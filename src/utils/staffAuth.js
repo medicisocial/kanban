@@ -13,6 +13,12 @@ export function isStaffAuthConfigured() {
   return Boolean(getConfiguredUsername() && getConfiguredPasswordHash());
 }
 
+export function isStaffAuthRequired() {
+  if (isPublicClientPortal()) return false;
+  if (isStaffAuthConfigured()) return true;
+  return import.meta.env.PROD;
+}
+
 export function isPublicClientPortal() {
   const params = new URLSearchParams(window.location.search);
   if (params.get('client')) return true;

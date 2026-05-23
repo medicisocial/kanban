@@ -4,6 +4,7 @@ import {
   createStaffSession,
   isPublicClientPortal,
   isStaffAuthConfigured,
+  isStaffAuthRequired,
   isStaffSessionValid,
   loadStaffSession,
   saveStaffSession,
@@ -13,7 +14,7 @@ import {
 const StaffAuthContext = createContext(null);
 
 export function StaffAuthProvider({ children }) {
-  const authRequired = isStaffAuthConfigured() && !isPublicClientPortal();
+  const authRequired = isStaffAuthRequired();
   const [session, setSession] = useState(null);
   const [ready, setReady] = useState(!authRequired);
 
@@ -41,6 +42,13 @@ export function StaffAuthProvider({ children }) {
   }, [authRequired]);
 
   const login = useCallback(async (username, password) => {
+    if (!isStaffAuthConfigured()) {
+      return {
+        ok: false,
+        error: 'Staff login is not configured for this deployment. Add VITE_STAFF_USERNAME and VITE_STAFF_PASSWORD_HASH in Vercel environment variables, then redeploy.',
+      };
+    }
+
     const ok = await verifyStaffCredentials(username, password);
     if (!ok) {
       return { ok: false, error: 'Invalid username or password.' };

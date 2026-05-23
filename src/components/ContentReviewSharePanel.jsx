@@ -21,7 +21,8 @@ export default function ContentReviewSharePanel({ cards }) {
   };
 
   return (
-    <div className="mx-auto mb-4 max-w-[1600px] rounded-xl border border-white/10 bg-[#1a1d2e] p-4 sm:mx-6 sm:p-5">
+    <div className="mx-auto mb-4 max-w-[1800px] px-4 sm:px-6">
+      <div className="rounded-xl border border-white/10 bg-[#1a1d2e] p-4 sm:p-5">
       <h3 className="text-sm font-semibold text-white">Share in-review content with clients</h3>
       <p className="mt-1 text-xs text-gray-400">
         Copy a private link for each client. They will see everything in In Review and can approve or request changes.
@@ -53,6 +54,7 @@ export default function ContentReviewSharePanel({ cards }) {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );
