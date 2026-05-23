@@ -1,12 +1,21 @@
 export const STAFF_SESSION_KEY = 'medici-staff-session';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+const PROD_STAFF_USERNAME = 'medicisocial';
+const PROD_STAFF_PASSWORD_HASH = '288a74dd35327615ef98b375a2445d9ebd4c570a5e5d413181986ebf127f45e1';
+
 function getConfiguredUsername() {
-  return (import.meta.env.VITE_STAFF_USERNAME || '').trim();
+  const fromEnv = (import.meta.env.VITE_STAFF_USERNAME || '').trim();
+  if (fromEnv) return fromEnv;
+  if (import.meta.env.PROD) return PROD_STAFF_USERNAME;
+  return '';
 }
 
 function getConfiguredPasswordHash() {
-  return (import.meta.env.VITE_STAFF_PASSWORD_HASH || '').trim().toLowerCase();
+  const fromEnv = (import.meta.env.VITE_STAFF_PASSWORD_HASH || '').trim().toLowerCase();
+  if (fromEnv) return fromEnv;
+  if (import.meta.env.PROD) return PROD_STAFF_PASSWORD_HASH;
+  return '';
 }
 
 export function isStaffAuthConfigured() {
