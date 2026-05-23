@@ -1,0 +1,59 @@
+import { useState } from 'react';
+import { useClientsContext } from '../context/ClientsContext';
+import { buildContentReviewShareUrl } from '../utils/contentReviewShare';
+
+export default function ContentReviewSharePanel({ cards }) {
+  const { clients, getClientColor } = useClientsContext();
+  const [copiedClient, setCopiedClient] = useState(null);
+
+  const copyLink = async (client) => {
+    const inReview = cards.filter(
+      (c) => c.client === client && c.columnId === 'in-review',
+    );
+    const url = buildContentReviewShareUrl(client, inReview);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedClient(client);
+      setTimeout(() => setCopiedClient(null), 2500);
+    } catch {
+      window.prompt('Copy this content review link:', url);
+    }
+  };
+
+  return (
+    <div className="mx-auto mb-4 max-w-[1600px] rounded-xl border border-white/10 bg-[#1a1d2e] p-4 sm:mx-6 sm:p-5">
+      <h3 className="text-sm font-semibold text-white">Share in-review content with clients</h3>
+      <p className="mt-1 text-xs text-gray-400">
+        Copy a private link for each client. They will see everything in In Review and can approve or request changes.
+      </p>
+      <div className="mt-4 space-y-2">
+        {clients.map((client) => {
+          const count = cards.filter(
+            (c) => c.client === client && c.columnId === 'in-review',
+          ).length;
+          const color = getClientColor(client);
+          return (
+            <div
+              key={client}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/5 bg-white/5 px-3 py-2.5"
+            >
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+                <span className="text-sm font-medium text-gray-200">{client}</span>
+                <span className="text-xs text-gray-500">{count} in review</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => copyLink(client)}
+                disabled={count === 0}
+                className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {copiedClient === client ? 'Link copied!' : 'Copy review link'}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
