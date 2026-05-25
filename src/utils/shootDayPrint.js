@@ -209,6 +209,55 @@ function wrapDocument(title, body) {
 </html>`;
 }
 
+function buildModelCallTimeRows(modelSchedules) {
+  const rows = [];
+
+  for (const { name, slots } of modelSchedules) {
+    for (const slot of slots) {
+      const content = slot.contentTitle
+        ? `${slot.contentTitle}${slot.contentType ? ` · ${slot.contentType}` : ""}`
+        : "—";
+      rows.push([name, slot.timeLabel, content]);
+    }
+  }
+
+  if (!rows.length) {
+    rows.push(["—", "—", "No models added yet."]);
+  }
+
+  return rows;
+}
+
+function modelCallTimesHtml(modelSchedules) {
+  const rows = buildModelCallTimeRows(modelSchedules);
+
+  return `
+    <section class="section avoid-break">
+      <h2 class="section-title">Model call times</h2>
+      <table class="schedule model-call-times">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Time</th>
+            <th>Content</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map(
+              ([model, time, content]) => `
+            <tr class="avoid-break">
+              <td>${escapeHtml(model)}</td>
+              <td class="col-time">${escapeHtml(time)}</td>
+              <td>${escapeHtml(content)}</td>
+            </tr>`,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </section>`;
+}
+
 export function buildShootPrintPayload({ client, dateKey, plan, cards }) {
   const focusDate = parseDateKey(dateKey);
   const timeline = buildShootTimeline(cards);
@@ -225,6 +274,7 @@ export function buildShootPrintPayload({ client, dateKey, plan, cards }) {
     plan,
     cards: [...timeline.map((e) => e.card), ...unscheduled],
     timeline,
+    modelSchedules,
     allModels,
     allNeeds,
     unscheduled,
@@ -232,7 +282,7 @@ export function buildShootPrintPayload({ client, dateKey, plan, cards }) {
 }
 
 export function buildShootPrintHtml(payload) {
-  const { client, dateLabel, plan, timeline, allModels, allNeeds, unscheduled } = payload;
+  const { client, dateLabel, plan, timeline, modelSchedules, allNeeds, unscheduled } = payload;
 
   let shotNum = 0;
   const scheduledRows = timeline
@@ -265,8 +315,8 @@ export function buildShootPrintHtml(payload) {
         <tbody>${bodyRows}</tbody>
       </table>
     </section>
-    <section class="section two-col">
-      ${listBlock("All models & talent", allModels)}
+    ${modelCallTimesHtml(modelSchedules)}
+    <section class="section">
       ${listBlock("Equipment & needs", allNeeds)}
     </section>
     ${
@@ -280,7 +330,7 @@ export function buildShootPrintHtml(payload) {
 }
 
 export function buildTimelineRowsPrintHtml(payload) {
-  const { client, dateLabel, plan, timeline, unscheduled } = payload;
+  const { client, dateLabel, plan, timeline, modelSchedules, unscheduled } = payload;
   const windowStart = parseTimeToMinutes(plan?.shootStartTime);
   const windowEnd = parseTimeToMinutes(plan?.shootEndTime);
 
@@ -320,6 +370,7 @@ export function buildTimelineRowsPrintHtml(payload) {
         <tbody>${bodyRows}</tbody>
       </table>
     </section>
+    ${modelCallTimesHtml(modelSchedules)}
     ${simpleFooter()}`;
 
   return wrapDocument(`${client} — Shoot Timeline`, body);
@@ -502,6 +553,49 @@ function addPdfShotTable(doc, autoTable, startY, bodyRows) {
   return doc.lastAutoTable.finalY + 10;
 }
 
+function addPdfModelCallTimesTable(doc, autoTable, startY, modelSchedules) {
+  let y = startY;
+
+  if (y > doc.internal.pageSize.getHeight() - 40) {
+    doc.addPage();
+    y = PDF_MARGIN + 4;
+  }
+
+  y = drawPdfSectionTitle(doc, y, "Model call times");
+
+  const tableWidth = PDF_PAGE_W - PDF_MARGIN * 2;
+
+  autoTable(doc, {
+    startY: y,
+    head: [["Model", "Time", "Content"]],
+    body: buildModelCallTimeRows(modelSchedules),
+    theme: "grid",
+    styles: PDF_SINGLE_LINE,
+    headStyles: {
+      fillColor: [245, 245, 245],
+      textColor: [60, 60, 60],
+      fontStyle: "bold",
+      fontSize: 8,
+      cellPadding: { top: 6, right: 4, bottom: 6, left: 4 },
+      overflow: "ellipsize",
+    },
+    alternateRowStyles: { fillColor: [252, 252, 252] },
+    columnStyles: {
+      0: { cellWidth: tableWidth * 0.22, overflow: "ellipsize" },
+      1: { cellWidth: tableWidth * 0.28, overflow: "ellipsize" },
+      2: { cellWidth: tableWidth * 0.5, overflow: "ellipsize" },
+    },
+    margin: { left: PDF_MARGIN, right: PDF_MARGIN, top: PDF_MARGIN, bottom: 14 },
+    rowPageBreak: "avoid",
+    showHead: "everyPage",
+    didDrawPage: (data) => {
+      drawPdfFooter(doc, data.pageNumber);
+    },
+  });
+
+  return doc.lastAutoTable.finalY + 10;
+}
+
 function addPdfListSection(doc, autoTable, startY, title, items) {
   let y = startY;
 
@@ -578,9 +672,9 @@ async function createProductionPdf(payload, variant) {
   y = drawPdfSessionTable(doc, autoTable, y, payload.plan);
   y = drawPdfSectionTitle(doc, y, isFull ? "Content schedule" : "Schedule by time");
   y = addPdfShotTable(doc, autoTable, y, buildShotTableRows(payload));
+  y = addPdfModelCallTimesTable(doc, autoTable, y, payload.modelSchedules);
 
   if (isFull) {
-    y = addPdfListSection(doc, autoTable, y, "All models & talent", payload.allModels);
     y = addPdfListSection(doc, autoTable, y, "Equipment & needs", payload.allNeeds);
     if (payload.plan.notes) {
       addPdfNotes(doc, autoTable, y, payload.plan.notes);

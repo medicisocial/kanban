@@ -234,32 +234,41 @@ export function getShootWindow(plan, entries = []) {
   return null;
 }
 
-export function buildHourMarkers(window) {
+export function buildHourMarkers(window, { edgePct = 8 } = {}) {
   if (!window) return [];
   const markers = [];
   const firstHour = Math.ceil(window.startMinutes / 60) * 60;
   for (let m = firstHour; m <= window.endMinutes; m += 60) {
     if (m >= window.startMinutes && m <= window.endMinutes) {
-      markers.push({
-        minutes: m,
-        label: minutesToTimeLabel(m),
-        pct: ((m - window.startMinutes) / window.span) * 100,
-      });
+      const pct = ((m - window.startMinutes) / window.span) * 100;
+      if (pct >= edgePct && pct <= 100 - edgePct) {
+        markers.push({
+          minutes: m,
+          label: minutesToTimeLabel(m),
+          pct,
+        });
+      }
     }
   }
   return markers;
 }
 
-export function positionOnTimeline(entry, window) {
+export function positionOnTimeline(entry, window, minBlockPct = 0) {
   if (!window) return null;
   const leftPct = ((entry.startMinutes - window.startMinutes) / window.span) * 100;
-  const widthPct = (entry.duration / window.span) * 100;
+  const widthPct = Math.max((entry.duration / window.span) * 100, minBlockPct);
   const outsideBefore = entry.startMinutes < window.startMinutes;
   const outsideAfter = entry.endMinutes > window.endMinutes;
   return { leftPct, widthPct, outsideBefore, outsideAfter };
 }
 
-export function assignTimelineLanes(entries) {
+function visualEndMinutes(entry, window, minBlockPct = 0) {
+  const pos = positionOnTimeline(entry, window, minBlockPct);
+  if (!pos) return entry.endMinutes;
+  return entry.startMinutes + (pos.widthPct / 100) * window.span;
+}
+
+export function assignTimelineLanes(entries, window = null, minBlockPct = 0) {
   const sorted = [...entries].sort((a, b) => a.startMinutes - b.startMinutes);
   const lanes = [];
 
@@ -267,7 +276,10 @@ export function assignTimelineLanes(entries) {
     let placed = false;
     for (let laneIndex = 0; laneIndex < lanes.length; laneIndex++) {
       const last = lanes[laneIndex][lanes[laneIndex].length - 1];
-      if (last.endMinutes <= entry.startMinutes) {
+      const lastVisualEnd = window
+        ? visualEndMinutes(last, window, minBlockPct)
+        : last.endMinutes;
+      if (lastVisualEnd <= entry.startMinutes) {
         lanes[laneIndex].push({ ...entry, lane: laneIndex });
         placed = true;
         break;

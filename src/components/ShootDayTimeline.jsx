@@ -12,7 +12,8 @@ import ShootDayTimelinePrintButton from "./ShootDayTimelinePrintButton";
 import ShootScriptModal from "./ShootScriptModal";
 
 const LANE_HEIGHT = 104;
-const MIN_BLOCK_PCT = 16;
+/** Minimum timeline width (% of track) so short slots stay visible without overlapping neighbors. */
+const MIN_BLOCK_PCT = 2;
 
 export default function ShootDayTimeline({
   entries,
@@ -27,7 +28,10 @@ export default function ShootDayTimeline({
   const canEditScript = Boolean(onUpdateCard);
   const window = useMemo(() => getShootWindow(plan, entries), [plan, entries]);
   const markers = useMemo(() => buildHourMarkers(window), [window]);
-  const lanedEntries = useMemo(() => assignTimelineLanes(entries), [entries]);
+  const lanedEntries = useMemo(
+    () => assignTimelineLanes(entries, window, MIN_BLOCK_PCT),
+    [entries, window],
+  );
   const laneCount = useMemo(
     () => (lanedEntries.length ? Math.max(...lanedEntries.map((e) => e.lane)) + 1 : 1),
     [lanedEntries],
@@ -61,25 +65,23 @@ export default function ShootDayTimeline({
 
       <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#141824] p-5">
         <div className="min-w-[960px]">
-          <div className="relative mb-3 h-8">
+          <div className="relative mb-3 h-9">
             <span
-              className="absolute text-xs font-medium text-gray-400"
-              style={{ left: 0 }}
+              className="absolute left-0 top-0 z-10 max-w-[42%] truncate bg-[#141824] pr-3 text-xs font-medium text-gray-400"
             >
               {window.startLabel}
             </span>
             {markers.map((m) => (
               <span
                 key={m.minutes}
-                className="absolute -translate-x-1/2 text-xs text-gray-500"
+                className="absolute top-0 -translate-x-1/2 text-xs text-gray-500"
                 style={{ left: `${m.pct}%` }}
               >
                 {m.label}
               </span>
             ))}
             <span
-              className="absolute text-xs font-medium text-gray-400"
-              style={{ right: 0 }}
+              className="absolute right-0 top-0 z-10 max-w-[42%] truncate bg-[#141824] pl-3 text-right text-xs font-medium text-gray-400"
             >
               {window.endLabel}
             </span>
@@ -105,15 +107,13 @@ export default function ShootDayTimeline({
               </div>
             ) : (
               lanedEntries.map((entry) => {
-                const pos = positionOnTimeline(entry, window);
+                const pos = positionOnTimeline(entry, window, MIN_BLOCK_PCT);
                 const typeStyle = getContentTypeStyle(entry.card.contentType);
                 if (!pos) return null;
 
                 const leftPct = Math.max(0, pos.leftPct);
-                const widthPct = Math.min(
-                  Math.max(pos.widthPct, MIN_BLOCK_PCT),
-                  100 - leftPct,
-                );
+                const widthPct = Math.min(pos.widthPct, 100 - leftPct);
+                const isLongSlot = entry.duration > 180;
 
                 return (
                   <button
@@ -132,8 +132,8 @@ export default function ShootDayTimeline({
                       backgroundColor: typeStyle.bg,
                       borderColor: typeStyle.border,
                       borderLeftWidth: "4px",
-                      minWidth: "180px",
                     }}
+                    title={isLongSlot ? "End time looks unusually late — check this card's end time" : undefined}
                   >
                     <p className={`text-xs font-semibold uppercase ${typeStyle.label}`}>
                       {entry.card.contentType}
@@ -144,7 +144,12 @@ export default function ShootDayTimeline({
                     <p className="mt-1 text-xs text-gray-400">
                       {entry.startLabel} – {entry.endLabel}
                     </p>
-                    {(pos.outsideBefore || pos.outsideAfter) && (
+                    {isLongSlot && (
+                      <span className="absolute right-2 top-2 text-xs text-amber-400" title="Check end time">
+                        ⚠
+                      </span>
+                    )}
+                    {(pos.outsideBefore || pos.outsideAfter) && !isLongSlot && (
                       <span className="absolute right-2 top-2 text-xs text-amber-400">⚠</span>
                     )}
                   </button>
