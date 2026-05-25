@@ -21,7 +21,6 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPos
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const badgeStyle = kindStyles[task.kind] || kindStyles.schedule;
   const canMarkPosted = task.kind === 'publish' || task.kind === 'post-story';
-  const showPostTimeByTitle = canMarkPosted && task.dueTime;
   const clientColor = getClientColor(task.client);
 
   const openCard = () => onOpenCard(task.card);
@@ -53,7 +52,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPos
           >
             <div className="flex flex-wrap items-baseline gap-2">
               <h3 className="text-sm font-semibold text-white">{task.title}</h3>
-              {showPostTimeByTitle && (
+              {task.dueTime && (
                 <span className="text-xs font-medium text-gray-400">{formatTime(task.dueTime)}</span>
               )}
             </div>
