@@ -36,14 +36,27 @@ function Field({ label, children, className = '' }) {
 }
 
 function OpusColorField({ label, styleKey, colorField, value, onPatch, showTextSample = false }) {
-  const display = parseHexColor(value) || '#ffffff';
-  const swatchColor = previewHexColor(display, display);
-  const pickerHex = toColorPickerHex(display);
+  const inputRef = useRef(null);
+  const [isFocused, setIsFocused] = useState(false);
+  const committed = parseHexColor(value) || '#ffffff';
+  const [editText, setEditText] = useState(committed);
 
-  const commit = (raw) => {
+  useEffect(() => {
+    if (!isFocused) {
+      setEditText(committed);
+    }
+  }, [value, committed, isFocused]);
+
+  const applyColor = (raw) => {
     const parsed = parseHexColor(raw);
-    if (parsed) onPatch(colorField, parsed);
+    if (!parsed) return null;
+    onPatch(colorField, parsed);
+    return parsed;
   };
+
+  const displayText = isFocused ? editText : committed;
+  const swatchColor = previewHexColor(isFocused ? editText : value, committed);
+  const pickerHex = toColorPickerHex(isFocused ? editText : committed);
 
   return (
     <Field label={label}>
@@ -69,22 +82,42 @@ function OpusColorField({ label, styleKey, colorField, value, onPatch, showTextS
           <input
             type="color"
             value={pickerHex}
-            onChange={(e) => commit(e.target.value)}
+            onChange={(e) => {
+              const parsed = applyColor(e.target.value);
+              if (parsed) setEditText(parsed);
+            }}
             className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
             aria-label={`${label} picker`}
           />
         </div>
         <input
+          ref={inputRef}
           type="text"
           data-opus-color-text
           data-style-key={styleKey}
           data-color-field={colorField}
-          value={display}
-          onChange={(e) => commit(e.target.value)}
-          onBlur={(e) => commit(e.target.value)}
-          onPaste={(e) => {
-            const pasted = e.clipboardData?.getData('text') ?? '';
-            requestAnimationFrame(() => commit(pasted));
+          value={displayText}
+          onFocus={() => {
+            setIsFocused(true);
+            setEditText(committed);
+          }}
+          onChange={(e) => {
+            const next = e.target.value;
+            setEditText(next);
+            applyColor(next);
+          }}
+          onBlur={(e) => {
+            setIsFocused(false);
+            const parsed = applyColor(e.target.value);
+            setEditText(parsed || committed);
+          }}
+          onPaste={() => {
+            requestAnimationFrame(() => {
+              const raw = inputRef.current?.value ?? '';
+              setEditText(raw);
+              const parsed = applyColor(raw);
+              if (parsed) setEditText(parsed);
+            });
           }}
           className={inputClass}
           placeholder="#000000"
