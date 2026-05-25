@@ -72,6 +72,32 @@ export function buildOneOffEditorTask(task) {
   };
 }
 
+export function applyEditorTaskOrder(tasks, orderIds = []) {
+  if (!orderIds.length) {
+    return [...tasks].sort(compareEditorTasks);
+  }
+
+  const orderMap = new Map(orderIds.map((id, index) => [id, index]));
+  return [...tasks].sort((a, b) => {
+    const aIndex = orderMap.has(a.id) ? orderMap.get(a.id) : Number.MAX_SAFE_INTEGER;
+    const bIndex = orderMap.has(b.id) ? orderMap.get(b.id) : Number.MAX_SAFE_INTEGER;
+    if (aIndex !== bIndex) return aIndex - bIndex;
+    return compareEditorTasks(a, b);
+  });
+}
+
+export function syncEditorTaskOrder(orderIds, taskIds) {
+  const next = orderIds.filter((id) => taskIds.includes(id));
+  for (const id of taskIds) {
+    if (!next.includes(id)) next.push(id);
+  }
+  return next;
+}
+
+export function buildInitialTaskOrder(tasks) {
+  return [...tasks].sort(compareEditorTasks).map((task) => task.id);
+}
+
 export function compareEditorTasks(a, b) {
   const dateA = a.dueDate || '9999-99-99';
   const dateB = b.dueDate || '9999-99-99';
@@ -85,11 +111,10 @@ export function compareEditorTasks(a, b) {
 }
 
 export function groupEditorTasksByDate(tasks, todayKey = toDateKey(new Date())) {
-  const sorted = [...tasks].sort(compareEditorTasks);
   const groups = [];
   let currentKey = null;
 
-  for (const task of sorted) {
+  for (const task of tasks) {
     let groupKey = task.dueDate || 'no-date';
     let groupLabel = task.dueDate
       ? formatEditorDateLabel(task.dueDate, todayKey)

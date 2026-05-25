@@ -1,10 +1,28 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { TEAM_MEMBERS, getContentTypeStyle } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import { toDateKey } from '../utils/calendar';
 import {
+  applyEditorTaskOrder,
   buildBoardEditorTasks,
+  buildInitialTaskOrder,
   buildOneOffEditorTask,
+  formatEditorDateLabel,
   groupEditorTasksByDate,
   filterEditorTasks,
 } from '../utils/editorTodo';
@@ -18,10 +36,14 @@ const kindStyles = {
 
 function EditorTodoItem({
   task,
+  sortable = false,
+  dragHandleProps = null,
   onOpenCard,
   onToggleComplete,
   onDeleteOneOff,
   getClientColor,
+  showDateBadge = false,
+  todayKey,
 }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const isOneOff = task.source === 'oneoff';
@@ -31,10 +53,21 @@ function EditorTodoItem({
     <article
       className={`rounded-xl border border-white/8 bg-[#1a1d2e] p-4 transition ${
         task.completed ? 'opacity-60' : ''
-      }`}
+      } ${sortable ? 'touch-none' : ''}`}
     >
       <div className="flex flex-wrap items-start gap-3">
-        {isOneOff ? (
+        {sortable && dragHandleProps ? (
+          <button
+            type="button"
+            className="mt-0.5 flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 active:cursor-grabbing hover:bg-white/10 hover:text-white"
+            aria-label={`Drag to reorder ${task.title}`}
+            {...dragHandleProps}
+          >
+            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M7 4a1 1 0 110 2 1 1 0 010-2zm6 0a1 1 0 110 2 1 1 0 010-2zM7 9a1 1 0 110 2 1 1 0 010-2zm6 0a1 1 0 110 2 1 1 0 010-2zM7 14a1 1 0 110 2 1 1 0 010-2zm6 0a1 1 0 110 2 1 1 0 010-2z" />
+            </svg>
+          </button>
+        ) : isOneOff ? (
           <input
             type="checkbox"
             checked={Boolean(task.completed)}
@@ -50,6 +83,11 @@ function EditorTodoItem({
 
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
+            {showDateBadge && task.dueDate && (
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-gray-300">
+                {formatEditorDateLabel(task.dueDate, todayKey).replace('Today · ', '')}
+              </span>
+            )}
             <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${kindStyles[task.kind]}`}>
               {task.label}
             </span>
@@ -99,7 +137,7 @@ function EditorTodoItem({
           </div>
         </div>
 
-        {isOneOff && (
+        {isOneOff && !sortable && (
           <button
             type="button"
             onClick={() => onDeleteOneOff(task.id)}
@@ -108,26 +146,78 @@ function EditorTodoItem({
             Delete
           </button>
         )}
+
+        {isOneOff && sortable && (
+          <div className="flex flex-col items-end gap-2">
+            <input
+              type="checkbox"
+              checked={Boolean(task.completed)}
+              onChange={() => onToggleComplete(task.id)}
+              className="h-4 w-4 rounded border-white/20 bg-[#1e2130] text-violet-600"
+              aria-label={`Mark ${task.title} complete`}
+            />
+            <button
+              type="button"
+              onClick={() => onDeleteOneOff(task.id)}
+              className="text-xs text-gray-500 hover:text-red-400"
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </div>
     </article>
+  );
+}
+
+function SortableEditorTodoItem(props) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: props.task.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <EditorTodoItem
+        {...props}
+        sortable
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
+    </div>
   );
 }
 
 export default function EditorTodo({
   cards,
   oneOffTasks,
+  taskOrder,
   search,
   clientFilter,
   onAddOneOffTask,
   onToggleOneOffComplete,
   onDeleteOneOffTask,
   onOpenCard,
+  onSyncTaskOrder,
+  onSetTaskOrder,
+  onReorderTasks,
+  onResetTaskOrder,
 }) {
   const { getClientColor } = useClientsContext();
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [showCompleted, setShowCompleted] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [sortMode, setSortMode] = useState(() => taskOrder.length > 0 ? 'custom' : 'date');
   const todayKey = toDateKey(new Date());
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const allTasks = useMemo(() => {
     const boardTasks = buildBoardEditorTasks(cards);
@@ -146,14 +236,44 @@ export default function EditorTodo({
     [allTasks, search, assigneeFilter, clientFilter, showCompleted],
   );
 
+  useEffect(() => {
+    onSyncTaskOrder(filteredTasks.map((task) => task.id));
+  }, [filteredTasks, onSyncTaskOrder]);
+
+  const orderedTasks = useMemo(
+    () => applyEditorTaskOrder(filteredTasks, sortMode === 'custom' ? taskOrder : []),
+    [filteredTasks, sortMode, taskOrder],
+  );
+
   const groupedTasks = useMemo(
-    () => groupEditorTasksByDate(filteredTasks, todayKey),
-    [filteredTasks, todayKey],
+    () => groupEditorTasksByDate(orderedTasks, todayKey),
+    [orderedTasks, todayKey],
   );
 
   const editCount = filteredTasks.filter((t) => t.kind === 'edit').length;
   const approveCount = filteredTasks.filter((t) => t.kind === 'approve').length;
   const oneOffCount = filteredTasks.filter((t) => t.kind === 'oneoff' && !t.completed).length;
+
+  const handleSortModeChange = (mode) => {
+    if (mode === 'custom' && !taskOrder.length && filteredTasks.length) {
+      onSetTaskOrder(buildInitialTaskOrder(filteredTasks));
+    }
+    if (mode === 'date') {
+      onResetTaskOrder();
+    }
+    setSortMode(mode);
+  };
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over) return;
+    onReorderTasks(active.id, over.id);
+  };
+
+  const sortModeClass = (mode) =>
+    `rounded-md px-3 py-1.5 text-sm font-medium transition ${
+      sortMode === mode ? 'bg-violet-600 text-white' : 'text-gray-400 hover:text-white'
+    }`;
 
   return (
     <div className="mx-auto max-w-[900px] px-4 py-4 sm:px-6">
@@ -161,7 +281,7 @@ export default function EditorTodo({
         <div>
           <h2 className="text-xl font-semibold text-white">Editor To-Do</h2>
           <p className="mt-1 text-sm text-gray-400">
-            Auto-generated from the board each day — editing and review tasks sorted by date.
+            Auto-generated from the board — drag to set your own priority order.
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
             <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-200">
@@ -186,6 +306,15 @@ export default function EditorTodo({
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
+        <div className="flex rounded-lg border border-white/10 bg-white/5 p-0.5">
+          <button type="button" onClick={() => handleSortModeChange('date')} className={sortModeClass('date')}>
+            By date
+          </button>
+          <button type="button" onClick={() => handleSortModeChange('custom')} className={sortModeClass('custom')}>
+            Custom order
+          </button>
+        </div>
+
         <label className="flex items-center gap-2 text-sm text-gray-400">
           <span>Editor</span>
           <select
@@ -213,13 +342,36 @@ export default function EditorTodo({
         </label>
       </div>
 
-      {groupedTasks.length === 0 ? (
+      {sortMode === 'custom' && (
+        <p className="mb-4 text-xs text-gray-500">Drag tasks using the grip handle to rearrange your list.</p>
+      )}
+
+      {orderedTasks.length === 0 ? (
         <div className="rounded-xl border border-dashed border-white/10 px-6 py-16 text-center">
           <p className="text-sm text-gray-400">Nothing on the list right now.</p>
           <p className="mt-1 text-xs text-gray-500">
             Move cards to Editing, Not Approved, or In Review on the board — or add a one-off task.
           </p>
         </div>
+      ) : sortMode === 'custom' ? (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={orderedTasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {orderedTasks.map((task) => (
+                <SortableEditorTodoItem
+                  key={task.id}
+                  task={task}
+                  onOpenCard={onOpenCard}
+                  onToggleComplete={onToggleOneOffComplete}
+                  onDeleteOneOff={onDeleteOneOffTask}
+                  getClientColor={getClientColor}
+                  showDateBadge
+                  todayKey={todayKey}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       ) : (
         <div className="space-y-8">
           {groupedTasks.map((group) => (

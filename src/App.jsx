@@ -56,9 +56,14 @@ function AppShell() {
   } = useVideoIdeas();
   const {
     oneOffTasks,
+    taskOrder,
     addOneOffTask,
     toggleOneOffComplete,
     deleteOneOffTask,
+    syncTaskOrder,
+    setTaskOrderFromIds,
+    reorderTasks,
+    resetTaskOrder,
   } = useEditorTasks();
   const { authRequired, ready, isAuthenticated, logout } = useStaffAuth();
 
@@ -470,12 +475,17 @@ function AppShell() {
         <EditorTodo
           cards={cards}
           oneOffTasks={oneOffTasks}
+          taskOrder={taskOrder}
           search={search}
           clientFilter={clientFilter}
           onAddOneOffTask={addOneOffTask}
           onToggleOneOffComplete={toggleOneOffComplete}
           onDeleteOneOffTask={deleteOneOffTask}
           onOpenCard={handleCardClick}
+          onSyncTaskOrder={syncTaskOrder}
+          onSetTaskOrder={setTaskOrderFromIds}
+          onReorderTasks={reorderTasks}
+          onResetTaskOrder={resetTaskOrder}
         />
       )}
 
