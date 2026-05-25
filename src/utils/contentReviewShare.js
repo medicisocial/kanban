@@ -117,9 +117,10 @@ export function buildContentReviewDenyUpdates(card, comment, timestamp = Date.no
   const noteAppend = trimmed
     ? `\n\nClient revision notes (${stamp}): ${trimmed}`
     : '';
+  const backToEditing = Boolean(card.isOneOffProject);
   return {
-    columnId: 'not-approved',
-    status: 'Not Approved',
+    columnId: backToEditing ? 'editing' : 'not-approved',
+    status: backToEditing ? 'Editing' : 'Not Approved',
     clientComment: trimmed,
     notes: `${card.notes || ''}${noteAppend}`.trim(),
   };

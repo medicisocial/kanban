@@ -3,7 +3,7 @@ import { toDateKey } from './calendar';
 
 export const EDIT_TASK_COLUMNS = ['editing', 'not-approved'];
 export const APPROVE_TASK_COLUMNS = ['in-review'];
-export const ONE_OFF_EDITOR_COLUMNS = ['editing', 'not-approved', 'in-review', 'approved', 'finished'];
+export const ONE_OFF_EDITOR_COLUMNS = ['editing', 'in-review', 'approved', 'finished'];
 
 export const REGULAR_EDITOR_STATUS_COLUMN_IDS = [
   'shoot',
@@ -18,7 +18,6 @@ export const REGULAR_EDITOR_STATUS_COLUMN_IDS = [
 export const ONE_OFF_STATUS_COLUMN_IDS = [
   'editing',
   'in-review',
-  'not-approved',
   'approved',
   'finished',
 ];

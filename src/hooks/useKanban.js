@@ -25,11 +25,14 @@ function migrateColumnId(columnId) {
 
 function normalizeCard(card) {
   const columnId = migrateColumnId(card.columnId);
+  const isOneOffProject = Boolean(card.isOneOffProject);
+  const resolvedColumnId =
+    isOneOffProject && columnId === 'not-approved' ? 'editing' : columnId;
   return {
     ...card,
     platform: PLATFORM,
-    columnId,
-    status: getStatusForColumn(columnId),
+    columnId: resolvedColumnId,
+    status: getStatusForColumn(resolvedColumnId),
     referenceMusic: card.referenceMusic || '',
     referenceVideo: card.referenceVideo || '',
     dropboxLink: card.dropboxLink || '',
@@ -110,7 +113,7 @@ function withColumnDate(columnId, dueDate, isOneOffProject = false) {
   return dueDate;
 }
 
-const ONE_OFF_ALLOWED_COLUMNS = ['editing', 'in-review', 'not-approved', 'approved', 'finished'];
+const ONE_OFF_ALLOWED_COLUMNS = ['editing', 'in-review', 'approved', 'finished'];
 
 function canMoveCardToColumn(card, targetColumnId) {
   if (card.isOneOffProject) {
