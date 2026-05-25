@@ -22,6 +22,7 @@ import {
   buildBoardEditorTasks,
   buildInitialTaskOrder,
   formatEditorDateLabel,
+  getEditorTaskStatusOptions,
   groupEditorTasksByDate,
   filterEditorTasks,
 } from '../utils/editorTodo';
@@ -41,6 +42,7 @@ function EditorTodoItem({
   onDeleteOneOff,
   onSubmitForReview,
   onSendBackForEditing,
+  onMoveTask,
   getClientColor,
   showDateBadge = false,
   todayKey,
@@ -49,6 +51,11 @@ function EditorTodoItem({
   const isOneOff = task.kind === 'oneoff';
   const clientColor = getClientColor(task.client);
   const isActive = !task.completed;
+  const statusOptions = getEditorTaskStatusOptions(isOneOff);
+
+  const openCard = () => {
+    if (task.card) onOpenCard?.(task.card);
+  };
 
   return (
     <article
@@ -62,6 +69,7 @@ function EditorTodoItem({
             type="button"
             className="mt-0.5 flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 active:cursor-grabbing hover:bg-white/10 hover:text-white"
             aria-label={`Drag to reorder ${task.title}`}
+            onClick={(e) => e.stopPropagation()}
             {...dragHandleProps}
           >
             <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -74,7 +82,11 @@ function EditorTodoItem({
           </span>
         )}
 
-        <div className="min-w-0 flex-1">
+        <button
+          type="button"
+          onClick={openCard}
+          className="min-w-0 flex-1 cursor-pointer rounded-lg text-left transition hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#810100]/50"
+        >
           <div className="mb-2 flex flex-wrap items-center gap-2">
             {showDateBadge && task.dueDate && (
               <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-gray-300">
@@ -94,15 +106,9 @@ function EditorTodoItem({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => onOpenCard?.(task.card)}
-            className="text-left hover:text-[#fca5a5]"
-          >
-            <h3 className={`text-sm font-semibold text-white ${task.completed ? 'line-through' : ''}`}>
-              {task.title}
-            </h3>
-          </button>
+          <h3 className={`text-sm font-semibold text-white group-hover:text-[#fca5a5] ${task.completed ? 'line-through' : ''}`}>
+            {task.title}
+          </h3>
 
           <p className="mt-1 text-xs font-medium" style={{ color: clientColor }}>
             {task.client}
@@ -123,12 +129,29 @@ function EditorTodoItem({
             <span>On board · {task.columnId.replace('-', ' ')}</span>
             {isOneOff && !task.dueDate && <span>No posting date</span>}
           </div>
-        </div>
+        </button>
 
-        <div className="flex shrink-0 flex-col gap-2">
+        <div className="flex shrink-0 flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+          <label className="block">
+            <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-500">
+              Board status
+            </span>
+            <select
+              value={task.columnId}
+              onChange={(e) => onMoveTask?.(task.cardId, e.target.value)}
+              className="select-dark w-full min-w-[130px] rounded-lg border border-white/10 bg-[#1a1a1a] px-2 py-1.5 text-xs text-[#f9f6f2] outline-none focus:border-[#810100]/50"
+              aria-label={`Board status for ${task.title}`}
+            >
+              {statusOptions.map((col) => (
+                <option key={col.id} value={col.id}>
+                  {col.title}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
-            onClick={() => onOpenCard?.(task.card)}
+            onClick={openCard}
             className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-white/5 hover:text-white"
           >
             Edit
@@ -217,6 +240,7 @@ export default function EditorTodo({
   onOpenCard,
   onSubmitForReview,
   onSendBackForEditing,
+  onMoveTask,
   onSyncTaskOrder,
   onSetTaskOrder,
   onReorderTasks,
@@ -376,6 +400,7 @@ export default function EditorTodo({
                   onDeleteOneOff={onDeleteOneOffTask}
                   onSubmitForReview={onSubmitForReview}
                   onSendBackForEditing={onSendBackForEditing}
+                  onMoveTask={onMoveTask}
                   getClientColor={getClientColor}
                   showDateBadge
                   todayKey={todayKey}
@@ -404,6 +429,7 @@ export default function EditorTodo({
                     onDeleteOneOff={onDeleteOneOffTask}
                     onSubmitForReview={onSubmitForReview}
                     onSendBackForEditing={onSendBackForEditing}
+                    onMoveTask={onMoveTask}
                     getClientColor={getClientColor}
                   />
                 ))}

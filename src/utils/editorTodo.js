@@ -1,8 +1,26 @@
+import { COLUMNS } from '../constants';
 import { toDateKey } from './calendar';
 
 export const EDIT_TASK_COLUMNS = ['editing', 'not-approved'];
 export const APPROVE_TASK_COLUMNS = ['in-review'];
 export const ONE_OFF_TASK_COLUMNS = ['editing', 'finished'];
+
+export const REGULAR_EDITOR_STATUS_COLUMN_IDS = [
+  'shoot',
+  'editing',
+  'in-review',
+  'not-approved',
+  'approved',
+  'scheduled',
+  'posted',
+];
+
+export const ONE_OFF_STATUS_COLUMN_IDS = ['editing', 'finished'];
+
+export function getEditorTaskStatusOptions(isOneOffProject = false) {
+  const allowed = isOneOffProject ? ONE_OFF_STATUS_COLUMN_IDS : REGULAR_EDITOR_STATUS_COLUMN_IDS;
+  return COLUMNS.filter((col) => allowed.includes(col.id));
+}
 
 export function getEditorTaskKind(columnId, isOneOffProject = false) {
   if (isOneOffProject && ONE_OFF_TASK_COLUMNS.includes(columnId)) return 'oneoff';

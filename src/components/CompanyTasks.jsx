@@ -23,6 +23,7 @@ export default function CompanyTasks({
   onMarkPosted,
   onSubmitForReview,
   onSendBackForEditing,
+  onMoveTask,
 }) {
   const [activeRole, setActiveRole] = useState('editor');
 
@@ -64,6 +65,7 @@ export default function CompanyTasks({
           onOpenCard={onOpenCard}
           onSubmitForReview={onSubmitForReview}
           onSendBackForEditing={onSendBackForEditing}
+          onMoveTask={onMoveTask}
           onSyncTaskOrder={onSyncTaskOrder}
           onSetTaskOrder={onSetTaskOrder}
           onReorderTasks={onReorderTasks}

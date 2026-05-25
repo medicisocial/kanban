@@ -139,6 +139,10 @@ function AppShell() {
     moveCard(cardId, "editing");
   };
 
+  const handleMoveEditorTask = (cardId, columnId) => {
+    moveCard(cardId, columnId);
+  };
+
   const handleDeleteOneOffProject = (cardId) => {
     deleteCard(cardId);
   };
@@ -516,6 +520,7 @@ function AppShell() {
           onMarkPosted={handleMarkPosted}
           onSubmitForReview={handleSubmitForReview}
           onSendBackForEditing={handleSendBackForEditing}
+          onMoveTask={handleMoveEditorTask}
         />
       )}
 
