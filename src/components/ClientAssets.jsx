@@ -7,6 +7,7 @@ import {
   OPUS_FONT_FAMILIES,
   OPUS_STYLE_KEYS,
   getOpusPreviewStyle,
+  normalizeClientAssets,
   parseHexColor,
   previewHexColor,
   toColorPickerHex,
@@ -30,6 +31,72 @@ function Field({ label, children, className = '' }) {
       <span className={labelClass}>{label}</span>
       {children}
     </label>
+  );
+}
+
+function commitHexColor(onChange, raw) {
+  const parsed = parseHexColor(typeof raw === 'string' ? raw : '');
+  if (!parsed) return false;
+  flushSync(() => onChange(parsed));
+  return true;
+}
+
+/** Opus color field — patches draft immediately, same reliability as font size inputs. */
+function OpusColorField({ label, value, onChange, showTextSample = false }) {
+  const textRef = useRef(null);
+  const resolved = parseHexColor(value) || '#ffffff';
+  const swatchColor = previewHexColor(resolved, resolved);
+  const pickerHex = toColorPickerHex(resolved);
+
+  return (
+    <Field label={label}>
+      <div className="flex items-center gap-2">
+        <div className="relative h-10 w-12 shrink-0 overflow-hidden rounded-lg border border-white/20">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage:
+                'repeating-conic-gradient(#666 0% 25%, #444 0% 50%) 50% / 8px 8px',
+            }}
+          />
+          {showTextSample ? (
+            <div
+              className="absolute inset-0 flex items-center justify-center text-sm font-bold"
+              style={{ color: swatchColor }}
+            >
+              Aa
+            </div>
+          ) : (
+            <div className="absolute inset-0" style={{ backgroundColor: swatchColor }} />
+          )}
+          <input
+            type="color"
+            value={pickerHex}
+            onChange={(e) => commitHexColor(onChange, e.target.value)}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            aria-label={`${label} picker`}
+          />
+        </div>
+        <input
+          ref={textRef}
+          key={resolved}
+          type="text"
+          defaultValue={resolved}
+          onChange={(e) => commitHexColor(onChange, e.target.value)}
+          onBlur={(e) => commitHexColor(onChange, e.target.value)}
+          onPaste={() => {
+            requestAnimationFrame(() => {
+              if (textRef.current) {
+                commitHexColor(onChange, textRef.current.value);
+              }
+            });
+          }}
+          className={inputClass}
+          placeholder="#000000"
+          spellCheck={false}
+        />
+      </div>
+    </Field>
   );
 }
 
@@ -186,7 +253,7 @@ function OpusStyleEditor({ styleKey, style, onPatchField }) {
           </select>
         </Field>
 
-        <ColorInput
+        <OpusColorField
           label="Text color"
           value={style.color}
           onChange={(v) => onPatchField('color', v)}
@@ -204,7 +271,7 @@ function OpusStyleEditor({ styleKey, style, onPatchField }) {
           />
         </Field>
 
-        <ColorInput
+        <OpusColorField
           label="Stroke color"
           value={style.strokeColor}
           onChange={(v) => onPatchField('strokeColor', v)}
@@ -259,7 +326,7 @@ function OpusStyleEditor({ styleKey, style, onPatchField }) {
           </select>
         </Field>
 
-        <ColorInput
+        <OpusColorField
           label="Background color"
           value={style.backgroundColor}
           onChange={(v) => onPatchField('backgroundColor', v)}
@@ -344,8 +411,7 @@ export default function ClientAssets({ clientFilter }) {
     setBaseline(snapshot);
     draftRef.current = snapshot;
     setActiveOpusStyle('headline');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeClient, getClientAssets]);
+  }, [activeClient]);
 
   const flushFocusedField = () => {
     flushSync(() => {
@@ -392,10 +458,18 @@ export default function ClientAssets({ clientFilter }) {
     if (!activeClient) return;
     flushFocusedField();
 
-    const source = draftRef.current ?? draft;
-    if (!source) return;
+    let payload = null;
+    flushSync(() => {
+      setDraft((current) => {
+        if (!current) return current;
+        payload = JSON.parse(JSON.stringify(current));
+        draftRef.current = current;
+        return current;
+      });
+    });
 
-    const payload = JSON.parse(JSON.stringify(source));
+    if (!payload) return;
+
     const saved = saveClientAssets(activeClient, payload);
     if (!saved) {
       setSaveError('Could not save — try again or check browser storage settings.');
@@ -403,9 +477,12 @@ export default function ClientAssets({ clientFilter }) {
     }
 
     setSaveError('');
-    setDraft(payload);
-    setBaseline(JSON.parse(JSON.stringify(payload)));
-    draftRef.current = payload;
+    const synced = JSON.parse(
+      JSON.stringify(normalizeClientAssets(payload, getClientColor(activeClient))),
+    );
+    setDraft(synced);
+    setBaseline(JSON.parse(JSON.stringify(synced)));
+    draftRef.current = synced;
   };
 
   const handleDiscard = () => {
@@ -806,12 +883,15 @@ export default function ClientAssets({ clientFilter }) {
               </div>
 
               <div className="rounded-xl border border-white/8 bg-[#111111] p-5">
-                <OpusStyleEditor
-                  key={activeOpusStyle}
-                  styleKey={activeOpusStyle}
-                  style={draft.opusAi[activeOpusStyle]}
-                  onPatchField={(field, value) => patchOpusStyleField(activeOpusStyle, field, value)}
-                />
+                {OPUS_STYLE_KEYS.map(({ key, label }) => (
+                  <div key={key} className={activeOpusStyle === key ? '' : 'hidden'}>
+                    <OpusStyleEditor
+                      styleKey={key}
+                      style={draft.opusAi[key]}
+                      onPatchField={(field, value) => patchOpusStyleField(key, field, value)}
+                    />
+                  </div>
+                ))}
               </div>
 
               <section className="rounded-xl border border-white/10 bg-[#141414] p-5">

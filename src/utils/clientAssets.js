@@ -75,6 +75,28 @@ export function createDefaultClientAssets(clientColor = '#810100') {
   };
 }
 
+export function normalizeOpusTextStyle(raw, defaults) {
+  const source = raw || {};
+  const { textColor, ...rest } = source;
+  const merged = { ...defaults, ...rest };
+
+  const savedColor = parseHexColor(merged.color);
+  const legacyColor = parseHexColor(textColor);
+
+  if (savedColor) {
+    merged.color = savedColor;
+  } else if (legacyColor) {
+    merged.color = legacyColor;
+  } else {
+    merged.color = defaults.color;
+  }
+
+  merged.strokeColor = parseHexColor(merged.strokeColor) || defaults.strokeColor;
+  merged.backgroundColor = parseHexColor(merged.backgroundColor) || defaults.backgroundColor;
+
+  return merged;
+}
+
 export function normalizeClientAssets(raw, clientColor = '#810100') {
   if (!raw || typeof raw !== 'object') {
     return createDefaultClientAssets(clientColor);
@@ -86,17 +108,17 @@ export function normalizeClientAssets(raw, clientColor = '#810100') {
     branding: {
       ...defaults.branding,
       ...raw.branding,
-      primaryColor: raw.branding?.primaryColor ?? defaults.branding.primaryColor,
-      secondaryColor: raw.branding?.secondaryColor ?? defaults.branding.secondaryColor,
-      accentColor: raw.branding?.accentColor ?? defaults.branding.accentColor,
+      primaryColor: parseHexColor(raw.branding?.primaryColor) ?? defaults.branding.primaryColor,
+      secondaryColor: parseHexColor(raw.branding?.secondaryColor) ?? defaults.branding.secondaryColor,
+      accentColor: parseHexColor(raw.branding?.accentColor) ?? defaults.branding.accentColor,
       fonts: Array.isArray(raw.branding?.fonts) ? raw.branding.fonts : defaults.branding.fonts,
       assets: Array.isArray(raw.branding?.assets) ? raw.branding.assets : [],
     },
     opusAi: {
-      headline: { ...defaults.opusAi.headline, ...(raw.opusAi?.headline || {}) },
-      subtitle: { ...defaults.opusAi.subtitle, ...(raw.opusAi?.subtitle || {}) },
-      caption: { ...defaults.opusAi.caption, ...(raw.opusAi?.caption || {}) },
-      cta: { ...defaults.opusAi.cta, ...(raw.opusAi?.cta || {}) },
+      headline: normalizeOpusTextStyle(raw.opusAi?.headline, defaults.opusAi.headline),
+      subtitle: normalizeOpusTextStyle(raw.opusAi?.subtitle, defaults.opusAi.subtitle),
+      caption: normalizeOpusTextStyle(raw.opusAi?.caption, defaults.opusAi.caption),
+      cta: normalizeOpusTextStyle(raw.opusAi?.cta, defaults.opusAi.cta),
     },
   };
 }
@@ -184,9 +206,15 @@ export function saveClientAssetsEntry(client, assets, knownClients = []) {
     return null;
   }
 
+  const clientColor =
+    parseHexColor(payload.branding.primaryColor) ||
+    parseHexColor(payload.branding.accentColor) ||
+    '#810100';
+  const normalized = normalizeClientAssets(payload, clientColor);
+
   const store = reconcileClientAssetsStore(loadClientAssetsStore(), knownClients);
   const canonicalClient = resolveClientStoreKey(store, client, knownClients);
-  store[canonicalClient] = payload;
+  store[canonicalClient] = normalized;
   const serialized = JSON.stringify(store);
   localStorage.setItem(CLIENT_ASSETS_STORAGE_KEY, serialized);
 
