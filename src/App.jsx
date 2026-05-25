@@ -18,7 +18,7 @@ import {
   buildContentReviewDenyUpdates,
 } from "./utils/contentReviewShare";
 import { getCalendarPortalClient } from "./utils/calendarShare";
-import { hasStoryRecurrence, withStoryOccurrence, parseStoryOccurrenceNotes } from "./utils/calendar";
+import { withStoryOccurrence, parseStoryOccurrenceNotes } from "./utils/calendar";
 import { createCard } from "./constants";
 import { useEditorTasks } from "./hooks/useEditorTasks";
 import { useAdminTasks } from "./hooks/useAdminTasks";
@@ -34,6 +34,7 @@ import ClientContentReviewPortal from "./components/ClientContentReviewPortal";
 import ClientCalendarPortal from "./components/ClientCalendarPortal";
 import ClientShootDayPortal from "./components/ClientShootDayPortal";
 import ContentReviewSharePanel from "./components/ContentReviewSharePanel";
+import ClientSyncBanner from "./components/ClientSyncBanner";
 import CardModal from "./components/CardModal";
 import StaffLogin from "./components/StaffLogin";
 import { ClientsProvider } from "./context/ClientsContext";
@@ -44,7 +45,7 @@ function AppShell() {
   const shootImportData = parseShootImportParam();
   const contentImportData = parseContentImportParam();
 
-  const { cards, addCard, addCalendarPost, addShootItem, createCardFromIdea, updateCard, deleteCard, moveCard } = useKanban();
+  const { cards, addCard, addCalendarPost, addShootItem, createCardFromIdea, updateCard, deleteCard, moveCard, markAsPosted } = useKanban();
   const { plans, getPlan, updatePlan, ensurePlan, deletePlan } = useShootPlans();
   const {
     ideas,
@@ -88,12 +89,25 @@ function AppShell() {
 
   const handleCardClick = (card) => {
     const stored = cards.find((c) => c.id === card.id) || card;
-    if (card.occurrenceDate && hasStoryRecurrence(stored)) {
+    if (card.occurrenceDate && stored.contentType === "Story") {
       setSelectedCard(withStoryOccurrence(stored, card.occurrenceDate));
       return;
     }
     setSelectedCard(stored);
   };
+
+  useEffect(() => {
+    if (!selectedCard) return;
+    const fresh = cards.find((c) => c.id === selectedCard.id);
+    if (!fresh) return;
+    setSelectedCard((prev) => {
+      if (!prev || prev.id !== fresh.id) return prev;
+      if (prev.occurrenceDate && fresh.contentType === "Story") {
+        return withStoryOccurrence(fresh, prev.occurrenceDate);
+      }
+      return { ...fresh, occurrenceDate: prev.occurrenceDate };
+    });
+  }, [cards, selectedCard?.id]);
 
   const handleAddCalendarPost = (data) => {
     const id = addCalendarPost(data);
@@ -110,6 +124,10 @@ function AppShell() {
       columnId: "scheduled",
       status: "Scheduled",
     });
+  };
+
+  const handleMarkPosted = (cardId, occurrenceDate) => {
+    markAsPosted(cardId, occurrenceDate);
   };
 
   const handleRemoveFromCalendar = (card) => {
@@ -414,39 +432,14 @@ function AppShell() {
 
       <FilterBar clientFilter={clientFilter} onClientChange={setClientFilter} />
 
-      {contentReviewResponseCount > 0 && activeView === "board" && (
-        <div className="mx-auto max-w-[1200px] px-4 pt-4 sm:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#810100]/30 bg-[#a00000]/10 px-4 py-3">
-            <p className="text-sm text-[#fecaca]">
-              {contentReviewResponseCount} content review response{contentReviewResponseCount === 1 ? "" : "s"} ready to sync
-            </p>
-            <button
-              type="button"
-              onClick={handleApplyContentReviewResponses}
-              className="rounded-lg bg-[#810100] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#a00000]"
-            >
-              Apply to board
-            </button>
-          </div>
-        </div>
-      )}
-
-      {responseCount > 0 && activeView === "ideas" && (
-        <div className="mx-auto max-w-[1200px] px-4 pt-4 sm:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-            <p className="text-sm text-amber-200">
-              {responseCount} client response{responseCount === 1 ? "" : "s"} ready to sync
-            </p>
-            <button
-              type="button"
-              onClick={handleApplyClientResponses}
-              className="rounded-lg bg-amber-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-amber-500"
-            >
-              Apply to board
-            </button>
-          </div>
-        </div>
-      )}
+      <ClientSyncBanner
+        ideaCount={responseCount}
+        contentReviewCount={contentReviewResponseCount}
+        shootCount={shootResponseCount}
+        onApplyIdeas={handleApplyClientResponses}
+        onApplyContentReview={handleApplyContentReviewResponses}
+        onApplyShoot={handleApplyShootResponses}
+      />
 
       {activeView === "ideas" && (
         <VideoIdeas
@@ -509,24 +502,8 @@ function AppShell() {
           onReorderTasks={reorderTasks}
           onResetTaskOrder={resetTaskOrder}
           onSchedulePost={handleSchedulePost}
+          onMarkPosted={handleMarkPosted}
         />
-      )}
-
-      {shootResponseCount > 0 && activeView === "shoot" && (
-        <div className="mx-auto max-w-[1200px] px-4 pt-4 sm:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
-            <p className="text-sm text-emerald-200">
-              {shootResponseCount} client shoot schedule{shootResponseCount === 1 ? "" : "s"} ready to sync
-            </p>
-            <button
-              type="button"
-              onClick={handleApplyShootResponses}
-              className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-500"
-            >
-              Apply to Shoot Schedule
-            </button>
-          </div>
-        </div>
       )}
 
       {activeView === "shoot" && (

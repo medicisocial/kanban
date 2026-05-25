@@ -151,6 +151,36 @@ export function isStoryOccurrenceOnDate(card, dateKey) {
   return card.dueDate === dateKey;
 }
 
+export function parseStoryPostedDates(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
+}
+
+export function isStoryPostedOnDate(card, dateKey) {
+  if (!dateKey) return false;
+  return parseStoryPostedDates(card?.storyPostedDates).includes(dateKey);
+}
+
+export function isStoryOccurrenceDue(card, dateKey) {
+  return isStoryOccurrenceOnDate(card, dateKey) && !isStoryPostedOnDate(card, dateKey);
+}
+
+export function shouldArchiveStoryAfterPost(card, postedDates) {
+  if (hasStoryRecurrence(card)) return false;
+
+  if (hasStoryDailyRange(card)) {
+    let cursor = parseDateKey(card.dueDate);
+    const end = parseDateKey(card.storyEndDate);
+    while (cursor <= end) {
+      if (!postedDates.includes(toDateKey(cursor))) return false;
+      cursor = addDays(cursor, 1);
+    }
+    return true;
+  }
+
+  return Boolean(card.dueDate && postedDates.includes(card.dueDate));
+}
+
 export function formatStoryScheduleSummary(card) {
   if (hasStoryDailyRange(card)) {
     const start = new Date(`${card.dueDate}T12:00:00`).toLocaleDateString('en-US', {
@@ -221,6 +251,14 @@ export function expandStoriesForRange(cards, rangeStart, rangeEnd) {
   const occurrences = [];
 
   for (const card of cards) {
+    if (card.columnId === 'posted') continue;
+
+    const pushOccurrence = (dateKey) => {
+      if (!isStoryPostedOnDate(card, dateKey)) {
+        occurrences.push({ card, dateKey });
+      }
+    };
+
     if (hasStoryDailyRange(card)) {
       const from = parseDateKey(card.dueDate);
       const to = parseDateKey(card.storyEndDate);
@@ -230,7 +268,7 @@ export function expandStoriesForRange(cards, rangeStart, rangeEnd) {
       const last = to < end ? startOfDay(to) : startOfDay(end);
 
       while (cursor <= last) {
-        occurrences.push({ card, dateKey: toDateKey(cursor) });
+        pushOccurrence(toDateKey(cursor));
         cursor = addDays(cursor, 1);
       }
       continue;
@@ -241,7 +279,7 @@ export function expandStoriesForRange(cards, rangeStart, rangeEnd) {
       if (card.dueDate) {
         const date = parseDateKey(card.dueDate);
         if (date >= start && date <= end) {
-          occurrences.push({ card, dateKey: card.dueDate });
+          pushOccurrence(card.dueDate);
         }
       }
       continue;
@@ -252,7 +290,7 @@ export function expandStoriesForRange(cards, rangeStart, rangeEnd) {
 
     while (cursor <= end) {
       if (days.includes(cursor.getDay()) && cursor >= from) {
-        occurrences.push({ card, dateKey: toDateKey(cursor) });
+        pushOccurrence(toDateKey(cursor));
       }
       cursor = addDays(cursor, 1);
     }

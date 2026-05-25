@@ -1,11 +1,15 @@
 import {
-  isStoryOccurrenceOnDate,
+  isStoryOccurrenceDue,
   toDateKey,
   withStoryOccurrence,
 } from './calendar';
 import { compareEditorTasks, formatEditorDateLabel } from './editorTodo';
 
-function buildScheduleTask(card) {
+export function resolveAccountManager(card, clientAccountManagers = {}) {
+  return card.accountManager || clientAccountManagers[card.client] || '';
+}
+
+function buildScheduleTask(card, clientAccountManagers) {
   return {
     id: `schedule-${card.id}`,
     source: 'board',
@@ -20,12 +24,13 @@ function buildScheduleTask(card) {
     dueDate: card.dueDate || '',
     dueTime: card.dueTime || '',
     assignedTo: card.assignedTo || '',
+    accountManager: resolveAccountManager(card, clientAccountManagers),
     notes: card.notes || '',
     card,
   };
 }
 
-function buildPublishTask(card, taskDate) {
+function buildPublishTask(card, taskDate, clientAccountManagers) {
   const isStory = card.contentType === 'Story';
   const occurrenceCard = isStory ? withStoryOccurrence(card, taskDate) : card;
 
@@ -43,19 +48,20 @@ function buildPublishTask(card, taskDate) {
     dueDate: taskDate,
     dueTime: card.dueTime || '',
     assignedTo: card.assignedTo || '',
+    accountManager: resolveAccountManager(card, clientAccountManagers),
     notes: occurrenceCard.notes || '',
     card: occurrenceCard,
   };
 }
 
 /** Scheduled stories that need to be posted on a given day (usually today). */
-export function buildStoryTasksToday(cards, todayKey = toDateKey(new Date())) {
+export function buildStoryTasksToday(cards, todayKey = toDateKey(new Date()), clientAccountManagers = {}) {
   const tasks = [];
 
   for (const card of cards) {
     if (card.contentType !== 'Story' || card.columnId !== 'scheduled') continue;
-    if (isStoryOccurrenceOnDate(card, todayKey)) {
-      tasks.push(buildPublishTask(card, todayKey));
+    if (isStoryOccurrenceDue(card, todayKey)) {
+      tasks.push(buildPublishTask(card, todayKey, clientAccountManagers));
     }
   }
 
@@ -63,19 +69,20 @@ export function buildStoryTasksToday(cards, todayKey = toDateKey(new Date())) {
 }
 
 /** Overall to-do for non-story content: approved + scheduled posts. */
-export function buildPostsTodoTasks(cards) {
+export function buildPostsTodoTasks(cards, clientAccountManagers = {}) {
   const tasks = [];
 
   for (const card of cards) {
     if (card.contentType === 'Story') continue;
+    if (card.columnId === 'posted') continue;
 
     if (card.columnId === 'approved') {
-      tasks.push(buildScheduleTask(card));
+      tasks.push(buildScheduleTask(card, clientAccountManagers));
       continue;
     }
 
     if (card.columnId === 'scheduled' && card.dueDate) {
-      tasks.push(buildPublishTask(card, card.dueDate));
+      tasks.push(buildPublishTask(card, card.dueDate, clientAccountManagers));
     }
   }
 
@@ -138,7 +145,7 @@ export function groupAccountManagerTasksByDate(tasks, todayKey = toDateKey(new D
 export function filterAccountManagerTasks(tasks, { search, client, assignee }) {
   return tasks.filter((task) => {
     if (client && client !== 'all' && task.client !== client) return false;
-    if (assignee && assignee !== 'all' && task.assignedTo !== assignee) return false;
+    if (assignee && assignee !== 'all' && task.accountManager !== assignee) return false;
     if (!search) return true;
 
     const q = search.toLowerCase();
@@ -148,6 +155,7 @@ export function filterAccountManagerTasks(tasks, { search, client, assignee }) {
       task.contentType,
       task.notes,
       task.assignedTo,
+      task.accountManager,
       task.label,
     ]
       .join(' ')

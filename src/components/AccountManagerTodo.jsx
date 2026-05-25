@@ -18,9 +18,12 @@ const kindStyles = {
   'post-story': 'border-blue-500/30 bg-blue-500/10 text-blue-200',
 };
 
-function TaskCard({ task, getClientColor, onOpenCard, onScheduleClick }) {
+function TaskCard({ task, getClientColor, onOpenCard, onScheduleClick, onMarkPosted }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const badgeStyle = kindStyles[task.kind] || kindStyles.schedule;
+  const canMarkPosted = task.kind === 'publish' || task.kind === 'post-story';
+
+  const openCard = () => onOpenCard(task.card);
 
   return (
     <article className="rounded-xl border border-white/8 bg-[#111111] p-4">
@@ -44,7 +47,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onScheduleClick }) {
 
           <button
             type="button"
-            onClick={() => onOpenCard(task.card)}
+            onClick={openCard}
             className="text-left hover:text-[#fca5a5]"
           >
             <h3 className="text-sm font-semibold text-white">{task.title}</h3>
@@ -56,6 +59,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onScheduleClick }) {
 
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
             {task.assignedTo && <span>Editor: {task.assignedTo}</span>}
+            {task.accountManager && <span>AM: {task.accountManager}</span>}
             {task.dueTime && <span>{task.dueTime}</span>}
             {task.contentType === 'Story' && (
               <span>{formatStoryScheduleSummary(task.card)}</span>
@@ -64,21 +68,39 @@ function TaskCard({ task, getClientColor, onOpenCard, onScheduleClick }) {
           </div>
         </div>
 
-        {task.kind === 'schedule' && (
+        <div className="flex shrink-0 flex-col gap-2">
           <button
             type="button"
-            onClick={() => onScheduleClick(task.card)}
-            className="shrink-0 rounded-lg bg-[#810100] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#a00000]"
+            onClick={openCard}
+            className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-white/5 hover:text-white"
           >
-            Schedule
+            Edit
           </button>
-        )}
+          {task.kind === 'schedule' && (
+            <button
+              type="button"
+              onClick={() => onScheduleClick(task.card)}
+              className="rounded-lg bg-[#810100] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#a00000]"
+            >
+              Schedule
+            </button>
+          )}
+          {canMarkPosted && (
+            <button
+              type="button"
+              onClick={() => onMarkPosted(task.cardId, task.taskDate || task.card.occurrenceDate)}
+              className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
+            >
+              Mark posted
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );
 }
 
-function ClientGroupedList({ tasks, getClientColor, onOpenCard, onScheduleClick }) {
+function ClientGroupedList({ tasks, getClientColor, onOpenCard, onScheduleClick, onMarkPosted }) {
   const groups = useMemo(() => groupAccountManagerTasksByClient(tasks), [tasks]);
 
   return (
@@ -101,6 +123,7 @@ function ClientGroupedList({ tasks, getClientColor, onOpenCard, onScheduleClick 
                 getClientColor={getClientColor}
                 onOpenCard={onOpenCard}
                 onScheduleClick={onScheduleClick}
+                onMarkPosted={onMarkPosted}
               />
             ))}
           </div>
@@ -110,7 +133,7 @@ function ClientGroupedList({ tasks, getClientColor, onOpenCard, onScheduleClick 
   );
 }
 
-function DateGroupedList({ tasks, getClientColor, onOpenCard, onScheduleClick }) {
+function DateGroupedList({ tasks, getClientColor, onOpenCard, onScheduleClick, onMarkPosted }) {
   const todayKey = toDateKey(new Date());
   const groups = useMemo(
     () => groupAccountManagerTasksByDate(tasks, todayKey),
@@ -135,6 +158,7 @@ function DateGroupedList({ tasks, getClientColor, onOpenCard, onScheduleClick })
                 getClientColor={getClientColor}
                 onOpenCard={onOpenCard}
                 onScheduleClick={onScheduleClick}
+                onMarkPosted={onMarkPosted}
               />
             ))}
           </div>
@@ -150,14 +174,21 @@ export default function AccountManagerTodo({
   clientFilter,
   onOpenCard,
   onSchedulePost,
+  onMarkPosted,
 }) {
-  const { getClientColor } = useClientsContext();
+  const { getClientColor, clientAccountManagers } = useClientsContext();
   const todayKey = toDateKey(new Date());
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [scheduleCard, setScheduleCard] = useState(null);
 
-  const storyTasksToday = useMemo(() => buildStoryTasksToday(cards, todayKey), [cards, todayKey]);
-  const postsTodoTasks = useMemo(() => buildPostsTodoTasks(cards), [cards]);
+  const storyTasksToday = useMemo(
+    () => buildStoryTasksToday(cards, todayKey, clientAccountManagers),
+    [cards, todayKey, clientAccountManagers],
+  );
+  const postsTodoTasks = useMemo(
+    () => buildPostsTodoTasks(cards, clientAccountManagers),
+    [cards, clientAccountManagers],
+  );
 
   const filterOptions = useMemo(
     () => ({ search, client: clientFilter, assignee: assigneeFilter }),
@@ -233,6 +264,7 @@ export default function AccountManagerTodo({
               getClientColor={getClientColor}
               onOpenCard={onOpenCard}
               onScheduleClick={setScheduleCard}
+              onMarkPosted={onMarkPosted}
             />
           )}
         </section>
@@ -263,6 +295,7 @@ export default function AccountManagerTodo({
               getClientColor={getClientColor}
               onOpenCard={onOpenCard}
               onScheduleClick={setScheduleCard}
+              onMarkPosted={onMarkPosted}
             />
           )}
         </section>

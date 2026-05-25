@@ -22,6 +22,7 @@ export default function CompanyTasks({
   onReorderTasks,
   onResetTaskOrder,
   onSchedulePost,
+  onMarkPosted,
 }) {
   const [activeRole, setActiveRole] = useState('editor');
 
@@ -77,6 +78,7 @@ export default function CompanyTasks({
           clientFilter={clientFilter}
           onOpenCard={onOpenCard}
           onSchedulePost={onSchedulePost}
+          onMarkPosted={onMarkPosted}
         />
       )}
 

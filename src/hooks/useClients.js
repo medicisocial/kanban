@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   DEFAULT_CLIENTS,
   DEFAULT_CLIENT_COLORS,
+  DEFAULT_CLIENT_ACCOUNT_MANAGERS,
   CLIENTS_STORAGE_KEY,
   CLIENT_COLOR_PALETTE,
 } from '../constants';
@@ -16,6 +17,10 @@ function loadClients() {
         return {
           names: parsed.names,
           colors: { ...DEFAULT_CLIENT_COLORS, ...(parsed.colors || {}) },
+          accountManagers: {
+            ...DEFAULT_CLIENT_ACCOUNT_MANAGERS,
+            ...(parsed.accountManagers || {}),
+          },
         };
       }
     }
@@ -25,6 +30,7 @@ function loadClients() {
   return {
     names: [...DEFAULT_CLIENTS],
     colors: { ...DEFAULT_CLIENT_COLORS },
+    accountManagers: { ...DEFAULT_CLIENT_ACCOUNT_MANAGERS },
   };
 }
 
@@ -49,6 +55,7 @@ export function useClients() {
       return {
         names: [...prev.names, trimmed],
         colors: { ...prev.colors, [trimmed]: nextColor },
+        accountManagers: { ...prev.accountManagers },
       };
     });
 
@@ -63,11 +70,29 @@ export function useClients() {
     [state.colors],
   );
 
+  const getClientAccountManager = useCallback(
+    (client) => state.accountManagers[client] || '',
+    [state.accountManagers],
+  );
+
+  const setClientAccountManager = useCallback((client, accountManager) => {
+    setState((prev) => ({
+      ...prev,
+      accountManagers: {
+        ...prev.accountManagers,
+        [client]: accountManager,
+      },
+    }));
+  }, []);
+
   return {
     clients: state.names,
     clientColors: state.colors,
+    clientAccountManagers: state.accountManagers,
     defaultClient: state.names[0] || DEFAULT_CLIENTS[0],
     addClient,
     getClientColor,
+    getClientAccountManager,
+    setClientAccountManager,
   };
 }

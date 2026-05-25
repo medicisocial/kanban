@@ -5,6 +5,7 @@ export const COLUMNS = [
   { id: 'not-approved', title: 'Not Approved' },
   { id: 'approved', title: 'Approved' },
   { id: 'scheduled', title: 'Scheduled' },
+  { id: 'posted', title: 'Posted' },
 ];
 
 export const DEFAULT_CLIENTS = [
@@ -97,6 +98,15 @@ export const COLUMN_BG = {
   'not-approved': 'bg-[#1a1212]',
   approved: 'bg-[#161616]',
   scheduled: 'bg-[#181818]',
+  posted: 'bg-[#141414]',
+};
+
+export const DEFAULT_CLIENT_ACCOUNT_MANAGERS = {
+  Plume: 'Valerie Landeros',
+  'The Locker Room': 'Jordan Nguyen',
+  'Arco Fit': 'Jordan Nguyen',
+  'Ara Med Spa': 'Valerie Landeros',
+  'Fulshear Regional': 'Jordan Nguyen',
 };
 
 export const STORAGE_KEY = 'medici-social-kanban';
@@ -123,6 +133,7 @@ export function createCard(overrides = {}) {
     dueDate: '',
     dueTime: '',
     assignedTo: TEAM_MEMBERS[0],
+    accountManager: '',
     notes: '',
     referenceMusic: '',
     referenceVideo: '',
@@ -136,6 +147,8 @@ export function createCard(overrides = {}) {
     storyRecurrenceDays: [],
     storyEndDate: '',
     storyOccurrenceNotes: {},
+    storyPostedDates: [],
+    postedAt: null,
     clientComment: '',
     status: 'To Shoot',
     columnId: 'shoot',

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import {
   CONTENT_TYPES,
   TEAM_MEMBERS,
+  ACCOUNT_MANAGERS,
   PLATFORM,
   PLATFORM_ICON,
   DEFAULT_SHOOT_DURATIONS,
@@ -14,7 +15,7 @@ import StoryRecurrencePicker from './StoryRecurrencePicker';
 
 export default function CardModal({ card, onClose, onUpdate, onDelete }) {
   const overlayRef = useRef(null);
-  const { clients } = useClientsContext();
+  const { clients, getClientAccountManager } = useClientsContext();
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -49,6 +50,13 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
         storyRecurrenceDays: [],
         storyEndDate: '',
         storyOccurrenceNotes: {},
+      });
+      return;
+    }
+    if (field === 'client') {
+      onUpdate(card.id, {
+        client: value,
+        accountManager: getClientAccountManager(value) || card.accountManager || '',
       });
       return;
     }
@@ -278,19 +286,36 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
             </div>
           )}
 
-          <Field label="Assigned To">
-            <select
-              value={card.assignedTo}
-              onChange={(e) => handleChange('assignedTo', e.target.value)}
-              className={inputClass}
-            >
-              {TEAM_MEMBERS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </Field>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Editor">
+              <select
+                value={card.assignedTo}
+                onChange={(e) => handleChange('assignedTo', e.target.value)}
+                className={inputClass}
+              >
+                {TEAM_MEMBERS.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Account manager">
+              <select
+                value={card.accountManager || getClientAccountManager(card.client) || ''}
+                onChange={(e) => handleChange('accountManager', e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Use client default</option>
+                {ACCOUNT_MANAGERS.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
 
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

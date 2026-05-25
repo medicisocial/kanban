@@ -1,12 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { STORAGE_KEY, getSampleData, COLUMNS, PLATFORM, TEAM_MEMBERS, createCard } from '../constants';
-import { toDateKey, parseRecurrenceDays, parseStoryOccurrenceNotes } from '../utils/calendar';
+import {
+  toDateKey,
+  parseRecurrenceDays,
+  parseStoryOccurrenceNotes,
+  parseStoryPostedDates,
+  shouldArchiveStoryAfterPost,
+} from '../utils/calendar';
 
 const LEGACY_COLUMN_MAP = {
   briefing: 'shoot',
   'in-production': 'editing',
   scheduled: 'scheduled',
-  posted: 'scheduled',
 };
 
 function getStatusForColumn(columnId) {
@@ -38,6 +43,9 @@ function normalizeCard(card) {
     storyRecurrenceDays: parseRecurrenceDays(card.storyRecurrenceDays),
     storyEndDate: card.storyEndDate || '',
     storyOccurrenceNotes: parseStoryOccurrenceNotes(card.storyOccurrenceNotes),
+    storyPostedDates: parseStoryPostedDates(card.storyPostedDates),
+    accountManager: card.accountManager || '',
+    postedAt: card.postedAt || null,
     clientComment: card.clientComment || '',
     sourceIdeaId: card.sourceIdeaId || null,
   };
@@ -181,6 +189,38 @@ export function useKanban() {
     );
   }, []);
 
+  const markAsPosted = useCallback((cardId, occurrenceDate) => {
+    setCards((prev) =>
+      prev.map((card) => {
+        if (card.id !== cardId) return card;
+
+        if (card.contentType === 'Story') {
+          const dateKey =
+            occurrenceDate || card.occurrenceDate || card.dueDate || toDateKey(new Date());
+          const storyPostedDates = [
+            ...new Set([...parseStoryPostedDates(card.storyPostedDates), dateKey]),
+          ];
+          const updates = { storyPostedDates };
+
+          if (shouldArchiveStoryAfterPost({ ...card, storyPostedDates }, storyPostedDates)) {
+            updates.columnId = 'posted';
+            updates.status = 'Posted';
+            updates.postedAt = Date.now();
+          }
+
+          return { ...card, ...updates };
+        }
+
+        return {
+          ...card,
+          columnId: 'posted',
+          status: 'Posted',
+          postedAt: Date.now(),
+        };
+      }),
+    );
+  }, []);
+
   const addCardWithDetails = useCallback((overrides = {}) => {
     const columnId = overrides.columnId || 'shoot';
     const card = createCard({
@@ -231,5 +271,6 @@ export function useKanban() {
     updateCard,
     deleteCard,
     moveCard,
+    markAsPosted,
   };
 }

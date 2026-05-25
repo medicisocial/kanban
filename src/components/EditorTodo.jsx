@@ -137,6 +137,16 @@ function EditorTodoItem({
           </div>
         </div>
 
+        {!isOneOff && (
+          <button
+            type="button"
+            onClick={() => onOpenCard?.(task.card)}
+            className="shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-white/5 hover:text-white"
+          >
+            Edit
+          </button>
+        )}
+
         {isOneOff && !sortable && (
           <button
             type="button"

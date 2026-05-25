@@ -1,10 +1,15 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
+import { exportBackupFile, importBackupFile } from '../utils/dataBackup';
 import AddClientModal from './AddClientModal';
+import ClientAssignmentsModal from './ClientAssignmentsModal';
 
 export default function FilterBar({ clientFilter, onClientChange }) {
-  const { clients, addClient } = useClientsContext();
+  const { clients, addClient, clientAccountManagers, setClientAccountManager } = useClientsContext();
   const [showAddClient, setShowAddClient] = useState(false);
+  const [showAssignments, setShowAssignments] = useState(false);
+  const [backupMessage, setBackupMessage] = useState('');
+  const importInputRef = useRef(null);
 
   const handleAddClient = (name, color) => {
     const result = addClient(name, color);
@@ -12,6 +17,34 @@ export default function FilterBar({ clientFilter, onClientChange }) {
       onClientChange(result.name);
     }
     return result;
+  };
+
+  const handleExport = () => {
+    exportBackupFile();
+    setBackupMessage('Backup downloaded.');
+    setTimeout(() => setBackupMessage(''), 3000);
+  };
+
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (
+      !window.confirm(
+        'Import will replace all local data with the backup file. Continue?',
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await importBackupFile(file);
+      window.location.reload();
+    } catch (error) {
+      setBackupMessage(error.message || 'Import failed.');
+      setTimeout(() => setBackupMessage(''), 4000);
+    }
   };
 
   return (
@@ -40,7 +73,41 @@ export default function FilterBar({ clientFilter, onClientChange }) {
           + Add client
         </button>
 
-        <span className="ml-1 text-xs text-gray-500">📸 Instagram only</span>
+        <button
+          type="button"
+          onClick={() => setShowAssignments(true)}
+          className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:bg-white/10 hover:text-white"
+        >
+          AM assignments
+        </button>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExport}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:bg-white/10 hover:text-white"
+          >
+            Export backup
+          </button>
+          <button
+            type="button"
+            onClick={() => importInputRef.current?.click()}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:bg-white/10 hover:text-white"
+          >
+            Import backup
+          </button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept="application/json,.json"
+            onChange={handleImport}
+            className="hidden"
+          />
+        </div>
+
+        {backupMessage && <span className="text-xs text-emerald-300">{backupMessage}</span>}
+
+        <span className="ml-auto text-xs text-gray-500">📸 Instagram only</span>
       </div>
 
       {showAddClient && (
@@ -48,6 +115,15 @@ export default function FilterBar({ clientFilter, onClientChange }) {
           existingClients={clients}
           onClose={() => setShowAddClient(false)}
           onAdd={handleAddClient}
+        />
+      )}
+
+      {showAssignments && (
+        <ClientAssignmentsModal
+          clients={clients}
+          clientAccountManagers={clientAccountManagers}
+          onClose={() => setShowAssignments(false)}
+          onSetClientAccountManager={setClientAccountManager}
         />
       )}
     </>
