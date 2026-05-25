@@ -230,7 +230,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
             )}
           </div>
 
-          {!isOneOff && card.contentType === 'Story' && ['scheduled', 'editing', 'approved'].includes(card.columnId) && (
+          {!isOneOff && card.contentType === 'Story' && ['scheduled', 'editing', 'in-review', 'approved'].includes(card.columnId) && (
             <StoryRecurrencePicker
               mode={storyRecurrenceMode}
               onModeChange={(mode) => {

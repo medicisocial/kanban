@@ -19,7 +19,7 @@ import {
 } from "./utils/contentReviewShare";
 import { getCalendarPortalClient } from "./utils/calendarShare";
 import { withStoryOccurrence, parseStoryOccurrenceNotes } from "./utils/calendar";
-import { createCard } from "./constants";
+import { createCard, COLUMNS } from "./constants";
 import { useEditorTasks } from "./hooks/useEditorTasks";
 import { useAdminTasks } from "./hooks/useAdminTasks";
 import CompanyTasks from "./components/CompanyTasks";
@@ -160,7 +160,7 @@ function AppShell() {
 
     if (
       !window.confirm(
-        `Remove "${card.title}" from the calendar? The card will stay on the board in ${card.columnId === "scheduled" ? "Scheduled" : "Editing"} without a plan date.`,
+        `Remove "${card.title}" from the calendar? The card will stay on the board in ${COLUMNS.find((col) => col.id === card.columnId)?.title || card.columnId} without a plan date.`,
       )
     ) {
       return;

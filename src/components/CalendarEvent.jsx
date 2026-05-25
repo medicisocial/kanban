@@ -1,4 +1,4 @@
-import { getContentTypeStyle, PLATFORM_ICON } from "../constants";
+import { COLUMNS, getContentTypeStyle, PLATFORM_ICON } from "../constants";
 import { useClientsContext } from "../context/ClientsContext";
 import { formatTime } from "../utils";
 import { formatStoryScheduleSummary, hasStoryDailyRange, hasStoryRecurrence } from "../utils/calendar";
@@ -10,10 +10,16 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
   const clientColor = getClientColor(card.client);
   const scheduleSummary = formatStoryScheduleSummary(card);
   const hasStorySchedule = hasStoryRecurrence(card) || hasStoryDailyRange(card);
-  const boardStatus =
-    card.columnId === 'scheduled' ? 'Scheduled' : card.columnId === 'editing' ? 'Editing' : null;
+  const columnMeta = COLUMNS.find((col) => col.id === card.columnId);
+  const boardStatus = columnMeta?.title ?? null;
   const statusClass =
-    card.columnId === 'scheduled' ? 'text-emerald-300' : 'text-amber-300';
+    card.columnId === 'scheduled'
+      ? 'text-emerald-300'
+      : card.columnId === 'approved'
+        ? 'text-blue-300'
+        : card.columnId === 'in-review'
+          ? 'text-[#fca5a5]'
+          : 'text-amber-300';
   const eventTitle = hideClient
     ? card.title
     : `${card.client}: ${card.title}${scheduleSummary ? ` (${scheduleSummary})` : ""}`;

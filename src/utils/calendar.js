@@ -333,7 +333,7 @@ export function groupCardsByDate(cards) {
   return map;
 }
 
-export const STAFF_CALENDAR_COLUMN_IDS = ['editing', 'scheduled'];
+export const STAFF_CALENDAR_COLUMN_IDS = ['editing', 'in-review', 'approved', 'scheduled'];
 
 export function isStaffCalendarCard(card) {
   return STAFF_CALENDAR_COLUMN_IDS.includes(card.columnId);
