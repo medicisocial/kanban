@@ -110,11 +110,13 @@ function withColumnDate(columnId, dueDate, isOneOffProject = false) {
   return dueDate;
 }
 
+const ONE_OFF_ALLOWED_COLUMNS = ['editing', 'in-review', 'not-approved', 'approved', 'finished'];
+
 function canMoveCardToColumn(card, targetColumnId) {
-  if (targetColumnId === 'finished') return card.isOneOffProject;
   if (card.isOneOffProject) {
-    return targetColumnId === 'editing' || targetColumnId === 'finished';
+    return ONE_OFF_ALLOWED_COLUMNS.includes(targetColumnId);
   }
+  if (targetColumnId === 'finished') return false;
   return true;
 }
 

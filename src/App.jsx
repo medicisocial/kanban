@@ -127,11 +127,6 @@ function AppShell() {
   };
 
   const handleSubmitForReview = (cardId) => {
-    const card = cards.find((c) => c.id === cardId);
-    if (card?.isOneOffProject) {
-      moveCard(cardId, "finished");
-      return;
-    }
     moveCard(cardId, "in-review");
   };
 

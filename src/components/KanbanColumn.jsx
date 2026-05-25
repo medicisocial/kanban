@@ -53,7 +53,7 @@ export default function KanbanColumn({ column, cards, onAddCard, onCardClick, on
 
         {cards.length === 0 && (
           <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-white/10 py-12 text-xs text-gray-500">
-            {column.id === 'finished' ? 'One-off projects land here when done' : 'Drop cards here'}
+            {column.id === 'finished' ? 'Approved one-off projects land here when done' : 'Drop cards here'}
           </div>
         )}
       </div>

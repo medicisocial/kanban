@@ -48,9 +48,8 @@ function EditorTodoItem({
   todayKey,
 }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
-  const isOneOff = task.kind === 'oneoff';
+  const isOneOff = task.isOneOffProject;
   const clientColor = getClientColor(task.client);
-  const isActive = !task.completed;
   const statusOptions = getEditorTaskStatusOptions(isOneOff);
 
   const openCard = () => {
@@ -174,16 +173,16 @@ function EditorTodoItem({
               Needs edits
             </button>
           )}
-          {isOneOff && isActive && (
+          {isOneOff && task.columnId === 'approved' && (
             <button
               type="button"
-              onClick={() => onSubmitForReview?.(task.cardId)}
+              onClick={() => onMoveTask?.(task.cardId, 'finished')}
               className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
             >
-              Mark done
+              Mark finished
             </button>
           )}
-          {isOneOff && !isActive && (
+          {isOneOff && task.completed && (
             <button
               type="button"
               onClick={() => onSendBackForEditing?.(task.cardId)}
@@ -287,7 +286,7 @@ export default function EditorTodo({
 
   const editCount = filteredTasks.filter((t) => t.kind === 'edit').length;
   const approveCount = filteredTasks.filter((t) => t.kind === 'approve').length;
-  const oneOffCount = filteredTasks.filter((t) => t.kind === 'oneoff' && !t.completed).length;
+  const oneOffCount = filteredTasks.filter((t) => t.isOneOffProject && !t.completed).length;
 
   const handleSortModeChange = (mode) => {
     if (mode === 'custom' && !taskOrder.length && filteredTasks.length) {

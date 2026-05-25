@@ -44,7 +44,7 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
         <div className="border-b border-white/5 px-5 py-4">
           <h2 className="text-lg font-semibold text-white">Add one-off project</h2>
           <p className="mt-1 text-sm text-gray-400">
-            Creates a card on the board in Editing — no posting date required. Mark done when finished.
+            Creates a card on the board in Editing — goes through review and approval like other content.
           </p>
         </div>
 

@@ -77,7 +77,9 @@ export default function KanbanBoard({
       map[col.id] = filteredCards.filter((c) => {
         if (c.columnId !== col.id) return false;
         if (col.id === 'finished') return c.isOneOffProject;
-        if (c.isOneOffProject && col.id !== 'editing') return false;
+        if (c.isOneOffProject) {
+          return ['editing', 'in-review', 'not-approved', 'approved'].includes(col.id);
+        }
         return true;
       });
     });

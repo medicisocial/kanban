@@ -3,7 +3,7 @@ import { toDateKey } from './calendar';
 
 export const EDIT_TASK_COLUMNS = ['editing', 'not-approved'];
 export const APPROVE_TASK_COLUMNS = ['in-review'];
-export const ONE_OFF_TASK_COLUMNS = ['editing', 'finished'];
+export const ONE_OFF_EDITOR_COLUMNS = ['editing', 'not-approved', 'in-review', 'approved', 'finished'];
 
 export const REGULAR_EDITOR_STATUS_COLUMN_IDS = [
   'shoot',
@@ -15,25 +15,32 @@ export const REGULAR_EDITOR_STATUS_COLUMN_IDS = [
   'posted',
 ];
 
-export const ONE_OFF_STATUS_COLUMN_IDS = ['editing', 'finished'];
+export const ONE_OFF_STATUS_COLUMN_IDS = [
+  'editing',
+  'in-review',
+  'not-approved',
+  'approved',
+  'finished',
+];
 
 export function getEditorTaskStatusOptions(isOneOffProject = false) {
   const allowed = isOneOffProject ? ONE_OFF_STATUS_COLUMN_IDS : REGULAR_EDITOR_STATUS_COLUMN_IDS;
   return COLUMNS.filter((col) => allowed.includes(col.id));
 }
 
-export function getEditorTaskKind(columnId, isOneOffProject = false) {
-  if (isOneOffProject && ONE_OFF_TASK_COLUMNS.includes(columnId)) return 'oneoff';
+export function getEditorTaskKind(columnId) {
   if (EDIT_TASK_COLUMNS.includes(columnId)) return 'edit';
   if (APPROVE_TASK_COLUMNS.includes(columnId)) return 'approve';
+  if (columnId === 'approved') return 'oneoff';
   return null;
 }
 
 export function getEditorTaskLabel(columnId, isOneOffProject = false) {
-  if (isOneOffProject) return 'One-off';
-  if (columnId === 'editing') return 'Edit';
-  if (columnId === 'not-approved') return 'Revise';
-  if (columnId === 'in-review') return 'Review / Approve';
+  if (columnId === 'editing') return isOneOffProject ? 'One-off · Edit' : 'Edit';
+  if (columnId === 'not-approved') return isOneOffProject ? 'One-off · Revise' : 'Revise';
+  if (columnId === 'in-review') return isOneOffProject ? 'One-off · Review' : 'Review / Approve';
+  if (columnId === 'approved') return 'One-off · Approved';
+  if (columnId === 'finished') return 'One-off · Finished';
   return 'Task';
 }
 
@@ -41,13 +48,11 @@ function getTaskSortDate(card) {
   return card.dueDate || card.shootDate || '';
 }
 
-function buildOneOffBoardTask(card) {
+function buildEditorTaskFromCard(card, overrides = {}) {
   return {
     id: `board-${card.id}`,
     source: 'board',
     cardId: card.id,
-    kind: 'oneoff',
-    label: 'One-off',
     title: card.title,
     client: card.client,
     contentType: card.contentType,
@@ -56,8 +61,9 @@ function buildOneOffBoardTask(card) {
     assignedTo: card.assignedTo || '',
     notes: card.notes || '',
     clientComment: card.clientComment || '',
-    completed: card.columnId === 'finished',
+    isOneOffProject: Boolean(card.isOneOffProject),
     card,
+    ...overrides,
   };
 }
 
@@ -68,31 +74,50 @@ export function buildBoardEditorTasks(cards) {
     if (card.contentType === 'Story') continue;
 
     if (card.isOneOffProject) {
-      if (card.columnId === 'editing' || card.columnId === 'finished') {
-        tasks.push(buildOneOffBoardTask(card));
+      if (!ONE_OFF_EDITOR_COLUMNS.includes(card.columnId)) continue;
+
+      if (card.columnId === 'finished') {
+        tasks.push(
+          buildEditorTaskFromCard(card, {
+            kind: 'oneoff',
+            label: getEditorTaskLabel('finished', true),
+            completed: true,
+          }),
+        );
+        continue;
       }
+
+      if (card.columnId === 'approved') {
+        tasks.push(
+          buildEditorTaskFromCard(card, {
+            kind: 'oneoff',
+            label: getEditorTaskLabel('approved', true),
+          }),
+        );
+        continue;
+      }
+
+      const kind = getEditorTaskKind(card.columnId);
+      if (!kind) continue;
+
+      tasks.push(
+        buildEditorTaskFromCard(card, {
+          kind,
+          label: getEditorTaskLabel(card.columnId, true),
+        }),
+      );
       continue;
     }
 
     const kind = getEditorTaskKind(card.columnId);
     if (!kind) continue;
 
-    tasks.push({
-      id: `board-${card.id}`,
-      source: 'board',
-      cardId: card.id,
-      kind,
-      label: getEditorTaskLabel(card.columnId),
-      title: card.title,
-      client: card.client,
-      contentType: card.contentType,
-      columnId: card.columnId,
-      dueDate: getTaskSortDate(card),
-      assignedTo: card.assignedTo || '',
-      notes: card.notes || '',
-      clientComment: card.clientComment || '',
-      card,
-    });
+    tasks.push(
+      buildEditorTaskFromCard(card, {
+        kind,
+        label: getEditorTaskLabel(card.columnId),
+      }),
+    );
   }
 
   return tasks;
@@ -148,7 +173,7 @@ export function groupEditorTasksByDate(tasks, todayKey = toDateKey(new Date())) 
       ? formatEditorDateLabel(task.dueDate, todayKey)
       : 'No date set';
 
-    if (task.kind === 'oneoff' && !task.dueDate) {
+    if (task.isOneOffProject && !task.dueDate) {
       groupKey = 'no-date';
       groupLabel = 'No posting date';
     } else if (task.dueDate && task.dueDate < todayKey) {
@@ -180,7 +205,7 @@ export function formatEditorDateLabel(dateKey, todayKey = toDateKey(new Date()))
 
 export function filterEditorTasks(tasks, { search, assignee, client, includeCompleted = true }) {
   return tasks.filter((task) => {
-    if (task.kind === 'oneoff' && task.completed && !includeCompleted) return false;
+    if (task.isOneOffProject && task.completed && !includeCompleted) return false;
     if (assignee && assignee !== 'all' && task.assignedTo !== assignee) return false;
     if (client && client !== 'all' && task.client !== client) return false;
     if (!search) return true;
