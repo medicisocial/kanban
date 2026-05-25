@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   clearGmailAuth,
   connectGmail,
-  GMAIL_OAUTH_MESSAGE_TYPE,
   loadGmailAuth,
   saveGmailAuth,
   sendShareEmailViaGmail,
@@ -10,22 +9,17 @@ import {
 
 export function useGmail() {
   const [auth, setAuth] = useState(() => loadGmailAuth());
+  const [connecting, setConnecting] = useState(false);
 
-  useEffect(() => {
-    const handleMessage = (event) => {
-      if (event.origin !== window.location.origin) return;
-      if (event.data?.type !== GMAIL_OAUTH_MESSAGE_TYPE) return;
-      const payload = event.data.payload;
-      if (!payload?.refreshToken) return;
-      saveGmailAuth(payload);
-      setAuth(payload);
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+  const connect = useCallback(async () => {
+    setConnecting(true);
+    const result = await connectGmail();
+    setConnecting(false);
+    if (result.ok && result.auth) {
+      setAuth(result.auth);
+    }
+    return result;
   }, []);
-
-  const connect = useCallback(() => connectGmail(), []);
 
   const disconnect = useCallback(() => {
     clearGmailAuth();
@@ -49,6 +43,7 @@ export function useGmail() {
   return {
     isConnected: Boolean(auth?.refreshToken),
     accountEmail: auth?.accountEmail || '',
+    connecting,
     connect,
     disconnect,
     sendShareEmail,

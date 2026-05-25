@@ -1,7 +1,7 @@
 import { useGmail } from '../hooks/useGmail';
 
 export default function GmailConnectButton() {
-  const { isConnected, accountEmail, connect, disconnect } = useGmail();
+  const { isConnected, accountEmail, connecting, connect, disconnect } = useGmail();
 
   if (isConnected) {
     return (
@@ -25,9 +25,10 @@ export default function GmailConnectButton() {
     <button
       type="button"
       onClick={() => connect()}
-      className="rounded-lg border border-[#810100]/40 bg-[#810100]/10 px-3 py-2 text-sm text-[#f9f6f2] transition hover:bg-[#810100]/20"
+      disabled={connecting}
+      className="rounded-lg border border-[#810100]/40 bg-[#810100]/10 px-3 py-2 text-sm text-[#f9f6f2] transition hover:bg-[#810100]/20 disabled:opacity-60"
     >
-      Connect Gmail
+      {connecting ? 'Connecting…' : 'Connect Gmail'}
     </button>
   );
 }

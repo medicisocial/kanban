@@ -1,9 +1,22 @@
 #!/usr/bin/env node
 /**
- * Save Google OAuth credentials to Vercel.
- * Usage: node scripts/setup-gmail-oauth.mjs CLIENT_ID CLIENT_SECRET [REFRESH_TOKEN]
+ * Save Google OAuth credentials to Vercel and redeploy.
+ * Usage: node scripts/setup-gmail-oauth.mjs CLIENT_ID CLIENT_SECRET
+ *
+ * Create a Web application OAuth client at:
+ * https://console.cloud.google.com/auth/clients/create?project=medici-client-pipeline
+ *
+ * Authorized JavaScript origins:
+ *   https://clientpipeline.vercel.app
+ *   https://kanban-three-virid.vercel.app
+ *
+ * Authorized redirect URIs (same as origins for popup sign-in):
+ *   https://clientpipeline.vercel.app
+ *   https://kanban-three-virid.vercel.app
  */
 import { execSync, spawnSync } from 'node:child_process';
+
+const PROJECTS = ['medicisocialportal', 'kanban'];
 
 function run(cmd) {
   console.log(`> ${cmd}`);
@@ -24,33 +37,35 @@ function setVercelEnv(name, value) {
 async function main() {
   const clientId = process.argv[2]?.trim();
   const clientSecret = process.argv[3]?.trim();
-  const refreshToken = process.argv[4]?.trim();
 
   if (!clientId || !clientSecret) {
     console.log(`
-Google Cloud → medici-client-pipeline → OAuth client (Web):
+Create a Web application OAuth client (NOT IAP):
+  https://console.cloud.google.com/auth/clients/create?project=medici-client-pipeline
 
-1. Consent screen: External, app name "Medici Client Pipeline"
-   Scopes: gmail.send, userinfo.email
-   Test user: info@medicisocial.com
+Authorized JavaScript origins:
+  https://clientpipeline.vercel.app
+  https://kanban-three-virid.vercel.app
 
-2. Create OAuth client → Web application
-   Redirect URIs:
-     https://clientpipeline.vercel.app/api/google/callback
-     https://kanban-three-virid.vercel.app/api/google/callback
+Authorized redirect URIs:
+  https://clientpipeline.vercel.app
+  https://kanban-three-virid.vercel.app
 
-3. Run:
-   node scripts/setup-gmail-oauth.mjs CLIENT_ID CLIENT_SECRET
+Then run:
+  node scripts/setup-gmail-oauth.mjs CLIENT_ID CLIENT_SECRET
 `);
     process.exit(1);
   }
 
-  setVercelEnv('GOOGLE_CLIENT_ID', clientId);
-  setVercelEnv('GOOGLE_CLIENT_SECRET', clientSecret);
-  if (refreshToken) setVercelEnv('GOOGLE_REFRESH_TOKEN', refreshToken);
+  for (const project of PROJECTS) {
+    run(`npm exec --yes vercel@latest link -- --yes --project ${project}`);
+    console.log(`\nSetting env vars on ${project}…`);
+    setVercelEnv('GOOGLE_CLIENT_ID', clientId);
+    setVercelEnv('GOOGLE_CLIENT_SECRET', clientSecret);
+    run('npm exec --yes vercel@latest -- deploy --prod');
+  }
 
-  run('npm exec --yes vercel@latest -- deploy --prod');
-  console.log('\nDone. Open the app → Connect Gmail → sign in as info@medicisocial.com');
+  console.log('\nDone. Open the app and click Connect Gmail.');
 }
 
 main().catch((error) => {
