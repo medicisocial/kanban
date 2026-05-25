@@ -128,8 +128,8 @@ export default function KanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="mx-auto max-w-[1800px] overflow-x-auto px-4 pb-6 sm:px-6">
-        <div className="mx-auto flex w-max justify-center gap-3">
+      <div className="w-full overflow-x-auto scroll-px-4 pb-6 sm:scroll-px-6">
+        <div className="flex w-max gap-3 px-4 sm:px-6">
           {COLUMNS.map((column) => (
             <KanbanColumn
               key={column.id}
