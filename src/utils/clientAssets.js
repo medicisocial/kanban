@@ -206,15 +206,9 @@ export function saveClientAssetsEntry(client, assets, knownClients = []) {
     return null;
   }
 
-  const clientColor =
-    parseHexColor(payload.branding.primaryColor) ||
-    parseHexColor(payload.branding.accentColor) ||
-    '#810100';
-  const normalized = normalizeClientAssets(payload, clientColor);
-
   const store = reconcileClientAssetsStore(loadClientAssetsStore(), knownClients);
   const canonicalClient = resolveClientStoreKey(store, client, knownClients);
-  store[canonicalClient] = normalized;
+  store[canonicalClient] = payload;
   const serialized = JSON.stringify(store);
   localStorage.setItem(CLIENT_ASSETS_STORAGE_KEY, serialized);
 

@@ -7,9 +7,10 @@ import {
   OPUS_FONT_FAMILIES,
   OPUS_STYLE_KEYS,
   getOpusPreviewStyle,
-  normalizeClientAssets,
+  loadClientAssetsStore,
   parseHexColor,
   previewHexColor,
+  readClientAssetsEntry,
   toColorPickerHex,
 } from '../utils/clientAssets';
 
@@ -34,19 +35,15 @@ function Field({ label, children, className = '' }) {
   );
 }
 
-function commitHexColor(onChange, raw) {
-  const parsed = parseHexColor(typeof raw === 'string' ? raw : '');
-  if (!parsed) return false;
-  flushSync(() => onChange(parsed));
-  return true;
-}
+function OpusColorField({ label, styleKey, colorField, value, onPatch, showTextSample = false }) {
+  const display = parseHexColor(value) || '#ffffff';
+  const swatchColor = previewHexColor(display, display);
+  const pickerHex = toColorPickerHex(display);
 
-/** Opus color field — patches draft immediately, same reliability as font size inputs. */
-function OpusColorField({ label, value, onChange, showTextSample = false }) {
-  const textRef = useRef(null);
-  const resolved = parseHexColor(value) || '#ffffff';
-  const swatchColor = previewHexColor(resolved, resolved);
-  const pickerHex = toColorPickerHex(resolved);
+  const commit = (raw) => {
+    const parsed = parseHexColor(raw);
+    if (parsed) onPatch(colorField, parsed);
+  };
 
   return (
     <Field label={label}>
@@ -72,24 +69,22 @@ function OpusColorField({ label, value, onChange, showTextSample = false }) {
           <input
             type="color"
             value={pickerHex}
-            onChange={(e) => commitHexColor(onChange, e.target.value)}
+            onChange={(e) => commit(e.target.value)}
             className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
             aria-label={`${label} picker`}
           />
         </div>
         <input
-          ref={textRef}
-          key={resolved}
           type="text"
-          defaultValue={resolved}
-          onChange={(e) => commitHexColor(onChange, e.target.value)}
-          onBlur={(e) => commitHexColor(onChange, e.target.value)}
-          onPaste={() => {
-            requestAnimationFrame(() => {
-              if (textRef.current) {
-                commitHexColor(onChange, textRef.current.value);
-              }
-            });
+          data-opus-color-text
+          data-style-key={styleKey}
+          data-color-field={colorField}
+          value={display}
+          onChange={(e) => commit(e.target.value)}
+          onBlur={(e) => commit(e.target.value)}
+          onPaste={(e) => {
+            const pasted = e.clipboardData?.getData('text') ?? '';
+            requestAnimationFrame(() => commit(pasted));
           }}
           className={inputClass}
           placeholder="#000000"
@@ -255,8 +250,10 @@ function OpusStyleEditor({ styleKey, style, onPatchField }) {
 
         <OpusColorField
           label="Text color"
+          styleKey={styleKey}
+          colorField="color"
           value={style.color}
-          onChange={(v) => onPatchField('color', v)}
+          onPatch={onPatchField}
           showTextSample
         />
 
@@ -273,8 +270,10 @@ function OpusStyleEditor({ styleKey, style, onPatchField }) {
 
         <OpusColorField
           label="Stroke color"
+          styleKey={styleKey}
+          colorField="strokeColor"
           value={style.strokeColor}
-          onChange={(v) => onPatchField('strokeColor', v)}
+          onPatch={onPatchField}
         />
 
         <Field label="Letter spacing (px)">
@@ -328,8 +327,10 @@ function OpusStyleEditor({ styleKey, style, onPatchField }) {
 
         <OpusColorField
           label="Background color"
+          styleKey={styleKey}
+          colorField="backgroundColor"
           value={style.backgroundColor}
-          onChange={(v) => onPatchField('backgroundColor', v)}
+          onPatch={onPatchField}
         />
 
         <Field label="Background opacity (0–1)">
@@ -429,12 +430,37 @@ export default function ClientAssets({ clientFilter }) {
 
   const patchDraft = (updater) => {
     setSaveError('');
-    setDraft((prev) => {
-      if (!prev) return prev;
-      const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
-      draftRef.current = next;
-      return next;
+    const prev = draftRef.current ?? draft;
+    if (!prev) return;
+    const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
+    draftRef.current = next;
+    setDraft(next);
+  };
+
+  const flushOpusColorsFromDom = () => {
+    const prev = draftRef.current ?? draft;
+    if (!prev) return;
+
+    let next = prev;
+    document.querySelectorAll('[data-opus-color-text]').forEach((node) => {
+      if (!(node instanceof HTMLInputElement)) return;
+      const styleKey = node.dataset.styleKey;
+      const field = node.dataset.colorField;
+      const parsed = parseHexColor(node.value);
+      if (!parsed || !styleKey || !field) return;
+      next = {
+        ...next,
+        opusAi: {
+          ...next.opusAi,
+          [styleKey]: { ...next.opusAi[styleKey], [field]: parsed },
+        },
+      };
     });
+
+    if (next !== prev) {
+      draftRef.current = next;
+      setDraft(next);
+    }
   };
 
   const patchBranding = (field, value) => {
@@ -457,19 +483,12 @@ export default function ClientAssets({ clientFilter }) {
   const handleSave = () => {
     if (!activeClient) return;
     flushFocusedField();
+    flushOpusColorsFromDom();
 
-    let payload = null;
-    flushSync(() => {
-      setDraft((current) => {
-        if (!current) return current;
-        payload = JSON.parse(JSON.stringify(current));
-        draftRef.current = current;
-        return current;
-      });
-    });
+    const source = draftRef.current ?? draft;
+    if (!source) return;
 
-    if (!payload) return;
-
+    const payload = JSON.parse(JSON.stringify(source));
     const saved = saveClientAssets(activeClient, payload);
     if (!saved) {
       setSaveError('Could not save — try again or check browser storage settings.');
@@ -477,8 +496,9 @@ export default function ClientAssets({ clientFilter }) {
     }
 
     setSaveError('');
+    const store = loadClientAssetsStore();
     const synced = JSON.parse(
-      JSON.stringify(normalizeClientAssets(payload, getClientColor(activeClient))),
+      JSON.stringify(readClientAssetsEntry(store, activeClient, getClientColor(activeClient), clients)),
     );
     setDraft(synced);
     setBaseline(JSON.parse(JSON.stringify(synced)));
@@ -499,6 +519,9 @@ export default function ClientAssets({ clientFilter }) {
     if (isDirty && !window.confirm('Discard unsaved changes for this client?')) return;
     setSaveError('');
     loadedClientRef.current = null;
+    setDraft(null);
+    setBaseline(null);
+    draftRef.current = null;
     setActiveClient(nextClient);
   };
 
