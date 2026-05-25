@@ -25,6 +25,7 @@ import {
   getEditorTaskStatusOptions,
   groupEditorTasksByDate,
   filterEditorTasks,
+  splitEditorTasksByQueue,
 } from '../utils/editorTodo';
 import AddEditorTaskModal from './AddEditorTaskModal';
 
@@ -228,6 +229,124 @@ function SortableEditorTodoItem(props) {
   );
 }
 
+function EditorTaskList({
+  tasks,
+  sortMode,
+  sensors,
+  onDragEnd,
+  onOpenCard,
+  onDeleteOneOffTask,
+  onSubmitForReview,
+  onSendBackForEditing,
+  onMoveTask,
+  getClientColor,
+  todayKey,
+  emptyMessage,
+}) {
+  if (tasks.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-white/10 px-4 py-10 text-center">
+        <p className="text-sm text-gray-400">{emptyMessage}</p>
+      </div>
+    );
+  }
+
+  if (sortMode === 'custom') {
+    return (
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-3">
+            {tasks.map((task) => (
+              <SortableEditorTodoItem
+                key={task.id}
+                task={task}
+                onOpenCard={onOpenCard}
+                onDeleteOneOff={onDeleteOneOffTask}
+                onSubmitForReview={onSubmitForReview}
+                onSendBackForEditing={onSendBackForEditing}
+                onMoveTask={onMoveTask}
+                getClientColor={getClientColor}
+                showDateBadge
+                todayKey={todayKey}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    );
+  }
+
+  const groupedTasks = groupEditorTasksByDate(tasks, todayKey);
+
+  return (
+    <div className="space-y-6">
+      {groupedTasks.map((group) => (
+        <section key={group.key}>
+          <h4
+            className={`mb-3 text-xs font-semibold uppercase tracking-wider ${
+              group.key === 'overdue' ? 'text-red-300' : 'text-gray-500'
+            }`}
+          >
+            {group.label}
+          </h4>
+          <div className="space-y-3">
+            {group.tasks.map((task) => (
+              <EditorTodoItem
+                key={task.id}
+                task={task}
+                onOpenCard={onOpenCard}
+                onDeleteOneOff={onDeleteOneOffTask}
+                onSubmitForReview={onSubmitForReview}
+                onSendBackForEditing={onSendBackForEditing}
+                onMoveTask={onMoveTask}
+                getClientColor={getClientColor}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function EditorTaskColumn({
+  title,
+  description,
+  count,
+  accentClass,
+  tasks,
+  sortMode,
+  sensors,
+  onDragEnd,
+  emptyMessage,
+  itemProps,
+  todayKey,
+}) {
+  return (
+    <section className="min-w-0 rounded-2xl border border-white/10 bg-[#0d0d0d] p-4 sm:p-5">
+      <div className="mb-4 border-b border-white/8 pb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-base font-semibold text-white">{title}</h3>
+          <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${accentClass}`}>
+            {count}
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-gray-500">{description}</p>
+      </div>
+
+      <EditorTaskList
+        tasks={tasks}
+        sortMode={sortMode}
+        sensors={sensors}
+        onDragEnd={onDragEnd}
+        emptyMessage={emptyMessage}
+        todayKey={todayKey}
+        {...itemProps}
+      />
+    </section>
+  );
+}
+
 export default function EditorTodo({
   embedded = false,
   cards,
@@ -279,13 +398,13 @@ export default function EditorTodo({
     [filteredTasks, sortMode, taskOrder],
   );
 
-  const groupedTasks = useMemo(
-    () => groupEditorTasksByDate(orderedTasks, todayKey),
-    [orderedTasks, todayKey],
+  const { editing: editingTasks, inReview: reviewTasks } = useMemo(
+    () => splitEditorTasksByQueue(orderedTasks),
+    [orderedTasks],
   );
 
-  const editCount = filteredTasks.filter((t) => t.kind === 'edit').length;
-  const approveCount = filteredTasks.filter((t) => t.kind === 'approve').length;
+  const editCount = editingTasks.length;
+  const approveCount = reviewTasks.length;
   const oneOffCount = filteredTasks.filter((t) => t.isOneOffProject && !t.completed).length;
 
   const handleSortModeChange = (mode) => {
@@ -309,24 +428,35 @@ export default function EditorTodo({
       sortMode === mode ? 'bg-[#810100] text-white' : 'text-gray-400 hover:text-white'
     }`;
 
+  const itemProps = {
+    onOpenCard,
+    onDeleteOneOffTask,
+    onSubmitForReview,
+    onSendBackForEditing,
+    onMoveTask,
+    getClientColor,
+  };
+
   return (
-    <div className={embedded ? '' : 'mx-auto max-w-[900px] px-4 py-4 sm:px-6'}>
+    <div className={embedded ? '' : 'mx-auto max-w-[1400px] px-4 py-4 sm:px-6'}>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-white">Editor tasks</h2>
           <p className="mt-1 text-sm text-gray-400">
-            Auto-generated from the board — drag to set your own priority order.
+            Editing and review queues from the board — drag within a column to set priority.
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
             <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-200">
-              {editCount} to edit
+              {editCount} need editing
             </span>
             <span className="rounded-full border border-[#810100]/30 bg-[#a00000]/10 px-2.5 py-1 text-[#fecaca]">
-              {approveCount} to review
+              {approveCount} in review
             </span>
-            <span className="rounded-full border border-white/20 bg-white/5 px-2.5 py-1 text-[#f9f6f2]">
-              {oneOffCount} one-off
-            </span>
+            {oneOffCount > 0 && (
+              <span className="rounded-full border border-white/20 bg-white/5 px-2.5 py-1 text-[#f9f6f2]">
+                {oneOffCount} one-off
+              </span>
+            )}
           </div>
         </div>
 
@@ -377,7 +507,7 @@ export default function EditorTodo({
       </div>
 
       {sortMode === 'custom' && (
-        <p className="mb-4 text-xs text-gray-500">Drag tasks using the grip handle to rearrange your list.</p>
+        <p className="mb-4 text-xs text-gray-500">Drag tasks using the grip handle to rearrange within each column.</p>
       )}
 
       {orderedTasks.length === 0 ? (
@@ -387,54 +517,34 @@ export default function EditorTodo({
             Move cards to Editing, Not Approved, or In Review on the board — or add a one-off project.
           </p>
         </div>
-      ) : sortMode === 'custom' ? (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={orderedTasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-3">
-              {orderedTasks.map((task) => (
-                <SortableEditorTodoItem
-                  key={task.id}
-                  task={task}
-                  onOpenCard={onOpenCard}
-                  onDeleteOneOff={onDeleteOneOffTask}
-                  onSubmitForReview={onSubmitForReview}
-                  onSendBackForEditing={onSendBackForEditing}
-                  onMoveTask={onMoveTask}
-                  getClientColor={getClientColor}
-                  showDateBadge
-                  todayKey={todayKey}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
       ) : (
-        <div className="space-y-8">
-          {groupedTasks.map((group) => (
-            <section key={group.key}>
-              <h3
-                className={`mb-3 text-sm font-semibold uppercase tracking-wider ${
-                  group.key === 'overdue' ? 'text-red-300' : 'text-gray-400'
-                }`}
-              >
-                {group.label}
-              </h3>
-              <div className="space-y-3">
-                {group.tasks.map((task) => (
-                  <EditorTodoItem
-                    key={task.id}
-                    task={task}
-                    onOpenCard={onOpenCard}
-                    onDeleteOneOff={onDeleteOneOffTask}
-                    onSubmitForReview={onSubmitForReview}
-                    onSendBackForEditing={onSendBackForEditing}
-                    onMoveTask={onMoveTask}
-                    getClientColor={getClientColor}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <EditorTaskColumn
+            title="Needs editing"
+            description="Cards in Editing or Not Approved — finish the cut and mark done when ready for review."
+            count={editCount}
+            accentClass="border-amber-500/30 bg-amber-500/10 text-amber-200"
+            tasks={editingTasks}
+            sortMode={sortMode}
+            sensors={sensors}
+            onDragEnd={handleDragEnd}
+            emptyMessage="No videos waiting for edits."
+            itemProps={itemProps}
+            todayKey={todayKey}
+          />
+          <EditorTaskColumn
+            title="In review"
+            description="Cards in In Review — internal QC before client approval."
+            count={approveCount}
+            accentClass="border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]"
+            tasks={reviewTasks}
+            sortMode={sortMode}
+            sensors={sensors}
+            onDragEnd={handleDragEnd}
+            emptyMessage="No videos in review."
+            itemProps={itemProps}
+            todayKey={todayKey}
+          />
         </div>
       )}
 

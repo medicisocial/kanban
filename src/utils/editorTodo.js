@@ -3,7 +3,7 @@ import { toDateKey } from './calendar';
 
 export const EDIT_TASK_COLUMNS = ['editing', 'not-approved'];
 export const APPROVE_TASK_COLUMNS = ['in-review'];
-export const ONE_OFF_EDITOR_COLUMNS = ['editing', 'in-review', 'approved', 'finished'];
+export const ONE_OFF_EDITOR_COLUMNS = ['editing', 'in-review', 'finished'];
 
 export const REGULAR_EDITOR_STATUS_COLUMN_IDS = [
   'shoot',
@@ -30,14 +30,13 @@ export function getEditorTaskStatusOptions(isOneOffProject = false) {
 export function getEditorTaskKind(columnId) {
   if (EDIT_TASK_COLUMNS.includes(columnId)) return 'edit';
   if (APPROVE_TASK_COLUMNS.includes(columnId)) return 'approve';
-  if (columnId === 'approved') return 'oneoff';
   return null;
 }
 
 export function getEditorTaskLabel(columnId, isOneOffProject = false) {
   if (columnId === 'editing') return isOneOffProject ? 'One-off · Edit' : 'Edit';
   if (columnId === 'not-approved') return isOneOffProject ? 'One-off · Revise' : 'Revise';
-  if (columnId === 'in-review') return isOneOffProject ? 'One-off · Review' : 'Review / Approve';
+  if (columnId === 'in-review') return isOneOffProject ? 'One-off · Review' : 'In review';
   if (columnId === 'approved') return 'One-off · Approved';
   if (columnId === 'finished') return 'One-off · Finished';
   return 'Task';
@@ -71,6 +70,7 @@ export function buildBoardEditorTasks(cards) {
 
   for (const card of cards) {
     if (card.contentType === 'Story') continue;
+    if (card.columnId === 'approved') continue;
 
     if (card.isOneOffProject) {
       if (!ONE_OFF_EDITOR_COLUMNS.includes(card.columnId)) continue;
@@ -81,16 +81,6 @@ export function buildBoardEditorTasks(cards) {
             kind: 'oneoff',
             label: getEditorTaskLabel('finished', true),
             completed: true,
-          }),
-        );
-        continue;
-      }
-
-      if (card.columnId === 'approved') {
-        tasks.push(
-          buildEditorTaskFromCard(card, {
-            kind: 'oneoff',
-            label: getEditorTaskLabel('approved', true),
           }),
         );
         continue;
@@ -200,6 +190,18 @@ export function formatEditorDateLabel(dateKey, todayKey = toDateKey(new Date()))
 
   if (dateKey === todayKey) return `Today · ${formatted}`;
   return formatted;
+}
+
+export function splitEditorTasksByQueue(tasks) {
+  const editing = [];
+  const inReview = [];
+
+  for (const task of tasks) {
+    if (task.kind === 'approve') inReview.push(task);
+    else editing.push(task);
+  }
+
+  return { editing, inReview };
 }
 
 export function filterEditorTasks(tasks, { search, assignee, client, includeCompleted = true }) {
