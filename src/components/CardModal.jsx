@@ -8,6 +8,7 @@ import {
   DEFAULT_SHOOT_DURATIONS,
   getContentTypeStyle,
   needsShootSchedule,
+  isOneOffProjectCard,
 } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import { hasStoryRecurrence, hasStoryDailyRange, getStoryScheduleMode, parseRecurrenceDays, parseStoryOccurrenceNotes } from '../utils/calendar';
@@ -32,6 +33,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
   if (!card) return null;
 
   const typeStyle = getContentTypeStyle(card.contentType);
+  const isOneOff = isOneOffProjectCard(card);
 
   const handleChange = (field, value) => {
     if (field === 'contentType' && value === 'Story') {
@@ -101,7 +103,9 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
             <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
               {card.status}
             </p>
-            <h2 className="mt-1 text-lg font-semibold text-white">Edit Card</h2>
+            <h2 className="mt-1 text-lg font-semibold text-white">
+              {isOneOff ? 'Edit one-off project' : 'Edit Card'}
+            </h2>
           </div>
           <button
             type="button"
@@ -163,22 +167,28 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
             </Field>
 
             <Field label="Content Type">
-              <select
-                value={card.contentType}
-                onChange={(e) => handleChange('contentType', e.target.value)}
-                className={inputClass}
-              >
-                {CONTENT_TYPES.filter((t) => t !== 'Story' || card.contentType === 'Story').map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+              {isOneOff ? (
+                <p className="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-violet-200">
+                  One-off Project
+                </p>
+              ) : (
+                <select
+                  value={card.contentType}
+                  onChange={(e) => handleChange('contentType', e.target.value)}
+                  className={inputClass}
+                >
+                  {CONTENT_TYPES.filter((t) => t !== 'Story' || card.contentType === 'Story').map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              )}
             </Field>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Plan date">
+            <Field label={isOneOff ? 'Due date (optional)' : 'Plan date'}>
               <input
                 type="date"
                 value={card.dueDate}
@@ -186,24 +196,28 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
                 className={inputClass}
               />
               <p className="mt-1 text-[10px] text-gray-500">
-                {card.columnId === 'scheduled'
-                  ? 'When the post goes live'
-                  : 'Target date on the content calendar'}
+                {isOneOff
+                  ? 'Internal deadline only — not a posting date'
+                  : card.columnId === 'scheduled'
+                    ? 'When the post goes live'
+                    : 'Target date on the content calendar'}
               </p>
             </Field>
 
-            <Field label={card.columnId === 'scheduled' ? 'Scheduled Time' : 'Plan time'}>
-              <input
-                type="time"
-                value={card.dueTime || ''}
-                onChange={(e) => handleChange('dueTime', e.target.value)}
-                className={inputClass}
-              />
-              <p className="mt-1 text-[10px] text-gray-500">Publish time (optional)</p>
-            </Field>
+            {!isOneOff && (
+              <Field label={card.columnId === 'scheduled' ? 'Scheduled Time' : 'Plan time'}>
+                <input
+                  type="time"
+                  value={card.dueTime || ''}
+                  onChange={(e) => handleChange('dueTime', e.target.value)}
+                  className={inputClass}
+                />
+                <p className="mt-1 text-[10px] text-gray-500">Publish time (optional)</p>
+              </Field>
+            )}
           </div>
 
-          {card.contentType === 'Story' && ['scheduled', 'editing', 'approved'].includes(card.columnId) && (
+          {!isOneOff && card.contentType === 'Story' && ['scheduled', 'editing', 'approved'].includes(card.columnId) && (
             <StoryRecurrencePicker
               mode={storyRecurrenceMode}
               onModeChange={(mode) => {
@@ -227,7 +241,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
             />
           )}
 
-          {needsShootSchedule(card.contentType) && (
+          {!isOneOff && needsShootSchedule(card.contentType) && (
             <Field label="Shoot Date">
               <input
                 type="date"

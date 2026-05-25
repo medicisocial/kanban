@@ -14,7 +14,7 @@ export default function KanbanCard({ card, onClick, onDelete }) {
   });
 
   const typeStyle = getContentTypeStyle(card.contentType);
-  const overdue = isOverdue(card.dueDate) && card.columnId !== 'scheduled';
+  const overdue = isOverdue(card.dueDate) && card.columnId !== 'scheduled' && !card.isOneOffProject;
 
   return (
     <div

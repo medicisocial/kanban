@@ -26,8 +26,11 @@ export default function KanbanColumn({ column, cards, onAddCard, onCardClick, on
         <button
           type="button"
           onClick={() => onAddCard(column.id)}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition hover:bg-white/10 hover:text-white"
+          className={`flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition hover:bg-white/10 hover:text-white ${
+            column.id === 'finished' ? 'invisible pointer-events-none' : ''
+          }`}
           aria-label={`Add card to ${column.title}`}
+          tabIndex={column.id === 'finished' ? -1 : 0}
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -50,7 +53,7 @@ export default function KanbanColumn({ column, cards, onAddCard, onCardClick, on
 
         {cards.length === 0 && (
           <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-white/10 py-12 text-xs text-gray-500">
-            Drop cards here
+            {column.id === 'finished' ? 'One-off projects land here when done' : 'Drop cards here'}
           </div>
         )}
       </div>

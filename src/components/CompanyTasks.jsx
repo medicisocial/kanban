@@ -5,13 +5,11 @@ import AdminTodo from './AdminTodo';
 
 export default function CompanyTasks({
   cards,
-  oneOffTasks,
   taskOrder,
   adminTasks,
   search,
   clientFilter,
   onAddOneOffTask,
-  onToggleOneOffComplete,
   onDeleteOneOffTask,
   onAddAdminTask,
   onToggleAdminTaskComplete,
@@ -23,6 +21,8 @@ export default function CompanyTasks({
   onResetTaskOrder,
   onSchedulePost,
   onMarkPosted,
+  onSubmitForReview,
+  onSendBackForEditing,
 }) {
   const [activeRole, setActiveRole] = useState('editor');
 
@@ -56,14 +56,14 @@ export default function CompanyTasks({
         <EditorTodo
           embedded
           cards={cards}
-          oneOffTasks={oneOffTasks}
           taskOrder={taskOrder}
           search={search}
           clientFilter={clientFilter}
           onAddOneOffTask={onAddOneOffTask}
-          onToggleOneOffComplete={onToggleOneOffComplete}
           onDeleteOneOffTask={onDeleteOneOffTask}
           onOpenCard={onOpenCard}
+          onSubmitForReview={onSubmitForReview}
+          onSendBackForEditing={onSendBackForEditing}
           onSyncTaskOrder={onSyncTaskOrder}
           onSetTaskOrder={onSetTaskOrder}
           onReorderTasks={onReorderTasks}

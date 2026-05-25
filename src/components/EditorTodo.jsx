@@ -21,7 +21,6 @@ import {
   applyEditorTaskOrder,
   buildBoardEditorTasks,
   buildInitialTaskOrder,
-  buildOneOffEditorTask,
   formatEditorDateLabel,
   groupEditorTasksByDate,
   filterEditorTasks,
@@ -39,15 +38,17 @@ function EditorTodoItem({
   sortable = false,
   dragHandleProps = null,
   onOpenCard,
-  onToggleComplete,
   onDeleteOneOff,
+  onSubmitForReview,
+  onSendBackForEditing,
   getClientColor,
   showDateBadge = false,
   todayKey,
 }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
-  const isOneOff = task.source === 'oneoff';
-  const clientColor = isOneOff ? '#f9f6f2' : getClientColor(task.client);
+  const isOneOff = task.kind === 'oneoff';
+  const clientColor = getClientColor(task.client);
+  const isActive = !task.completed;
 
   return (
     <article
@@ -67,14 +68,6 @@ function EditorTodoItem({
               <path d="M7 4a1 1 0 110 2 1 1 0 010-2zm6 0a1 1 0 110 2 1 1 0 010-2zM7 9a1 1 0 110 2 1 1 0 010-2zm6 0a1 1 0 110 2 1 1 0 010-2zM7 14a1 1 0 110 2 1 1 0 010-2zm6 0a1 1 0 110 2 1 1 0 010-2z" />
             </svg>
           </button>
-        ) : isOneOff ? (
-          <input
-            type="checkbox"
-            checked={Boolean(task.completed)}
-            onChange={() => onToggleComplete(task.id)}
-            className="mt-1 h-4 w-4 rounded border-white/20 bg-[#1a1a1a] text-[#810100]"
-            aria-label={`Mark ${task.title} complete`}
-          />
         ) : (
           <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] text-gray-400">
             →
@@ -99,18 +92,12 @@ function EditorTodoItem({
                 {task.contentType}
               </span>
             )}
-            {isOneOff && (
-              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#f9f6f2]">
-                One-off
-              </span>
-            )}
           </div>
 
           <button
             type="button"
-            onClick={() => !isOneOff && onOpenCard?.(task.card)}
-            className={`text-left ${!isOneOff ? 'hover:text-[#fca5a5]' : ''}`}
-            disabled={isOneOff}
+            onClick={() => onOpenCard?.(task.card)}
+            className="text-left hover:text-[#fca5a5]"
           >
             <h3 className={`text-sm font-semibold text-white ${task.completed ? 'line-through' : ''}`}>
               {task.title}
@@ -118,7 +105,7 @@ function EditorTodoItem({
           </button>
 
           <p className="mt-1 text-xs font-medium" style={{ color: clientColor }}>
-            {isOneOff ? task.projectName : task.client}
+            {task.client}
           </p>
 
           {task.clientComment && (
@@ -133,48 +120,65 @@ function EditorTodoItem({
 
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
             {task.assignedTo && <span>Assigned to {task.assignedTo}</span>}
-            {!isOneOff && <span>On board · {task.columnId.replace('-', ' ')}</span>}
+            <span>On board · {task.columnId.replace('-', ' ')}</span>
+            {isOneOff && !task.dueDate && <span>No posting date</span>}
           </div>
         </div>
 
-        {!isOneOff && (
+        <div className="flex shrink-0 flex-col gap-2">
           <button
             type="button"
             onClick={() => onOpenCard?.(task.card)}
-            className="shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-white/5 hover:text-white"
+            className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-white/5 hover:text-white"
           >
             Edit
           </button>
-        )}
-
-        {isOneOff && !sortable && (
-          <button
-            type="button"
-            onClick={() => onDeleteOneOff(task.id)}
-            className="text-xs text-gray-500 hover:text-red-400"
-          >
-            Delete
-          </button>
-        )}
-
-        {isOneOff && sortable && (
-          <div className="flex flex-col items-end gap-2">
-            <input
-              type="checkbox"
-              checked={Boolean(task.completed)}
-              onChange={() => onToggleComplete(task.id)}
-              className="h-4 w-4 rounded border-white/20 bg-[#1a1a1a] text-[#810100]"
-              aria-label={`Mark ${task.title} complete`}
-            />
+          {task.kind === 'edit' && (
             <button
               type="button"
-              onClick={() => onDeleteOneOff(task.id)}
+              onClick={() => onSubmitForReview?.(task.cardId)}
+              className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
+            >
+              Mark done
+            </button>
+          )}
+          {task.kind === 'approve' && (
+            <button
+              type="button"
+              onClick={() => onSendBackForEditing?.(task.cardId)}
+              className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 transition hover:bg-amber-500/20"
+            >
+              Needs edits
+            </button>
+          )}
+          {isOneOff && isActive && (
+            <button
+              type="button"
+              onClick={() => onSubmitForReview?.(task.cardId)}
+              className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
+            >
+              Mark done
+            </button>
+          )}
+          {isOneOff && !isActive && (
+            <button
+              type="button"
+              onClick={() => onSendBackForEditing?.(task.cardId)}
+              className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 transition hover:bg-amber-500/20"
+            >
+              Back to editing
+            </button>
+          )}
+          {isOneOff && (
+            <button
+              type="button"
+              onClick={() => onDeleteOneOff?.(task.cardId)}
               className="text-xs text-gray-500 hover:text-red-400"
             >
               Delete
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </article>
   );
@@ -205,14 +209,14 @@ function SortableEditorTodoItem(props) {
 export default function EditorTodo({
   embedded = false,
   cards,
-  oneOffTasks,
   taskOrder,
   search,
   clientFilter,
   onAddOneOffTask,
-  onToggleOneOffComplete,
   onDeleteOneOffTask,
   onOpenCard,
+  onSubmitForReview,
+  onSendBackForEditing,
   onSyncTaskOrder,
   onSetTaskOrder,
   onReorderTasks,
@@ -230,11 +234,7 @@ export default function EditorTodo({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const allTasks = useMemo(() => {
-    const boardTasks = buildBoardEditorTasks(cards);
-    const customTasks = oneOffTasks.map(buildOneOffEditorTask);
-    return [...boardTasks, ...customTasks];
-  }, [cards, oneOffTasks]);
+  const allTasks = useMemo(() => buildBoardEditorTasks(cards), [cards]);
 
   const filteredTasks = useMemo(
     () =>
@@ -312,7 +312,7 @@ export default function EditorTodo({
           onClick={() => setShowAddModal(true)}
           className="rounded-lg bg-[#810100] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#a00000]"
         >
-          + Add one-off task
+          + Add one-off project
         </button>
       </div>
 
@@ -361,7 +361,7 @@ export default function EditorTodo({
         <div className="rounded-xl border border-dashed border-white/10 px-6 py-16 text-center">
           <p className="text-sm text-gray-400">Nothing on the list right now.</p>
           <p className="mt-1 text-xs text-gray-500">
-            Move cards to Editing, Not Approved, or In Review on the board — or add a one-off task.
+            Move cards to Editing, Not Approved, or In Review on the board — or add a one-off project.
           </p>
         </div>
       ) : sortMode === 'custom' ? (
@@ -373,8 +373,9 @@ export default function EditorTodo({
                   key={task.id}
                   task={task}
                   onOpenCard={onOpenCard}
-                  onToggleComplete={onToggleOneOffComplete}
                   onDeleteOneOff={onDeleteOneOffTask}
+                  onSubmitForReview={onSubmitForReview}
+                  onSendBackForEditing={onSendBackForEditing}
                   getClientColor={getClientColor}
                   showDateBadge
                   todayKey={todayKey}
@@ -400,8 +401,9 @@ export default function EditorTodo({
                     key={task.id}
                     task={task}
                     onOpenCard={onOpenCard}
-                    onToggleComplete={onToggleOneOffComplete}
                     onDeleteOneOff={onDeleteOneOffTask}
+                    onSubmitForReview={onSubmitForReview}
+                    onSendBackForEditing={onSendBackForEditing}
                     getClientColor={getClientColor}
                   />
                 ))}

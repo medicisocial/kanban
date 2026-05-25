@@ -6,6 +6,7 @@ export const COLUMNS = [
   { id: 'approved', title: 'Approved' },
   { id: 'scheduled', title: 'Scheduled' },
   { id: 'posted', title: 'Posted' },
+  { id: 'finished', title: 'Finished' },
 ];
 
 export const DEFAULT_CLIENTS = [
@@ -50,6 +51,7 @@ export const CONTENT_TYPES = [
   'Story',
   'Carousel',
   'Static Post',
+  'One-off Project',
 ];
 
 export const DEFAULT_SHOOT_DURATIONS = {
@@ -64,6 +66,7 @@ export const CONTENT_TYPE_COLORS = {
   Story: { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.14)', label: 'text-blue-300' },
   Carousel: { border: '#f472b6', bg: 'rgba(244, 114, 182, 0.14)', label: 'text-pink-300' },
   'Static Post': { border: '#810100', bg: 'rgba(129, 1, 0, 0.14)', label: 'text-[#fca5a5]' },
+  'One-off Project': { border: '#a78bfa', bg: 'rgba(167, 139, 250, 0.14)', label: 'text-violet-300' },
 };
 
 export function getContentTypeStyle(contentType) {
@@ -71,7 +74,11 @@ export function getContentTypeStyle(contentType) {
 }
 
 export function needsShootSchedule(contentType) {
-  return contentType !== 'Story';
+  return contentType !== 'Story' && contentType !== 'One-off Project';
+}
+
+export function isOneOffProjectCard(card) {
+  return Boolean(card?.isOneOffProject);
 }
 
 export const PLATFORM = 'Instagram';
@@ -94,6 +101,7 @@ export const COLUMN_BG = {
   approved: 'bg-[#161616]',
   scheduled: 'bg-[#181818]',
   posted: 'bg-[#141414]',
+  finished: 'bg-[#131318]',
 };
 
 export const DEFAULT_CLIENT_ACCOUNT_MANAGERS = {
@@ -145,6 +153,7 @@ export function createCard(overrides = {}) {
     storyPostedDates: [],
     postedAt: null,
     clientComment: '',
+    isOneOffProject: false,
     status: 'To Shoot',
     columnId: 'shoot',
     createdAt: Date.now(),

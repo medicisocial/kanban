@@ -45,7 +45,7 @@ function AppShell() {
   const shootImportData = parseShootImportParam();
   const contentImportData = parseContentImportParam();
 
-  const { cards, addCard, addCalendarPost, addShootItem, createCardFromIdea, updateCard, deleteCard, moveCard, markAsPosted } = useKanban();
+  const { cards, addCard, addCalendarPost, addShootItem, createCardFromIdea, updateCard, deleteCard, moveCard, markAsPosted, addOneOffProject } = useKanban();
   const { plans, getPlan, updatePlan, ensurePlan, deletePlan } = useShootPlans();
   const {
     ideas,
@@ -57,11 +57,7 @@ function AppShell() {
     markDeclined,
   } = useVideoIdeas();
   const {
-    oneOffTasks,
     taskOrder,
-    addOneOffTask,
-    toggleOneOffComplete,
-    deleteOneOffTask,
     syncTaskOrder,
     setTaskOrderFromIds,
     reorderTasks,
@@ -128,6 +124,23 @@ function AppShell() {
 
   const handleMarkPosted = (cardId, occurrenceDate) => {
     markAsPosted(cardId, occurrenceDate);
+  };
+
+  const handleSubmitForReview = (cardId) => {
+    const card = cards.find((c) => c.id === cardId);
+    if (card?.isOneOffProject) {
+      moveCard(cardId, "finished");
+      return;
+    }
+    moveCard(cardId, "in-review");
+  };
+
+  const handleSendBackForEditing = (cardId) => {
+    moveCard(cardId, "editing");
+  };
+
+  const handleDeleteOneOffProject = (cardId) => {
+    deleteCard(cardId);
   };
 
   const handleRemoveFromCalendar = (card) => {
@@ -485,14 +498,12 @@ function AppShell() {
       {activeView === "todo" && (
         <CompanyTasks
           cards={cards}
-          oneOffTasks={oneOffTasks}
           taskOrder={taskOrder}
           adminTasks={adminTasks}
           search={search}
           clientFilter={clientFilter}
-          onAddOneOffTask={addOneOffTask}
-          onToggleOneOffComplete={toggleOneOffComplete}
-          onDeleteOneOffTask={deleteOneOffTask}
+          onAddOneOffTask={addOneOffProject}
+          onDeleteOneOffTask={handleDeleteOneOffProject}
           onAddAdminTask={addAdminTask}
           onToggleAdminTaskComplete={toggleAdminTaskComplete}
           onDeleteAdminTask={deleteAdminTask}
@@ -503,6 +514,8 @@ function AppShell() {
           onResetTaskOrder={resetTaskOrder}
           onSchedulePost={handleSchedulePost}
           onMarkPosted={handleMarkPosted}
+          onSubmitForReview={handleSubmitForReview}
+          onSendBackForEditing={handleSendBackForEditing}
         />
       )}
 

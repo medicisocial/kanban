@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEY, getSampleData, COLUMNS, PLATFORM, TEAM_MEMBERS, createCard } from '../constants';
+import { STORAGE_KEY, getSampleData, COLUMNS, PLATFORM, TEAM_MEMBERS, createCard, EDITOR_TODO_STORAGE_KEY } from '../constants';
 import {
   toDateKey,
   parseRecurrenceDays,
@@ -48,7 +48,43 @@ function normalizeCard(card) {
     postedAt: card.postedAt || null,
     clientComment: card.clientComment || '',
     sourceIdeaId: card.sourceIdeaId || null,
+    isOneOffProject: Boolean(card.isOneOffProject),
   };
+}
+
+function migrateLegacyOneOffTasks(cards) {
+  try {
+    const stored = localStorage.getItem(EDITOR_TODO_STORAGE_KEY);
+    if (stored === null) return cards;
+
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      localStorage.removeItem(EDITOR_TODO_STORAGE_KEY);
+      return cards;
+    }
+
+    const migrated = parsed.map((task) =>
+      normalizeCard(
+        createCard({
+          id: task.id,
+          client: task.projectName || 'Plume',
+          title: task.title || 'One-off project',
+          notes: task.description || '',
+          dueDate: task.dueDate || '',
+          assignedTo: task.assignedTo || TEAM_MEMBERS[0],
+          contentType: 'One-off Project',
+          isOneOffProject: true,
+          columnId: task.completed ? 'finished' : 'editing',
+          createdAt: task.createdAt || Date.now(),
+        }),
+      ),
+    );
+
+    localStorage.removeItem(EDITOR_TODO_STORAGE_KEY);
+    return [...cards, ...migrated];
+  } catch {
+    return cards;
+  }
 }
 
 function loadCards() {
@@ -57,20 +93,29 @@ function loadCards() {
     if (stored) {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map(normalizeCard);
+        return migrateLegacyOneOffTasks(parsed.map(normalizeCard));
       }
     }
   } catch {
     /* fall through to sample data */
   }
-  return getSampleData();
+  return migrateLegacyOneOffTasks(getSampleData());
 }
 
-function withColumnDate(columnId, dueDate) {
+function withColumnDate(columnId, dueDate, isOneOffProject = false) {
+  if (isOneOffProject) return dueDate || '';
   if ((columnId === 'scheduled' || columnId === 'editing') && !dueDate) {
     return toDateKey(new Date());
   }
   return dueDate;
+}
+
+function canMoveCardToColumn(card, targetColumnId) {
+  if (targetColumnId === 'finished') return card.isOneOffProject;
+  if (card.isOneOffProject) {
+    return targetColumnId === 'editing' || targetColumnId === 'finished';
+  }
+  return true;
 }
 
 export function useKanban() {
@@ -156,9 +201,11 @@ export function useKanban() {
       prev.map((card) => {
         if (card.id !== id) return card;
         const nextColumnId = updates.columnId ?? card.columnId;
+        const isOneOff = updates.isOneOffProject ?? card.isOneOffProject;
         const nextDueDate = withColumnDate(
           nextColumnId,
           updates.dueDate !== undefined ? updates.dueDate : card.dueDate,
+          isOneOff,
         );
         return {
           ...card,
@@ -179,11 +226,12 @@ export function useKanban() {
     setCards((prev) =>
       prev.map((card) => {
         if (card.id !== cardId) return card;
+        if (!canMoveCardToColumn(card, targetColumnId)) return card;
         return {
           ...card,
           columnId: targetColumnId,
           status,
-          dueDate: withColumnDate(targetColumnId, card.dueDate),
+          dueDate: withColumnDate(targetColumnId, card.dueDate, card.isOneOffProject),
         };
       }),
     );
@@ -223,11 +271,12 @@ export function useKanban() {
 
   const addCardWithDetails = useCallback((overrides = {}) => {
     const columnId = overrides.columnId || 'shoot';
+    const isOneOff = Boolean(overrides.isOneOffProject);
     const card = createCard({
       ...overrides,
       columnId,
       status: overrides.status || getStatusForColumn(columnId),
-      dueDate: withColumnDate(columnId, overrides.dueDate ?? ''),
+      dueDate: withColumnDate(columnId, overrides.dueDate ?? '', isOneOff),
     });
     setCards((prev) => [...prev, card]);
     return card.id;
@@ -261,10 +310,28 @@ export function useKanban() {
     });
   }, [addCardWithDetails]);
 
+  const addOneOffProject = useCallback(
+    ({ client, title, description = '', dueDate = '', assignedTo }) => {
+      return addCardWithDetails({
+        client,
+        title,
+        notes: description,
+        dueDate,
+        assignedTo: assignedTo || TEAM_MEMBERS[0],
+        contentType: 'One-off Project',
+        isOneOffProject: true,
+        columnId: 'editing',
+        status: 'Editing',
+      });
+    },
+    [addCardWithDetails],
+  );
+
   return {
     cards,
     addCard,
     addCardWithDetails,
+    addOneOffProject,
     addCalendarPost,
     addShootItem,
     createCardFromIdea,

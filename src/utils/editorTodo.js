@@ -2,14 +2,17 @@ import { toDateKey } from './calendar';
 
 export const EDIT_TASK_COLUMNS = ['editing', 'not-approved'];
 export const APPROVE_TASK_COLUMNS = ['in-review'];
+export const ONE_OFF_TASK_COLUMNS = ['editing', 'finished'];
 
-export function getEditorTaskKind(columnId) {
+export function getEditorTaskKind(columnId, isOneOffProject = false) {
+  if (isOneOffProject && ONE_OFF_TASK_COLUMNS.includes(columnId)) return 'oneoff';
   if (EDIT_TASK_COLUMNS.includes(columnId)) return 'edit';
   if (APPROVE_TASK_COLUMNS.includes(columnId)) return 'approve';
   return null;
 }
 
-export function getEditorTaskLabel(columnId) {
+export function getEditorTaskLabel(columnId, isOneOffProject = false) {
+  if (isOneOffProject) return 'One-off';
   if (columnId === 'editing') return 'Edit';
   if (columnId === 'not-approved') return 'Revise';
   if (columnId === 'in-review') return 'Review / Approve';
@@ -20,11 +23,38 @@ function getTaskSortDate(card) {
   return card.dueDate || card.shootDate || '';
 }
 
+function buildOneOffBoardTask(card) {
+  return {
+    id: `board-${card.id}`,
+    source: 'board',
+    cardId: card.id,
+    kind: 'oneoff',
+    label: 'One-off',
+    title: card.title,
+    client: card.client,
+    contentType: card.contentType,
+    columnId: card.columnId,
+    dueDate: getTaskSortDate(card),
+    assignedTo: card.assignedTo || '',
+    notes: card.notes || '',
+    clientComment: card.clientComment || '',
+    completed: card.columnId === 'finished',
+    card,
+  };
+}
+
 export function buildBoardEditorTasks(cards) {
   const tasks = [];
 
   for (const card of cards) {
     if (card.contentType === 'Story') continue;
+
+    if (card.isOneOffProject) {
+      if (card.columnId === 'editing' || card.columnId === 'finished') {
+        tasks.push(buildOneOffBoardTask(card));
+      }
+      continue;
+    }
 
     const kind = getEditorTaskKind(card.columnId);
     if (!kind) continue;
@@ -48,27 +78,6 @@ export function buildBoardEditorTasks(cards) {
   }
 
   return tasks;
-}
-
-export function buildOneOffEditorTask(task) {
-  return {
-    id: task.id,
-    source: 'oneoff',
-    cardId: null,
-    kind: 'oneoff',
-    label: 'One-off',
-    title: task.title,
-    client: task.projectName,
-    projectName: task.projectName,
-    contentType: '',
-    columnId: '',
-    dueDate: task.dueDate || '',
-    assignedTo: task.assignedTo || '',
-    notes: task.description || '',
-    clientComment: '',
-    completed: Boolean(task.completed),
-    completedAt: task.completedAt || null,
-  };
 }
 
 export function applyEditorTaskOrder(tasks, orderIds = []) {
@@ -98,11 +107,13 @@ export function buildInitialTaskOrder(tasks) {
 }
 
 export function compareEditorTasks(a, b) {
+  if (a.completed !== b.completed) return a.completed ? 1 : -1;
+
   const dateA = a.dueDate || '9999-99-99';
   const dateB = b.dueDate || '9999-99-99';
   if (dateA !== dateB) return dateA.localeCompare(dateB);
 
-  const kindOrder = { edit: 0, approve: 1, oneoff: 2 };
+  const kindOrder = { edit: 0, oneoff: 1, approve: 2 };
   const kindDiff = (kindOrder[a.kind] ?? 9) - (kindOrder[b.kind] ?? 9);
   if (kindDiff !== 0) return kindDiff;
 
@@ -119,7 +130,10 @@ export function groupEditorTasksByDate(tasks, todayKey = toDateKey(new Date())) 
       ? formatEditorDateLabel(task.dueDate, todayKey)
       : 'No date set';
 
-    if (task.dueDate && task.dueDate < todayKey) {
+    if (task.kind === 'oneoff' && !task.dueDate) {
+      groupKey = 'no-date';
+      groupLabel = 'No posting date';
+    } else if (task.dueDate && task.dueDate < todayKey) {
       groupKey = 'overdue';
       groupLabel = 'Overdue';
     }
@@ -148,16 +162,15 @@ export function formatEditorDateLabel(dateKey, todayKey = toDateKey(new Date()))
 
 export function filterEditorTasks(tasks, { search, assignee, client, includeCompleted = true }) {
   return tasks.filter((task) => {
-    if (task.source === 'oneoff' && task.completed && !includeCompleted) return false;
+    if (task.kind === 'oneoff' && task.completed && !includeCompleted) return false;
     if (assignee && assignee !== 'all' && task.assignedTo !== assignee) return false;
-    if (client && client !== 'all' && task.source === 'board' && task.client !== client) return false;
+    if (client && client !== 'all' && task.client !== client) return false;
     if (!search) return true;
 
     const q = search.toLowerCase();
     const haystack = [
       task.title,
       task.client,
-      task.projectName,
       task.contentType,
       task.label,
       task.notes,

@@ -1,33 +1,29 @@
 import { useState } from 'react';
 import { TEAM_MEMBERS } from '../constants';
-import { toDateKey } from '../utils/calendar';
+import { useClientsContext } from '../context/ClientsContext';
 
 const inputClass =
   'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30';
 
 export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) {
-  const [projectName, setProjectName] = useState('');
+  const { clients } = useClientsContext();
+  const [client, setClient] = useState(clients[0] || '');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState(toDateKey(new Date()));
+  const [dueDate, setDueDate] = useState('');
   const [assignedTo, setAssignedTo] = useState(defaultAssignee || TEAM_MEMBERS[0]);
   const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const trimmedProject = projectName.trim();
     const trimmedTitle = title.trim();
-    if (!trimmedProject || !trimmedTitle) {
-      setError('Project name and task title are required.');
-      return;
-    }
-    if (!dueDate) {
-      setError('Pick a due date for this task.');
+    if (!client || !trimmedTitle) {
+      setError('Client and project title are required.');
       return;
     }
 
     onAdd({
-      projectName: trimmedProject,
+      client,
       title: trimmedTitle,
       description: description.trim(),
       dueDate,
@@ -46,34 +42,38 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-white/5 px-5 py-4">
-          <h2 className="text-lg font-semibold text-white">Add one-off task</h2>
+          <h2 className="text-lg font-semibold text-white">Add one-off project</h2>
           <p className="mt-1 text-sm text-gray-400">
-            For a one-time gig or internal project — not tied to a client account.
+            Creates a card on the board in Editing — no posting date required. Mark done when finished.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4">
           <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-gray-400">Project name</span>
-            <input
-              type="text"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              placeholder="e.g. Conference recap video"
+            <span className="mb-1.5 block text-xs font-medium text-gray-400">Client</span>
+            <select
+              value={client}
+              onChange={(e) => setClient(e.target.value)}
               className={inputClass}
-              autoFocus
               required
-            />
+            >
+              {clients.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-gray-400">Task</span>
+            <span className="mb-1.5 block text-xs font-medium text-gray-400">Project title</span>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="What needs to be done?"
+              placeholder="e.g. Conference recap video"
               className={inputClass}
+              autoFocus
               required
             />
           </label>
@@ -90,13 +90,12 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-gray-400">Due date</span>
+              <span className="mb-1.5 block text-xs font-medium text-gray-400">Due date (optional)</span>
               <input
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 className={inputClass}
-                required
               />
             </label>
 
@@ -134,7 +133,7 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
               type="submit"
               className="flex-1 rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white hover:bg-[#a00000]"
             >
-              Add task
+              Add project
             </button>
           </div>
         </form>

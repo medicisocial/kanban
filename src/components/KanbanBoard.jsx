@@ -74,7 +74,12 @@ export default function KanbanBoard({
   const cardsByColumn = useMemo(() => {
     const map = {};
     COLUMNS.forEach((col) => {
-      map[col.id] = filteredCards.filter((c) => c.columnId === col.id);
+      map[col.id] = filteredCards.filter((c) => {
+        if (c.columnId !== col.id) return false;
+        if (col.id === 'finished') return c.isOneOffProject;
+        if (c.isOneOffProject && col.id !== 'editing') return false;
+        return true;
+      });
     });
     return map;
   }, [filteredCards]);

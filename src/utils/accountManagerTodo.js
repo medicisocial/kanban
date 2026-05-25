@@ -74,6 +74,7 @@ export function buildPostsTodoTasks(cards, clientAccountManagers = {}) {
 
   for (const card of cards) {
     if (card.contentType === 'Story') continue;
+    if (card.isOneOffProject) continue;
     if (card.columnId === 'posted') continue;
 
     if (card.columnId === 'approved') {
