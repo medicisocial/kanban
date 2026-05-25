@@ -336,6 +336,7 @@ export function groupCardsByDate(cards) {
 export const STAFF_CALENDAR_COLUMN_IDS = ['editing', 'in-review', 'approved', 'scheduled'];
 
 export function isStaffCalendarCard(card) {
+  if (card.isOneOffProject || card.contentType === 'One-off Project') return false;
   return STAFF_CALENDAR_COLUMN_IDS.includes(card.columnId);
 }
 
