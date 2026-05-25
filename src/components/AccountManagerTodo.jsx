@@ -208,8 +208,8 @@ export default function AccountManagerTodo({
         </label>
       </div>
 
-      <div className="space-y-8">
-        <section className="rounded-2xl border border-blue-500/20 bg-[#0d0d0d] p-5 sm:p-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+        <section className="min-w-0 rounded-2xl border border-blue-500/20 bg-[#0d0d0d] p-5 sm:p-6">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold text-white">Stories · post today</h3>
@@ -237,7 +237,7 @@ export default function AccountManagerTodo({
           )}
         </section>
 
-        <section className="rounded-2xl border border-amber-500/20 bg-[#0d0d0d] p-5 sm:p-6">
+        <section className="min-w-0 rounded-2xl border border-amber-500/20 bg-[#0d0d0d] p-5 sm:p-6">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold text-white">Posts & other content · overall to-do</h3>

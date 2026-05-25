@@ -86,6 +86,10 @@ export const ACCOUNT_MANAGERS = [
   'Jordan Nguyen',
 ];
 
+export const COMPANY_STAFF = [
+  ...new Set([...TEAM_MEMBERS, ...ACCOUNT_MANAGERS]),
+];
+
 export const COLUMN_BG = {
   shoot: 'bg-[#111111]',
   editing: 'bg-[#121212]',
@@ -101,6 +105,7 @@ export const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
 export const SHOOT_PLANS_STORAGE_KEY = 'medici-social-shoot-plans';
 export const EDITOR_TODO_STORAGE_KEY = 'medici-social-editor-todo';
 export const EDITOR_TODO_ORDER_KEY = 'medici-social-editor-todo-order';
+export const ADMIN_TASKS_STORAGE_KEY = 'medici-social-admin-tasks';
 
 export const IDEA_STATUSES = {
   pending: 'Pending Review',

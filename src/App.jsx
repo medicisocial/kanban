@@ -21,6 +21,7 @@ import { getCalendarPortalClient } from "./utils/calendarShare";
 import { hasStoryRecurrence, withStoryOccurrence, parseStoryOccurrenceNotes } from "./utils/calendar";
 import { createCard } from "./constants";
 import { useEditorTasks } from "./hooks/useEditorTasks";
+import { useAdminTasks } from "./hooks/useAdminTasks";
 import CompanyTasks from "./components/CompanyTasks";
 import Navbar from "./components/Navbar";
 import FilterBar from "./components/FilterBar";
@@ -65,6 +66,12 @@ function AppShell() {
     reorderTasks,
     resetTaskOrder,
   } = useEditorTasks();
+  const {
+    adminTasks,
+    addAdminTask,
+    toggleAdminTaskComplete,
+    deleteAdminTask,
+  } = useAdminTasks();
   const { authRequired, ready, isAuthenticated, logout } = useStaffAuth();
 
   const [selectedCard, setSelectedCard] = useState(null);
@@ -487,11 +494,15 @@ function AppShell() {
           cards={cards}
           oneOffTasks={oneOffTasks}
           taskOrder={taskOrder}
+          adminTasks={adminTasks}
           search={search}
           clientFilter={clientFilter}
           onAddOneOffTask={addOneOffTask}
           onToggleOneOffComplete={toggleOneOffComplete}
           onDeleteOneOffTask={deleteOneOffTask}
+          onAddAdminTask={addAdminTask}
+          onToggleAdminTaskComplete={toggleAdminTaskComplete}
+          onDeleteAdminTask={deleteAdminTask}
           onOpenCard={handleCardClick}
           onSyncTaskOrder={syncTaskOrder}
           onSetTaskOrder={setTaskOrderFromIds}
