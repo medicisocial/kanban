@@ -9,7 +9,10 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
   const typeStyle = getContentTypeStyle(card.contentType);
   const clientColor = getClientColor(card.client);
   const recurring = hasStoryRecurrence(card);
-  const isPlanned = card.columnId === 'editing';
+  const boardStatus =
+    card.columnId === 'scheduled' ? 'Scheduled' : card.columnId === 'editing' ? 'Editing' : null;
+  const statusClass =
+    card.columnId === 'scheduled' ? 'text-emerald-300' : 'text-amber-300';
   const eventTitle = hideClient
     ? card.title
     : `${card.client}: ${card.title}${recurring ? ` (Every ${formatRecurrenceDays(card.storyRecurrenceDays)})` : ""}`;
@@ -68,8 +71,10 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
         {!card.dueTime && recurring && (
           <span className="mb-0.5 block text-[9px] font-medium text-purple-300">↻ weekly</span>
         )}
-        {isPlanned && (
-          <span className="mb-0.5 block text-[9px] font-medium text-amber-300">Planning</span>
+        {boardStatus && (
+          <span className={`mb-0.5 block text-[9px] font-semibold ${statusClass}`}>
+            {boardStatus}
+          </span>
         )}
         <CardTitleLink
           title={card.title}
@@ -103,9 +108,14 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
               {card.client}
             </span>
           )}
-          <span className={`shrink-0 text-[10px] font-semibold ${typeStyle.label}${hideClient ? " ml-auto" : ""}`}>
-            {card.contentType}
-          </span>
+          <div className={`flex shrink-0 items-center gap-1.5${hideClient ? ' ml-auto' : ''}`}>
+            {boardStatus && (
+              <span className={`text-[10px] font-semibold ${statusClass}`}>{boardStatus}</span>
+            )}
+            <span className={`text-[10px] font-semibold ${typeStyle.label}`}>
+              {card.contentType}
+            </span>
+          </div>
         </div>
         <CardTitleLink
           title={card.title}
@@ -113,7 +123,6 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
           className="line-clamp-2 block text-xs font-medium leading-snug text-white"
         />
         <p className="mt-1 truncate text-[10px] text-gray-500">
-          {isPlanned ? 'Planning · ' : ''}
           {card.dueTime ? `${formatTime(card.dueTime)} · ` : ""}
           {recurring ? `Every ${formatRecurrenceDays(card.storyRecurrenceDays)} · ` : ""}
           {PLATFORM_ICON} {card.assignedTo}
