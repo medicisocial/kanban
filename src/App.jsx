@@ -20,6 +20,8 @@ import {
 import { getCalendarPortalClient } from "./utils/calendarShare";
 import { hasStoryRecurrence, withStoryOccurrence, parseStoryOccurrenceNotes } from "./utils/calendar";
 import { createCard } from "./constants";
+import { useEditorTasks } from "./hooks/useEditorTasks";
+import EditorTodo from "./components/EditorTodo";
 import Navbar from "./components/Navbar";
 import FilterBar from "./components/FilterBar";
 import KanbanBoard from "./components/KanbanBoard";
@@ -52,6 +54,12 @@ function AppShell() {
     markApproved,
     markDeclined,
   } = useVideoIdeas();
+  const {
+    oneOffTasks,
+    addOneOffTask,
+    toggleOneOffComplete,
+    deleteOneOffTask,
+  } = useEditorTasks();
   const { authRequired, ready, isAuthenticated, logout } = useStaffAuth();
 
   const [selectedCard, setSelectedCard] = useState(null);
@@ -455,6 +463,19 @@ function AppShell() {
           onCardClick={handleCardClick}
           onAddCalendarPost={handleAddCalendarPost}
           onRemoveFromCalendar={handleRemoveFromCalendar}
+        />
+      )}
+
+      {activeView === "todo" && (
+        <EditorTodo
+          cards={cards}
+          oneOffTasks={oneOffTasks}
+          search={search}
+          clientFilter={clientFilter}
+          onAddOneOffTask={addOneOffTask}
+          onToggleOneOffComplete={toggleOneOffComplete}
+          onDeleteOneOffTask={deleteOneOffTask}
+          onOpenCard={handleCardClick}
         />
       )}
 

@@ -94,6 +94,7 @@ export const STORAGE_KEY = 'medici-social-kanban';
 export const VIDEO_IDEAS_STORAGE_KEY = 'medici-social-video-ideas';
 export const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
 export const SHOOT_PLANS_STORAGE_KEY = 'medici-social-shoot-plans';
+export const EDITOR_TODO_STORAGE_KEY = 'medici-social-editor-todo';
 
 export const IDEA_STATUSES = {
   pending: 'Pending Review',

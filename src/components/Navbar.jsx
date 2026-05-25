@@ -31,6 +31,9 @@ export default function Navbar({ search, onSearchChange, activeView, onViewChang
           <button type="button" onClick={() => onViewChange("calendar")} className={tabClass("calendar")}>
             Calendar
           </button>
+          <button type="button" onClick={() => onViewChange("todo")} className={tabClass("todo")}>
+            Editor To-Do
+          </button>
           <button type="button" onClick={() => onViewChange("shoot")} className={tabClass("shoot")}>
             Shoot Schedule
           </button>
