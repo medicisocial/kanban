@@ -35,11 +35,11 @@ function Field({ label, children, className = '' }) {
 
 function ColorInput({ label, value, onChange, showTextSample = false }) {
   const inputRef = useRef(null);
+  const focusedRef = useRef(false);
   const [text, setText] = useState(() => parseHexColor(value) || value || '');
 
-  // Sync from parent when value changes externally — never while this field is focused.
   useEffect(() => {
-    if (inputRef.current === document.activeElement) return;
+    if (focusedRef.current) return;
     setText(parseHexColor(value) || value || '');
   }, [value]);
 
@@ -87,6 +87,9 @@ function ColorInput({ label, value, onChange, showTextSample = false }) {
           ref={inputRef}
           type="text"
           value={text}
+          onFocus={() => {
+            focusedRef.current = true;
+          }}
           onChange={(e) => {
             const next = e.target.value;
             setText(next);
@@ -101,7 +104,9 @@ function ColorInput({ label, value, onChange, showTextSample = false }) {
             });
           }}
           onBlur={() => {
-            commitToParent(text);
+            focusedRef.current = false;
+            const current = inputRef.current?.value ?? text;
+            commitToParent(current);
           }}
           className={inputClass}
           placeholder="#000000"
@@ -301,6 +306,7 @@ export default function ClientAssets({ clientFilter }) {
   const [draft, setDraft] = useState(null);
   const [baseline, setBaseline] = useState(null);
   const [saveError, setSaveError] = useState('');
+  const loadedClientRef = useRef(null);
 
   useEffect(() => {
     draftRef.current = draft;
@@ -311,9 +317,14 @@ export default function ClientAssets({ clientFilter }) {
       setDraft(null);
       setBaseline(null);
       draftRef.current = null;
+      loadedClientRef.current = null;
       return;
     }
 
+    // Reload when switching clients, or first load — not after save on the same client.
+    if (loadedClientRef.current === activeClient) return;
+
+    loadedClientRef.current = activeClient;
     const color = getClientColor(activeClient);
     const snapshot = JSON.parse(
       JSON.stringify(normalizeClientAssets(store[activeClient], color)),
@@ -321,9 +332,14 @@ export default function ClientAssets({ clientFilter }) {
     setDraft(snapshot);
     setBaseline(snapshot);
     draftRef.current = snapshot;
-    // Only reload when switching clients — handleSave updates draft after save.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeClient]);
+  }, [activeClient, store, getClientColor]);
+
+  const flushFocusedField = () => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) {
+      active.blur();
+    }
+  };
 
   const isDirty = useMemo(() => {
     if (!draft || !baseline) return false;
@@ -359,10 +375,11 @@ export default function ClientAssets({ clientFilter }) {
 
   const handleSave = () => {
     if (!activeClient) return;
+    flushFocusedField();
+
     const source = draftRef.current ?? draft;
     if (!source) return;
 
-    // Save draft as-is — do not re-normalize (that can reset edited values).
     const payload = JSON.parse(JSON.stringify(source));
     const saved = saveClientAssets(activeClient, payload);
     if (!saved) {
@@ -387,7 +404,9 @@ export default function ClientAssets({ clientFilter }) {
   const handleClientChange = (nextClient) => {
     if (nextClient === activeClient) return;
     if (isDirty && !window.confirm('Discard unsaved changes for this client?')) return;
+    flushFocusedField();
     setSaveError('');
+    loadedClientRef.current = null;
     setActiveClient(nextClient);
   };
 
@@ -757,6 +776,7 @@ export default function ClientAssets({ clientFilter }) {
 
               <div className="rounded-xl border border-white/8 bg-[#111111] p-5">
                 <OpusStyleEditor
+                  key={activeOpusStyle}
                   styleKey={activeOpusStyle}
                   style={draft.opusAi[activeOpusStyle]}
                   onPatchField={(field, value) => patchOpusStyleField(activeOpusStyle, field, value)}
