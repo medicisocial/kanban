@@ -44,11 +44,6 @@ export const CLIENT_COLOR_PALETTE = [
 
 export const CLIENTS_STORAGE_KEY = 'medici-social-clients';
 
-/** Display name and address clients see when email is sent via Gmail. */
-export const MEDICI_SENDER_NAME = 'Medici Social';
-export const MEDICI_SENDER_EMAIL = 'info@medicisocial.com';
-export const GMAIL_AUTH_STORAGE_KEY = 'medici-gmail-auth';
-
 export const CONTENT_TYPES = [
   'Reel',
   'Story',

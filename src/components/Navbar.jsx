@@ -1,5 +1,3 @@
-import GmailConnectButton from "./GmailConnectButton";
-
 export default function Navbar({ search, onSearchChange, activeView, onViewChange, onSignOut }) {
   const tabClass = (view) =>
     `rounded-md px-2.5 py-1.5 text-sm font-medium transition sm:px-3 ${
@@ -61,16 +59,13 @@ export default function Navbar({ search, onSearchChange, activeView, onViewChang
         </div>
 
         {onSignOut && (
-          <>
-            <GmailConnectButton />
-            <button
-              type="button"
-              onClick={onSignOut}
-              className="rounded-lg border border-white/10 px-3 py-2 text-sm text-gray-400 transition hover:border-white/20 hover:text-white"
-            >
-              Sign out
-            </button>
-          </>
+          <button
+            type="button"
+            onClick={onSignOut}
+            className="rounded-lg border border-white/10 px-3 py-2 text-sm text-gray-400 transition hover:border-white/20 hover:text-white"
+          >
+            Sign out
+          </button>
         )}
       </div>
     </header>

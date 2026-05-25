@@ -1,17 +1,29 @@
+import { useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { getScheduledCards } from '../utils/calendar';
 import { buildCalendarShareUrl } from '../utils/calendarShare';
-import ClientShareButtons from './ClientShareButtons';
 
 export default function CalendarSharePanel({ cards }) {
   const { clients, getClientColor } = useClientsContext();
+  const [copiedClient, setCopiedClient] = useState(null);
   const scheduled = getScheduledCards(cards);
+
+  const copyLink = async (client) => {
+    const url = buildCalendarShareUrl(client, scheduled);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedClient(client);
+      setTimeout(() => setCopiedClient(null), 2500);
+    } catch {
+      window.prompt('Copy this calendar link:', url);
+    }
+  };
 
   return (
     <div className="mb-4 rounded-xl border border-white/10 bg-[#111111] p-4 sm:p-5">
       <h3 className="text-sm font-semibold text-white">Share calendar with clients</h3>
       <p className="mt-1 text-xs text-gray-400">
-        Copy or email each client&apos;s scheduled calendar. Clients cannot see other brands.
+        Copy each client&apos;s scheduled calendar. Clients cannot see other brands.
       </p>
       <div className="mt-4 space-y-2">
         {clients.map((client) => {
@@ -27,22 +39,14 @@ export default function CalendarSharePanel({ cards }) {
                 <span className="text-sm font-medium text-[#f9f6f2]">{client}</span>
                 <span className="text-xs text-gray-500">{count} scheduled</span>
               </div>
-              <ClientShareButtons
-                client={client}
-                shareType="calendar"
-                copyDisabled={count === 0}
-                copyLabel="Copy calendar link"
-                copiedLabel="Link copied!"
-                getShareUrl={() => buildCalendarShareUrl(client, scheduled)}
-                onCopyLink={async () => {
-                  const url = buildCalendarShareUrl(client, scheduled);
-                  try {
-                    await navigator.clipboard.writeText(url);
-                  } catch {
-                    window.prompt('Copy this calendar link:', url);
-                  }
-                }}
-              />
+              <button
+                type="button"
+                onClick={() => copyLink(client)}
+                disabled={count === 0}
+                className="rounded-lg bg-[#810100] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#a00000] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {copiedClient === client ? 'Link copied!' : 'Copy calendar link'}
+              </button>
             </div>
           );
         })}

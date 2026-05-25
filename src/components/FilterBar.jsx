@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import AddClientModal from './AddClientModal';
-import ManageClientsModal from './ManageClientsModal';
 
 export default function FilterBar({ clientFilter, onClientChange }) {
   const { clients, addClient } = useClientsContext();
   const [showAddClient, setShowAddClient] = useState(false);
-  const [showManageClients, setShowManageClients] = useState(false);
 
   const handleAddClient = (name, color) => {
     const result = addClient(name, color);
@@ -36,14 +34,6 @@ export default function FilterBar({ clientFilter, onClientChange }) {
 
         <button
           type="button"
-          onClick={() => setShowManageClients(true)}
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:bg-white/10 hover:text-white"
-        >
-          Manage clients
-        </button>
-
-        <button
-          type="button"
           onClick={() => setShowAddClient(true)}
           className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:bg-white/10 hover:text-white"
         >
@@ -52,10 +42,6 @@ export default function FilterBar({ clientFilter, onClientChange }) {
 
         <span className="ml-1 text-xs text-gray-500">📸 Instagram only</span>
       </div>
-
-      {showManageClients && (
-        <ManageClientsModal onClose={() => setShowManageClients(false)} />
-      )}
 
       {showAddClient && (
         <AddClientModal
