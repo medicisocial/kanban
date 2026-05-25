@@ -7,7 +7,6 @@ import {
   OPUS_FONT_FAMILIES,
   OPUS_STYLE_KEYS,
   getOpusPreviewStyle,
-  normalizeClientAssets,
   parseHexColor,
   previewHexColor,
   toColorPickerHex,
@@ -69,17 +68,6 @@ function ColorInput({ label, value, onChange, showTextSample = false }) {
     onChangeRef.current(parsed);
     return true;
   };
-
-  useEffect(() => {
-    return () => {
-      const raw = inputRef.current?.value;
-      if (!raw) return;
-      const parsed = parseHexColor(raw);
-      if (parsed) {
-        onChangeRef.current(parsed);
-      }
-    };
-  }, []);
 
   return (
     <Field label={label}>
@@ -317,7 +305,7 @@ function OpusStyleEditor({ styleKey, style, onPatchField }) {
 
 export default function ClientAssets({ clientFilter }) {
   const { clients, getClientColor } = useClientsContext();
-  const { store, saveClientAssets } = useClientAssetsContext();
+  const { getClientAssets, hasSavedClientAssets, saveClientAssets } = useClientAssetsContext();
   const [activeClient, setActiveClient] = useState(
     clientFilter !== 'all' ? clientFilter : clients[0] || '',
   );
@@ -325,7 +313,6 @@ export default function ClientAssets({ clientFilter }) {
   const [activeOpusStyle, setActiveOpusStyle] = useState('headline');
   const draftRef = useRef(null);
 
-  const clientColor = activeClient ? getClientColor(activeClient) : '#810100';
   const [draft, setDraft] = useState(null);
   const [baseline, setBaseline] = useState(null);
   const [saveError, setSaveError] = useState('');
@@ -334,6 +321,11 @@ export default function ClientAssets({ clientFilter }) {
   useEffect(() => {
     draftRef.current = draft;
   }, [draft]);
+
+  const loadDraftForClient = (client) => {
+    const color = getClientColor(client);
+    return JSON.parse(JSON.stringify(getClientAssets(client, color)));
+  };
 
   useEffect(() => {
     if (!activeClient) {
@@ -344,20 +336,16 @@ export default function ClientAssets({ clientFilter }) {
       return;
     }
 
-    // Reload when switching clients, or first load — not after save on the same client.
     if (loadedClientRef.current === activeClient) return;
 
     loadedClientRef.current = activeClient;
-    const color = getClientColor(activeClient);
-    const snapshot = JSON.parse(
-      JSON.stringify(normalizeClientAssets(store[activeClient], color)),
-    );
+    const snapshot = loadDraftForClient(activeClient);
     setDraft(snapshot);
     setBaseline(snapshot);
     draftRef.current = snapshot;
-    // Only reload draft when the active client changes — handleSave updates draft after save.
+    setActiveOpusStyle('headline');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeClient]);
+  }, [activeClient, getClientAssets]);
 
   const flushFocusedField = () => {
     flushSync(() => {
@@ -437,9 +425,17 @@ export default function ClientAssets({ clientFilter }) {
     setActiveClient(nextClient);
   };
 
+  const handleOpusStyleChange = (styleKey) => {
+    if (styleKey === activeOpusStyle) return;
+    flushFocusedField();
+    setActiveOpusStyle(styleKey);
+  };
+
   useEffect(() => {
     if (clientFilter === 'all' || clientFilter === activeClient) return;
     flushFocusedField();
+    if (isDirty && !window.confirm('Discard unsaved changes for this client?')) return;
+    setSaveError('');
     loadedClientRef.current = null;
     setActiveClient(clientFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -797,7 +793,7 @@ export default function ClientAssets({ clientFilter }) {
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setActiveOpusStyle(key)}
+                    onClick={() => handleOpusStyleChange(key)}
                     className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
                       activeOpusStyle === key
                         ? 'bg-[#810100] text-white'
@@ -845,7 +841,7 @@ export default function ClientAssets({ clientFilter }) {
                   ? saveError
                   : isDirty
                     ? 'You have unsaved changes — click Save to keep them.'
-                    : store[activeClient]
+                    : hasSavedClientAssets(activeClient)
                       ? 'All changes saved.'
                       : 'Nothing saved yet — click Save when ready.'}
               </p>

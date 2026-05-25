@@ -118,15 +118,75 @@ export function loadClientAssetsStore() {
   return migrateClientAssetsStore(loadRawClientAssetsStore());
 }
 
+function normalizeStoreKey(name) {
+  if (!name || typeof name !== 'string') return '';
+  return name.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+/** Match a client name to its key in the assets store (exact, then case-insensitive). */
+export function resolveClientStoreKey(store, clientName, knownClients = []) {
+  if (!clientName) return clientName;
+  if (store?.[clientName]) return clientName;
+
+  const target = normalizeStoreKey(clientName);
+
+  for (const key of Object.keys(store || {})) {
+    if (normalizeStoreKey(key) === target) {
+      return key;
+    }
+  }
+
+  for (const client of knownClients) {
+    if (normalizeStoreKey(client) === target) {
+      return client;
+    }
+  }
+
+  return clientName;
+}
+
+/** Merge duplicate / legacy keys onto canonical client names from the clients list. */
+export function reconcileClientAssetsStore(store, knownClients = []) {
+  if (!store || typeof store !== 'object') return {};
+  if (!knownClients.length) return { ...store };
+
+  const next = { ...store };
+  let changed = false;
+
+  for (const client of knownClients) {
+    const sourceKey = resolveClientStoreKey(next, client, knownClients);
+    if (!next[sourceKey]) continue;
+
+    if (sourceKey !== client) {
+      next[client] = next[sourceKey];
+      delete next[sourceKey];
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    localStorage.setItem(CLIENT_ASSETS_STORAGE_KEY, JSON.stringify(next));
+    return next;
+  }
+
+  return store;
+}
+
+export function readClientAssetsEntry(store, clientName, clientColor = '#810100', knownClients = []) {
+  const key = resolveClientStoreKey(store, clientName, knownClients);
+  return normalizeClientAssets(store[key], clientColor);
+}
+
 /** Persist one client profile — reads localStorage fresh, writes atomically. */
-export function saveClientAssetsEntry(client, assets) {
+export function saveClientAssetsEntry(client, assets, knownClients = []) {
   const payload = JSON.parse(JSON.stringify(assets));
   if (!payload?.branding || !payload?.opusAi) {
     return null;
   }
 
-  const store = loadClientAssetsStore();
-  store[client] = payload;
+  const store = reconcileClientAssetsStore(loadClientAssetsStore(), knownClients);
+  const canonicalClient = resolveClientStoreKey(store, client, knownClients);
+  store[canonicalClient] = payload;
   const serialized = JSON.stringify(store);
   localStorage.setItem(CLIENT_ASSETS_STORAGE_KEY, serialized);
 

@@ -1,27 +1,55 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   loadClientAssetsStore,
-  normalizeClientAssets,
+  readClientAssetsEntry,
+  reconcileClientAssetsStore,
+  resolveClientStoreKey,
   saveClientAssetsEntry,
 } from '../utils/clientAssets';
 
-export function useClientAssets() {
-  const [store, setStore] = useState(loadClientAssetsStore);
+export function useClientAssets(knownClients = []) {
+  const clientKey = useMemo(
+    () => knownClients.join('\0'),
+    [knownClients],
+  );
 
-  const getClientAssets = useCallback((client, clientColor = '#810100') => {
-    return normalizeClientAssets(store[client], clientColor);
-  }, [store]);
+  const [store, setStore] = useState(() =>
+    reconcileClientAssetsStore(loadClientAssetsStore(), knownClients),
+  );
 
-  const saveClientAssets = useCallback((client, assets) => {
-    const nextStore = saveClientAssetsEntry(client, assets);
-    if (!nextStore) return false;
-    setStore(nextStore);
-    return true;
-  }, []);
+  useEffect(() => {
+    setStore((prev) => reconcileClientAssetsStore(prev, knownClients));
+  }, [clientKey, knownClients]);
+
+  const getClientAssets = useCallback(
+    (client, clientColor = '#810100') => {
+      return readClientAssetsEntry(store, client, clientColor, knownClients);
+    },
+    [store, knownClients],
+  );
+
+  const hasSavedClientAssets = useCallback(
+    (client) => {
+      const key = resolveClientStoreKey(store, client, knownClients);
+      return Boolean(store[key]);
+    },
+    [store, knownClients],
+  );
+
+  const saveClientAssets = useCallback(
+    (client, assets) => {
+      const nextStore = saveClientAssetsEntry(client, assets, knownClients);
+      if (!nextStore) return false;
+      setStore(nextStore);
+      return true;
+    },
+    [knownClients],
+  );
 
   return {
     store,
     getClientAssets,
+    hasSavedClientAssets,
     saveClientAssets,
   };
 }
