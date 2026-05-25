@@ -1,21 +1,22 @@
 import { getContentTypeStyle, PLATFORM_ICON } from "../constants";
 import { useClientsContext } from "../context/ClientsContext";
 import { formatTime } from "../utils";
-import { formatRecurrenceDays, hasStoryRecurrence } from "../utils/calendar";
+import { formatStoryScheduleSummary, hasStoryDailyRange, hasStoryRecurrence } from "../utils/calendar";
 import CardTitleLink from "./CardTitleLink";
 
 export default function CalendarEvent({ card, onClick, onRemove, compact = false, hideClient = false }) {
   const { getClientColor } = useClientsContext();
   const typeStyle = getContentTypeStyle(card.contentType);
   const clientColor = getClientColor(card.client);
-  const recurring = hasStoryRecurrence(card);
+  const scheduleSummary = formatStoryScheduleSummary(card);
+  const hasStorySchedule = hasStoryRecurrence(card) || hasStoryDailyRange(card);
   const boardStatus =
     card.columnId === 'scheduled' ? 'Scheduled' : card.columnId === 'editing' ? 'Editing' : null;
   const statusClass =
     card.columnId === 'scheduled' ? 'text-emerald-300' : 'text-amber-300';
   const eventTitle = hideClient
     ? card.title
-    : `${card.client}: ${card.title}${recurring ? ` (Every ${formatRecurrenceDays(card.storyRecurrenceDays)})` : ""}`;
+    : `${card.client}: ${card.title}${scheduleSummary ? ` (${scheduleSummary})` : ""}`;
 
   const handleRemove = (ev) => {
     ev.stopPropagation();
@@ -65,11 +66,11 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
         {card.dueTime && (
           <span className="mb-0.5 block text-[9px] font-medium text-gray-400">
             {formatTime(card.dueTime)}
-            {recurring && <span className="ml-1 text-[#fca5a5]">↻</span>}
+            {hasStorySchedule && <span className="ml-1 text-[#fca5a5]">↻</span>}
           </span>
         )}
-        {!card.dueTime && recurring && (
-          <span className="mb-0.5 block text-[9px] font-medium text-[#fca5a5]">↻ weekly</span>
+        {!card.dueTime && hasStorySchedule && (
+          <span className="mb-0.5 block text-[9px] font-medium text-[#fca5a5]">↻ {scheduleSummary || 'recurring'}</span>
         )}
         {boardStatus && (
           <span className={`mb-0.5 block text-[9px] font-semibold ${statusClass}`}>
@@ -124,7 +125,7 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
         />
         <p className="mt-1 truncate text-[10px] text-gray-500">
           {card.dueTime ? `${formatTime(card.dueTime)} · ` : ""}
-          {recurring ? `Every ${formatRecurrenceDays(card.storyRecurrenceDays)} · ` : ""}
+          {scheduleSummary ? `${scheduleSummary} · ` : ""}
           {PLATFORM_ICON} {card.assignedTo}
         </p>
       </button>

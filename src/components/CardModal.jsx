@@ -9,7 +9,7 @@ import {
   needsShootSchedule,
 } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
-import { hasStoryRecurrence, parseRecurrenceDays, parseStoryOccurrenceNotes } from '../utils/calendar';
+import { hasStoryRecurrence, hasStoryDailyRange, getStoryScheduleMode, parseRecurrenceDays, parseStoryOccurrenceNotes } from '../utils/calendar';
 import StoryRecurrencePicker from './StoryRecurrencePicker';
 
 export default function CardModal({ card, onClose, onUpdate, onDelete }) {
@@ -47,11 +47,12 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
       onUpdate(card.id, {
         contentType: value,
         storyRecurrenceDays: [],
+        storyEndDate: '',
         storyOccurrenceNotes: {},
       });
       return;
     }
-    if (field === 'notes' && card.occurrenceDate && hasStoryRecurrence(card)) {
+    if (field === 'notes' && card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card))) {
       onUpdate(card.id, {
         storyOccurrenceNotes: {
           ...parseStoryOccurrenceNotes(card.storyOccurrenceNotes),
@@ -64,7 +65,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
   };
 
   const recurrenceDays = parseRecurrenceDays(card.storyRecurrenceDays);
-  const storyRecurrenceMode = hasStoryRecurrence(card) ? 'weekly' : 'once';
+  const storyRecurrenceMode = getStoryScheduleMode(card);
   const occurrenceLabel = card.occurrenceDate
     ? new Date(`${card.occurrenceDate}T12:00:00`).toLocaleDateString('en-US', {
         weekday: 'long',
@@ -194,20 +195,27 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
             </Field>
           </div>
 
-          {card.contentType === 'Story' && (card.columnId === 'scheduled' || card.columnId === 'editing') && (
+          {card.contentType === 'Story' && ['scheduled', 'editing', 'approved'].includes(card.columnId) && (
             <StoryRecurrencePicker
               mode={storyRecurrenceMode}
               onModeChange={(mode) => {
                 if (mode === 'once') {
+                  onUpdate(card.id, { storyRecurrenceDays: [], storyEndDate: '' });
+                } else if (mode === 'daily') {
                   onUpdate(card.id, { storyRecurrenceDays: [] });
-                } else if (!recurrenceDays.length) {
-                  onUpdate(card.id, { storyRecurrenceDays: [1] });
+                } else if (mode === 'weekly') {
+                  onUpdate(card.id, {
+                    storyEndDate: '',
+                    storyRecurrenceDays: recurrenceDays.length ? recurrenceDays : [1],
+                  });
                 }
               }}
               days={recurrenceDays}
-              onDaysChange={(days) => onUpdate(card.id, { storyRecurrenceDays: days })}
+              onDaysChange={(days) => onUpdate(card.id, { storyRecurrenceDays: days, storyEndDate: '' })}
               startDate={card.dueDate}
               onStartDateChange={(dueDate) => handleChange('dueDate', dueDate)}
+              endDate={card.storyEndDate || ''}
+              onEndDateChange={(storyEndDate) => handleChange('storyEndDate', storyEndDate)}
             />
           )}
 
@@ -327,7 +335,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
             </Field>
           </div>
 
-          <Field label={card.occurrenceDate && hasStoryRecurrence(card) ? `Notes (${occurrenceLabel})` : 'Notes'}>
+          <Field label={card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card)) ? `Notes (${occurrenceLabel})` : 'Notes'}>
             <textarea
               value={card.notes}
               onChange={(e) => handleChange('notes', e.target.value)}
@@ -335,11 +343,11 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
               placeholder="Add notes..."
               className={`${inputClass} resize-y`}
             />
-            {card.occurrenceDate && hasStoryRecurrence(card) ? (
+            {card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card)) ? (
               <p className="mt-1 text-[10px] text-gray-500">
                 Only for this date — other occurrences keep their own notes.
               </p>
-            ) : hasStoryRecurrence(card) ? (
+            ) : hasStoryRecurrence(card) || hasStoryDailyRange(card) ? (
               <p className="mt-1 text-[10px] text-gray-500">
                 Default notes for this story. Open a date on the calendar to edit that day only.
               </p>

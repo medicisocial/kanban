@@ -10,6 +10,8 @@ export default function StoryRecurrencePicker({
   onDaysChange,
   startDate,
   onStartDateChange,
+  endDate,
+  onEndDateChange,
 }) {
   const toggleDay = (day) => {
     if (days.includes(day)) {
@@ -41,11 +43,47 @@ export default function StoryRecurrencePicker({
           <button type="button" onClick={() => onModeChange("once")} className={modeBtnClass("once")}>
             One-time
           </button>
+          <button type="button" onClick={() => onModeChange("daily")} className={modeBtnClass("daily")}>
+            Daily campaign
+          </button>
           <button type="button" onClick={() => onModeChange("weekly")} className={modeBtnClass("weekly")}>
             Repeats weekly
           </button>
         </div>
       </div>
+
+      {mode === "once" && (
+        <p className="text-xs text-gray-400">Post once on the plan date.</p>
+      )}
+
+      {mode === "daily" && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-gray-400">Start date</span>
+            <input
+              type="date"
+              value={startDate || ""}
+              onChange={(e) => onStartDateChange(e.target.value)}
+              className={inputClass}
+              required
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-gray-400">End date</span>
+            <input
+              type="date"
+              value={endDate || ""}
+              onChange={(e) => onEndDateChange(e.target.value)}
+              min={startDate || undefined}
+              className={inputClass}
+              required
+            />
+          </label>
+          <p className="sm:col-span-2 text-xs text-gray-400">
+            Shows in account manager tasks every day from start through end — e.g. Memorial Day flyer running all week.
+          </p>
+        </div>
+      )}
 
       {mode === "weekly" && (
         <>

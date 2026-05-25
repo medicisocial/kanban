@@ -81,6 +81,11 @@ export const TEAM_MEMBERS = [
   'Jordan Nguyen',
 ];
 
+export const ACCOUNT_MANAGERS = [
+  'Valerie Landeros',
+  'Jordan Nguyen',
+];
+
 export const COLUMN_BG = {
   shoot: 'bg-[#111111]',
   editing: 'bg-[#121212]',
@@ -124,6 +129,7 @@ export function createCard(overrides = {}) {
     shootNeeds: '',
     shootScript: '',
     storyRecurrenceDays: [],
+    storyEndDate: '',
     storyOccurrenceNotes: {},
     clientComment: '',
     status: 'To Shoot',

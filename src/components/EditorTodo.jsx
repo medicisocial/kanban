@@ -193,6 +193,7 @@ function SortableEditorTodoItem(props) {
 }
 
 export default function EditorTodo({
+  embedded = false,
   cards,
   oneOffTasks,
   taskOrder,
@@ -276,10 +277,10 @@ export default function EditorTodo({
     }`;
 
   return (
-    <div className="mx-auto max-w-[900px] px-4 py-4 sm:px-6">
+    <div className={embedded ? '' : 'mx-auto max-w-[900px] px-4 py-4 sm:px-6'}>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-white">Editor To-Do</h2>
+          <h2 className="text-xl font-semibold text-white">Editor tasks</h2>
           <p className="mt-1 text-sm text-gray-400">
             Auto-generated from the board — drag to set your own priority order.
           </p>

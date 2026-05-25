@@ -21,7 +21,7 @@ import { getCalendarPortalClient } from "./utils/calendarShare";
 import { hasStoryRecurrence, withStoryOccurrence, parseStoryOccurrenceNotes } from "./utils/calendar";
 import { createCard } from "./constants";
 import { useEditorTasks } from "./hooks/useEditorTasks";
-import EditorTodo from "./components/EditorTodo";
+import CompanyTasks from "./components/CompanyTasks";
 import Navbar from "./components/Navbar";
 import FilterBar from "./components/FilterBar";
 import KanbanBoard from "./components/KanbanBoard";
@@ -92,6 +92,17 @@ function AppShell() {
     const id = addCalendarPost(data);
     setSelectedCard(createCard({ ...data, id, columnId: "editing", status: "Editing" }));
     setActiveView("calendar");
+  };
+
+  const handleSchedulePost = (cardId, { dueDate, dueTime, storyEndDate = '', storyRecurrenceDays = [] }) => {
+    updateCard(cardId, {
+      dueDate,
+      dueTime: dueTime || '',
+      storyEndDate,
+      storyRecurrenceDays,
+      columnId: "scheduled",
+      status: "Scheduled",
+    });
   };
 
   const handleRemoveFromCalendar = (card) => {
@@ -472,7 +483,7 @@ function AppShell() {
       )}
 
       {activeView === "todo" && (
-        <EditorTodo
+        <CompanyTasks
           cards={cards}
           oneOffTasks={oneOffTasks}
           taskOrder={taskOrder}
@@ -486,6 +497,7 @@ function AppShell() {
           onSetTaskOrder={setTaskOrderFromIds}
           onReorderTasks={reorderTasks}
           onResetTaskOrder={resetTaskOrder}
+          onSchedulePost={handleSchedulePost}
         />
       )}
 

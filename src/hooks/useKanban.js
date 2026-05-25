@@ -36,6 +36,7 @@ function normalizeCard(card) {
     shootNeeds: card.shootNeeds || '',
     shootScript: card.shootScript || '',
     storyRecurrenceDays: parseRecurrenceDays(card.storyRecurrenceDays),
+    storyEndDate: card.storyEndDate || '',
     storyOccurrenceNotes: parseStoryOccurrenceNotes(card.storyOccurrenceNotes),
     clientComment: card.clientComment || '',
     sourceIdeaId: card.sourceIdeaId || null,
@@ -192,7 +193,7 @@ export function useKanban() {
     return card.id;
   }, []);
 
-  const addCalendarPost = useCallback(({ client, title, contentType, dueDate, dueTime = '', storyRecurrenceDays = [] }) => {
+  const addCalendarPost = useCallback(({ client, title, contentType, dueDate, dueTime = '', storyRecurrenceDays = [], storyEndDate = '' }) => {
     const recurrence = parseRecurrenceDays(storyRecurrenceDays);
     return addCardWithDetails({
       client,
@@ -201,6 +202,7 @@ export function useKanban() {
       dueDate: recurrence.length ? (dueDate || toDateKey(new Date())) : dueDate,
       dueTime,
       storyRecurrenceDays: recurrence,
+      storyEndDate: storyEndDate || '',
       columnId: 'editing',
       status: 'Editing',
     });

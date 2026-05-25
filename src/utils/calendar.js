@@ -119,6 +119,63 @@ export function hasStoryRecurrence(card) {
   return parseRecurrenceDays(card?.storyRecurrenceDays).length > 0;
 }
 
+export function hasStoryDailyRange(card) {
+  const start = card?.dueDate;
+  const end = card?.storyEndDate;
+  return Boolean(start && end && end >= start);
+}
+
+export function getStoryScheduleMode(card) {
+  if (hasStoryRecurrence(card)) return 'weekly';
+  if (hasStoryDailyRange(card)) return 'daily';
+  return 'once';
+}
+
+export function isStoryOccurrenceOnDate(card, dateKey) {
+  if (card?.contentType !== 'Story' || !dateKey) return false;
+
+  const target = parseDateKey(dateKey);
+
+  if (hasStoryDailyRange(card)) {
+    const from = parseDateKey(card.dueDate);
+    const to = parseDateKey(card.storyEndDate);
+    return target >= from && target <= to;
+  }
+
+  const days = parseRecurrenceDays(card.storyRecurrenceDays);
+  if (days.length) {
+    const from = card.dueDate ? parseDateKey(card.dueDate) : target;
+    return target >= from && days.includes(target.getDay());
+  }
+
+  return card.dueDate === dateKey;
+}
+
+export function formatStoryScheduleSummary(card) {
+  if (hasStoryDailyRange(card)) {
+    const start = new Date(`${card.dueDate}T12:00:00`).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+    const end = new Date(`${card.storyEndDate}T12:00:00`).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+    return `Daily · ${start} – ${end}`;
+  }
+  if (hasStoryRecurrence(card)) {
+    return `Every ${formatRecurrenceDays(card.storyRecurrenceDays)}`;
+  }
+  if (card.dueDate) {
+    return new Date(`${card.dueDate}T12:00:00`).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+  return '';
+}
+
 export function parseStoryOccurrenceNotes(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const notes = {};
@@ -140,7 +197,7 @@ export function getStoryOccurrenceNotes(card, dateKey) {
 }
 
 export function withStoryOccurrence(card, dateKey) {
-  if (!dateKey || !hasStoryRecurrence(card)) return card;
+  if (!dateKey || card?.contentType !== 'Story') return card;
   return {
     ...card,
     occurrenceDate: dateKey,
@@ -164,6 +221,21 @@ export function expandStoriesForRange(cards, rangeStart, rangeEnd) {
   const occurrences = [];
 
   for (const card of cards) {
+    if (hasStoryDailyRange(card)) {
+      const from = parseDateKey(card.dueDate);
+      const to = parseDateKey(card.storyEndDate);
+      if (to < start || from > end) continue;
+
+      let cursor = from > start ? startOfDay(from) : startOfDay(start);
+      const last = to < end ? startOfDay(to) : startOfDay(end);
+
+      while (cursor <= last) {
+        occurrences.push({ card, dateKey: toDateKey(cursor) });
+        cursor = addDays(cursor, 1);
+      }
+      continue;
+    }
+
     const days = parseRecurrenceDays(card.storyRecurrenceDays);
     if (!days.length) {
       if (card.dueDate) {
@@ -194,7 +266,7 @@ export function groupStoryOccurrencesByDate(occurrences) {
   for (const { card, dateKey } of occurrences) {
     if (!map[dateKey]) map[dateKey] = [];
     if (!map[dateKey].some((c) => c.id === card.id)) {
-      map[dateKey].push(hasStoryRecurrence(card) ? withStoryOccurrence(card, dateKey) : card);
+      map[dateKey].push(card.contentType === 'Story' ? withStoryOccurrence(card, dateKey) : card);
     }
   }
   for (const key of Object.keys(map)) {
@@ -244,7 +316,7 @@ export function getCalendarPosts(cards) {
 export function getCalendarStories(cards) {
   return cards.filter((c) => {
     if (c.contentType !== 'Story' || !isStaffCalendarCard(c)) return false;
-    return c.dueDate || parseRecurrenceDays(c.storyRecurrenceDays).length > 0;
+    return c.dueDate || parseRecurrenceDays(c.storyRecurrenceDays).length > 0 || hasStoryDailyRange(c);
   });
 }
 
@@ -262,6 +334,6 @@ export function getScheduledPosts(cards) {
 export function getScheduledStories(cards) {
   return cards.filter((c) => {
     if (c.columnId !== 'scheduled' || c.contentType !== 'Story') return false;
-    return c.dueDate || parseRecurrenceDays(c.storyRecurrenceDays).length > 0;
+    return c.dueDate || parseRecurrenceDays(c.storyRecurrenceDays).length > 0 || hasStoryDailyRange(c);
   });
 }

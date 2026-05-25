@@ -25,6 +25,7 @@ export default function AddCalendarPostModal({
   });
   const [recurrenceMode, setRecurrenceMode] = useState("once");
   const [recurrenceDays, setRecurrenceDays] = useState([]);
+  const [storyEndDate, setStoryEndDate] = useState("");
   const [error, setError] = useState("");
 
   const handleSubmit = (e) => {
@@ -38,10 +39,20 @@ export default function AddCalendarPostModal({
     }
 
     const isWeeklyStory = lockContentType && recurrenceMode === "weekly";
+    const isDailyStory = lockContentType && recurrenceMode === "daily";
 
     if (isWeeklyStory) {
       if (!recurrenceDays.length) {
         setError("Pick at least one day for the story to repeat.");
+        return;
+      }
+    } else if (isDailyStory) {
+      if (!form.dueDate || !storyEndDate) {
+        setError("Pick a start and end date for the daily campaign.");
+        return;
+      }
+      if (storyEndDate < form.dueDate) {
+        setError("End date must be on or after the start date.");
         return;
       }
     } else if (!form.dueDate) {
@@ -56,6 +67,7 @@ export default function AddCalendarPostModal({
       dueDate: isWeeklyStory ? form.dueDate || toDateKey(new Date()) : form.dueDate,
       dueTime: form.dueTime,
       storyRecurrenceDays: isWeeklyStory ? recurrenceDays : [],
+      storyEndDate: isDailyStory ? storyEndDate : "",
     });
     onClose();
   };
@@ -141,6 +153,8 @@ export default function AddCalendarPostModal({
               onDaysChange={setRecurrenceDays}
               startDate={form.dueDate}
               onStartDateChange={(dueDate) => setForm({ ...form, dueDate })}
+              endDate={storyEndDate}
+              onEndDateChange={setStoryEndDate}
             />
           )}
 
@@ -168,7 +182,7 @@ export default function AddCalendarPostModal({
             </div>
           )}
 
-          {lockContentType && recurrenceMode === "weekly" && (
+          {lockContentType && (recurrenceMode === "weekly" || recurrenceMode === "daily") && (
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-gray-400">Publish time (optional)</span>
               <input

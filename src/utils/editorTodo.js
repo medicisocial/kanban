@@ -1,7 +1,7 @@
 import { toDateKey } from './calendar';
 
 export const EDIT_TASK_COLUMNS = ['editing', 'not-approved'];
-export const APPROVE_TASK_COLUMNS = ['in-review', 'approved'];
+export const APPROVE_TASK_COLUMNS = ['in-review'];
 
 export function getEditorTaskKind(columnId) {
   if (EDIT_TASK_COLUMNS.includes(columnId)) return 'edit';
@@ -13,7 +13,6 @@ export function getEditorTaskLabel(columnId) {
   if (columnId === 'editing') return 'Edit';
   if (columnId === 'not-approved') return 'Revise';
   if (columnId === 'in-review') return 'Review / Approve';
-  if (columnId === 'approved') return 'Finalize';
   return 'Task';
 }
 

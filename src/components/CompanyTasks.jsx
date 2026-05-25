@@ -1,0 +1,74 @@
+import { useState } from 'react';
+import EditorTodo from './EditorTodo';
+import AccountManagerTodo from './AccountManagerTodo';
+
+export default function CompanyTasks({
+  cards,
+  oneOffTasks,
+  taskOrder,
+  search,
+  clientFilter,
+  onAddOneOffTask,
+  onToggleOneOffComplete,
+  onDeleteOneOffTask,
+  onOpenCard,
+  onSyncTaskOrder,
+  onSetTaskOrder,
+  onReorderTasks,
+  onResetTaskOrder,
+  onSchedulePost,
+}) {
+  const [activeRole, setActiveRole] = useState('editor');
+
+  const tabClass = (role) =>
+    `rounded-md px-3 py-1.5 text-sm font-medium transition ${
+      activeRole === role ? 'bg-[#810100] text-white' : 'text-gray-400 hover:text-white'
+    }`;
+
+  return (
+    <div className="mx-auto max-w-[900px] px-4 py-4 sm:px-6">
+      <div className="mb-6">
+        <h1 className="font-serif text-2xl font-semibold text-white">Company tasks</h1>
+        <p className="mt-1 text-sm text-gray-400">
+          Daily worklists for editors and account managers.
+        </p>
+      </div>
+
+      <div className="mb-6 flex rounded-lg border border-white/10 bg-white/5 p-0.5 w-fit">
+        <button type="button" onClick={() => setActiveRole('editor')} className={tabClass('editor')}>
+          Editors
+        </button>
+        <button type="button" onClick={() => setActiveRole('account')} className={tabClass('account')}>
+          Account managers
+        </button>
+      </div>
+
+      {activeRole === 'editor' ? (
+        <EditorTodo
+          embedded
+          cards={cards}
+          oneOffTasks={oneOffTasks}
+          taskOrder={taskOrder}
+          search={search}
+          clientFilter={clientFilter}
+          onAddOneOffTask={onAddOneOffTask}
+          onToggleOneOffComplete={onToggleOneOffComplete}
+          onDeleteOneOffTask={onDeleteOneOffTask}
+          onOpenCard={onOpenCard}
+          onSyncTaskOrder={onSyncTaskOrder}
+          onSetTaskOrder={onSetTaskOrder}
+          onReorderTasks={onReorderTasks}
+          onResetTaskOrder={onResetTaskOrder}
+        />
+      ) : (
+        <AccountManagerTodo
+          cards={cards}
+          search={search}
+          clientFilter={clientFilter}
+          onOpenCard={onOpenCard}
+          onSchedulePost={onSchedulePost}
+        />
+      )}
+    </div>
+  );
+}
