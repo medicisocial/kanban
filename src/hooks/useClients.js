@@ -6,6 +6,16 @@ import {
   CLIENT_COLOR_PALETTE,
 } from '../constants';
 import { normalizeClientName, pickNextClientColor } from '../utils/clients';
+import { normalizeEmailList } from '../utils/clientEmail';
+
+function normalizeClientEmailMap(raw) {
+  if (!raw || typeof raw !== 'object') return {};
+  const out = {};
+  for (const [client, value] of Object.entries(raw)) {
+    out[client] = normalizeEmailList(value);
+  }
+  return out;
+}
 
 function loadClients() {
   try {
@@ -16,7 +26,7 @@ function loadClients() {
         return {
           names: parsed.names,
           colors: { ...DEFAULT_CLIENT_COLORS, ...(parsed.colors || {}) },
-          emails: { ...(parsed.emails || {}) },
+          emails: normalizeClientEmailMap(parsed.emails),
         };
       }
     }
@@ -37,7 +47,7 @@ export function useClients() {
     localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const addClient = useCallback((name, color, email = '') => {
+  const addClient = useCallback((name, color) => {
     const trimmed = normalizeClientName(name);
     if (!trimmed) return { ok: false, error: 'Please enter a client name.' };
 
@@ -51,7 +61,7 @@ export function useClients() {
       return {
         names: [...prev.names, trimmed],
         colors: { ...prev.colors, [trimmed]: nextColor },
-        emails: { ...prev.emails, [trimmed]: (email || '').trim() },
+        emails: { ...prev.emails, [trimmed]: [] },
       };
     });
 
@@ -61,15 +71,18 @@ export function useClients() {
     return { ok: true, name: trimmed };
   }, []);
 
-  const setClientEmails = useCallback((emails) => {
-    setState((prev) => ({
-      ...prev,
-      emails: { ...prev.emails, ...emails },
-    }));
+  const setClientEmails = useCallback((emailsByClient) => {
+    setState((prev) => {
+      const nextEmails = { ...prev.emails };
+      for (const [client, list] of Object.entries(emailsByClient)) {
+        nextEmails[client] = normalizeEmailList(list);
+      }
+      return { ...prev, emails: nextEmails };
+    });
   }, []);
 
-  const getClientEmail = useCallback(
-    (client) => state.emails[client] || '',
+  const getClientEmails = useCallback(
+    (client) => state.emails[client] || [],
     [state.emails],
   );
 
@@ -85,7 +98,7 @@ export function useClients() {
     defaultClient: state.names[0] || DEFAULT_CLIENTS[0],
     addClient,
     setClientEmails,
-    getClientEmail,
+    getClientEmails,
     getClientColor,
   };
 }
