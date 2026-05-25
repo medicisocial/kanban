@@ -77,7 +77,7 @@ function AppShell() {
 
   const handleAddCalendarPost = (data) => {
     const id = addCalendarPost(data);
-    setSelectedCard(createCard({ ...data, id, columnId: "scheduled", status: "Scheduled" }));
+    setSelectedCard(createCard({ ...data, id, columnId: "editing", status: "Editing" }));
     setActiveView("calendar");
   };
 
@@ -99,7 +99,7 @@ function AppShell() {
 
     if (
       !window.confirm(
-        `Remove "${card.title}" from the calendar? The card will stay on the board in Scheduled without a publish date.`,
+        `Remove "${card.title}" from the calendar? The card will stay on the board in ${card.columnId === "scheduled" ? "Scheduled" : "Editing"} without a plan date.`,
       )
     ) {
       return;

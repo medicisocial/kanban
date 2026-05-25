@@ -225,6 +225,30 @@ export function groupCardsByDate(cards) {
   return map;
 }
 
+export const STAFF_CALENDAR_COLUMN_IDS = ['editing', 'scheduled'];
+
+export function isStaffCalendarCard(card) {
+  return STAFF_CALENDAR_COLUMN_IDS.includes(card.columnId);
+}
+
+export function getCalendarCards(cards) {
+  return cards.filter((c) => isStaffCalendarCard(c) && c.dueDate);
+}
+
+export function getCalendarPosts(cards) {
+  return cards.filter(
+    (c) => isStaffCalendarCard(c) && c.dueDate && c.contentType !== 'Story',
+  );
+}
+
+export function getCalendarStories(cards) {
+  return cards.filter((c) => {
+    if (c.contentType !== 'Story' || !isStaffCalendarCard(c)) return false;
+    return c.dueDate || parseRecurrenceDays(c.storyRecurrenceDays).length > 0;
+  });
+}
+
+/** Client-facing share links — finalized schedule only */
 export function getScheduledCards(cards) {
   return cards.filter((c) => c.columnId === 'scheduled' && c.dueDate);
 }
@@ -237,7 +261,7 @@ export function getScheduledPosts(cards) {
 
 export function getScheduledStories(cards) {
   return cards.filter((c) => {
-    if (c.columnId !== "scheduled" || c.contentType !== "Story") return false;
+    if (c.columnId !== 'scheduled' || c.contentType !== 'Story') return false;
     return c.dueDate || parseRecurrenceDays(c.storyRecurrenceDays).length > 0;
   });
 }

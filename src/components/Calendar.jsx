@@ -4,8 +4,8 @@ import {
   addWeeks,
   addMonths,
   groupCardsByDate,
-  getScheduledPosts,
-  getScheduledStories,
+  getCalendarPosts,
+  getCalendarStories,
   buildStoryCalendarByDate,
   toDateKey,
 } from "../utils/calendar";
@@ -32,8 +32,8 @@ export default function Calendar({
   const isStories = calendarTab === "stories";
 
   const visibleCards = useMemo(() => {
-    const scheduled = isStories ? getScheduledStories(cards) : getScheduledPosts(cards);
-    return filterCards(scheduled, { client: clientFilter, search });
+    const planned = isStories ? getCalendarStories(cards) : getCalendarPosts(cards);
+    return filterCards(planned, { client: clientFilter, search });
   }, [cards, clientFilter, search, isStories]);
 
   const cardsByDate = useMemo(() => {
@@ -147,7 +147,7 @@ export default function Calendar({
       <p className="mb-4 text-xs text-gray-500">
         {isStories
           ? "Stories live on the calendar only — removing one deletes it entirely."
-          : "Reels, carousels, and static posts — Stories have their own calendar tab."}
+          : "Plan reels, carousels, and static posts by month — items in Editing or Scheduled appear here."}
       </p>
 
       {viewMode === "week" ? (

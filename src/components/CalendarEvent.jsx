@@ -9,6 +9,7 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
   const typeStyle = getContentTypeStyle(card.contentType);
   const clientColor = getClientColor(card.client);
   const recurring = hasStoryRecurrence(card);
+  const isPlanned = card.columnId === 'editing';
   const eventTitle = hideClient
     ? card.title
     : `${card.client}: ${card.title}${recurring ? ` (Every ${formatRecurrenceDays(card.storyRecurrenceDays)})` : ""}`;
@@ -67,6 +68,9 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
         {!card.dueTime && recurring && (
           <span className="mb-0.5 block text-[9px] font-medium text-purple-300">↻ weekly</span>
         )}
+        {isPlanned && (
+          <span className="mb-0.5 block text-[9px] font-medium text-amber-300">Planning</span>
+        )}
         <CardTitleLink
           title={card.title}
           dropboxLink={card.dropboxLink}
@@ -109,6 +113,7 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
           className="line-clamp-2 block text-xs font-medium leading-snug text-white"
         />
         <p className="mt-1 truncate text-[10px] text-gray-500">
+          {isPlanned ? 'Planning · ' : ''}
           {card.dueTime ? `${formatTime(card.dueTime)} · ` : ""}
           {recurring ? `Every ${formatRecurrenceDays(card.storyRecurrenceDays)} · ` : ""}
           {PLATFORM_ICON} {card.assignedTo}

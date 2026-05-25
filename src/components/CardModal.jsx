@@ -169,17 +169,21 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Scheduled Date">
+            <Field label="Plan date">
               <input
                 type="date"
                 value={card.dueDate}
                 onChange={(e) => handleChange('dueDate', e.target.value)}
                 className={inputClass}
               />
-              <p className="mt-1 text-[10px] text-gray-500">When the post goes live</p>
+              <p className="mt-1 text-[10px] text-gray-500">
+                {card.columnId === 'scheduled'
+                  ? 'When the post goes live'
+                  : 'Target date on the content calendar'}
+              </p>
             </Field>
 
-            <Field label="Scheduled Time">
+            <Field label={card.columnId === 'scheduled' ? 'Scheduled Time' : 'Plan time'}>
               <input
                 type="time"
                 value={card.dueTime || ''}
@@ -190,7 +194,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
             </Field>
           </div>
 
-          {card.contentType === 'Story' && card.columnId === 'scheduled' && (
+          {card.contentType === 'Story' && (card.columnId === 'scheduled' || card.columnId === 'editing') && (
             <StoryRecurrencePicker
               mode={storyRecurrenceMode}
               onModeChange={(mode) => {

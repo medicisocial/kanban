@@ -57,8 +57,8 @@ function loadCards() {
   return getSampleData();
 }
 
-function withScheduledDate(columnId, dueDate) {
-  if (columnId === 'scheduled' && !dueDate) {
+function withColumnDate(columnId, dueDate) {
+  if ((columnId === 'scheduled' || columnId === 'editing') && !dueDate) {
     return toDateKey(new Date());
   }
   return dueDate;
@@ -81,7 +81,7 @@ export function useKanban() {
         contentType: 'Reel',
         platform: PLATFORM,
         title: 'New task',
-        dueDate: withScheduledDate(columnId, ''),
+        dueDate: withColumnDate(columnId, ''),
         dueTime: '',
         shootDate: '',
         shootTime: '',
@@ -147,7 +147,7 @@ export function useKanban() {
       prev.map((card) => {
         if (card.id !== id) return card;
         const nextColumnId = updates.columnId ?? card.columnId;
-        const nextDueDate = withScheduledDate(
+        const nextDueDate = withColumnDate(
           nextColumnId,
           updates.dueDate !== undefined ? updates.dueDate : card.dueDate,
         );
@@ -174,7 +174,7 @@ export function useKanban() {
           ...card,
           columnId: targetColumnId,
           status,
-          dueDate: withScheduledDate(targetColumnId, card.dueDate),
+          dueDate: withColumnDate(targetColumnId, card.dueDate),
         };
       }),
     );
@@ -186,7 +186,7 @@ export function useKanban() {
       ...overrides,
       columnId,
       status: overrides.status || getStatusForColumn(columnId),
-      dueDate: withScheduledDate(columnId, overrides.dueDate ?? ''),
+      dueDate: withColumnDate(columnId, overrides.dueDate ?? ''),
     });
     setCards((prev) => [...prev, card]);
     return card.id;
@@ -201,8 +201,8 @@ export function useKanban() {
       dueDate: recurrence.length ? (dueDate || toDateKey(new Date())) : dueDate,
       dueTime,
       storyRecurrenceDays: recurrence,
-      columnId: 'scheduled',
-      status: 'Scheduled',
+      columnId: 'editing',
+      status: 'Editing',
     });
   }, [addCardWithDetails]);
 
