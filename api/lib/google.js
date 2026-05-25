@@ -1,74 +1,4 @@
-const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
-const USERINFO_EMAIL_SCOPE = 'https://www.googleapis.com/auth/userinfo.email';
-export const GOOGLE_SCOPES = `${GMAIL_SEND_SCOPE} ${USERINFO_EMAIL_SCOPE}`;
-
-export function getRedirectUri(req) {
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  const proto = req.headers['x-forwarded-proto'] || 'https';
-  return `${proto}://${host}/api/google/callback`;
-}
-
-export async function exchangeCodeForTokens(code, redirectUri) {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error('Google OAuth is not configured on the server.');
-  }
-
-  const response = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      code,
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: redirectUri,
-      grant_type: 'authorization_code',
-    }),
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error_description || data.error || 'Token exchange failed.');
-  }
-  return data;
-}
-
-export async function refreshAccessToken(refreshToken) {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error('Google OAuth is not configured on the server.');
-  }
-
-  const response = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      refresh_token: refreshToken,
-      client_id: clientId,
-      client_secret: clientSecret,
-      grant_type: 'refresh_token',
-    }),
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error_description || data.error || 'Could not refresh Gmail access.');
-  }
-  return data.access_token;
-}
-
-export async function fetchGoogleEmail(accessToken) {
-  const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error?.message || 'Could not read Google account email.');
-  }
-  return data.email || '';
-}
+import nodemailer from 'nodemailer';
 
 export function encodeGmailRaw(message) {
   return Buffer.from(message, 'utf8')
@@ -92,21 +22,34 @@ export function buildPlainTextEmail({ fromName, fromEmail, to, subject, body }) 
   ].join('\r\n');
 }
 
-export async function sendGmailMessage({ accessToken, rawMessage }) {
-  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ raw: encodeGmailRaw(rawMessage) }),
+export async function sendViaGmailSmtp({ to, subject, text, fromName, fromEmail }) {
+  const user = process.env.GMAIL_USER || 'info@medicisocial.com';
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  if (!pass) {
+    throw new Error('Gmail is not configured on the server (missing GMAIL_APP_PASSWORD).');
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: { user, pass },
   });
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error?.message || 'Gmail rejected the message.');
-  }
-  return data;
+  const result = await transporter.sendMail({
+    from: `"${fromName || 'Medici Social'}" <${fromEmail || user}>`,
+    to,
+    subject,
+    text,
+  });
+
+  return { id: result.messageId };
+}
+
+export function getRedirectUri(req) {
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  const proto = req.headers['x-forwarded-proto'] || 'https';
+  return `${proto}://${host}/api/google/callback`;
 }
 
 export function oauthResultHtml(payload, origin) {

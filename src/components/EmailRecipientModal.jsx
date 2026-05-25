@@ -9,7 +9,7 @@ const inputClass =
 
 export default function EmailRecipientModal({ client, shareType, getShareUrl, onClose }) {
   const { getClientEmails } = useClientsContext();
-  const { isConnected, connect, sendShareEmail } = useGmail();
+  const { sendShareEmail } = useGmail();
   const savedEmails = getClientEmails(client);
   const [selectedEmail, setSelectedEmail] = useState(savedEmails[0] || '');
   const [customEmail, setCustomEmail] = useState('');
@@ -32,12 +32,6 @@ export default function EmailRecipientModal({ client, shareType, getShareUrl, on
     };
   }, [onClose]);
 
-  const handleConnect = () => {
-    setError('');
-    const result = connect();
-    if (!result.ok) setError(result.error);
-  };
-
   const handleSend = async (e) => {
     e.preventDefault();
     setError('');
@@ -52,27 +46,22 @@ export default function EmailRecipientModal({ client, shareType, getShareUrl, on
     }
 
     const url = getShareUrl();
+    setSending(true);
+    const result = await sendShareEmail({ to: recipient, type: shareType, client, url });
+    setSending(false);
 
-    if (isConnected) {
-      setSending(true);
-      const result = await sendShareEmail({
-        to: recipient,
-        type: shareType,
-        client,
-        url,
-      });
-      setSending(false);
-      if (!result.ok) {
-        setError(result.error);
+    if (!result.ok) {
+      if (result.error?.includes('not configured')) {
+        openClientShareEmail({ to: recipient, type: shareType, client, url });
+        onClose();
         return;
       }
-      setSent(true);
-      setTimeout(onClose, 1200);
+      setError(result.error);
       return;
     }
 
-    openClientShareEmail({ to: recipient, type: shareType, client, url });
-    onClose();
+    setSent(true);
+    setTimeout(onClose, 1200);
   };
 
   return (
@@ -88,34 +77,12 @@ export default function EmailRecipientModal({ client, shareType, getShareUrl, on
         <div className="border-b border-white/5 px-5 py-4">
           <h2 className="font-serif text-lg font-semibold text-white">Email {client}</h2>
           <p className="mt-1 text-sm text-gray-400">
-            {isConnected ? (
-              <>
-                Sends from <span className="text-[#f9f6f2]">{MEDICI_SENDER_NAME}</span> (
-                {MEDICI_SENDER_EMAIL}) via your connected Gmail.
-              </>
-            ) : (
-              <>
-                Connect Gmail once to send as <span className="text-[#f9f6f2]">{MEDICI_SENDER_NAME}</span>, or
-                open a draft in your email app.
-              </>
-            )}
+            Sends from <span className="text-[#f9f6f2]">{MEDICI_SENDER_NAME}</span> (
+            {MEDICI_SENDER_EMAIL}).
           </p>
         </div>
 
         <div className="space-y-4 px-5 py-4">
-          {!isConnected && (
-            <div className="rounded-lg border border-[#810100]/30 bg-[#810100]/10 px-3 py-3">
-              <p className="text-sm text-gray-300">Gmail is not connected on this browser.</p>
-              <button
-                type="button"
-                onClick={handleConnect}
-                className="mt-2 rounded-lg bg-[#810100] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#a00000]"
-              >
-                Connect Gmail
-              </button>
-            </div>
-          )}
-
           {savedEmails.length > 0 ? (
             <fieldset className="space-y-2">
               <legend className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
@@ -181,7 +148,7 @@ export default function EmailRecipientModal({ client, shareType, getShareUrl, on
             disabled={sending || sent}
             className="flex-1 rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white hover:bg-[#a00000] disabled:opacity-60"
           >
-            {sending ? 'Sending…' : sent ? 'Sent!' : isConnected ? 'Send email' : 'Open in email app'}
+            {sending ? 'Sending…' : sent ? 'Sent!' : 'Send email'}
           </button>
         </div>
       </form>
