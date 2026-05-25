@@ -37,9 +37,6 @@ export default function Navbar({ search, onSearchChange, activeView, onViewChang
           <button type="button" onClick={() => onViewChange("shoot")} className={tabClass("shoot")}>
             Shoot Schedule
           </button>
-          <button type="button" onClick={() => onViewChange("assets")} className={tabClass("assets")}>
-            Assets
-          </button>
         </div>
 
         <div className="relative ml-auto w-full sm:w-64">
