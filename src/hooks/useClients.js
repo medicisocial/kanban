@@ -16,6 +16,7 @@ function loadClients() {
         return {
           names: parsed.names,
           colors: { ...DEFAULT_CLIENT_COLORS, ...(parsed.colors || {}) },
+          emails: { ...(parsed.emails || {}) },
         };
       }
     }
@@ -25,6 +26,7 @@ function loadClients() {
   return {
     names: [...DEFAULT_CLIENTS],
     colors: { ...DEFAULT_CLIENT_COLORS },
+    emails: {},
   };
 }
 
@@ -35,7 +37,7 @@ export function useClients() {
     localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const addClient = useCallback((name, color) => {
+  const addClient = useCallback((name, color, email = '') => {
     const trimmed = normalizeClientName(name);
     if (!trimmed) return { ok: false, error: 'Please enter a client name.' };
 
@@ -49,6 +51,7 @@ export function useClients() {
       return {
         names: [...prev.names, trimmed],
         colors: { ...prev.colors, [trimmed]: nextColor },
+        emails: { ...prev.emails, [trimmed]: (email || '').trim() },
       };
     });
 
@@ -58,6 +61,18 @@ export function useClients() {
     return { ok: true, name: trimmed };
   }, []);
 
+  const setClientEmails = useCallback((emails) => {
+    setState((prev) => ({
+      ...prev,
+      emails: { ...prev.emails, ...emails },
+    }));
+  }, []);
+
+  const getClientEmail = useCallback(
+    (client) => state.emails[client] || '',
+    [state.emails],
+  );
+
   const getClientColor = useCallback(
     (client) => state.colors[client] || '#9ca3af',
     [state.colors],
@@ -66,8 +81,11 @@ export function useClients() {
   return {
     clients: state.names,
     clientColors: state.colors,
+    clientEmails: state.emails,
     defaultClient: state.names[0] || DEFAULT_CLIENTS[0],
     addClient,
+    setClientEmails,
+    getClientEmail,
     getClientColor,
   };
 }
