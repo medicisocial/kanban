@@ -9,17 +9,26 @@ export default function ModelScheduleSummary({ schedules, title, titleClassName,
       >
         {title}
       </h5>
-      <ul className="mt-2 space-y-2">
+      <ul className="mt-3 space-y-3">
         {schedules.map(({ name, slots }) => (
           <li
             key={name}
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5"
           >
-            <p className="text-sm font-medium text-[#f9f6f2]">{name}</p>
-            <ul className="mt-1 space-y-0.5">
+            <p className="text-sm font-semibold text-[#f9f6f2]">{name}</p>
+            <ul className="mt-2 space-y-1.5">
               {slots.map((slot, index) => (
-                <li key={`${slot.timeLabel}-${index}`} className="text-xs text-gray-400">
-                  {slot.timeLabel}
+                <li
+                  key={`${slot.timeLabel}-${slot.contentTitle}-${index}`}
+                  className="flex flex-wrap items-baseline gap-x-2 text-xs"
+                >
+                  <span className="font-medium text-[#fecaca]">{slot.timeLabel}</span>
+                  {slot.contentTitle && (
+                    <span className="text-gray-400">
+                      {slot.contentTitle}
+                      {slot.contentType ? ` · ${slot.contentType}` : ""}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>

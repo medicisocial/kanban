@@ -3,6 +3,7 @@ import {
   getDefaultShootEndTime,
   parseTimeToMinutes,
 } from "../utils/shootDay";
+import ModelTagInput from "./ModelTagInput";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-2.5 py-1.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50";
@@ -136,21 +137,22 @@ export default function ShootDayPlanningRow({
           />
         </label>
 
-        <label className="block">
+        <label className="block sm:col-span-2 lg:col-span-4">
           <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
             Models / talent
           </span>
-          <input
-            type="text"
+          <ModelTagInput
             value={card.shootModels || ""}
-            onChange={(e) => handleChange("shootModels", e.target.value)}
+            onChange={(value) => handleChange("shootModels", value)}
             disabled={readOnly}
-            placeholder="e.g. Sarah, Mike"
-            className={inputClass}
+            placeholder="Add model name, press Enter"
           />
+          <p className="mt-1 text-[10px] text-gray-600">
+            Add each person separately — their call times appear in the summary below.
+          </p>
         </label>
 
-        <label className="block">
+        <label className="block sm:col-span-2 lg:col-span-2">
           <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
             Props & needs
           </span>
@@ -224,6 +226,19 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
             />
           </label>
         </div>
+      </div>
+
+      <div className="sm:col-span-2 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+        <p className="mb-1 text-xs font-semibold text-gray-300">Full-session models</p>
+        <p className="mb-3 text-[10px] text-gray-500">
+          Models needed for the entire shoot window (not tied to a specific piece of content).
+        </p>
+        <ModelTagInput
+          value={plan.sessionModels || ""}
+          onChange={(value) => onUpdatePlan({ sessionModels: value })}
+          disabled={readOnly}
+          placeholder="Add model name, press Enter"
+        />
       </div>
     </div>
   );

@@ -227,23 +227,32 @@ export default function ClientShootDayPortal({
           />
         </section>
 
-        {(modelSchedules.length > 0 || allNeeds.length > 0) && (
-          <section className="grid gap-4 sm:grid-cols-2">
-            {modelSchedules.length > 0 && (
-              <ModelScheduleSummary schedules={modelSchedules} title="All models & talent" />
-            )}
-            {allNeeds.length > 0 && (
-              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Equipment & needs</h3>
-                <ul className="mt-2 space-y-1">
-                  {allNeeds.map((item) => (
-                    <li key={item} className="text-sm text-[#f9f6f2]">{item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+        {allNeeds.length > 0 && (
+          <section>
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Equipment & needs</h3>
+              <ul className="mt-2 space-y-1">
+                {allNeeds.map((item) => (
+                  <li key={item} className="text-sm text-[#f9f6f2]">{item}</li>
+                ))}
+              </ul>
+            </div>
           </section>
         )}
+
+        <section>
+          <h2 className="mb-1 text-sm font-semibold text-white">Model call times</h2>
+          <p className="mb-4 text-xs text-gray-500">
+            Add models to each content item — call times are generated from shoot start/end times.
+          </p>
+          {modelSchedules.length > 0 ? (
+            <ModelScheduleSummary schedules={modelSchedules} title="Who needs to be there when" />
+          ) : (
+            <div className="rounded-lg border border-dashed border-white/10 px-4 py-8 text-center">
+              <p className="text-sm text-gray-400">No models added yet.</p>
+            </div>
+          )}
+        </section>
 
         <section>
           <h2 className="mb-3 text-sm font-semibold text-white">Session extras</h2>

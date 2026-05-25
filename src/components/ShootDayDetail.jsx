@@ -234,16 +234,34 @@ function ClientShootSection({
 
         {(modelSchedules.length > 0 || allNeeds.length > 0) && (
           <div className="grid gap-4 sm:grid-cols-2">
-            {modelSchedules.length > 0 && (
+            {allNeeds.length > 0 && (
+              <SummaryList title="Equipment & needs" items={allNeeds} color={color} />
+            )}
+          </div>
+        )}
+
+        {clientCards.length > 0 && (
+          <div>
+            <h4 className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              Model call times
+            </h4>
+            <p className="mb-3 text-xs text-gray-500">
+              Based on models added to each content item and full-session models above.
+            </p>
+            {modelSchedules.length > 0 ? (
               <ModelScheduleSummary
                 schedules={modelSchedules}
-                title="All models & talent"
+                title="Who needs to be there when"
                 titleClassName="text-xs font-semibold uppercase tracking-wider"
                 titleStyle={{ color }}
               />
-            )}
-            {allNeeds.length > 0 && (
-              <SummaryList title="Equipment & needs" items={allNeeds} color={color} />
+            ) : (
+              <div className="rounded-lg border border-dashed border-white/10 px-4 py-8 text-center">
+                <p className="text-sm text-gray-400">No models added yet.</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Add models to each content item — their call times will appear here automatically.
+                </p>
+              </div>
             )}
           </div>
         )}

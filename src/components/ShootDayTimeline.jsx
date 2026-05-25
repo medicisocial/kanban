@@ -6,6 +6,7 @@ import {
   buildHourMarkers,
   positionOnTimeline,
   assignTimelineLanes,
+  splitList,
 } from "../utils/shootDay";
 import ShootDayTimelinePrintButton from "./ShootDayTimelinePrintButton";
 import ShootScriptModal from "./ShootScriptModal";
@@ -228,7 +229,16 @@ export default function ShootDayTimeline({
                     )}
                   </div>
                   {entry.card.shootModels && (
-                    <p className="mt-1 text-sm text-gray-400">Models: {entry.card.shootModels}</p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {splitList(entry.card.shootModels).map((name) => (
+                        <span
+                          key={name}
+                          className="rounded-full bg-black/20 px-1.5 py-0.5 text-[10px] text-gray-300"
+                        >
+                          {name}
+                        </span>
+                      ))}
+                    </div>
                   )}
                   {entry.card.shootNeeds && (
                     <p className="text-sm text-gray-400">Needs: {entry.card.shootNeeds}</p>

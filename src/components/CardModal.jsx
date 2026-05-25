@@ -13,6 +13,7 @@ import { useClientsContext } from '../context/ClientsContext';
 import { hasStoryRecurrence, hasStoryDailyRange, getStoryScheduleMode, parseRecurrenceDays, parseStoryOccurrenceNotes } from '../utils/calendar';
 import { getDefaultShootEndTime, parseTimeToMinutes } from '../utils/shootDay';
 import StoryRecurrencePicker from './StoryRecurrencePicker';
+import ModelTagInput from './ModelTagInput';
 
 export default function CardModal({ card, onClose, onUpdate, onDelete }) {
   const overlayRef = useRef(null);
@@ -289,12 +290,10 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
                   />
                 </Field>
                 <Field label="Models / Talent">
-                  <input
-                    type="text"
+                  <ModelTagInput
                     value={card.shootModels || ''}
-                    onChange={(e) => handleChange('shootModels', e.target.value)}
-                    placeholder="e.g. Sarah, Mike"
-                    className={inputClass}
+                    onChange={(value) => handleChange('shootModels', value)}
+                    placeholder="Add model name, press Enter"
                   />
                 </Field>
                 <Field label="Props & Needs">

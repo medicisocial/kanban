@@ -289,14 +289,24 @@ export function splitList(value) {
     .filter(Boolean);
 }
 
+export function joinList(items) {
+  return items.filter(Boolean).join(", ");
+}
+
 export function aggregateModelsWithSlots(cards, sessionModels = "", plan = {}) {
   const modelSlots = new Map();
 
-  function addSlot(name, { timeLabel, sortKey, endMinutes }) {
+  function addSlot(name, { timeLabel, sortKey, endMinutes, contentTitle, contentType, cardId }) {
     if (!name) return;
     if (!modelSlots.has(name)) modelSlots.set(name, new Map());
-    const key = `${sortKey}|${endMinutes ?? sortKey}|${timeLabel}`;
-    modelSlots.get(name).set(key, { timeLabel, sortKey, endMinutes: endMinutes ?? sortKey });
+    const key = cardId ? `${cardId}|${sortKey}|${endMinutes}` : `${sortKey}|${endMinutes}|${timeLabel}`;
+    modelSlots.get(name).set(key, {
+      timeLabel,
+      sortKey,
+      endMinutes: endMinutes ?? sortKey,
+      contentTitle: contentTitle || "",
+      contentType: contentType || "",
+    });
   }
 
   const timeline = buildShootTimeline(cards);
@@ -327,7 +337,14 @@ export function aggregateModelsWithSlots(cards, sessionModels = "", plan = {}) {
     }
 
     for (const name of names) {
-      addSlot(name, { timeLabel, sortKey, endMinutes });
+      addSlot(name, {
+        timeLabel,
+        sortKey,
+        endMinutes,
+        contentTitle: card.title,
+        contentType: card.contentType,
+        cardId: card.id,
+      });
     }
   }
 
@@ -351,6 +368,7 @@ export function aggregateModelsWithSlots(cards, sessionModels = "", plan = {}) {
           timeLabel: sessionLabel,
           sortKey: sessionSortKey,
           endMinutes: sessionEndMinutes,
+          contentTitle: "Full session",
         });
       }
     }
@@ -375,7 +393,14 @@ export function aggregateModelsWithSlots(cards, sessionModels = "", plan = {}) {
 
 export function formatModelScheduleLines(schedules) {
   return schedules.map(({ name, slots }) => {
-    const times = slots.map((slot) => slot.timeLabel).join("; ");
+    const times = slots
+      .map((slot) => {
+        if (slot.contentTitle && slot.contentTitle !== "Full session") {
+          return `${slot.timeLabel} (${slot.contentTitle})`;
+        }
+        return slot.timeLabel;
+      })
+      .join("; ");
     return `${name} — ${times}`;
   });
 }
