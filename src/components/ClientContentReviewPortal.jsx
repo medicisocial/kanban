@@ -69,10 +69,13 @@ export default function ClientContentReviewPortal({
     const card = localCards.find((c) => c.id === cardId);
     if (!card) return;
 
+    const trimmed = (comment || '').trim();
+    if (!trimmed) return;
+
     const response = {
       cardId,
       action: 'denied',
-      comment,
+      comment: trimmed,
       client,
       card,
       timestamp: Date.now(),
@@ -120,7 +123,7 @@ export default function ClientContentReviewPortal({
         {!done ? (
           <>
             <p className="mb-2 text-sm text-gray-300">
-              Review the content below. Approve when it&apos;s ready to schedule, or request changes with your notes.
+              Review the content below. Approve when it&apos;s ready to schedule, or mark not approved with notes explaining what to change.
             </p>
             <p className="mb-6 text-xs text-gray-500">
               {pendingCount} item{pendingCount === 1 ? '' : 's'} waiting for your review

@@ -58,9 +58,9 @@ function getSampleIdeas() {
 function loadIdeas() {
   try {
     const stored = localStorage.getItem(VIDEO_IDEAS_STORAGE_KEY);
-    if (stored) {
+    if (stored !== null) {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch {
     /* fall through */

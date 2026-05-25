@@ -15,6 +15,7 @@ import {
   loadContentReviewResponses,
   parseContentImportParam,
   applyContentReviewResponses,
+  buildContentReviewDenyUpdates,
 } from "./utils/contentReviewShare";
 import { getCalendarPortalClient } from "./utils/calendarShare";
 import { hasStoryRecurrence, withStoryOccurrence, parseStoryOccurrenceNotes } from "./utils/calendar";
@@ -228,16 +229,9 @@ function AppShell() {
   const handleContentReviewDeny = (cardId, comment) => {
     const card = cards.find((c) => c.id === cardId);
     if (!card) return;
-    const stamp = new Date().toLocaleDateString();
-    const noteAppend = comment
-      ? `\n\nClient revision notes (${stamp}): ${comment}`
-      : "";
-    updateCard(cardId, {
-      columnId: "editing",
-      status: "Editing",
-      clientComment: comment || "",
-      notes: `${card.notes || ""}${noteAppend}`.trim(),
-    });
+    const trimmed = (comment || '').trim();
+    if (!trimmed) return;
+    updateCard(cardId, buildContentReviewDenyUpdates(card, trimmed));
   };
 
   const handleApplyContentReviewResponses = () => {
@@ -503,6 +497,7 @@ function AppShell() {
           card={selectedCard}
           onClose={() => setSelectedCard(null)}
           onUpdate={handleUpdate}
+          onDelete={handleDelete}
         />
       )}
     </div>

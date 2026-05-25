@@ -12,7 +12,7 @@ import { useClientsContext } from '../context/ClientsContext';
 import { hasStoryRecurrence, parseRecurrenceDays, parseStoryOccurrenceNotes } from '../utils/calendar';
 import StoryRecurrencePicker from './StoryRecurrencePicker';
 
-export default function CardModal({ card, onClose, onUpdate }) {
+export default function CardModal({ card, onClose, onUpdate, onDelete }) {
   const overlayRef = useRef(null);
   const { clients } = useClientsContext();
 
@@ -343,9 +343,19 @@ export default function CardModal({ card, onClose, onUpdate }) {
           </Field>
 
           {card.clientComment && (
-            <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 px-3 py-2.5">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-violet-300">
-                Client feedback
+            <div
+              className={`rounded-lg border px-3 py-2.5 ${
+                card.columnId === 'not-approved'
+                  ? 'border-red-500/30 bg-red-500/10'
+                  : 'border-violet-500/20 bg-violet-500/5'
+              }`}
+            >
+              <p
+                className={`text-[10px] font-medium uppercase tracking-wider ${
+                  card.columnId === 'not-approved' ? 'text-red-300' : 'text-violet-300'
+                }`}
+              >
+                {card.columnId === 'not-approved' ? 'Client revision notes' : 'Client feedback'}
               </p>
               <p className="mt-1 text-sm text-gray-300">&ldquo;{card.clientComment}&rdquo;</p>
             </div>
@@ -362,11 +372,20 @@ export default function CardModal({ card, onClose, onUpdate }) {
           </div>
         </div>
 
-        <div className="border-t border-white/5 px-5 py-4">
+        <div className="flex gap-2 border-t border-white/5 px-5 py-4">
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(card.id)}
+              className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-500/20"
+            >
+              Delete
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-lg bg-violet-600 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500"
+            className="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500"
           >
             Done
           </button>

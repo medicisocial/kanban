@@ -2,6 +2,7 @@ export const COLUMNS = [
   { id: 'shoot', title: 'To Shoot' },
   { id: 'editing', title: 'Editing' },
   { id: 'in-review', title: 'In Review' },
+  { id: 'not-approved', title: 'Not Approved' },
   { id: 'approved', title: 'Approved' },
   { id: 'scheduled', title: 'Scheduled' },
 ];
@@ -84,6 +85,7 @@ export const COLUMN_BG = {
   shoot: 'bg-[#1a1d2e]',
   editing: 'bg-[#1c2030]',
   'in-review': 'bg-[#1f2336]',
+  'not-approved': 'bg-[#2a1f24]',
   approved: 'bg-[#21253a]',
   scheduled: 'bg-[#23273d]',
 };

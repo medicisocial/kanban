@@ -111,6 +111,20 @@ export function parseContentImportParam() {
   }
 }
 
+export function buildContentReviewDenyUpdates(card, comment, timestamp = Date.now()) {
+  const trimmed = (comment || '').trim();
+  const stamp = new Date(timestamp).toLocaleDateString();
+  const noteAppend = trimmed
+    ? `\n\nClient revision notes (${stamp}): ${trimmed}`
+    : '';
+  return {
+    columnId: 'not-approved',
+    status: 'Not Approved',
+    clientComment: trimmed,
+    notes: `${card.notes || ''}${noteAppend}`.trim(),
+  };
+}
+
 export function applyContentReviewResponses(cards, responses, { updateCard }) {
   let applied = 0;
 
@@ -118,7 +132,7 @@ export function applyContentReviewResponses(cards, responses, { updateCard }) {
     const card = cards.find((c) => c.id === response.cardId);
     if (!card || card.columnId !== 'in-review') continue;
 
-    const comment = response.comment || '';
+    const comment = (response.comment || '').trim();
 
     if (response.action === 'approved') {
       updateCard(response.cardId, {
@@ -131,16 +145,8 @@ export function applyContentReviewResponses(cards, responses, { updateCard }) {
     }
 
     if (response.action === 'denied') {
-      const stamp = new Date(response.timestamp || Date.now()).toLocaleDateString();
-      const noteAppend = comment
-        ? `\n\nClient revision notes (${stamp}): ${comment}`
-        : '';
-      updateCard(response.cardId, {
-        columnId: 'editing',
-        status: 'Editing',
-        clientComment: comment,
-        notes: `${card.notes || ''}${noteAppend}`.trim(),
-      });
+      if (!comment) continue;
+      updateCard(response.cardId, buildContentReviewDenyUpdates(card, comment, response.timestamp));
       applied += 1;
     }
   }

@@ -46,7 +46,7 @@ export default function KanbanCard({ card, onClick, onDelete }) {
           onDelete(card.id);
         }}
         onPointerDown={(e) => e.stopPropagation()}
-        className="absolute right-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-md text-gray-500 opacity-0 transition hover:bg-white/10 hover:text-red-400 group-hover:opacity-100"
+        className="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md text-gray-400 opacity-80 transition hover:bg-white/10 hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100"
         aria-label="Delete card"
       >
         ✕
@@ -98,6 +98,12 @@ export default function KanbanCard({ card, onClick, onDelete }) {
           </span>
         )}
       </div>
+
+      {card.columnId === 'not-approved' && card.clientComment && (
+        <p className="mt-2 line-clamp-2 text-xs text-red-300/90" title={card.clientComment}>
+          ↩ {card.clientComment}
+        </p>
+      )}
 
       {card.assignedTo && (
         <div className="mt-2 flex items-center gap-1.5">
