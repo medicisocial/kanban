@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useClientsContext } from '../context/ClientsContext';
 import { useClientAssetsContext } from '../context/ClientAssetsContext';
 import {
@@ -35,24 +36,50 @@ function Field({ label, children, className = '' }) {
 
 function ColorInput({ label, value, onChange, showTextSample = false }) {
   const inputRef = useRef(null);
-  const focusedRef = useRef(false);
-  const [text, setText] = useState(() => parseHexColor(value) || value || '');
+  const onChangeRef = useRef(onChange);
+  const [isFocused, setIsFocused] = useState(false);
+  const [editText, setEditText] = useState(() => parseHexColor(value) || value || '');
 
-  useEffect(() => {
-    if (focusedRef.current) return;
-    setText(parseHexColor(value) || value || '');
-  }, [value]);
+  onChangeRef.current = onChange;
 
-  const swatchColor = previewHexColor(text, parseHexColor(value) || '#888888');
+  const committed = parseHexColor(value) || value || '';
+  const displayText = isFocused ? editText : committed;
+  const swatchColor = previewHexColor(isFocused ? editText : value, committed || '#888888');
   const pickerHex = toColorPickerHex(swatchColor);
 
-  const commitToParent = (next) => {
-    const parsed = parseHexColor(next);
+  useEffect(() => {
+    if (!isFocused) {
+      setEditText(committed);
+    }
+  }, [value, committed, isFocused]);
+
+  const commitParsed = (parsed) => {
     if (!parsed) return false;
-    setText(parsed);
-    onChange(parsed);
+    onChangeRef.current(parsed);
+    if (!isFocused) {
+      setEditText(parsed);
+    }
     return true;
   };
+
+  const commitRaw = (raw) => {
+    const parsed = parseHexColor(raw);
+    if (!parsed) return false;
+    setEditText(parsed);
+    onChangeRef.current(parsed);
+    return true;
+  };
+
+  useEffect(() => {
+    return () => {
+      const raw = inputRef.current?.value;
+      if (!raw) return;
+      const parsed = parseHexColor(raw);
+      if (parsed) {
+        onChangeRef.current(parsed);
+      }
+    };
+  }, []);
 
   return (
     <Field label={label}>
@@ -78,7 +105,7 @@ function ColorInput({ label, value, onChange, showTextSample = false }) {
           <input
             type="color"
             value={pickerHex}
-            onChange={(e) => commitToParent(e.target.value)}
+            onChange={(e) => commitRaw(e.target.value)}
             className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
             aria-label={`${label} picker`}
           />
@@ -86,27 +113,29 @@ function ColorInput({ label, value, onChange, showTextSample = false }) {
         <input
           ref={inputRef}
           type="text"
-          value={text}
+          value={displayText}
           onFocus={() => {
-            focusedRef.current = true;
+            setIsFocused(true);
+            setEditText(committed);
           }}
           onChange={(e) => {
             const next = e.target.value;
-            setText(next);
-            commitToParent(next);
+            setEditText(next);
+            commitParsed(parseHexColor(next));
           }}
           onPaste={() => {
             requestAnimationFrame(() => {
               const el = inputRef.current;
               if (!el) return;
-              setText(el.value);
-              commitToParent(el.value);
+              setEditText(el.value);
+              commitRaw(el.value);
             });
           }}
           onBlur={() => {
-            focusedRef.current = false;
-            const current = inputRef.current?.value ?? text;
-            commitToParent(current);
+            setIsFocused(false);
+            const current = inputRef.current?.value ?? editText;
+            if (commitRaw(current)) return;
+            setEditText(committed);
           }}
           className={inputClass}
           placeholder="#000000"
@@ -296,12 +325,6 @@ export default function ClientAssets({ clientFilter }) {
   const [activeOpusStyle, setActiveOpusStyle] = useState('headline');
   const draftRef = useRef(null);
 
-  useEffect(() => {
-    if (clientFilter !== 'all') {
-      setActiveClient(clientFilter);
-    }
-  }, [clientFilter]);
-
   const clientColor = activeClient ? getClientColor(activeClient) : '#810100';
   const [draft, setDraft] = useState(null);
   const [baseline, setBaseline] = useState(null);
@@ -332,13 +355,17 @@ export default function ClientAssets({ clientFilter }) {
     setDraft(snapshot);
     setBaseline(snapshot);
     draftRef.current = snapshot;
-  }, [activeClient, store, getClientColor]);
+    // Only reload draft when the active client changes — handleSave updates draft after save.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeClient]);
 
   const flushFocusedField = () => {
-    const active = document.activeElement;
-    if (active instanceof HTMLElement) {
-      active.blur();
-    }
+    flushSync(() => {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement) {
+        active.blur();
+      }
+    });
   };
 
   const isDirty = useMemo(() => {
@@ -403,12 +430,20 @@ export default function ClientAssets({ clientFilter }) {
 
   const handleClientChange = (nextClient) => {
     if (nextClient === activeClient) return;
-    if (isDirty && !window.confirm('Discard unsaved changes for this client?')) return;
     flushFocusedField();
+    if (isDirty && !window.confirm('Discard unsaved changes for this client?')) return;
     setSaveError('');
     loadedClientRef.current = null;
     setActiveClient(nextClient);
   };
+
+  useEffect(() => {
+    if (clientFilter === 'all' || clientFilter === activeClient) return;
+    flushFocusedField();
+    loadedClientRef.current = null;
+    setActiveClient(clientFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientFilter]);
 
   const sectionClass = (section) =>
     `rounded-md px-3 py-1.5 text-sm font-medium transition ${
@@ -825,6 +860,7 @@ export default function ClientAssets({ clientFilter }) {
                 </button>
                 <button
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={handleSave}
                   className="rounded-lg bg-[#810100] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#9a0100]"
                 >
