@@ -8,6 +8,7 @@ import {
   STORAGE_KEY,
   VIDEO_IDEAS_STORAGE_KEY,
 } from '../constants';
+import { CLIENT_ASSETS_STORAGE_KEY } from '../utils/clientAssets';
 
 export const BACKUP_VERSION = 1;
 
@@ -19,6 +20,7 @@ export const BACKUP_STORAGE_KEYS = [
   EDITOR_TODO_STORAGE_KEY,
   EDITOR_TODO_ORDER_KEY,
   ADMIN_TASKS_STORAGE_KEY,
+  CLIENT_ASSETS_STORAGE_KEY,
 ];
 
 const BACKUP_QUEUE_KEYS = [

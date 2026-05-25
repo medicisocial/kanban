@@ -22,6 +22,8 @@ import { withStoryOccurrence, parseStoryOccurrenceNotes } from "./utils/calendar
 import { createCard } from "./constants";
 import { useEditorTasks } from "./hooks/useEditorTasks";
 import { useAdminTasks } from "./hooks/useAdminTasks";
+import ClientAssets from "./components/ClientAssets";
+import { ClientAssetsProvider } from "./context/ClientAssetsContext";
 import CompanyTasks from "./components/CompanyTasks";
 import Navbar from "./components/Navbar";
 import FilterBar from "./components/FilterBar";
@@ -536,6 +538,10 @@ function AppShell() {
         />
       )}
 
+      {activeView === "assets" && (
+        <ClientAssets clientFilter={clientFilter} />
+      )}
+
       {selectedCard && (
         <CardModal
           card={selectedCard}
@@ -552,7 +558,9 @@ export default function App() {
   return (
     <StaffAuthProvider>
       <ClientsProvider>
-        <AppShell />
+        <ClientAssetsProvider>
+          <AppShell />
+        </ClientAssetsProvider>
       </ClientsProvider>
     </StaffAuthProvider>
   );

@@ -65,7 +65,7 @@ function loadIdeas() {
   } catch {
     /* fall through */
   }
-  return getSampleIdeas();
+  return [];
 }
 
 export function useVideoIdeas() {

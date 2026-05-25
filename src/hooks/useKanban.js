@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEY, getSampleData, COLUMNS, PLATFORM, TEAM_MEMBERS, createCard, EDITOR_TODO_STORAGE_KEY } from '../constants';
+import { STORAGE_KEY, COLUMNS, PLATFORM, TEAM_MEMBERS, createCard, EDITOR_TODO_STORAGE_KEY } from '../constants';
 import {
   toDateKey,
   parseRecurrenceDays,
@@ -93,16 +93,16 @@ function migrateLegacyOneOffTasks(cards) {
 function loadCards() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
+    if (stored !== null) {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return migrateLegacyOneOffTasks(parsed.map(normalizeCard));
       }
     }
   } catch {
-    /* fall through to sample data */
+    /* fall through */
   }
-  return migrateLegacyOneOffTasks(getSampleData());
+  return migrateLegacyOneOffTasks([]);
 }
 
 function withColumnDate(columnId, dueDate, isOneOffProject = false) {
