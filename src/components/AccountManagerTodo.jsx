@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ACCOUNT_MANAGERS, getContentTypeStyle } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
+import { formatTime } from '../utils';
 import { formatStoryScheduleSummary, toDateKey } from '../utils/calendar';
 import {
   buildPostsTodoTasks,
@@ -10,18 +11,18 @@ import {
   groupAccountManagerTasksByClient,
   groupAccountManagerTasksByDate,
 } from '../utils/accountManagerTodo';
-import SchedulePostModal from './SchedulePostModal';
-
 const kindStyles = {
   schedule: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200',
   publish: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
   'post-story': 'border-blue-500/30 bg-blue-500/10 text-blue-200',
 };
 
-function TaskCard({ task, getClientColor, onOpenCard, onScheduleClick, onMarkPosted }) {
+function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const badgeStyle = kindStyles[task.kind] || kindStyles.schedule;
   const canMarkPosted = task.kind === 'publish' || task.kind === 'post-story';
+  const showPostTimeByTitle = canMarkPosted && task.dueTime;
+  const clientColor = getClientColor(task.client);
 
   const openCard = () => onOpenCard(task.card);
 
@@ -50,8 +51,19 @@ function TaskCard({ task, getClientColor, onOpenCard, onScheduleClick, onMarkPos
             onClick={openCard}
             className="text-left hover:text-[#fca5a5]"
           >
-            <h3 className="text-sm font-semibold text-white">{task.title}</h3>
+            <div className="flex flex-wrap items-baseline gap-2">
+              <h3 className="text-sm font-semibold text-white">{task.title}</h3>
+              {showPostTimeByTitle && (
+                <span className="text-xs font-medium text-gray-400">{formatTime(task.dueTime)}</span>
+              )}
+            </div>
           </button>
+
+          {task.client && (
+            <p className="mt-1 text-xs font-medium" style={{ color: clientColor }}>
+              {task.client}
+            </p>
+          )}
 
           {task.notes && (
             <p className="mt-2 line-clamp-2 text-xs text-gray-400">{task.notes}</p>
@@ -60,7 +72,6 @@ function TaskCard({ task, getClientColor, onOpenCard, onScheduleClick, onMarkPos
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
             {task.assignedTo && <span>Editor: {task.assignedTo}</span>}
             {task.accountManager && <span>AM: {task.accountManager}</span>}
-            {task.dueTime && <span>{task.dueTime}</span>}
             {task.contentType === 'Story' && (
               <span>{formatStoryScheduleSummary(task.card)}</span>
             )}
@@ -79,10 +90,10 @@ function TaskCard({ task, getClientColor, onOpenCard, onScheduleClick, onMarkPos
           {task.kind === 'schedule' && (
             <button
               type="button"
-              onClick={() => onScheduleClick(task.card)}
+              onClick={() => onMarkScheduled(task.cardId)}
               className="rounded-lg bg-[#810100] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#a00000]"
             >
-              Schedule
+              Scheduled
             </button>
           )}
           {canMarkPosted && (
@@ -100,7 +111,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onScheduleClick, onMarkPos
   );
 }
 
-function ClientGroupedList({ tasks, getClientColor, onOpenCard, onScheduleClick, onMarkPosted }) {
+function ClientGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted }) {
   const groups = useMemo(() => groupAccountManagerTasksByClient(tasks), [tasks]);
 
   return (
@@ -122,7 +133,7 @@ function ClientGroupedList({ tasks, getClientColor, onOpenCard, onScheduleClick,
                 task={task}
                 getClientColor={getClientColor}
                 onOpenCard={onOpenCard}
-                onScheduleClick={onScheduleClick}
+                onMarkScheduled={onMarkScheduled}
                 onMarkPosted={onMarkPosted}
               />
             ))}
@@ -133,7 +144,7 @@ function ClientGroupedList({ tasks, getClientColor, onOpenCard, onScheduleClick,
   );
 }
 
-function DateGroupedList({ tasks, getClientColor, onOpenCard, onScheduleClick, onMarkPosted }) {
+function DateGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted }) {
   const todayKey = toDateKey(new Date());
   const groups = useMemo(
     () => groupAccountManagerTasksByDate(tasks, todayKey),
@@ -157,7 +168,7 @@ function DateGroupedList({ tasks, getClientColor, onOpenCard, onScheduleClick, o
                 task={task}
                 getClientColor={getClientColor}
                 onOpenCard={onOpenCard}
-                onScheduleClick={onScheduleClick}
+                onMarkScheduled={onMarkScheduled}
                 onMarkPosted={onMarkPosted}
               />
             ))}
@@ -173,13 +184,12 @@ export default function AccountManagerTodo({
   search,
   clientFilter,
   onOpenCard,
-  onSchedulePost,
+  onMarkScheduled,
   onMarkPosted,
 }) {
   const { getClientColor, clientAccountManagers } = useClientsContext();
   const todayKey = toDateKey(new Date());
   const [assigneeFilter, setAssigneeFilter] = useState('all');
-  const [scheduleCard, setScheduleCard] = useState(null);
 
   const storyTasksToday = useMemo(
     () => buildStoryTasksToday(cards, todayKey, clientAccountManagers),
@@ -204,11 +214,6 @@ export default function AccountManagerTodo({
     () => filterAccountManagerTasks(postsTodoTasks, filterOptions),
     [postsTodoTasks, filterOptions],
   );
-
-  const handleSchedule = (cardId, schedule) => {
-    onSchedulePost(cardId, schedule);
-    setScheduleCard(null);
-  };
 
   const todayLabel = formatAccountManagerDateLabel(todayKey, todayKey);
 
@@ -263,7 +268,7 @@ export default function AccountManagerTodo({
               tasks={filteredStoryTasks}
               getClientColor={getClientColor}
               onOpenCard={onOpenCard}
-              onScheduleClick={setScheduleCard}
+              onMarkScheduled={onMarkScheduled}
               onMarkPosted={onMarkPosted}
             />
           )}
@@ -294,20 +299,12 @@ export default function AccountManagerTodo({
               tasks={filteredPostsTasks}
               getClientColor={getClientColor}
               onOpenCard={onOpenCard}
-              onScheduleClick={setScheduleCard}
+              onMarkScheduled={onMarkScheduled}
               onMarkPosted={onMarkPosted}
             />
           )}
         </section>
       </div>
-
-      {scheduleCard && (
-        <SchedulePostModal
-          card={scheduleCard}
-          onClose={() => setScheduleCard(null)}
-          onSchedule={handleSchedule}
-        />
-      )}
     </div>
   );
 }

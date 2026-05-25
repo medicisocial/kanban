@@ -15,7 +15,7 @@ function buildScheduleTask(card, clientAccountManagers) {
     source: 'board',
     cardId: card.id,
     kind: 'schedule',
-    label: 'Schedule',
+    label: 'Scheduled',
     title: card.title,
     client: card.client,
     contentType: card.contentType,

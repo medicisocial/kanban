@@ -19,7 +19,7 @@ export default function CompanyTasks({
   onSetTaskOrder,
   onReorderTasks,
   onResetTaskOrder,
-  onSchedulePost,
+  onMarkScheduled,
   onMarkPosted,
   onSubmitForReview,
   onSendBackForEditing,
@@ -79,7 +79,7 @@ export default function CompanyTasks({
           search={search}
           clientFilter={clientFilter}
           onOpenCard={onOpenCard}
-          onSchedulePost={onSchedulePost}
+          onMarkScheduled={onMarkScheduled}
           onMarkPosted={onMarkPosted}
         />
       )}

@@ -111,15 +111,8 @@ function AppShell() {
     setActiveView("calendar");
   };
 
-  const handleSchedulePost = (cardId, { dueDate, dueTime, storyEndDate = '', storyRecurrenceDays = [] }) => {
-    updateCard(cardId, {
-      dueDate,
-      dueTime: dueTime || '',
-      storyEndDate,
-      storyRecurrenceDays,
-      columnId: "scheduled",
-      status: "Scheduled",
-    });
+  const handleMarkScheduled = (cardId) => {
+    moveCard(cardId, "scheduled");
   };
 
   const handleMarkPosted = (cardId, occurrenceDate) => {
@@ -511,7 +504,7 @@ function AppShell() {
           onSetTaskOrder={setTaskOrderFromIds}
           onReorderTasks={reorderTasks}
           onResetTaskOrder={resetTaskOrder}
-          onSchedulePost={handleSchedulePost}
+          onMarkScheduled={handleMarkScheduled}
           onMarkPosted={handleMarkPosted}
           onSubmitForReview={handleSubmitForReview}
           onSendBackForEditing={handleSendBackForEditing}
