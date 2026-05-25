@@ -31,10 +31,10 @@ export default function CalendarWeekView({
             <div
               key={key}
               className={`flex w-[160px] shrink-0 flex-col rounded-xl sm:w-[200px] ${
-                today ? "bg-violet-500/10 ring-1 ring-violet-500/30" : "bg-[#1a1d2e]"
+                today ? "bg-[#a00000]/10 ring-1 ring-[#810100]/30" : "bg-[#111111]"
               }`}
             >
-              <div className={`border-b border-white/5 px-3 py-2.5 ${today ? "text-violet-300" : "text-gray-300"}`}>
+              <div className={`border-b border-white/5 px-3 py-2.5 ${today ? "text-[#fca5a5]" : "text-gray-300"}`}>
                 <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
                   {DAY_NAMES[day.getDay()]}
                 </p>

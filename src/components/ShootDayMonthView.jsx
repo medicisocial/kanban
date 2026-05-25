@@ -25,7 +25,7 @@ export default function ShootDayMonthView({
     <div className="flex flex-col">
       <p className="mb-3 text-sm text-gray-400">{formatMonthYear(focusDate)} shoot schedule</p>
 
-      <div className="overflow-x-auto rounded-xl border border-white/5 bg-[#1a1d2e]">
+      <div className="overflow-x-auto rounded-xl border border-white/5 bg-[#111111]">
         <div className="grid grid-cols-7 border-b border-white/5">
           {DAY_NAMES.map((name) => (
             <div
@@ -62,24 +62,24 @@ export default function ShootDayMonthView({
                   onClick={() => onDayClick(day)}
                   className={`min-h-[120px] border-r border-white/5 p-1.5 text-left transition last:border-r-0 hover:bg-white/5 sm:min-h-[140px] sm:p-2 ${
                     !inMonth ? "bg-black/20 opacity-50" : ""
-                  } ${today ? "bg-violet-500/10 ring-1 ring-inset ring-violet-500/30" : ""} ${
-                    hasShoot ? "hover:ring-1 hover:ring-violet-500/20" : ""
+                  } ${today ? "bg-[#a00000]/10 ring-1 ring-inset ring-[#810100]/30" : ""} ${
+                    hasShoot ? "hover:ring-1 hover:ring-[#810100]/20" : ""
                   }`}
                 >
                   <div className="mb-1 flex items-center justify-between">
                     <span
                       className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
                         today
-                          ? "bg-violet-500 text-white"
+                          ? "bg-[#a00000] text-white"
                           : inMonth
-                            ? "text-gray-200"
+                            ? "text-[#f9f6f2]"
                             : "text-gray-600"
                       }`}
                     >
                       {day.getDate()}
                     </span>
                     {hasShoot && (
-                      <span className="rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[10px] font-medium text-violet-300">
+                      <span className="rounded-full bg-[#a00000]/20 px-1.5 py-0.5 text-[10px] font-medium text-[#fca5a5]">
                         {shootCount > 0 ? shootCount : "•"}
                       </span>
                     )}

@@ -44,7 +44,7 @@ export default function ShootDayDetail({
       </div>
 
       {!hasShootDay ? (
-        <div className="rounded-xl border border-dashed border-white/10 bg-[#1a1d2e] px-6 py-16 text-center">
+        <div className="rounded-xl border border-dashed border-white/10 bg-[#111111] px-6 py-16 text-center">
           <p className="text-sm text-gray-400">Nothing scheduled to shoot on this day.</p>
           <p className="mt-2 text-xs text-gray-500">
             Add a client shoot, or set a Shoot Date on any board card.
@@ -53,7 +53,7 @@ export default function ShootDayDetail({
             <button
               type="button"
               onClick={onAddShootDay}
-              className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500"
+              className="rounded-lg bg-[#810100] px-4 py-2 text-sm font-medium text-white hover:bg-[#a00000]"
             >
               Add client shoot
             </button>
@@ -118,7 +118,7 @@ function ClientShootSection({
 
   return (
     <section
-      className="overflow-hidden rounded-xl border border-white/5 bg-[#1a1d2e]"
+      className="overflow-hidden rounded-xl border border-white/5 bg-[#111111]"
       style={{ borderLeftColor: color, borderLeftWidth: "4px" }}
     >
       <header className="border-b border-white/5 px-4 py-4 sm:px-5">
@@ -193,7 +193,7 @@ function ClientShootSection({
               <button
                 type="button"
                 onClick={() => onAddShootItemForClient(client)}
-                className="mt-3 rounded-lg bg-violet-600/20 px-3 py-1.5 text-xs font-medium text-violet-300 hover:bg-violet-600/30"
+                className="mt-3 rounded-lg bg-[#810100]/20 px-3 py-1.5 text-xs font-medium text-[#fca5a5] hover:bg-[#810100]/30"
               >
                 Add first item
               </button>
@@ -288,7 +288,7 @@ function SummaryList({ title, items, color }) {
         {items.map((item) => (
           <li
             key={item}
-            className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-gray-200"
+            className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-[#f9f6f2]"
           >
             {item}
           </li>

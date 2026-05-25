@@ -30,8 +30,8 @@ import AddEditorTaskModal from './AddEditorTaskModal';
 
 const kindStyles = {
   edit: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
-  approve: 'border-violet-500/30 bg-violet-500/10 text-violet-200',
-  oneoff: 'border-sky-500/30 bg-sky-500/10 text-sky-200',
+  approve: 'border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]',
+  oneoff: 'border-white/20 bg-white/5 text-[#f9f6f2]',
 };
 
 function EditorTodoItem({
@@ -47,11 +47,11 @@ function EditorTodoItem({
 }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const isOneOff = task.source === 'oneoff';
-  const clientColor = isOneOff ? '#38bdf8' : getClientColor(task.client);
+  const clientColor = isOneOff ? '#f9f6f2' : getClientColor(task.client);
 
   return (
     <article
-      className={`rounded-xl border border-white/8 bg-[#1a1d2e] p-4 transition ${
+      className={`rounded-xl border border-white/8 bg-[#111111] p-4 transition ${
         task.completed ? 'opacity-60' : ''
       } ${sortable ? 'touch-none' : ''}`}
     >
@@ -72,7 +72,7 @@ function EditorTodoItem({
             type="checkbox"
             checked={Boolean(task.completed)}
             onChange={() => onToggleComplete(task.id)}
-            className="mt-1 h-4 w-4 rounded border-white/20 bg-[#1e2130] text-violet-600"
+            className="mt-1 h-4 w-4 rounded border-white/20 bg-[#1a1a1a] text-[#810100]"
             aria-label={`Mark ${task.title} complete`}
           />
         ) : (
@@ -100,7 +100,7 @@ function EditorTodoItem({
               </span>
             )}
             {isOneOff && (
-              <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold text-sky-300">
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#f9f6f2]">
                 One-off
               </span>
             )}
@@ -109,7 +109,7 @@ function EditorTodoItem({
           <button
             type="button"
             onClick={() => !isOneOff && onOpenCard?.(task.card)}
-            className={`text-left ${!isOneOff ? 'hover:text-violet-300' : ''}`}
+            className={`text-left ${!isOneOff ? 'hover:text-[#fca5a5]' : ''}`}
             disabled={isOneOff}
           >
             <h3 className={`text-sm font-semibold text-white ${task.completed ? 'line-through' : ''}`}>
@@ -153,7 +153,7 @@ function EditorTodoItem({
               type="checkbox"
               checked={Boolean(task.completed)}
               onChange={() => onToggleComplete(task.id)}
-              className="h-4 w-4 rounded border-white/20 bg-[#1e2130] text-violet-600"
+              className="h-4 w-4 rounded border-white/20 bg-[#1a1a1a] text-[#810100]"
               aria-label={`Mark ${task.title} complete`}
             />
             <button
@@ -272,7 +272,7 @@ export default function EditorTodo({
 
   const sortModeClass = (mode) =>
     `rounded-md px-3 py-1.5 text-sm font-medium transition ${
-      sortMode === mode ? 'bg-violet-600 text-white' : 'text-gray-400 hover:text-white'
+      sortMode === mode ? 'bg-[#810100] text-white' : 'text-gray-400 hover:text-white'
     }`;
 
   return (
@@ -287,10 +287,10 @@ export default function EditorTodo({
             <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-200">
               {editCount} to edit
             </span>
-            <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-violet-200">
+            <span className="rounded-full border border-[#810100]/30 bg-[#a00000]/10 px-2.5 py-1 text-[#fecaca]">
               {approveCount} to review
             </span>
-            <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-sky-200">
+            <span className="rounded-full border border-white/20 bg-white/5 px-2.5 py-1 text-[#f9f6f2]">
               {oneOffCount} one-off
             </span>
           </div>
@@ -299,7 +299,7 @@ export default function EditorTodo({
         <button
           type="button"
           onClick={() => setShowAddModal(true)}
-          className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-500"
+          className="rounded-lg bg-[#810100] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#a00000]"
         >
           + Add one-off task
         </button>
@@ -320,7 +320,7 @@ export default function EditorTodo({
           <select
             value={assigneeFilter}
             onChange={(e) => setAssigneeFilter(e.target.value)}
-            className="select-dark rounded-lg border border-white/10 bg-[#1e2130] px-3 py-1.5 text-sm text-gray-200 outline-none"
+            className="select-dark rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-1.5 text-sm text-[#f9f6f2] outline-none"
           >
             <option value="all">All editors</option>
             {TEAM_MEMBERS.map((member) => (
@@ -336,7 +336,7 @@ export default function EditorTodo({
             type="checkbox"
             checked={showCompleted}
             onChange={(e) => setShowCompleted(e.target.checked)}
-            className="h-4 w-4 rounded border-white/20 bg-[#1e2130] text-violet-600"
+            className="h-4 w-4 rounded border-white/20 bg-[#1a1a1a] text-[#810100]"
           />
           Show completed one-offs
         </label>

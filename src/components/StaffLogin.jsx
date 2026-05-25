@@ -3,7 +3,7 @@ import { isStaffAuthConfigured } from '../utils/staffAuth';
 import { useStaffAuth } from '../context/StaffAuthContext';
 
 const inputClass =
-  'select-dark w-full rounded-lg border border-white/10 bg-[#1e2130] px-3 py-2.5 text-sm text-gray-200 outline-none transition focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30';
+  'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30';
 
 export default function StaffLogin() {
   const { login } = useStaffAuth();
@@ -25,16 +25,16 @@ export default function StaffLogin() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0f1117] px-4 py-8">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1a1d2e] p-6 shadow-2xl sm:p-8">
+    <div className="flex min-h-screen items-center justify-center bg-black px-4 py-8">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#111111] p-6 shadow-2xl sm:p-8">
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/20">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#810100] to-[#a00000] shadow-lg shadow-[#810100]/20">
             <span className="text-sm font-bold text-white">M</span>
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Staff only</p>
-            <h1 className="text-lg font-semibold text-white">Medici Social</h1>
-            <p className="text-xs text-gray-500">Client Pipeline</p>
+            <h1 className="font-serif text-lg font-semibold text-white">Medici Social</h1>
+            <p className="text-xs text-white/50">Client Pipeline</p>
           </div>
         </div>
 
@@ -79,7 +79,7 @@ export default function StaffLogin() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full rounded-lg bg-violet-600 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white transition hover:bg-[#a00000] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? 'Signing in…' : 'Sign in'}
             </button>

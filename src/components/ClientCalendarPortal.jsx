@@ -48,7 +48,7 @@ function ClientCalendarDetail({ card, onClose }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1e2130] p-5 shadow-2xl"
+        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1a1a1a] p-5 shadow-2xl"
         style={{ borderTopColor: typeStyle.border, borderTopWidth: '3px' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -73,18 +73,18 @@ function ClientCalendarDetail({ card, onClose }) {
         <dl className="space-y-2 text-sm">
           <div className="flex justify-between gap-4">
             <dt className="text-gray-500">Date</dt>
-            <dd className="text-right text-gray-200">{formattedDate}</dd>
+            <dd className="text-right text-[#f9f6f2]">{formattedDate}</dd>
           </div>
           {card.dueTime && (
             <div className="flex justify-between gap-4">
               <dt className="text-gray-500">Time</dt>
-              <dd className="text-right text-gray-200">{formatTime(card.dueTime)}</dd>
+              <dd className="text-right text-[#f9f6f2]">{formatTime(card.dueTime)}</dd>
             </div>
           )}
           {hasStoryRecurrence(card) && (
             <div className="flex justify-between gap-4">
               <dt className="text-gray-500">Repeats</dt>
-              <dd className="text-right text-gray-200">Every {formatRecurrenceDays(card.storyRecurrenceDays)}</dd>
+              <dd className="text-right text-[#f9f6f2]">Every {formatRecurrenceDays(card.storyRecurrenceDays)}</dd>
             </div>
           )}
           <div className="flex justify-between gap-4">
@@ -94,7 +94,7 @@ function ClientCalendarDetail({ card, onClose }) {
           {card.assignedTo && (
             <div className="flex justify-between gap-4">
               <dt className="text-gray-500">Team</dt>
-              <dd className="text-gray-200">{PLATFORM_ICON} {card.assignedTo}</dd>
+              <dd className="text-[#f9f6f2]">{PLATFORM_ICON} {card.assignedTo}</dd>
             </div>
           )}
         </dl>
@@ -108,7 +108,7 @@ function ClientCalendarDetail({ card, onClose }) {
             href={card.dropboxLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500"
+            className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-[#810100] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#a00000]"
           >
             View content ↗
           </a>
@@ -163,10 +163,10 @@ export default function ClientCalendarPortal({ client, cards }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f1117]">
-      <header className="border-b border-white/5 bg-[#0f1117]/95 px-4 py-6 sm:px-6">
+    <div className="min-h-screen bg-black">
+      <header className="border-b border-white/5 bg-black/95 px-4 py-6 sm:px-6">
         <div className="mx-auto flex max-w-[1800px] items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/20">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#810100] to-[#a00000] shadow-lg shadow-[#810100]/20">
             <span className="text-sm font-bold text-white">M</span>
           </div>
           <div>
@@ -213,7 +213,7 @@ export default function ClientCalendarPortal({ client, cards }) {
               onClick={() => setViewMode('month')}
               className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${
                 viewMode === 'month'
-                  ? 'bg-violet-600 text-white'
+                  ? 'bg-[#810100] text-white'
                   : 'text-gray-400 hover:text-white'
               }`}
             >
@@ -224,7 +224,7 @@ export default function ClientCalendarPortal({ client, cards }) {
               onClick={() => setViewMode('week')}
               className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${
                 viewMode === 'week'
-                  ? 'bg-violet-600 text-white'
+                  ? 'bg-[#810100] text-white'
                   : 'text-gray-400 hover:text-white'
               }`}
             >

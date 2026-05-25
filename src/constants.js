@@ -35,7 +35,7 @@ export const CLIENT_COLOR_PALETTE = [
   '#3b82f6',
   '#ec4899',
   '#ef4444',
-  '#8b5cf6',
+  '#810100',
   '#14b8a6',
   '#f97316',
   '#6366f1',
@@ -62,7 +62,7 @@ export const CONTENT_TYPE_COLORS = {
   Reel: { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.14)', label: 'text-amber-300' },
   Story: { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.14)', label: 'text-blue-300' },
   Carousel: { border: '#f472b6', bg: 'rgba(244, 114, 182, 0.14)', label: 'text-pink-300' },
-  'Static Post': { border: '#a855f7', bg: 'rgba(168, 85, 247, 0.14)', label: 'text-violet-300' },
+  'Static Post': { border: '#810100', bg: 'rgba(129, 1, 0, 0.14)', label: 'text-[#fca5a5]' },
 };
 
 export function getContentTypeStyle(contentType) {
@@ -82,12 +82,12 @@ export const TEAM_MEMBERS = [
 ];
 
 export const COLUMN_BG = {
-  shoot: 'bg-[#1a1d2e]',
-  editing: 'bg-[#1c2030]',
-  'in-review': 'bg-[#1f2336]',
-  'not-approved': 'bg-[#2a1f24]',
-  approved: 'bg-[#21253a]',
-  scheduled: 'bg-[#23273d]',
+  shoot: 'bg-[#111111]',
+  editing: 'bg-[#121212]',
+  'in-review': 'bg-[#141414]',
+  'not-approved': 'bg-[#1a1212]',
+  approved: 'bg-[#161616]',
+  scheduled: 'bg-[#181818]',
 };
 
 export const STORAGE_KEY = 'medici-social-kanban';

@@ -374,7 +374,7 @@ function AppShell() {
 
   if (authRequired && !ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0f1117]">
+      <div className="flex min-h-screen items-center justify-center bg-black">
         <p className="text-sm text-gray-500">Loading…</p>
       </div>
     );
@@ -385,7 +385,7 @@ function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1117]">
+    <div className="min-h-screen bg-black">
       <Navbar
         search={search}
         onSearchChange={setSearch}
@@ -398,14 +398,14 @@ function AppShell() {
 
       {contentReviewResponseCount > 0 && activeView === "board" && (
         <div className="mx-auto max-w-[1200px] px-4 pt-4 sm:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3">
-            <p className="text-sm text-violet-200">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#810100]/30 bg-[#a00000]/10 px-4 py-3">
+            <p className="text-sm text-[#fecaca]">
               {contentReviewResponseCount} content review response{contentReviewResponseCount === 1 ? "" : "s"} ready to sync
             </p>
             <button
               type="button"
               onClick={handleApplyContentReviewResponses}
-              className="rounded-lg bg-violet-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-violet-500"
+              className="rounded-lg bg-[#810100] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#a00000]"
             >
               Apply to board
             </button>

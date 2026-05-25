@@ -12,13 +12,13 @@ export default function KanbanColumn({ column, cards, onAddCard, onCardClick, on
     <div
       ref={setNodeRef}
       className={`flex w-[280px] shrink-0 flex-col rounded-xl sm:w-[300px] ${
-        COLUMN_BG[column.id] || 'bg-[#1a1d2e]'
-      } ${isOver ? 'ring-2 ring-violet-500/50 bg-violet-500/5' : ''}`}
+        COLUMN_BG[column.id] || 'bg-[#111111]'
+      } ${isOver ? 'ring-2 ring-[#810100]/50 bg-[#a00000]/5' : ''}`}
       style={{ minHeight: 'calc(100vh - 180px)' }}
     >
       <div className="flex items-center justify-between px-3 pb-2 pt-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-gray-200">{column.title}</h2>
+          <h2 className="text-sm font-semibold text-[#f9f6f2]">{column.title}</h2>
           <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-white/10 px-1.5 text-xs font-medium text-gray-400">
             {cards.length}
           </span>

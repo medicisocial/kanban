@@ -3,7 +3,7 @@ import { CONTENT_TYPES } from "../constants";
 import { useClientsContext } from "../context/ClientsContext";
 
 const inputClass =
-  "select-dark w-full rounded-lg border border-white/10 bg-[#1e2130] px-3 py-2 text-sm text-gray-200 outline-none transition focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30";
+  "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30";
 
 export default function AddShootDayModal({
   mode = "day",
@@ -57,7 +57,7 @@ export default function AddShootDayModal({
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#1e2130] shadow-2xl"
+        className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
           <div>
@@ -169,7 +169,7 @@ export default function AddShootDayModal({
           </button>
           <button
             type="submit"
-            className="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-medium text-white hover:bg-violet-500"
+            className="flex-1 rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white hover:bg-[#a00000]"
           >
             {isItem ? "Add item" : "Add client shoot"}
           </button>

@@ -3,7 +3,7 @@ import { TEAM_MEMBERS } from '../constants';
 import { toDateKey } from '../utils/calendar';
 
 const inputClass =
-  'select-dark w-full rounded-lg border border-white/10 bg-[#1e2130] px-3 py-2.5 text-sm text-gray-200 outline-none transition focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30';
+  'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30';
 
 export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) {
   const [projectName, setProjectName] = useState('');
@@ -42,7 +42,7 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#1a1d2e] shadow-2xl"
+        className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#111111] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="border-b border-white/5 px-5 py-4">
@@ -132,7 +132,7 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
             </button>
             <button
               type="submit"
-              className="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-medium text-white hover:bg-violet-500"
+              className="flex-1 rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white hover:bg-[#a00000]"
             >
               Add task
             </button>

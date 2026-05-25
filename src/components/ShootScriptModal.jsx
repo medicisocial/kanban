@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getContentTypeStyle } from '../constants';
 
 const inputClass =
-  'select-dark w-full rounded-lg border border-white/10 bg-[#1e2130] px-3 py-2 text-sm text-gray-200 outline-none transition focus:border-violet-500/50';
+  'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50';
 
 export default function ShootScriptModal({ card, onClose, onSave, readOnly = false }) {
   const [draft, setDraft] = useState(card?.shootScript || '');
@@ -37,7 +37,7 @@ export default function ShootScriptModal({ card, onClose, onSave, readOnly = fal
       onClick={onClose}
     >
       <div
-        className="my-4 w-full max-w-lg rounded-2xl border border-white/10 bg-[#1e2130] shadow-2xl"
+        className="my-4 w-full max-w-lg rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl"
         style={{ borderTopColor: typeStyle.border, borderTopWidth: '3px' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -59,7 +59,7 @@ export default function ShootScriptModal({ card, onClose, onSave, readOnly = fal
         <div className="px-5 py-4">
           {readOnly ? (
             draft ? (
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-200">{draft}</p>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#f9f6f2]">{draft}</p>
             ) : (
               <p className="text-sm text-gray-500">No script written yet.</p>
             )
@@ -87,7 +87,7 @@ export default function ShootScriptModal({ card, onClose, onSave, readOnly = fal
             <button
               type="button"
               onClick={handleSave}
-              className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-500"
+              className="rounded-lg bg-[#810100] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#a00000]"
             >
               Save script
             </button>

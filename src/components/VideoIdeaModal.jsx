@@ -4,7 +4,7 @@ import { useClientsContext } from "../context/ClientsContext";
 import { normalizeLink } from "../utils/links";
 
 const inputClass =
-  "select-dark w-full rounded-lg border border-white/10 bg-[#1e2130] px-3 py-2 text-sm text-gray-200 outline-none transition focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30";
+  "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30";
 
 export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultClient }) {
   const isEdit = Boolean(idea);
@@ -61,7 +61,7 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
     >
       <form
         onSubmit={handleSubmit}
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#1e2130] shadow-2xl"
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
@@ -170,7 +170,7 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
         <div className="border-t border-white/5 px-5 py-4">
           <button
             type="submit"
-            className="w-full rounded-lg bg-violet-600 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500"
+            className="w-full rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white transition hover:bg-[#a00000]"
           >
             {isEdit ? "Save Changes" : "Share with Client"}
           </button>

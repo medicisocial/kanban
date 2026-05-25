@@ -84,7 +84,7 @@ export default function ShootDayTimeline({
           </div>
 
           <div
-            className="relative rounded-lg border border-violet-500/20 bg-violet-500/5"
+            className="relative rounded-lg border border-[#810100]/20 bg-[#a00000]/5"
             style={{ height: `${trackHeight}px` }}
           >
             {markers.map((m) => (
@@ -189,7 +189,7 @@ export default function ShootDayTimeline({
                         href={normalizeLink(entry.card.referenceVideo)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-sm text-violet-300 transition hover:text-violet-200"
+                        className="inline-flex items-center gap-1.5 text-sm text-[#fca5a5] transition hover:text-[#fecaca]"
                       >
                         <span>🎬</span>
                         <span>Reference video ↗</span>
@@ -199,7 +199,7 @@ export default function ShootDayTimeline({
                       <button
                         type="button"
                         onClick={() => setScriptCard(entry.card)}
-                        className="inline-flex items-center gap-1.5 text-sm text-violet-300 transition hover:text-violet-200"
+                        className="inline-flex items-center gap-1.5 text-sm text-[#fca5a5] transition hover:text-[#fecaca]"
                       >
                         <span>📄</span>
                         <span>{entry.card.shootScript ? 'View script' : 'Write script'}</span>

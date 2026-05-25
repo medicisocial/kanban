@@ -111,7 +111,7 @@ export default function ShootDay({
               type="date"
               value={dateKeyToInputValue(focusDate)}
               onChange={(e) => setFocusDate(inputValueToDate(e.target.value))}
-              className="select-dark rounded-lg border border-white/10 bg-[#1e2130] px-3 py-1.5 text-sm text-gray-200 outline-none transition focus:border-violet-500/50"
+              className="select-dark rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-1.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50"
             />
           )}
         </div>
@@ -120,7 +120,7 @@ export default function ShootDay({
           <button
             type="button"
             onClick={() => setShootModal({ mode: viewMode === "day" ? "item" : "day" })}
-            className="rounded-lg bg-violet-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-violet-500"
+            className="rounded-lg bg-[#810100] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#a00000]"
           >
             + {viewMode === "day" ? "Add item" : "Add client shoot"}
           </button>
@@ -130,7 +130,7 @@ export default function ShootDay({
             onClick={() => setViewMode("month")}
             className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${
               viewMode === "month"
-                ? "bg-violet-600 text-white"
+                ? "bg-[#810100] text-white"
                 : "text-gray-400 hover:text-white"
             }`}
           >
@@ -141,7 +141,7 @@ export default function ShootDay({
             onClick={() => setViewMode("day")}
             className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${
               viewMode === "day"
-                ? "bg-violet-600 text-white"
+                ? "bg-[#810100] text-white"
                 : "text-gray-400 hover:text-white"
             }`}
           >

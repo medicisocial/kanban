@@ -22,7 +22,7 @@ export default function FilterBar({ clientFilter, onClientChange }) {
         <select
           value={clientFilter}
           onChange={(e) => onClientChange(e.target.value)}
-          className="select-dark rounded-lg border border-white/10 bg-[#1e2130] px-3 py-1.5 text-sm text-gray-200 outline-none transition focus:border-violet-500/50"
+          className="select-dark rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-1.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50"
         >
           <option value="all">All Clients</option>
           {clients.map((c) => (

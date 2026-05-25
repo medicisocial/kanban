@@ -65,11 +65,11 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
         {card.dueTime && (
           <span className="mb-0.5 block text-[9px] font-medium text-gray-400">
             {formatTime(card.dueTime)}
-            {recurring && <span className="ml-1 text-purple-300">↻</span>}
+            {recurring && <span className="ml-1 text-[#fca5a5]">↻</span>}
           </span>
         )}
         {!card.dueTime && recurring && (
-          <span className="mb-0.5 block text-[9px] font-medium text-purple-300">↻ weekly</span>
+          <span className="mb-0.5 block text-[9px] font-medium text-[#fca5a5]">↻ weekly</span>
         )}
         {boardStatus && (
           <span className={`mb-0.5 block text-[9px] font-semibold ${statusClass}`}>
@@ -79,7 +79,7 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
         <CardTitleLink
           title={card.title}
           dropboxLink={card.dropboxLink}
-          className="block truncate text-[10px] font-medium text-gray-200"
+          className="block truncate text-[10px] font-medium text-[#f9f6f2]"
         />
       </div>
     );

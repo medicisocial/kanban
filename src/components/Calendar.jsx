@@ -68,7 +68,7 @@ export default function Calendar({
       calendarTab === tab
         ? tab === "stories"
           ? "bg-blue-600 text-white"
-          : "bg-violet-600 text-white"
+          : "bg-[#810100] text-white"
         : "text-gray-400 hover:text-white"
     }`;
 
@@ -77,7 +77,7 @@ export default function Calendar({
       viewMode === mode
         ? isStories
           ? "bg-blue-600 text-white"
-          : "bg-violet-600 text-white"
+          : "bg-[#810100] text-white"
         : "text-gray-400 hover:text-white"
     }`;
 
@@ -128,7 +128,7 @@ export default function Calendar({
             type="button"
             onClick={() => openAddModal()}
             className={`rounded-lg px-4 py-1.5 text-sm font-medium text-white transition hover:opacity-90 ${
-              isStories ? "bg-blue-600 hover:bg-blue-500" : "bg-violet-600 hover:bg-violet-500"
+              isStories ? "bg-blue-600 hover:bg-blue-500" : "bg-[#810100] hover:bg-[#a00000]"
             }`}
           >
             + {isStories ? "Add story" : "Add post"}

@@ -8,7 +8,7 @@ export default function CardTitleLink({ title, dropboxLink, className = '' }) {
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
         title="Open content in Dropbox"
-        className={`${className} text-violet-300 underline decoration-violet-500/50 underline-offset-2 transition hover:text-violet-200 hover:decoration-violet-400`}
+        className={`${className} text-[#fca5a5] underline decoration-[#810100]/50 underline-offset-2 transition hover:text-[#fecaca] hover:decoration-[#dc2626]`}
       >
         {title}
         <span className="ml-1 inline-block text-[10px] opacity-70" aria-hidden="true">↗</span>

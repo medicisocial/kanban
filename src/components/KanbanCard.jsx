@@ -35,7 +35,7 @@ export default function KanbanCard({ card, onClick, onDelete }) {
         backgroundColor: typeStyle.bg,
         touchAction: 'none',
       }}
-      className={`group relative cursor-grab rounded-xl border border-white/8 border-l-[4px] p-3 pr-8 text-left shadow-md outline-none transition-shadow active:cursor-grabbing focus-visible:ring-1 focus-visible:ring-violet-500/50 ${
+      className={`group relative cursor-grab rounded-xl border border-white/8 border-l-[4px] p-3 pr-8 text-left shadow-md outline-none transition-shadow active:cursor-grabbing focus-visible:ring-1 focus-visible:ring-[#810100]/50 ${
         isDragging ? 'opacity-40' : 'hover:shadow-lg hover:shadow-black/20'
       }`}
     >
@@ -83,7 +83,7 @@ export default function KanbanCard({ card, onClick, onDelete }) {
 
       <div className="mt-2 flex flex-wrap gap-1.5">
         {card.dropboxLink && (
-          <span className="rounded-md bg-violet-500/15 px-1.5 py-0.5 text-[10px] text-violet-300" title="Dropbox content linked">
+          <span className="rounded-md bg-[#a00000]/15 px-1.5 py-0.5 text-[10px] text-[#fca5a5]" title="Dropbox content linked">
             📦 Dropbox
           </span>
         )}

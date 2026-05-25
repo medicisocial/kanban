@@ -84,7 +84,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
       }}
     >
       <div
-        className="my-4 w-full max-w-lg rounded-2xl border border-white/10 bg-[#1e2130] shadow-2xl"
+        className="my-4 w-full max-w-lg rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl"
         style={{ borderTopColor: typeStyle.border, borderTopWidth: '3px' }}
       >
         <div className="flex items-start justify-between border-b border-white/5 px-5 py-4">
@@ -127,7 +127,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
                 href={card.dropboxLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-1.5 inline-block truncate text-xs text-violet-400 hover:text-violet-300"
+                className="mt-1.5 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
               >
                 Open in Dropbox →
               </a>
@@ -299,7 +299,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
                   href={card.referenceMusic}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1.5 inline-block truncate text-xs text-violet-400 hover:text-violet-300"
+                  className="mt-1.5 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
                 >
                   Open music link →
                 </a>
@@ -319,7 +319,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
                   href={card.referenceVideo}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1.5 inline-block truncate text-xs text-violet-400 hover:text-violet-300"
+                  className="mt-1.5 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
                 >
                   Open video link →
                 </a>
@@ -351,12 +351,12 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
               className={`rounded-lg border px-3 py-2.5 ${
                 card.columnId === 'not-approved'
                   ? 'border-red-500/30 bg-red-500/10'
-                  : 'border-violet-500/20 bg-violet-500/5'
+                  : 'border-[#810100]/20 bg-[#a00000]/5'
               }`}
             >
               <p
                 className={`text-[10px] font-medium uppercase tracking-wider ${
-                  card.columnId === 'not-approved' ? 'text-red-300' : 'text-violet-300'
+                  card.columnId === 'not-approved' ? 'text-red-300' : 'text-[#fca5a5]'
                 }`}
               >
                 {card.columnId === 'not-approved' ? 'Client revision notes' : 'Client feedback'}
@@ -389,7 +389,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-lg bg-violet-600 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500"
+            className="flex-1 rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white transition hover:bg-[#a00000]"
           >
             Done
           </button>
@@ -409,4 +409,4 @@ function Field({ label, children }) {
 }
 
 const inputClass =
-  'select-dark w-full rounded-lg border border-white/10 bg-[#1e2130] px-3 py-2 text-sm text-gray-200 outline-none transition focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30';
+  'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30';

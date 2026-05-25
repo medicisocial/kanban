@@ -58,13 +58,13 @@ export default function VideoIdeaCard({
       onKeyDown={handleCardKeyDown}
       role={selectable || isEditable ? "button" : undefined}
       tabIndex={selectable || isEditable ? 0 : undefined}
-      className={`flex flex-col overflow-hidden rounded-xl border bg-[#1a1d2e] ${
+      className={`flex flex-col overflow-hidden rounded-xl border bg-[#111111] ${
         selected
-          ? "border-violet-500/50 ring-1 ring-violet-500/30"
+          ? "border-[#810100]/50 ring-1 ring-[#810100]/30"
           : "border-white/8"
       } ${
         selectable || isEditable
-          ? "cursor-pointer transition hover:border-white/15 hover:bg-[#1e2130]"
+          ? "cursor-pointer transition hover:border-white/15 hover:bg-[#1a1a1a]"
           : ""
       }`}
       style={{ borderTopColor: clientColor, borderTopWidth: "3px" }}
@@ -78,7 +78,7 @@ export default function VideoIdeaCard({
                 checked={selected}
                 onChange={() => onSelectToggle?.(idea.id)}
                 onClick={(e) => e.stopPropagation()}
-                className="mt-1 h-4 w-4 shrink-0 rounded border-white/20 bg-[#1e2130] text-violet-600 focus:ring-violet-500/50"
+                className="mt-1 h-4 w-4 shrink-0 rounded border-white/20 bg-[#1a1a1a] text-[#810100] focus:ring-[#810100]/50"
                 aria-label={`Select ${idea.title}`}
               />
             )}
@@ -103,7 +103,7 @@ export default function VideoIdeaCard({
               href={idea.referenceVideo}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2.5 text-sm text-violet-300 transition hover:bg-white/10 hover:text-violet-200"
+              className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2.5 text-sm text-[#fca5a5] transition hover:bg-white/10 hover:text-[#fecaca]"
             >
               <span>🎬</span>
               <span className="truncate">Watch reference video ↗</span>
@@ -127,7 +127,7 @@ export default function VideoIdeaCard({
               <button
                 type="button"
                 onClick={() => onGoToBoard?.(idea.boardCardId)}
-                className="mt-2 text-xs text-violet-400 hover:text-violet-300"
+                className="mt-2 text-xs text-[#dc2626] hover:text-[#fca5a5]"
               >
                 View on board →
               </button>
@@ -147,7 +147,7 @@ export default function VideoIdeaCard({
                   onChange={(e) => setComment(e.target.value)}
                   rows={2}
                   placeholder="What do you like about this idea?"
-                  className="select-dark w-full resize-y rounded-lg border border-white/10 bg-[#1e2130] px-3 py-2 text-sm text-gray-200 outline-none transition focus:border-violet-500/50"
+                  className="select-dark w-full resize-y rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50"
                 />
               </label>
             ) : (

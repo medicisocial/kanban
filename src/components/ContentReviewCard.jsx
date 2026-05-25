@@ -3,7 +3,7 @@ import { getContentTypeStyle } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 
 const inputClass =
-  'select-dark w-full rounded-lg border border-white/10 bg-[#1e2130] px-3 py-2 text-sm text-gray-200 outline-none transition focus:border-violet-500/50';
+  'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50';
 
 export default function ContentReviewCard({ card, onApprove, onDeny }) {
   const [comment, setComment] = useState('');
@@ -24,7 +24,7 @@ export default function ContentReviewCard({ card, onApprove, onDeny }) {
 
   return (
     <article
-      className="flex flex-col overflow-hidden rounded-xl border border-white/8 bg-[#1a1d2e]"
+      className="flex flex-col overflow-hidden rounded-xl border border-white/8 bg-[#111111]"
       style={{ borderTopColor: clientColor, borderTopWidth: '3px' }}
     >
       <div className="p-4">
@@ -48,7 +48,7 @@ export default function ContentReviewCard({ card, onApprove, onDeny }) {
             href={card.dropboxLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="mb-3 flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2.5 text-sm text-violet-300 transition hover:bg-white/10 hover:text-violet-200"
+            className="mb-3 flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2.5 text-sm text-[#fca5a5] transition hover:bg-white/10 hover:text-[#fecaca]"
           >
             <span>📁</span>
             <span className="truncate">View content in Dropbox ↗</span>

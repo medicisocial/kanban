@@ -1,7 +1,7 @@
 import { WEEKDAY_OPTIONS } from "../utils/calendar";
 
 const inputClass =
-  "select-dark w-full rounded-lg border border-white/10 bg-[#1e2130] px-3 py-2 text-sm text-gray-200 outline-none transition focus:border-violet-500/50";
+  "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50";
 
 export default function StoryRecurrencePicker({
   mode,

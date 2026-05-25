@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { CLIENT_COLOR_PALETTE } from '../constants';
 
 const inputClass =
-  'select-dark w-full rounded-lg border border-white/10 bg-[#1e2130] px-3 py-2 text-sm text-gray-200 outline-none transition focus:border-violet-500/50';
+  'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50';
 
 export default function AddClientModal({ onClose, onAdd, existingClients }) {
   const [name, setName] = useState('');
@@ -39,7 +39,7 @@ export default function AddClientModal({ onClose, onAdd, existingClients }) {
     >
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1e2130] shadow-2xl"
+        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
@@ -92,7 +92,7 @@ export default function AddClientModal({ onClose, onAdd, existingClients }) {
         <div className="border-t border-white/5 px-5 py-4">
           <button
             type="submit"
-            className="w-full rounded-lg bg-violet-600 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500"
+            className="w-full rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white transition hover:bg-[#a00000]"
           >
             Add Client
           </button>

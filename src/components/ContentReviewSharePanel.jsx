@@ -22,7 +22,7 @@ export default function ContentReviewSharePanel({ cards }) {
 
   return (
     <div className="mx-auto mb-4 max-w-[1800px] px-4 sm:px-6">
-      <div className="rounded-xl border border-white/10 bg-[#1a1d2e] p-4 sm:p-5">
+      <div className="rounded-xl border border-white/10 bg-[#111111] p-4 sm:p-5">
       <h3 className="text-sm font-semibold text-white">Share in-review content with clients</h3>
       <p className="mt-1 text-xs text-gray-400">
         Copy a private link for each client. They will see everything in In Review and can approve or request changes.
@@ -40,14 +40,14 @@ export default function ContentReviewSharePanel({ cards }) {
             >
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-                <span className="text-sm font-medium text-gray-200">{client}</span>
+                <span className="text-sm font-medium text-[#f9f6f2]">{client}</span>
                 <span className="text-xs text-gray-500">{count} in review</span>
               </div>
               <button
                 type="button"
                 onClick={() => copyLink(client)}
                 disabled={count === 0}
-                className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-lg bg-[#810100] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#a00000] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {copiedClient === client ? 'Link copied!' : 'Copy review link'}
               </button>

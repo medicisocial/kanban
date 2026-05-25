@@ -105,10 +105,10 @@ export default function ClientContentReviewPortal({
   const pendingCount = localCards.length;
 
   return (
-    <div className="min-h-screen bg-[#0f1117]">
-      <header className="border-b border-white/5 bg-[#0f1117]/95 px-4 py-6 sm:px-6">
+    <div className="min-h-screen bg-black">
+      <header className="border-b border-white/5 bg-black/95 px-4 py-6 sm:px-6">
         <div className="mx-auto flex max-w-[800px] items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/20">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#810100] to-[#a00000] shadow-lg shadow-[#810100]/20">
             <span className="text-sm font-bold text-white">M</span>
           </div>
           <div>
@@ -156,7 +156,7 @@ export default function ClientContentReviewPortal({
                 <button
                   type="button"
                   onClick={copyImportLink}
-                  className="mt-3 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500"
+                  className="mt-3 rounded-lg bg-[#810100] px-4 py-2 text-sm font-medium text-white hover:bg-[#a00000]"
                 >
                   {copied ? 'Link copied!' : 'Copy feedback link'}
                 </button>

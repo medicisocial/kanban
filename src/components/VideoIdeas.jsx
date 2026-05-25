@@ -110,7 +110,7 @@ export default function VideoIdeas({
             <button
               type="button"
               onClick={() => setIdeaModal("add")}
-              className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-500"
+              className="rounded-lg bg-[#810100] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#a00000]"
             >
               + Add Idea
             </button>
@@ -147,7 +147,7 @@ export default function VideoIdeas({
       ) : null}
 
       {isBulkDeleteView && filteredIdeas.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#1a1d2e] px-4 py-3">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#111111] px-4 py-3">
           <p className="text-sm text-gray-400">
             {selectedCount > 0
               ? `${selectedCount} selected`
@@ -174,7 +174,7 @@ export default function VideoIdeas({
       )}
 
       {filteredIdeas.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 bg-[#1a1d2e] px-6 py-16 text-center">
+        <div className="rounded-xl border border-dashed border-white/10 bg-[#111111] px-6 py-16 text-center">
           <p className="text-sm text-gray-400">
             {pageMode === "review"
               ? `No pending ideas for ${reviewClient}.`
@@ -184,7 +184,7 @@ export default function VideoIdeas({
             <button
               type="button"
               onClick={() => setIdeaModal("add")}
-              className="mt-3 text-sm text-violet-400 hover:text-violet-300"
+              className="mt-3 text-sm text-[#dc2626] hover:text-[#fca5a5]"
             >
               Add your first video idea
             </button>

@@ -131,7 +131,7 @@ export default function ClientShootDayPortal({
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#0f1117]">
+      <div className="min-h-screen bg-black">
         <header className="border-b border-white/5 px-4 py-6 sm:px-6">
           <div className="mx-auto max-w-[800px]">
             <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Medici Social</p>
@@ -159,7 +159,7 @@ export default function ClientShootDayPortal({
                 <button
                   type="button"
                   onClick={() => copyImportLink()}
-                  className="mt-6 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500"
+                  className="mt-6 rounded-lg bg-[#810100] px-4 py-2 text-sm font-medium text-white hover:bg-[#a00000]"
                 >
                   {copied ? "Link copied!" : "Copy schedule link for Medici Social"}
                 </button>
@@ -172,7 +172,7 @@ export default function ClientShootDayPortal({
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1117]">
+    <div className="min-h-screen bg-black">
       <header className="border-b border-white/5 px-4 py-6 sm:px-6">
         <div className="mx-auto max-w-[800px]">
           <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Medici Social</p>
@@ -236,7 +236,7 @@ export default function ClientShootDayPortal({
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Equipment & needs</h3>
                 <ul className="mt-2 space-y-1">
                   {allNeeds.map((item) => (
-                    <li key={item} className="text-sm text-gray-200">{item}</li>
+                    <li key={item} className="text-sm text-[#f9f6f2]">{item}</li>
                   ))}
                 </ul>
               </div>

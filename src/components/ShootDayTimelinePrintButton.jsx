@@ -6,7 +6,7 @@ export default function ShootDayTimelinePrintButton({ client, dateKey, plan, car
   const disabled = busy || !cards.some((c) => c.shootTime);
   const btnClass =
     className ||
-    "rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-200 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40";
+    "rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#f9f6f2] transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40";
 
   const payload = () => buildShootPrintPayload({ client, dateKey, plan, cards });
 
