@@ -9,7 +9,7 @@ const inputClass =
 
 export default function EmailRecipientModal({ client, shareType, getShareUrl, onClose }) {
   const { getClientEmails } = useClientsContext();
-  const { sendShareEmail } = useGmail();
+  const { isConnected, connect, sendShareEmail } = useGmail();
   const savedEmails = getClientEmails(client);
   const [selectedEmail, setSelectedEmail] = useState(savedEmails[0] || '');
   const [customEmail, setCustomEmail] = useState('');
@@ -32,6 +32,12 @@ export default function EmailRecipientModal({ client, shareType, getShareUrl, on
     };
   }, [onClose]);
 
+  const handleConnect = () => {
+    setError('');
+    const result = connect();
+    if (!result.ok) setError(result.error);
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
     setError('');
@@ -51,9 +57,8 @@ export default function EmailRecipientModal({ client, shareType, getShareUrl, on
     setSending(false);
 
     if (!result.ok) {
-      if (result.error?.includes('not configured')) {
-        openClientShareEmail({ to: recipient, type: shareType, client, url });
-        onClose();
+      if (result.status === 503 || result.error?.includes('not connected')) {
+        setError('Connect Gmail first (top right), then try again.');
         return;
       }
       setError(result.error);
@@ -62,6 +67,15 @@ export default function EmailRecipientModal({ client, shareType, getShareUrl, on
 
     setSent(true);
     setTimeout(onClose, 1200);
+  };
+
+  const handleMailtoFallback = () => {
+    if (!recipient || !isValidEmail(recipient)) {
+      setError('Choose a valid email address first.');
+      return;
+    }
+    openClientShareEmail({ to: recipient, type: shareType, client, url: getShareUrl() });
+    onClose();
   };
 
   return (
@@ -77,12 +91,26 @@ export default function EmailRecipientModal({ client, shareType, getShareUrl, on
         <div className="border-b border-white/5 px-5 py-4">
           <h2 className="font-serif text-lg font-semibold text-white">Email {client}</h2>
           <p className="mt-1 text-sm text-gray-400">
-            Sends from <span className="text-[#f9f6f2]">{MEDICI_SENDER_NAME}</span> (
-            {MEDICI_SENDER_EMAIL}).
+            Sends from <span className="text-[#f9f6f2]">{MEDICI_SENDER_NAME}</span> ({MEDICI_SENDER_EMAIL}).
           </p>
         </div>
 
         <div className="space-y-4 px-5 py-4">
+          {!isConnected && (
+            <div className="rounded-lg border border-[#810100]/30 bg-[#810100]/10 px-3 py-3">
+              <p className="text-sm text-gray-300">
+                Connect Gmail once (Workspace accounts cannot use app passwords).
+              </p>
+              <button
+                type="button"
+                onClick={handleConnect}
+                className="mt-2 rounded-lg bg-[#810100] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#a00000]"
+              >
+                Connect Gmail
+              </button>
+            </div>
+          )}
+
           {savedEmails.length > 0 ? (
             <fieldset className="space-y-2">
               <legend className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
@@ -135,20 +163,29 @@ export default function EmailRecipientModal({ client, shareType, getShareUrl, on
           {sent && <p className="text-sm text-green-400">Email sent!</p>}
         </div>
 
-        <div className="flex gap-2 border-t border-white/5 px-5 py-4">
+        <div className="flex flex-col gap-2 border-t border-white/5 px-5 py-4">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-white/10 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={sending || sent || !isConnected}
+              className="flex-1 rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white hover:bg-[#a00000] disabled:opacity-60"
+            >
+              {sending ? 'Sending…' : sent ? 'Sent!' : 'Send email'}
+            </button>
+          </div>
           <button
             type="button"
-            onClick={onClose}
-            className="rounded-lg border border-white/10 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5"
+            onClick={handleMailtoFallback}
+            className="text-xs text-gray-500 underline hover:text-gray-300"
           >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={sending || sent}
-            className="flex-1 rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white hover:bg-[#a00000] disabled:opacity-60"
-          >
-            {sending ? 'Sending…' : sent ? 'Sent!' : 'Send email'}
+            Or open draft in your email app instead
           </button>
         </div>
       </form>
