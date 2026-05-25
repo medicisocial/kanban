@@ -251,8 +251,6 @@ export function expandStoriesForRange(cards, rangeStart, rangeEnd) {
   const occurrences = [];
 
   for (const card of cards) {
-    if (card.columnId === 'posted') continue;
-
     const pushOccurrence = (dateKey) => {
       if (!isStoryPostedOnDate(card, dateKey)) {
         occurrences.push({ card, dateKey });

@@ -12,7 +12,6 @@ export const REGULAR_EDITOR_STATUS_COLUMN_IDS = [
   'not-approved',
   'approved',
   'scheduled',
-  'posted',
 ];
 
 export const ONE_OFF_STATUS_COLUMN_IDS = [

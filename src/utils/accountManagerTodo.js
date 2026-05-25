@@ -75,14 +75,14 @@ export function buildPostsTodoTasks(cards, clientAccountManagers = {}) {
   for (const card of cards) {
     if (card.contentType === 'Story') continue;
     if (card.isOneOffProject) continue;
-    if (card.columnId === 'posted') continue;
+    if (card.postedAt) continue;
 
     if (card.columnId === 'approved') {
       tasks.push(buildScheduleTask(card, clientAccountManagers));
       continue;
     }
 
-    if (card.columnId === 'scheduled' && card.dueDate) {
+    if (card.columnId === 'scheduled' && card.dueDate && !card.postedAt) {
       tasks.push(buildPublishTask(card, card.dueDate, clientAccountManagers));
     }
   }

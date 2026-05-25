@@ -12,6 +12,7 @@ const LEGACY_COLUMN_MAP = {
   briefing: 'shoot',
   'in-production': 'editing',
   scheduled: 'scheduled',
+  posted: 'scheduled',
 };
 
 function getStatusForColumn(columnId) {
@@ -24,10 +25,13 @@ function migrateColumnId(columnId) {
 }
 
 function normalizeCard(card) {
-  const columnId = migrateColumnId(card.columnId);
+  const rawColumnId = card.columnId;
+  const columnId = migrateColumnId(rawColumnId);
   const isOneOffProject = Boolean(card.isOneOffProject);
   const resolvedColumnId =
     isOneOffProject && columnId === 'not-approved' ? 'editing' : columnId;
+  const postedAt =
+    card.postedAt || (rawColumnId === 'posted' ? Date.now() : null);
   return {
     ...card,
     platform: PLATFORM,
@@ -49,7 +53,7 @@ function normalizeCard(card) {
     storyOccurrenceNotes: parseStoryOccurrenceNotes(card.storyOccurrenceNotes),
     storyPostedDates: parseStoryPostedDates(card.storyPostedDates),
     accountManager: card.accountManager || '',
-    postedAt: card.postedAt || null,
+    postedAt,
     clientComment: card.clientComment || '',
     sourceIdeaId: card.sourceIdeaId || null,
     isOneOffProject: Boolean(card.isOneOffProject),
@@ -259,8 +263,6 @@ export function useKanban() {
           const updates = { storyPostedDates };
 
           if (shouldArchiveStoryAfterPost({ ...card, storyPostedDates }, storyPostedDates)) {
-            updates.columnId = 'posted';
-            updates.status = 'Posted';
             updates.postedAt = Date.now();
           }
 
@@ -269,8 +271,6 @@ export function useKanban() {
 
         return {
           ...card,
-          columnId: 'posted',
-          status: 'Posted',
           postedAt: Date.now(),
         };
       }),

@@ -5,7 +5,6 @@ export const COLUMNS = [
   { id: 'not-approved', title: 'Not Approved' },
   { id: 'approved', title: 'Approved' },
   { id: 'scheduled', title: 'Scheduled' },
-  { id: 'posted', title: 'Posted' },
   { id: 'finished', title: 'Finished' },
 ];
 
@@ -100,7 +99,6 @@ export const COLUMN_BG = {
   'not-approved': 'bg-[#1a1212]',
   approved: 'bg-[#161616]',
   scheduled: 'bg-[#181818]',
-  posted: 'bg-[#141414]',
   finished: 'bg-[#131318]',
 };
 

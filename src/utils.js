@@ -28,7 +28,7 @@ export function isOverdue(dateStr) {
 }
 
 export function getBoardCards(cards) {
-  return cards.filter((card) => card.contentType !== 'Story');
+  return cards.filter((card) => card.contentType !== 'Story' && !card.postedAt);
 }
 
 export function filterCards(cards, { client, search }) {
