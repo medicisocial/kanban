@@ -76,25 +76,46 @@ export function createDefaultClientAssets(clientColor = '#810100') {
 }
 
 export function normalizeOpusTextStyle(raw, defaults) {
-  const source = raw || {};
-  const { textColor, ...rest } = source;
-  const merged = { ...defaults, ...rest };
-
-  const savedColor = parseHexColor(merged.color);
-  const legacyColor = parseHexColor(textColor);
-
-  if (savedColor) {
-    merged.color = savedColor;
-  } else if (legacyColor) {
-    merged.color = legacyColor;
-  } else {
-    merged.color = defaults.color;
+  if (!raw || typeof raw !== 'object') {
+    return { ...defaults };
   }
 
-  merged.strokeColor = parseHexColor(merged.strokeColor) || defaults.strokeColor;
-  merged.backgroundColor = parseHexColor(merged.backgroundColor) || defaults.backgroundColor;
+  const color =
+    parseHexColor(raw.color) ||
+    parseHexColor(raw.textColor) ||
+    defaults.color;
+  const strokeColor = parseHexColor(raw.strokeColor) || defaults.strokeColor;
+  const backgroundColor = parseHexColor(raw.backgroundColor) || defaults.backgroundColor;
 
-  return merged;
+  const { textColor: _textColor, ...rest } = raw;
+
+  return {
+    ...defaults,
+    ...rest,
+    color,
+    strokeColor,
+    backgroundColor,
+  };
+}
+
+export function sanitizeOpusAiForStorage(opusAi) {
+  if (!opusAi || typeof opusAi !== 'object') return opusAi;
+
+  const sanitized = {};
+  for (const key of OPUS_STYLE_KEYS.map(({ key: styleKey }) => styleKey)) {
+    const style = opusAi[key];
+    if (!style || typeof style !== 'object') continue;
+
+    const { textColor, ...rest } = style;
+    sanitized[key] = {
+      ...rest,
+      color: parseHexColor(rest.color) || parseHexColor(textColor) || '#ffffff',
+      strokeColor: parseHexColor(rest.strokeColor) || '#000000',
+      backgroundColor: parseHexColor(rest.backgroundColor) || '#000000',
+    };
+  }
+
+  return sanitized;
 }
 
 export function normalizeClientAssets(raw, clientColor = '#810100') {
@@ -205,6 +226,8 @@ export function saveClientAssetsEntry(client, assets, knownClients = []) {
   if (!payload?.branding || !payload?.opusAi) {
     return null;
   }
+
+  payload.opusAi = sanitizeOpusAiForStorage(payload.opusAi);
 
   const store = reconcileClientAssetsStore(loadClientAssetsStore(), knownClients);
   const canonicalClient = resolveClientStoreKey(store, client, knownClients);

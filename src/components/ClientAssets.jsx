@@ -7,10 +7,8 @@ import {
   OPUS_FONT_FAMILIES,
   OPUS_STYLE_KEYS,
   getOpusPreviewStyle,
-  loadClientAssetsStore,
   parseHexColor,
   previewHexColor,
-  readClientAssetsEntry,
   toColorPickerHex,
 } from '../utils/clientAssets';
 
@@ -37,9 +35,12 @@ function Field({ label, children, className = '' }) {
 
 function OpusColorField({ label, styleKey, colorField, value, onPatch, showTextSample = false }) {
   const inputRef = useRef(null);
+  const onPatchRef = useRef(onPatch);
   const [isFocused, setIsFocused] = useState(false);
   const committed = parseHexColor(value) || '#ffffff';
   const [editText, setEditText] = useState(committed);
+
+  onPatchRef.current = onPatch;
 
   useEffect(() => {
     if (!isFocused) {
@@ -50,7 +51,7 @@ function OpusColorField({ label, styleKey, colorField, value, onPatch, showTextS
   const applyColor = (raw) => {
     const parsed = parseHexColor(raw);
     if (!parsed) return null;
-    onPatch(colorField, parsed);
+    onPatchRef.current(colorField, parsed);
     return parsed;
   };
 
@@ -109,7 +110,7 @@ function OpusColorField({ label, styleKey, colorField, value, onPatch, showTextS
           onBlur={(e) => {
             setIsFocused(false);
             const parsed = applyColor(e.target.value);
-            setEditText(parsed || committed);
+            setEditText(parsed || parseHexColor(value) || '#ffffff');
           }}
           onPaste={() => {
             requestAnimationFrame(() => {
@@ -470,17 +471,15 @@ export default function ClientAssets({ clientFilter }) {
     setDraft(next);
   };
 
-  const flushOpusColorsFromDom = () => {
-    const prev = draftRef.current ?? draft;
-    if (!prev) return;
+  const mergeOpusColorsFromDom = (base) => {
+    let next = base;
 
-    let next = prev;
     document.querySelectorAll('[data-opus-color-text]').forEach((node) => {
       if (!(node instanceof HTMLInputElement)) return;
       const styleKey = node.dataset.styleKey;
       const field = node.dataset.colorField;
       const parsed = parseHexColor(node.value);
-      if (!parsed || !styleKey || !field) return;
+      if (!parsed || !styleKey || !field || !next.opusAi?.[styleKey]) return;
       next = {
         ...next,
         opusAi: {
@@ -490,10 +489,19 @@ export default function ClientAssets({ clientFilter }) {
       };
     });
 
-    if (next !== prev) {
-      draftRef.current = next;
-      setDraft(next);
-    }
+    return next;
+  };
+
+  const buildSavePayload = () => {
+    flushFocusedField();
+
+    const base = draftRef.current ?? draft;
+    if (!base) return null;
+
+    const merged = mergeOpusColorsFromDom(base);
+    draftRef.current = merged;
+
+    return JSON.parse(JSON.stringify(merged));
   };
 
   const patchBranding = (field, value) => {
@@ -515,13 +523,10 @@ export default function ClientAssets({ clientFilter }) {
 
   const handleSave = () => {
     if (!activeClient) return;
-    flushFocusedField();
-    flushOpusColorsFromDom();
 
-    const source = draftRef.current ?? draft;
-    if (!source) return;
+    const payload = buildSavePayload();
+    if (!payload) return;
 
-    const payload = JSON.parse(JSON.stringify(source));
     const saved = saveClientAssets(activeClient, payload);
     if (!saved) {
       setSaveError('Could not save — try again or check browser storage settings.');
@@ -529,13 +534,10 @@ export default function ClientAssets({ clientFilter }) {
     }
 
     setSaveError('');
-    const store = loadClientAssetsStore();
-    const synced = JSON.parse(
-      JSON.stringify(readClientAssetsEntry(store, activeClient, getClientColor(activeClient), clients)),
-    );
-    setDraft(synced);
-    setBaseline(JSON.parse(JSON.stringify(synced)));
-    draftRef.current = synced;
+    const snapshot = JSON.parse(JSON.stringify(payload));
+    setDraft(snapshot);
+    setBaseline(JSON.parse(JSON.stringify(snapshot)));
+    draftRef.current = snapshot;
   };
 
   const handleDiscard = () => {
@@ -992,7 +994,6 @@ export default function ClientAssets({ clientFilter }) {
                 </button>
                 <button
                   type="button"
-                  onMouseDown={(e) => e.preventDefault()}
                   onClick={handleSave}
                   className="rounded-lg bg-[#810100] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#9a0100]"
                 >
