@@ -129,17 +129,19 @@ export default function KanbanBoard({
       onDragCancel={handleDragCancel}
     >
       <div className="w-full overflow-x-auto scroll-px-4 pb-6 sm:scroll-px-6">
-        <div className="flex w-max gap-3 px-4 sm:px-6">
-          {COLUMNS.map((column) => (
-            <KanbanColumn
-              key={column.id}
-              column={column}
-              cards={cardsByColumn[column.id]}
-              onAddCard={onAddCard}
-              onCardClick={onCardClick}
-              onDeleteCard={onDeleteCard}
-            />
-          ))}
+        <div className="flex justify-center px-4 sm:px-6">
+          <div className="flex w-max gap-3">
+            {COLUMNS.map((column) => (
+              <KanbanColumn
+                key={column.id}
+                column={column}
+                cards={cardsByColumn[column.id]}
+                onAddCard={onAddCard}
+                onCardClick={onCardClick}
+                onDeleteCard={onDeleteCard}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
