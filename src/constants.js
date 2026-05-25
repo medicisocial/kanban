@@ -77,19 +77,14 @@ export function needsShootSchedule(contentType) {
 export const PLATFORM = 'Instagram';
 export const PLATFORM_ICON = '📸';
 
-export const TEAM_MEMBERS = [
-  'Valerie Landeros',
-  'Jordan Nguyen',
-];
+export const DEFAULT_EDITOR = 'Jordan Nguyen';
+export const DEFAULT_ACCOUNT_MANAGER = 'Valerie Landeros';
 
-export const ACCOUNT_MANAGERS = [
-  'Valerie Landeros',
-  'Jordan Nguyen',
-];
+export const TEAM_MEMBERS = [DEFAULT_EDITOR];
 
-export const COMPANY_STAFF = [
-  ...new Set([...TEAM_MEMBERS, ...ACCOUNT_MANAGERS]),
-];
+export const ACCOUNT_MANAGERS = [DEFAULT_ACCOUNT_MANAGER];
+
+export const COMPANY_STAFF = [DEFAULT_EDITOR, DEFAULT_ACCOUNT_MANAGER];
 
 export const COLUMN_BG = {
   shoot: 'bg-[#111111]',
@@ -102,11 +97,11 @@ export const COLUMN_BG = {
 };
 
 export const DEFAULT_CLIENT_ACCOUNT_MANAGERS = {
-  Plume: 'Valerie Landeros',
-  'The Locker Room': 'Jordan Nguyen',
-  'Arco Fit': 'Jordan Nguyen',
-  'Ara Med Spa': 'Valerie Landeros',
-  'Fulshear Regional': 'Jordan Nguyen',
+  Plume: DEFAULT_ACCOUNT_MANAGER,
+  'The Locker Room': DEFAULT_ACCOUNT_MANAGER,
+  'Arco Fit': DEFAULT_ACCOUNT_MANAGER,
+  'Ara Med Spa': DEFAULT_ACCOUNT_MANAGER,
+  'Fulshear Regional': DEFAULT_ACCOUNT_MANAGER,
 };
 
 export const STORAGE_KEY = 'medici-social-kanban';
@@ -132,7 +127,7 @@ export function createCard(overrides = {}) {
     title: '',
     dueDate: '',
     dueTime: '',
-    assignedTo: TEAM_MEMBERS[0],
+    assignedTo: DEFAULT_EDITOR,
     accountManager: '',
     notes: '',
     referenceMusic: '',
@@ -164,7 +159,7 @@ export function getSampleData() {
       contentType: 'Reel',
       title: 'Spring collection launch teaser',
       dueDate: '2026-05-28',
-      assignedTo: 'Valerie Landeros',
+      assignedTo: DEFAULT_EDITOR,
       priority: 'High',
       notes: 'Focus on the new pastel palette. Hook: "Your spring glow starts here."',
       status: 'To Shoot',
@@ -175,7 +170,7 @@ export function getSampleData() {
       contentType: 'Carousel',
       title: 'Game day hype — 5 slide carousel',
       dueDate: '2026-05-25',
-      assignedTo: 'Jordan Nguyen',
+      assignedTo: DEFAULT_EDITOR,
       priority: 'Urgent',
       notes: 'Include player stats from last week. CTA: shop new jerseys.',
       status: 'To Shoot',
@@ -186,7 +181,7 @@ export function getSampleData() {
       contentType: 'Story',
       title: "Mother's Day promo story series",
       dueDate: '2026-05-30',
-      assignedTo: 'Valerie Landeros',
+      assignedTo: DEFAULT_EDITOR,
       priority: 'Medium',
       notes: '3-part story: offer reveal, treatment showcase, booking link.',
       status: 'To Shoot',
@@ -197,7 +192,7 @@ export function getSampleData() {
       contentType: 'Reel',
       title: '30-day challenge kickoff video',
       dueDate: '2026-05-27',
-      assignedTo: 'Jordan Nguyen',
+      assignedTo: DEFAULT_EDITOR,
       priority: 'High',
       notes: 'Trending audio TBD. Show before/after transformations from last cohort.',
       shootDate: '2026-05-22',
@@ -209,7 +204,7 @@ export function getSampleData() {
       contentType: 'Static Post',
       title: 'Brand sustainability report highlight',
       dueDate: '2026-05-26',
-      assignedTo: 'Valerie Landeros',
+      assignedTo: DEFAULT_EDITOR,
       priority: 'Low',
       notes: 'Pull key stats from the 2025 report. Professional tone for B2B audience.',
       status: 'Editing',
@@ -220,7 +215,7 @@ export function getSampleData() {
       contentType: 'Reel',
       title: 'Behind the scenes — warehouse restock',
       dueDate: '2026-05-24',
-      assignedTo: 'Jordan Nguyen',
+      assignedTo: DEFAULT_EDITOR,
       priority: 'Medium',
       notes: 'Raw, authentic vibe. No heavy editing.',
       shootDate: '2026-05-22',
@@ -232,7 +227,7 @@ export function getSampleData() {
       contentType: 'Reel',
       title: 'Hydrafacial treatment walkthrough',
       dueDate: '2026-05-23',
-      assignedTo: 'Valerie Landeros',
+      assignedTo: DEFAULT_EDITOR,
       priority: 'High',
       notes: 'Draft v2 ready for client sign-off.',
       shootDate: '2026-05-22',
@@ -245,7 +240,7 @@ export function getSampleData() {
       contentType: 'Carousel',
       title: 'Nutrition tips — macro breakdown',
       dueDate: '2026-05-22',
-      assignedTo: 'Jordan Nguyen',
+      assignedTo: DEFAULT_EDITOR,
       priority: 'Medium',
       notes: 'Dietitian reviewed copy. Waiting on client approval for slide 4 layout.',
       dropboxLink: 'https://www.dropbox.com/s/example-nutrition-carousel',
@@ -257,7 +252,7 @@ export function getSampleData() {
       contentType: 'Story',
       title: 'Customer unboxing UGC repost',
       dueDate: '2026-05-21',
-      assignedTo: 'Valerie Landeros',
+      assignedTo: DEFAULT_EDITOR,
       priority: 'Low',
       notes: 'Got permission from @stylebyjade. Branded sticker overlay applied.',
       dropboxLink: 'https://www.dropbox.com/s/example-unboxing-story',
@@ -270,7 +265,7 @@ export function getSampleData() {
       title: 'Weekend sale announcement',
       dueDate: '2026-05-24',
       dueTime: '09:00',
-      assignedTo: 'Jordan Nguyen',
+      assignedTo: DEFAULT_EDITOR,
       priority: 'Urgent',
       notes: 'Scheduled for Saturday 9 AM EST. 20% off sitewide.',
       status: 'Scheduled',
@@ -282,7 +277,7 @@ export function getSampleData() {
       title: 'Trainer spotlight — Coach Mike',
       dueDate: '2026-05-23',
       dueTime: '07:00',
-      assignedTo: 'Valerie Landeros',
+      assignedTo: DEFAULT_EDITOR,
       priority: 'Medium',
       notes: 'Auto-publish Monday 7 AM. Cross-post to Stories.',
       status: 'Scheduled',
@@ -294,7 +289,7 @@ export function getSampleData() {
       title: 'Skincare routine — AM vs PM',
       dueDate: '2026-05-22',
       dueTime: '11:00',
-      assignedTo: 'Jordan Nguyen',
+      assignedTo: DEFAULT_EDITOR,
       priority: 'Low',
       notes: 'Queued in Later for Wednesday 11 AM.',
       status: 'Scheduled',
