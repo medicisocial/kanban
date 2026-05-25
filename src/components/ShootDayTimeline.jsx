@@ -20,6 +20,7 @@ export default function ShootDayTimeline({
   client,
   dateKey,
   onUpdateCard,
+  onCardClick,
 }) {
   const [scriptCard, setScriptCard] = useState(null);
   const canEditScript = Boolean(onUpdateCard);
@@ -114,9 +115,14 @@ export default function ShootDayTimeline({
                 );
 
                 return (
-                  <div
+                  <button
                     key={entry.card.id}
-                    className="absolute overflow-hidden rounded-lg border px-3 py-2 shadow-lg transition hover:z-10 hover:brightness-110"
+                    type="button"
+                    onClick={() => onCardClick?.(entry.card)}
+                    disabled={!onCardClick}
+                    className={`absolute overflow-hidden rounded-lg border px-3 py-2 text-left shadow-lg transition hover:z-10 hover:brightness-110 ${
+                      onCardClick ? "cursor-pointer" : "cursor-default"
+                    }`}
                     style={{
                       left: `${leftPct}%`,
                       width: `${widthPct}%`,
@@ -135,12 +141,12 @@ export default function ShootDayTimeline({
                       {entry.card.title}
                     </p>
                     <p className="mt-1 text-xs text-gray-400">
-                      {entry.startLabel} · {entry.duration} min
+                      {entry.startLabel} – {entry.endLabel}
                     </p>
                     {(pos.outsideBefore || pos.outsideAfter) && (
                       <span className="absolute right-2 top-2 text-xs text-amber-400">⚠</span>
                     )}
-                  </div>
+                  </button>
                 );
               })
             )}
@@ -169,13 +175,24 @@ export default function ShootDayTimeline({
             return (
               <div
                 key={`detail-${entry.card.id}`}
-                className="flex flex-wrap items-start gap-4 rounded-lg border border-white/8 px-4 py-3"
+                role={onCardClick ? "button" : undefined}
+                tabIndex={onCardClick ? 0 : undefined}
+                onClick={() => onCardClick?.(entry.card)}
+                onKeyDown={(e) => {
+                  if (onCardClick && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    onCardClick(entry.card);
+                  }
+                }}
+                className={`flex flex-wrap items-start gap-4 rounded-lg border border-white/8 px-4 py-3 text-left transition ${
+                  onCardClick ? "cursor-pointer hover:bg-white/[0.03]" : ""
+                }`}
                 style={{ borderLeftColor: typeStyle.border, borderLeftWidth: "4px" }}
               >
                 <div className="w-32 shrink-0">
                   <p className="text-sm font-semibold text-white">{entry.startLabel}</p>
                   <p className="text-xs text-gray-500">
-                    {entry.duration} min → {entry.endLabel}
+                    → {entry.endLabel}
                   </p>
                 </div>
                 <div className="min-w-0 flex-1">
@@ -189,6 +206,7 @@ export default function ShootDayTimeline({
                         href={normalizeLink(entry.card.referenceVideo)}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="inline-flex items-center gap-1.5 text-sm text-[#fca5a5] transition hover:text-[#fecaca]"
                       >
                         <span>🎬</span>
@@ -198,7 +216,10 @@ export default function ShootDayTimeline({
                     {(entry.card.shootScript || canEditScript) && (
                       <button
                         type="button"
-                        onClick={() => setScriptCard(entry.card)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setScriptCard(entry.card);
+                        }}
                         className="inline-flex items-center gap-1.5 text-sm text-[#fca5a5] transition hover:text-[#fecaca]"
                       >
                         <span>📄</span>
@@ -227,9 +248,22 @@ export default function ShootDayTimeline({
           <p className="mb-2 text-sm font-medium text-gray-500">Not yet scheduled</p>
           <ul className="space-y-1">
             {unscheduled.map((card) => (
-              <li key={card.id} className="text-sm text-gray-400">
-                {card.title}
-                <span className="ml-2 text-xs text-gray-600">({card.contentType})</span>
+              <li key={card.id}>
+                {onCardClick ? (
+                  <button
+                    type="button"
+                    onClick={() => onCardClick(card)}
+                    className="text-sm text-gray-400 transition hover:text-[#fecaca]"
+                  >
+                    {card.title}
+                    <span className="ml-2 text-xs text-gray-600">({card.contentType})</span>
+                  </button>
+                ) : (
+                  <span className="text-sm text-gray-400">
+                    {card.title}
+                    <span className="ml-2 text-xs text-gray-600">({card.contentType})</span>
+                  </span>
+                )}
               </li>
             ))}
           </ul>

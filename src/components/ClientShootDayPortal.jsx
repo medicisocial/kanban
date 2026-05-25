@@ -94,6 +94,7 @@ export default function ClientShootDayPortal({
     for (const card of localCards) {
       onUpdateCard?.(card.id, {
         shootTime: card.shootTime || "",
+        shootEndTime: card.shootEndTime || "",
         shootDuration: card.shootDuration || "",
         shootModels: card.shootModels || "",
         shootNeeds: card.shootNeeds || "",

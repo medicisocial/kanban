@@ -5,13 +5,13 @@ import {
   ACCOUNT_MANAGERS,
   PLATFORM,
   PLATFORM_ICON,
-  DEFAULT_SHOOT_DURATIONS,
   getContentTypeStyle,
   needsShootSchedule,
   isOneOffProjectCard,
 } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import { hasStoryRecurrence, hasStoryDailyRange, getStoryScheduleMode, parseRecurrenceDays, parseStoryOccurrenceNotes } from '../utils/calendar';
+import { getDefaultShootEndTime, parseTimeToMinutes } from '../utils/shootDay';
 import StoryRecurrencePicker from './StoryRecurrencePicker';
 
 export default function CardModal({ card, onClose, onUpdate, onDelete }) {
@@ -41,6 +41,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
         contentType: value,
         shootDate: '',
         shootTime: '',
+        shootEndTime: '',
         shootModels: '',
         shootNeeds: '',
       });
@@ -69,6 +70,17 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
           [card.occurrenceDate]: value,
         },
       });
+      return;
+    }
+    if (field === 'shootTime') {
+      const updates = { shootTime: value };
+      const start = parseTimeToMinutes(value);
+      const end = parseTimeToMinutes(card.shootEndTime);
+      if (start != null && (end == null || end <= start)) {
+        updates.shootEndTime = getDefaultShootEndTime(value, card.contentType);
+      }
+      if (!value) updates.shootEndTime = '';
+      onUpdate(card.id, updates);
       return;
     }
     onUpdate(card.id, { [field]: value });
@@ -259,7 +271,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
                 Shoot schedule planning
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="Shoot Time">
+                <Field label="Start time">
                   <input
                     type="time"
                     value={card.shootTime || ''}
@@ -267,14 +279,12 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
                     className={inputClass}
                   />
                 </Field>
-                <Field label="Duration (minutes)">
+                <Field label="End time">
                   <input
-                    type="number"
-                    min={5}
-                    max={240}
-                    step={5}
-                    value={card.shootDuration || DEFAULT_SHOOT_DURATIONS[card.contentType] || 45}
-                    onChange={(e) => handleChange('shootDuration', Number(e.target.value) || '')}
+                    type="time"
+                    value={card.shootEndTime || ''}
+                    onChange={(e) => handleChange('shootEndTime', e.target.value)}
+                    min={card.shootTime || undefined}
                     className={inputClass}
                   />
                 </Field>

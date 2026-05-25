@@ -194,9 +194,9 @@ function AppShell() {
     ) {
       return;
     }
-    updateCard(card.id, { shootDate: "", shootTime: "" });
+    updateCard(card.id, { shootDate: "", shootTime: "", shootEndTime: "" });
     setSelectedCard((prev) =>
-      prev?.id === card.id ? { ...prev, shootDate: "", shootTime: "" } : prev,
+      prev?.id === card.id ? { ...prev, shootDate: "", shootTime: "", shootEndTime: "" } : prev,
     );
   };
 
@@ -208,12 +208,12 @@ function AppShell() {
     if (!window.confirm(message)) return;
 
     for (const card of clientCards) {
-      updateCard(card.id, { shootDate: "", shootTime: "" });
+      updateCard(card.id, { shootDate: "", shootTime: "", shootEndTime: "" });
     }
     deletePlan(client, dateKey);
     setSelectedCard((prev) =>
       prev?.client === client && prev?.shootDate === dateKey
-        ? { ...prev, shootDate: "", shootTime: "" }
+        ? { ...prev, shootDate: "", shootTime: "", shootEndTime: "" }
         : prev,
     );
   };

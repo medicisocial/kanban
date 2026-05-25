@@ -206,6 +206,7 @@ function ClientShootSection({
                   card={card}
                   onUpdate={onUpdateCard}
                   onRemove={onRemoveFromSchedule}
+                  onCardClick={onCardClick}
                   shootWindow={plan}
                   onOpenScript={setScriptCard}
                 />
@@ -226,6 +227,7 @@ function ClientShootSection({
             client={client}
             dateKey={dateKey}
             onUpdateCard={onUpdateCard}
+            onCardClick={onCardClick}
           />
         </div>
         )}

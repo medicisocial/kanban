@@ -29,6 +29,7 @@ export function buildShootShareUrl(client, dateKey, cards, plan) {
             title: c.title,
             contentType: c.contentType,
             shootTime: c.shootTime || "",
+            shootEndTime: c.shootEndTime || "",
             shootDuration: c.shootDuration || "",
             shootModels: c.shootModels || "",
             shootNeeds: c.shootNeeds || "",
@@ -94,6 +95,7 @@ export function buildShootSubmission(client, dateKey, plan, cards) {
     cards: cards.map((c) => ({
       id: c.id,
       shootTime: c.shootTime || "",
+      shootEndTime: c.shootEndTime || "",
       shootDuration: c.shootDuration || "",
       shootModels: c.shootModels || "",
       shootNeeds: c.shootNeeds || "",
@@ -114,6 +116,7 @@ export function applyShootSubmission(submission, cards, { updateCard, updatePlan
     if (cards.some((c) => c.id === item.id)) {
       updateCard(item.id, {
         shootTime: item.shootTime || "",
+        shootEndTime: item.shootEndTime || "",
         shootDuration: item.shootDuration || "",
         shootModels: item.shootModels || "",
         shootNeeds: item.shootNeeds || "",

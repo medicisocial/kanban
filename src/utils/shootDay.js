@@ -151,21 +151,52 @@ export function formatTimeInput(time) {
   return minutesToTimeLabel(mins);
 }
 
+export function minutesToTimeInput(totalMinutes) {
+  const normalized = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const h = Math.floor(normalized / 60);
+  const m = normalized % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+export function getDefaultShootEndTime(shootTime, contentType) {
+  const startMinutes = parseTimeToMinutes(shootTime);
+  if (startMinutes == null) return "";
+  return minutesToTimeInput(startMinutes + getDefaultDuration(contentType));
+}
+
+function resolveShootSlot(card) {
+  const startMinutes = parseTimeToMinutes(card.shootTime);
+  if (startMinutes == null) return null;
+
+  const endMinutesFromField = parseTimeToMinutes(card.shootEndTime);
+  if (endMinutesFromField != null && endMinutesFromField > startMinutes) {
+    return {
+      startMinutes,
+      endMinutes: endMinutesFromField,
+      duration: endMinutesFromField - startMinutes,
+      startLabel: formatTimeInput(card.shootTime),
+      endLabel: formatTimeInput(card.shootEndTime),
+    };
+  }
+
+  const duration = Number(card.shootDuration) || getDefaultDuration(card.contentType);
+  return {
+    startMinutes,
+    endMinutes: startMinutes + duration,
+    duration,
+    startLabel: formatTimeInput(card.shootTime),
+    endLabel: minutesToTimeLabel(startMinutes + duration),
+  };
+}
+
 export function buildShootTimeline(cards) {
   return cards
-    .filter((c) => c.shootTime && parseTimeToMinutes(c.shootTime) != null)
     .map((card) => {
-      const startMinutes = parseTimeToMinutes(card.shootTime);
-      const duration = Number(card.shootDuration) || getDefaultDuration(card.contentType);
-      return {
-        card,
-        startMinutes,
-        endMinutes: startMinutes + duration,
-        duration,
-        startLabel: formatTimeInput(card.shootTime),
-        endLabel: minutesToTimeLabel(startMinutes + duration),
-      };
+      const slot = resolveShootSlot(card);
+      if (!slot) return null;
+      return { card, ...slot };
     })
+    .filter(Boolean)
     .sort((a, b) => a.startMinutes - b.startMinutes);
 }
 

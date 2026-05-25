@@ -143,6 +143,7 @@ export function createCard(overrides = {}) {
     dropboxLink: '',
     shootDate: '',
     shootTime: '',
+    shootEndTime: '',
     shootDuration: 45,
     shootModels: '',
     shootNeeds: '',

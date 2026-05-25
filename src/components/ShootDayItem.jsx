@@ -22,7 +22,9 @@ export default function ShootDayItem({ card, onClick }) {
       <div className="mb-1.5 flex flex-wrap items-center gap-2">
         {card.shootTime && (
           <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white">
-            {formatTimeInput(card.shootTime)}
+            {card.shootEndTime
+              ? `${formatTimeInput(card.shootTime)} – ${formatTimeInput(card.shootEndTime)}`
+              : formatTimeInput(card.shootTime)}
           </span>
         )}
         <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${typeStyle.label}`}>

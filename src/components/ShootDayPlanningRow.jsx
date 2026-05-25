@@ -1,4 +1,8 @@
 import { getContentTypeStyle } from "../constants";
+import {
+  getDefaultShootEndTime,
+  parseTimeToMinutes,
+} from "../utils/shootDay";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-2.5 py-1.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50";
@@ -7,6 +11,7 @@ export default function ShootDayPlanningRow({
   card,
   onUpdate,
   onRemove,
+  onCardClick,
   readOnly = false,
   shootWindow = null,
   onOpenScript,
@@ -15,6 +20,17 @@ export default function ShootDayPlanningRow({
 
   const handleChange = (field, value) => {
     onUpdate?.(card.id, { [field]: value });
+  };
+
+  const handleShootTimeChange = (value) => {
+    const updates = { shootTime: value };
+    const start = parseTimeToMinutes(value);
+    const end = parseTimeToMinutes(card.shootEndTime);
+    if (start != null && (end == null || end <= start)) {
+      updates.shootEndTime = getDefaultShootEndTime(value, card.contentType);
+    }
+    if (!value) updates.shootEndTime = "";
+    onUpdate?.(card.id, updates);
   };
 
   const timeMin = shootWindow?.shootStartTime || undefined;
@@ -34,10 +50,10 @@ export default function ShootDayPlanningRow({
           <span className={`text-[10px] font-semibold uppercase ${typeStyle.label}`}>
             {card.contentType}
           </span>
-          {onOpenScript ? (
+          {onCardClick ? (
             <button
               type="button"
-              onClick={() => onOpenScript(card)}
+              onClick={() => onCardClick(card)}
               className="mt-0.5 block w-full text-left text-sm font-semibold text-white transition hover:text-[#fecaca]"
             >
               {card.title}
@@ -50,40 +66,49 @@ export default function ShootDayPlanningRow({
           )}
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-        {onOpenScript && (
-          <button
-            type="button"
-            onClick={() => onOpenScript(card)}
-            className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-              card.shootScript
-                ? 'bg-[#810100]/20 text-[#fca5a5] hover:bg-[#810100]/30'
-                : 'border border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            {card.shootScript ? 'Edit script' : 'Write script'}
-          </button>
-        )}
-        {onRemove && !readOnly && (
-          <button
-            type="button"
-            onClick={() => onRemove(card)}
-            className="rounded-lg border border-red-500/20 px-2.5 py-1 text-xs font-medium text-red-300 transition hover:bg-red-500/10"
-          >
-            Remove
-          </button>
-        )}
+          {onCardClick && (
+            <button
+              type="button"
+              onClick={() => onCardClick(card)}
+              className="rounded-lg border border-white/10 px-2.5 py-1 text-xs font-medium text-gray-300 transition hover:bg-white/10 hover:text-white"
+            >
+              Open card
+            </button>
+          )}
+          {onOpenScript && (
+            <button
+              type="button"
+              onClick={() => onOpenScript(card)}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                card.shootScript
+                  ? "bg-[#810100]/20 text-[#fca5a5] hover:bg-[#810100]/30"
+                  : "border border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {card.shootScript ? "Edit script" : "Write script"}
+            </button>
+          )}
+          {onRemove && !readOnly && (
+            <button
+              type="button"
+              onClick={() => onRemove(card)}
+              className="rounded-lg border border-red-500/20 px-2.5 py-1 text-xs font-medium text-red-300 transition hover:bg-red-500/10"
+            >
+              Remove
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block">
           <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
-            Shoot time
+            Start time
           </span>
           <input
             type="time"
             value={card.shootTime || ""}
-            onChange={(e) => handleChange("shootTime", e.target.value)}
+            onChange={(e) => handleShootTimeChange(e.target.value)}
             disabled={readOnly}
             min={timeMin}
             max={timeMax}
@@ -94,6 +119,21 @@ export default function ShootDayPlanningRow({
               Within {timeMin} – {timeMax}
             </p>
           )}
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
+            End time
+          </span>
+          <input
+            type="time"
+            value={card.shootEndTime || ""}
+            onChange={(e) => handleChange("shootEndTime", e.target.value)}
+            disabled={readOnly}
+            min={card.shootTime || timeMin}
+            max={timeMax}
+            className={inputClass}
+          />
         </label>
 
         <label className="block">
@@ -110,7 +150,7 @@ export default function ShootDayPlanningRow({
           />
         </label>
 
-        <label className="block sm:col-span-2 lg:col-span-1">
+        <label className="block">
           <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
             Props & needs
           </span>
