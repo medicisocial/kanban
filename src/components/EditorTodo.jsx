@@ -16,11 +16,10 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { TEAM_MEMBERS, getContentTypeStyle } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
-import { toDateKey } from '../utils/calendar';
+import { formatScheduledDateTime } from '../utils';
 import {
   applyEditorTaskOrder,
   buildBoardEditorTasks,
-  formatEditorDateLabel,
   getEditorTaskStatusOptions,
   filterEditorTasks,
   splitEditorTasksByQueue,
@@ -46,8 +45,6 @@ function EditorTodoItem({
   onSendBackForEditing,
   onMoveTask,
   getClientColor,
-  showDateBadge = false,
-  todayKey,
 }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const isOneOff = task.isOneOffProject;
@@ -75,11 +72,6 @@ function EditorTodoItem({
           className="min-w-0 flex-1 cursor-pointer rounded-lg text-left transition hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#810100]/50"
         >
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            {showDateBadge && task.dueDate && (
-              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-gray-300">
-                {formatEditorDateLabel(task.dueDate, todayKey).replace('Today · ', '')}
-              </span>
-            )}
             <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${kindStyles[task.kind]}`}>
               {task.label}
             </span>
@@ -93,9 +85,16 @@ function EditorTodoItem({
             )}
           </div>
 
-          <h3 className={`text-sm font-semibold text-white group-hover:text-[#fca5a5] ${task.completed ? 'line-through' : ''}`}>
-            {task.title}
-          </h3>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <h3 className={`text-sm font-semibold text-white group-hover:text-[#fca5a5] ${task.completed ? 'line-through' : ''}`}>
+              {task.title}
+            </h3>
+            {!isOneOff && task.postDate && (
+              <span className="text-xs font-medium text-gray-400">
+                {formatScheduledDateTime(task.postDate, task.dueTime)}
+              </span>
+            )}
+          </div>
 
           <p className="mt-1 text-xs font-medium" style={{ color: clientColor }}>
             {task.client}
@@ -228,7 +227,6 @@ function EditorTaskList({
   onSendBackForEditing,
   onMoveTask,
   getClientColor,
-  todayKey,
   emptyMessage,
 }) {
   if (tasks.length === 0) {
@@ -253,8 +251,6 @@ function EditorTaskList({
               onSendBackForEditing={onSendBackForEditing}
               onMoveTask={onMoveTask}
               getClientColor={getClientColor}
-              showDateBadge
-              todayKey={todayKey}
             />
           ))}
         </div>
@@ -273,7 +269,6 @@ function EditorTaskColumn({
   onDragEnd,
   emptyMessage,
   itemProps,
-  todayKey,
 }) {
   return (
     <section className="min-w-0 rounded-2xl border border-white/10 bg-[#0d0d0d] p-4 sm:p-5">
@@ -292,7 +287,6 @@ function EditorTaskColumn({
         sensors={sensors}
         onDragEnd={onDragEnd}
         emptyMessage={emptyMessage}
-        todayKey={todayKey}
         {...itemProps}
       />
     </section>
@@ -318,7 +312,6 @@ export default function EditorTodo({
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [showCompleted, setShowCompleted] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const todayKey = toDateKey(new Date());
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -450,7 +443,6 @@ export default function EditorTodo({
             onDragEnd={handleDragEnd}
             emptyMessage="No videos waiting for edits."
             itemProps={itemProps}
-            todayKey={todayKey}
           />
           <EditorTaskColumn
             title="In review"
@@ -462,7 +454,6 @@ export default function EditorTodo({
             onDragEnd={handleDragEnd}
             emptyMessage="No videos in review."
             itemProps={itemProps}
-            todayKey={todayKey}
           />
         </div>
       )}

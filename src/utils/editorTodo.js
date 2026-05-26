@@ -71,6 +71,8 @@ function buildEditorTaskFromCard(card, overrides = {}) {
     contentType: card.contentType,
     columnId: card.columnId,
     dueDate: getTaskSortDate(card),
+    dueTime: card.dueTime || '',
+    postDate: card.dueDate || '',
     assignedTo: card.assignedTo || '',
     notes: card.notes || '',
     clientComment: card.clientComment || '',

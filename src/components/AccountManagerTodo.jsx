@@ -16,7 +16,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { ACCOUNT_MANAGERS, getContentTypeStyle } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
-import { formatTime } from '../utils';
+import { formatScheduledDateTime } from '../utils';
 import { formatStoryScheduleSummary, toDateKey } from '../utils/calendar';
 import {
   applyAccountManagerTaskOrder,
@@ -76,6 +76,11 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onRequ
           </div>
 
           <h3 className="text-sm font-semibold text-white">{task.title}</h3>
+          {!task.isOneOffProject && task.dueDate && (
+            <p className="mt-1 text-xs font-medium text-gray-400">
+              {formatScheduledDateTime(task.dueDate, task.dueTime)}
+            </p>
+          )}
 
           <p className="mt-1 text-xs font-medium" style={{ color: clientColor }}>
             {task.client}
@@ -194,8 +199,10 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPos
           >
             <div className="flex flex-wrap items-baseline gap-2">
               <h3 className="text-sm font-semibold text-white">{task.title}</h3>
-              {task.dueTime && (
-                <span className="text-xs font-medium text-gray-400">{formatTime(task.dueTime)}</span>
+              {task.dueDate && (
+                <span className="text-xs font-medium text-gray-400">
+                  {formatScheduledDateTime(task.dueDate, task.dueTime)}
+                </span>
               )}
             </div>
           </button>
