@@ -54,6 +54,41 @@ function buildPublishTask(card, taskDate, clientAccountManagers) {
   };
 }
 
+function buildInReviewTask(card, clientAccountManagers) {
+  return {
+    id: `review-${card.id}`,
+    source: 'board',
+    cardId: card.id,
+    kind: 'in-review',
+    label: 'In review',
+    title: card.title,
+    client: card.client,
+    contentType: card.contentType,
+    columnId: card.columnId,
+    taskDate: card.dueDate || '',
+    dueDate: card.dueDate || '',
+    dueTime: card.dueTime || '',
+    assignedTo: card.assignedTo || '',
+    accountManager: resolveAccountManager(card, clientAccountManagers),
+    notes: card.notes || '',
+    clientComment: card.clientComment || '',
+    card,
+  };
+}
+
+/** Cards in In Review — same queue as the editor task page. */
+export function buildInReviewTasks(cards, clientAccountManagers = {}) {
+  const tasks = [];
+
+  for (const card of cards) {
+    if (card.contentType === 'Story') continue;
+    if (card.columnId !== 'in-review') continue;
+    tasks.push(buildInReviewTask(card, clientAccountManagers));
+  }
+
+  return tasks.sort(compareAccountManagerTasks);
+}
+
 /** Scheduled stories that need to be posted on a given day (usually today). */
 export function buildStoryTasksToday(cards, todayKey = toDateKey(new Date()), clientAccountManagers = {}) {
   const tasks = [];
@@ -123,7 +158,9 @@ export function groupAccountManagerTasksByDate(tasks, todayKey = toDateKey(new D
     let groupKey = task.dueDate || 'no-date';
     let groupLabel = task.dueDate
       ? formatEditorDateLabel(task.dueDate, todayKey)
-      : 'Needs scheduling';
+      : task.kind === 'schedule'
+        ? 'Needs scheduling'
+        : 'No date set';
 
     if (task.kind === 'schedule') {
       groupKey = 'needs-scheduling';
@@ -158,6 +195,7 @@ export function filterAccountManagerTasks(tasks, { search, client, assignee }) {
       task.assignedTo,
       task.accountManager,
       task.label,
+      task.clientComment,
     ]
       .join(' ')
       .toLowerCase();

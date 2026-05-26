@@ -33,15 +33,15 @@ export default function CompanyTasks({
     }`;
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-6">
-      <div className="mb-6">
+    <div className="mx-auto max-w-[1800px] px-4 py-4 sm:px-6">
+      <div className="mb-6 text-center">
         <h1 className="font-serif text-2xl font-semibold text-white">Company tasks</h1>
         <p className="mt-1 text-sm text-gray-400">
           Worklists for editors, account managers, and administrative work.
         </p>
       </div>
 
-      <div className="mb-6 flex flex-wrap rounded-lg border border-white/10 bg-white/5 p-0.5 w-fit gap-0.5">
+      <div className="mb-6 flex flex-wrap justify-center rounded-lg border border-white/10 bg-white/5 p-0.5 w-fit gap-0.5 mx-auto">
         <button type="button" onClick={() => setActiveRole('editor')} className={tabClass('editor')}>
           Editors
         </button>

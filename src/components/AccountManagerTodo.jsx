@@ -4,6 +4,7 @@ import { useClientsContext } from '../context/ClientsContext';
 import { formatTime } from '../utils';
 import { formatStoryScheduleSummary, toDateKey } from '../utils/calendar';
 import {
+  buildInReviewTasks,
   buildPostsTodoTasks,
   buildStoryTasksToday,
   filterAccountManagerTasks,
@@ -12,6 +13,7 @@ import {
   groupAccountManagerTasksByDate,
 } from '../utils/accountManagerTodo';
 const kindStyles = {
+  'in-review': 'border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]',
   schedule: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200',
   publish: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
   'post-story': 'border-blue-500/30 bg-blue-500/10 text-blue-200',
@@ -61,6 +63,12 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPos
           {task.client && (
             <p className="mt-1 text-xs font-medium" style={{ color: clientColor }}>
               {task.client}
+            </p>
+          )}
+
+          {task.clientComment && (
+            <p className="mt-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-200">
+              Client notes: {task.clientComment}
             </p>
           )}
 
@@ -117,7 +125,7 @@ function ClientGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled,
     <div className="space-y-8">
       {groups.map((group) => (
         <section key={group.client}>
-          <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-400">
+          <h4 className="mb-3 flex items-center justify-center gap-2 text-center text-sm font-semibold uppercase tracking-wider text-gray-400">
             <span
               className="h-2 w-2 rounded-full"
               style={{ backgroundColor: getClientColor(group.client) }}
@@ -154,7 +162,7 @@ function DateGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled, o
     <div className="space-y-8">
       {groups.map((group) => (
         <section key={group.key}>
-          <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
+          <h4 className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-gray-400">
             {group.label}
             <span className="ml-2 font-normal normal-case text-gray-500">
               ({group.tasks.length})
@@ -194,6 +202,10 @@ export default function AccountManagerTodo({
     () => buildStoryTasksToday(cards, todayKey, clientAccountManagers),
     [cards, todayKey, clientAccountManagers],
   );
+  const inReviewTasks = useMemo(
+    () => buildInReviewTasks(cards, clientAccountManagers),
+    [cards, clientAccountManagers],
+  );
   const postsTodoTasks = useMemo(
     () => buildPostsTodoTasks(cards, clientAccountManagers),
     [cards, clientAccountManagers],
@@ -209,6 +221,11 @@ export default function AccountManagerTodo({
     [storyTasksToday, filterOptions],
   );
 
+  const filteredInReviewTasks = useMemo(
+    () => filterAccountManagerTasks(inReviewTasks, filterOptions),
+    [inReviewTasks, filterOptions],
+  );
+
   const filteredPostsTasks = useMemo(
     () => filterAccountManagerTasks(postsTodoTasks, filterOptions),
     [postsTodoTasks, filterOptions],
@@ -218,14 +235,14 @@ export default function AccountManagerTodo({
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-6 text-center">
         <h2 className="text-xl font-semibold text-white">Account manager tasks</h2>
         <p className="mt-1 text-sm text-gray-400">
-          Stories to post today, plus your overall to-do for everything else.
+          In-review content, stories to post today, and your overall scheduling to-do.
         </p>
       </div>
 
-      <div className="mb-8">
+      <div className="mb-8 flex justify-center">
         <label className="flex items-center gap-2 text-sm text-gray-400">
           <span>Account manager</span>
           <select
@@ -243,16 +260,47 @@ export default function AccountManagerTodo({
         </label>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
-        <section className="min-w-0 rounded-2xl border border-blue-500/20 bg-[#0d0d0d] p-5 sm:p-6">
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-semibold text-white">Stories · post today</h3>
-              <p className="mt-1 text-sm text-gray-400">{todayLabel}</p>
+      <div className="mx-auto grid max-w-[1680px] grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start">
+        <section className="min-w-0 rounded-2xl border border-[#810100]/20 bg-[#0d0d0d] p-5 sm:p-6">
+          <div className="mb-6 text-center">
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <h3 className="text-lg font-semibold text-white">In review</h3>
+              <span className="rounded-full border border-[#810100]/30 bg-[#a00000]/10 px-2.5 py-1 text-xs text-[#fecaca]">
+                {filteredInReviewTasks.length} in review
+              </span>
             </div>
-            <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-xs text-blue-200">
-              {filteredStoryTasks.length} to post
-            </span>
+            <p className="mt-2 text-sm text-gray-400">
+              Content in internal review before client approval.
+            </p>
+          </div>
+
+          {filteredInReviewTasks.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-white/10 px-6 py-10 text-center">
+              <p className="text-sm text-gray-400">Nothing in review right now.</p>
+              <p className="mt-1 text-xs text-gray-500">
+                Cards moved to In Review on the board appear here.
+              </p>
+            </div>
+          ) : (
+            <DateGroupedList
+              tasks={filteredInReviewTasks}
+              getClientColor={getClientColor}
+              onOpenCard={onOpenCard}
+              onMarkScheduled={onMarkScheduled}
+              onMarkPosted={onMarkPosted}
+            />
+          )}
+        </section>
+
+        <section className="min-w-0 rounded-2xl border border-blue-500/20 bg-[#0d0d0d] p-5 sm:p-6">
+          <div className="mb-6 text-center">
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <h3 className="text-lg font-semibold text-white">Stories · post today</h3>
+              <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-xs text-blue-200">
+                {filteredStoryTasks.length} to post
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-gray-400">{todayLabel}</p>
           </div>
 
           {filteredStoryTasks.length === 0 ? (
@@ -274,16 +322,16 @@ export default function AccountManagerTodo({
         </section>
 
         <section className="min-w-0 rounded-2xl border border-amber-500/20 bg-[#0d0d0d] p-5 sm:p-6">
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-            <div>
+          <div className="mb-6 text-center">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <h3 className="text-lg font-semibold text-white">Posts & other content · overall to-do</h3>
-              <p className="mt-1 text-sm text-gray-400">
-                Approved posts to schedule, plus upcoming and overdue publish dates.
-              </p>
+              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200">
+                {filteredPostsTasks.length} tasks
+              </span>
             </div>
-            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200">
-              {filteredPostsTasks.length} tasks
-            </span>
+            <p className="mt-2 text-sm text-gray-400">
+              Approved posts to schedule, plus upcoming and overdue publish dates.
+            </p>
           </div>
 
           {filteredPostsTasks.length === 0 ? (
