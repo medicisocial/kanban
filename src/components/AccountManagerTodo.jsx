@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ACCOUNT_MANAGERS, getContentTypeStyle } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
-import { formatScheduledDateTime } from '../utils';
+import TaskPostSchedule from './TaskPostSchedule';
 import { formatStoryScheduleSummary, toDateKey } from '../utils/calendar';
 import {
   applyAccountManagerTaskOrder,
@@ -57,8 +57,8 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onRequ
 
           <h3 className="text-sm font-semibold text-white">{task.title}</h3>
           {!task.isOneOffProject && task.dueDate && (
-            <p className="mt-1 text-xs font-medium text-gray-400">
-              {formatScheduledDateTime(task.dueDate, task.dueTime)}
+            <p className="mt-1">
+              <TaskPostSchedule postDate={task.dueDate} dueTime={task.dueTime} />
             </p>
           )}
 
@@ -156,9 +156,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPos
             <div className="flex flex-wrap items-baseline gap-2">
               <h3 className="text-sm font-semibold text-white">{task.title}</h3>
               {task.dueDate && (
-                <span className="text-xs font-medium text-gray-400">
-                  {formatScheduledDateTime(task.dueDate, task.dueTime)}
-                </span>
+                <TaskPostSchedule postDate={task.dueDate} dueTime={task.dueTime} />
               )}
             </div>
           </button>

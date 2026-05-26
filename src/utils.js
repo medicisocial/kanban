@@ -1,3 +1,5 @@
+import { addDays, parseDateKey, toDateKey } from './utils/calendar';
+
 export function formatDate(dateStr) {
   if (!dateStr) return '';
   const date = new Date(dateStr + 'T00:00:00');
@@ -17,6 +19,11 @@ export function formatScheduledDateTime(dateStr, timeStr) {
   const datePart = formatDate(dateStr);
   if (!timeStr) return datePart;
   return `${datePart} · ${formatTime(timeStr)}`;
+}
+
+export function isPostingTomorrow(postDate, todayKey = toDateKey(new Date())) {
+  if (!postDate) return false;
+  return postDate === toDateKey(addDays(parseDateKey(todayKey), 1));
 }
 
 export function isOverdue(dateStr) {

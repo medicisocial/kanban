@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { TEAM_MEMBERS, getContentTypeStyle } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
-import { formatScheduledDateTime } from '../utils';
+import TaskPostSchedule from './TaskPostSchedule';
 import {
   applyEditorTaskOrder,
   buildBoardEditorTasks,
@@ -75,9 +75,7 @@ function EditorTodoItem({
               {task.title}
             </h3>
             {!isOneOff && task.postDate && (
-              <span className="text-xs font-medium text-gray-400">
-                {formatScheduledDateTime(task.postDate, task.dueTime)}
-              </span>
+              <TaskPostSchedule postDate={task.postDate} dueTime={task.dueTime} />
             )}
           </div>
 
