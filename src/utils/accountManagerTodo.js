@@ -3,7 +3,7 @@ import {
   toDateKey,
   withStoryOccurrence,
 } from './calendar';
-import { compareEditorTasks, formatEditorDateLabel } from './editorTodo';
+import { formatEditorDateLabel } from './editorTodo';
 
 export function resolveAccountManager(card, clientAccountManagers = {}) {
   return card.accountManager || clientAccountManagers[card.client] || '';
@@ -123,17 +123,21 @@ export function buildPostsTodoTasks(cards, clientAccountManagers = {}) {
     }
   }
 
-  return [...tasks].sort((a, b) => {
-    const scheduleDiff = (a.kind === 'schedule' ? 0 : 1) - (b.kind === 'schedule' ? 0 : 1);
-    if (scheduleDiff !== 0) return scheduleDiff;
-    return compareAccountManagerTasks(a, b);
-  });
+  return tasks.sort(compareAccountManagerTasks);
 }
 
 export function compareAccountManagerTasks(a, b) {
-  const clientDiff = (a.client || '').localeCompare(b.client || '');
-  if (clientDiff !== 0) return clientDiff;
-  return compareEditorTasks(a, b);
+  const keyA = getAccountManagerPostSortKey(a);
+  const keyB = getAccountManagerPostSortKey(b);
+  if (keyA !== keyB) return keyA.localeCompare(keyB);
+  return (a.title || '').localeCompare(b.title || '');
+}
+
+function getAccountManagerPostSortKey(task) {
+  const postDate = task.dueDate || task.taskDate || '';
+  if (!postDate) return '9999-99-99T99:99';
+  const time = task.dueTime || '99:99';
+  return `${postDate}T${time}`;
 }
 
 export function applyAccountManagerTaskOrder(tasks, orderIds = []) {

@@ -1,19 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { useMemo, useState } from 'react';
 import { ACCOUNT_MANAGERS, getContentTypeStyle } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import { formatScheduledDateTime } from '../utils';
@@ -36,11 +21,6 @@ const kindStyles = {
 };
 
 const inReviewKindStyle = 'border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]';
-
-const interactiveProps = {
-  onPointerDown: (e) => e.stopPropagation(),
-  onClick: (e) => e.stopPropagation(),
-};
 
 function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onRequestEdits }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
@@ -102,7 +82,7 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onRequ
           </div>
         </button>
 
-        <div className="flex shrink-0 flex-col gap-2" {...interactiveProps}>
+        <div className="flex shrink-0 flex-col gap-2">
           <label className="block">
             <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-500">
               Board status
@@ -137,30 +117,6 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onRequ
         </div>
       </div>
     </article>
-  );
-}
-
-function SortableInReviewTaskCard(props) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: props.task.id,
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="cursor-grab touch-none active:cursor-grabbing"
-      {...attributes}
-      {...listeners}
-    >
-      <InReviewTaskCard {...props} />
-    </div>
   );
 }
 
@@ -227,7 +183,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPos
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2" {...interactiveProps}>
+        <div className="flex shrink-0 flex-col gap-2">
           <button
             type="button"
             onClick={openCard}
@@ -259,43 +215,15 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPos
   );
 }
 
-function SortableTaskCard(props) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: props.task.id,
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="cursor-grab touch-none active:cursor-grabbing"
-      {...attributes}
-      {...listeners}
-    >
-      <TaskCard {...props} />
-    </div>
-  );
-}
-
-function SortableTaskList({ tasks, sensors, onDragEnd, renderItem }) {
+function TaskList({ tasks, renderItem }) {
   if (tasks.length === 0) {
     return null;
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-      <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-3">
-          {tasks.map((task) => renderItem(task))}
-        </div>
-      </SortableContext>
-    </DndContext>
+    <div className="space-y-3">
+      {tasks.map((task) => renderItem(task))}
+    </div>
   );
 }
 
@@ -308,19 +236,11 @@ export default function AccountManagerTodo({
   onMarkPosted,
   onMoveTask,
   onSendBackForEditing,
-  amTaskOrder,
-  onSyncAmQueueOrder,
-  onReorderAmQueueTasks,
 }) {
   const { getClientColor, clientAccountManagers } = useClientsContext();
   const todayKey = toDateKey(new Date());
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [needsEditsCard, setNeedsEditsCard] = useState(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
 
   const storyTasksToday = useMemo(
     () => buildStoryTasksToday(cards, todayKey, clientAccountManagers),
@@ -340,46 +260,19 @@ export default function AccountManagerTodo({
     [search, clientFilter, assigneeFilter],
   );
 
-  const filteredStoryTasks = useMemo(
-    () => filterAccountManagerTasks(storyTasksToday, filterOptions),
-    [storyTasksToday, filterOptions],
-  );
-
-  const filteredInReviewTasks = useMemo(
-    () => filterAccountManagerTasks(inReviewTasks, filterOptions),
+  const orderedInReviewTasks = useMemo(
+    () => applyAccountManagerTaskOrder(filterAccountManagerTasks(inReviewTasks, filterOptions)),
     [inReviewTasks, filterOptions],
   );
 
-  const filteredPostsTasks = useMemo(
-    () => filterAccountManagerTasks(postsTodoTasks, filterOptions),
-    [postsTodoTasks, filterOptions],
-  );
-
-  useEffect(() => {
-    onSyncAmQueueOrder('inReview', filteredInReviewTasks.map((task) => task.id));
-  }, [filteredInReviewTasks, onSyncAmQueueOrder]);
-
-  useEffect(() => {
-    onSyncAmQueueOrder('stories', filteredStoryTasks.map((task) => task.id));
-  }, [filteredStoryTasks, onSyncAmQueueOrder]);
-
-  useEffect(() => {
-    onSyncAmQueueOrder('posts', filteredPostsTasks.map((task) => task.id));
-  }, [filteredPostsTasks, onSyncAmQueueOrder]);
-
-  const orderedInReviewTasks = useMemo(
-    () => applyAccountManagerTaskOrder(filteredInReviewTasks, amTaskOrder.inReview),
-    [filteredInReviewTasks, amTaskOrder.inReview],
-  );
-
   const orderedStoryTasks = useMemo(
-    () => applyAccountManagerTaskOrder(filteredStoryTasks, amTaskOrder.stories),
-    [filteredStoryTasks, amTaskOrder.stories],
+    () => applyAccountManagerTaskOrder(filterAccountManagerTasks(storyTasksToday, filterOptions)),
+    [storyTasksToday, filterOptions],
   );
 
   const orderedPostsTasks = useMemo(
-    () => applyAccountManagerTaskOrder(filteredPostsTasks, amTaskOrder.posts),
-    [filteredPostsTasks, amTaskOrder.posts],
+    () => applyAccountManagerTaskOrder(filterAccountManagerTasks(postsTodoTasks, filterOptions)),
+    [postsTodoTasks, filterOptions],
   );
 
   const todayLabel = formatAccountManagerDateLabel(todayKey, todayKey);
@@ -394,7 +287,7 @@ export default function AccountManagerTodo({
       <div className="mb-6 text-center">
         <h2 className="text-xl font-semibold text-white">Account manager tasks</h2>
         <p className="mt-1 text-sm text-gray-400">
-          In-review content, stories to post today, and your overall scheduling to-do.
+          In-review content, stories to post today, and your overall scheduling to-do — sorted by post date and time, earliest first.
         </p>
       </div>
 
@@ -438,15 +331,10 @@ export default function AccountManagerTodo({
               </p>
             </div>
           ) : (
-            <SortableTaskList
+            <TaskList
               tasks={orderedInReviewTasks}
-              sensors={sensors}
-              onDragEnd={(event) => {
-                const { active, over } = event;
-                if (over) onReorderAmQueueTasks('inReview', active.id, over.id);
-              }}
               renderItem={(task) => (
-                <SortableInReviewTaskCard
+                <InReviewTaskCard
                   key={task.id}
                   task={task}
                   getClientColor={getClientColor}
@@ -478,15 +366,10 @@ export default function AccountManagerTodo({
               </p>
             </div>
           ) : (
-            <SortableTaskList
+            <TaskList
               tasks={orderedStoryTasks}
-              sensors={sensors}
-              onDragEnd={(event) => {
-                const { active, over } = event;
-                if (over) onReorderAmQueueTasks('stories', active.id, over.id);
-              }}
               renderItem={(task) => (
-                <SortableTaskCard
+                <TaskCard
                   key={task.id}
                   task={task}
                   getClientColor={getClientColor}
@@ -520,15 +403,10 @@ export default function AccountManagerTodo({
               </p>
             </div>
           ) : (
-            <SortableTaskList
+            <TaskList
               tasks={orderedPostsTasks}
-              sensors={sensors}
-              onDragEnd={(event) => {
-                const { active, over } = event;
-                if (over) onReorderAmQueueTasks('posts', active.id, over.id);
-              }}
               renderItem={(task) => (
-                <SortableTaskCard
+                <TaskCard
                   key={task.id}
                   task={task}
                   getClientColor={getClientColor}
