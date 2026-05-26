@@ -1,5 +1,6 @@
 import {
   ADMIN_TASKS_STORAGE_KEY,
+  AM_TODO_ORDER_KEY,
   CLIENT_RESPONSES_STORAGE_KEY,
   CLIENTS_STORAGE_KEY,
   EDITOR_TODO_ORDER_KEY,
@@ -18,6 +19,7 @@ export const BACKUP_STORAGE_KEYS = [
   SHOOT_PLANS_STORAGE_KEY,
   EDITOR_TODO_STORAGE_KEY,
   EDITOR_TODO_ORDER_KEY,
+  AM_TODO_ORDER_KEY,
   ADMIN_TASKS_STORAGE_KEY,
 ];
 
@@ -27,19 +29,11 @@ const BACKUP_QUEUE_KEYS = [
   'medici-social-shoot-responses',
 ];
 
+export const ALL_SYNC_STORAGE_KEYS = [...BACKUP_STORAGE_KEYS, ...BACKUP_QUEUE_KEYS];
+
 export function buildBackupPayload() {
   const data = {};
-  for (const key of BACKUP_STORAGE_KEYS) {
-    const raw = localStorage.getItem(key);
-    if (raw !== null) {
-      try {
-        data[key] = JSON.parse(raw);
-      } catch {
-        data[key] = raw;
-      }
-    }
-  }
-  for (const key of BACKUP_QUEUE_KEYS) {
+  for (const key of ALL_SYNC_STORAGE_KEYS) {
     const raw = localStorage.getItem(key);
     if (raw !== null) {
       try {
@@ -55,6 +49,40 @@ export function buildBackupPayload() {
     app: 'medici-social-kanban',
     data,
   };
+}
+
+export function applyBackupPayload(payload) {
+  if (!payload?.data || typeof payload.data !== 'object') return false;
+
+  for (const key of Object.keys(payload.data)) {
+    localStorage.setItem(key, JSON.stringify(payload.data[key]));
+  }
+  return true;
+}
+
+export function hasWorkspaceData(payload = buildBackupPayload()) {
+  const cards = payload?.data?.[STORAGE_KEY];
+  if (Array.isArray(cards) && cards.length > 0) return true;
+
+  const ideas = payload?.data?.[VIDEO_IDEAS_STORAGE_KEY];
+  if (Array.isArray(ideas) && ideas.length > 0) return true;
+
+  const adminTasks = payload?.data?.[ADMIN_TASKS_STORAGE_KEY];
+  if (Array.isArray(adminTasks) && adminTasks.length > 0) return true;
+
+  const shootPlans = payload?.data?.[SHOOT_PLANS_STORAGE_KEY];
+  if (shootPlans && typeof shootPlans === 'object' && Object.keys(shootPlans).length > 0) {
+    return true;
+  }
+
+  return false;
+}
+
+export function getPayloadTimestamp(payload) {
+  const exportedAt = payload?.exportedAt;
+  if (!exportedAt) return 0;
+  const time = new Date(exportedAt).getTime();
+  return Number.isFinite(time) ? time : 0;
 }
 
 export function exportBackupFile() {

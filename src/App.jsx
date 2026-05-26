@@ -39,6 +39,7 @@ import CardModal from "./components/CardModal";
 import StaffLogin from "./components/StaffLogin";
 import { ClientsProvider } from "./context/ClientsContext";
 import { StaffAuthProvider, useStaffAuth } from "./context/StaffAuthContext";
+import { WorkspaceSyncProvider } from "./context/WorkspaceSyncContext";
 
 function AppShell() {
   const importData = parseImportParam();
@@ -582,9 +583,11 @@ function AppShell() {
 export default function App() {
   return (
     <StaffAuthProvider>
-      <ClientsProvider>
-        <AppShell />
-      </ClientsProvider>
+      <WorkspaceSyncProvider>
+        <ClientsProvider>
+          <AppShell />
+        </ClientsProvider>
+      </WorkspaceSyncProvider>
     </StaffAuthProvider>
   );
 }
