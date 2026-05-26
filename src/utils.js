@@ -34,8 +34,21 @@ export function isOverdue(dateStr) {
   return due < today;
 }
 
+/** Scheduled non-story posts whose plan date has passed — off the board, still on calendar. */
+export function isPastScheduledBoardPost(card, todayKey = toDateKey(new Date())) {
+  if (card.contentType === 'Story' || card.isOneOffProject) return false;
+  if (card.columnId !== 'scheduled' || !card.dueDate) return false;
+  return card.dueDate < todayKey;
+}
+
 export function getBoardCards(cards) {
-  return cards.filter((card) => card.contentType !== 'Story' && !card.postedAt);
+  const todayKey = toDateKey(new Date());
+  return cards.filter((card) => {
+    if (card.contentType === 'Story') return false;
+    if (card.postedAt) return false;
+    if (isPastScheduledBoardPost(card, todayKey)) return false;
+    return true;
+  });
 }
 
 export function filterCards(cards, { client, search }) {
