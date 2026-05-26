@@ -74,8 +74,7 @@ export default function ClientPortalCredentialsModal({
           <div>
             <h2 className="text-lg font-semibold text-white">Client portal logins</h2>
             <p className="mt-1 text-sm text-gray-400">
-              One username and password per brand. Clients sign in at{' '}
-              <span className="text-gray-300">?portal=1</span>
+              One username and password per brand. Clients sign in at the main site URL.
             </p>
           </div>
           <button type="button" onClick={onClose} className="text-gray-400 hover:text-white">

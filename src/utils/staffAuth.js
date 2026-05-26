@@ -23,19 +23,24 @@ export function isStaffAuthConfigured() {
 }
 
 export function isStaffAuthRequired() {
-  if (isPublicClientPortal()) return false;
+  if (isPublicShareLink()) return false;
   if (isStaffAuthConfigured()) return true;
   return import.meta.env.PROD;
 }
 
-export function isPublicClientPortal() {
+export function isPublicShareLink() {
   const params = new URLSearchParams(window.location.search);
-  if (params.get('portal') === '1' || params.get('portal') === 'true') return true;
   if (params.get('client')) return true;
   if (params.get('calendar')) return true;
   if (params.get('content')) return true;
   if (params.get('shoot') && params.get('date')) return true;
   return false;
+}
+
+export function isPublicClientPortal() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('portal') === '1' || params.get('portal') === 'true') return true;
+  return isPublicShareLink();
 }
 
 export function isClientHubPortal() {

@@ -15,7 +15,7 @@ const TABS = [
   { id: 'shoots', label: 'Shoot schedule' },
 ];
 
-export default function ClientHubPortal() {
+export default function ClientHubPortal({ onSignOut }) {
   const { brand, portalData, loadingData, dataError, logout, queueCloudResponse, refreshPortalData } =
     useClientAuth();
   const { getClientColor } = useClientsContext();
@@ -33,6 +33,11 @@ export default function ClientHubPortal() {
 
   const handleIdeaResponse = (response) => queueCloudResponse('idea', response);
   const handleContentResponse = (response) => queueCloudResponse('content', response);
+
+  const handleSignOut = () => {
+    logout();
+    onSignOut?.();
+  };
 
   return (
     <div className="min-h-screen bg-black">
@@ -59,7 +64,7 @@ export default function ClientHubPortal() {
             </button>
             <button
               type="button"
-              onClick={logout}
+              onClick={handleSignOut}
               className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5"
             >
               Sign out
