@@ -11,6 +11,7 @@ import {
   formatAccountManagerDateLabel,
   groupAccountManagerTasksByClient,
   groupAccountManagerTasksByDate,
+  getAccountManagerReviewStatusOptions,
 } from '../utils/accountManagerTodo';
 const kindStyles = {
   'in-review': 'border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]',
@@ -19,11 +20,13 @@ const kindStyles = {
   'post-story': 'border-blue-500/30 bg-blue-500/10 text-blue-200',
 };
 
-function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted }) {
+function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted, onMoveTask }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const badgeStyle = kindStyles[task.kind] || kindStyles.schedule;
   const canMarkPosted = task.kind === 'publish' || task.kind === 'post-story';
   const clientColor = getClientColor(task.client);
+  const reviewStatusOptions =
+    task.kind === 'in-review' ? getAccountManagerReviewStatusOptions(task.isOneOffProject) : [];
 
   const openCard = () => onOpenCard(task.card);
 
@@ -86,7 +89,26 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPos
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2">
+        <div className="flex shrink-0 flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+          {task.kind === 'in-review' && (
+            <label className="block">
+              <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                Board status
+              </span>
+              <select
+                value={task.columnId}
+                onChange={(e) => onMoveTask?.(task.cardId, e.target.value)}
+                className="select-dark w-full min-w-[130px] rounded-lg border border-white/10 bg-[#1a1a1a] px-2 py-1.5 text-xs text-[#f9f6f2] outline-none focus:border-[#810100]/50"
+                aria-label={`Board status for ${task.title}`}
+              >
+                {reviewStatusOptions.map((col) => (
+                  <option key={col.id} value={col.id}>
+                    {col.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <button
             type="button"
             onClick={openCard}
@@ -118,7 +140,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPos
   );
 }
 
-function ClientGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted }) {
+function ClientGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted, onMoveTask }) {
   const groups = useMemo(() => groupAccountManagerTasksByClient(tasks), [tasks]);
 
   return (
@@ -142,6 +164,7 @@ function ClientGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled,
                 onOpenCard={onOpenCard}
                 onMarkScheduled={onMarkScheduled}
                 onMarkPosted={onMarkPosted}
+                onMoveTask={onMoveTask}
               />
             ))}
           </div>
@@ -151,7 +174,7 @@ function ClientGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled,
   );
 }
 
-function DateGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted }) {
+function DateGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted, onMoveTask }) {
   const todayKey = toDateKey(new Date());
   const groups = useMemo(
     () => groupAccountManagerTasksByDate(tasks, todayKey),
@@ -177,6 +200,7 @@ function DateGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled, o
                 onOpenCard={onOpenCard}
                 onMarkScheduled={onMarkScheduled}
                 onMarkPosted={onMarkPosted}
+                onMoveTask={onMoveTask}
               />
             ))}
           </div>
@@ -193,6 +217,7 @@ export default function AccountManagerTodo({
   onOpenCard,
   onMarkScheduled,
   onMarkPosted,
+  onMoveTask,
 }) {
   const { getClientColor, clientAccountManagers } = useClientsContext();
   const todayKey = toDateKey(new Date());
@@ -288,6 +313,7 @@ export default function AccountManagerTodo({
               onOpenCard={onOpenCard}
               onMarkScheduled={onMarkScheduled}
               onMarkPosted={onMarkPosted}
+              onMoveTask={onMoveTask}
             />
           )}
         </section>
@@ -317,6 +343,7 @@ export default function AccountManagerTodo({
               onOpenCard={onOpenCard}
               onMarkScheduled={onMarkScheduled}
               onMarkPosted={onMarkPosted}
+              onMoveTask={onMoveTask}
             />
           )}
         </section>
@@ -348,6 +375,7 @@ export default function AccountManagerTodo({
               onOpenCard={onOpenCard}
               onMarkScheduled={onMarkScheduled}
               onMarkPosted={onMarkPosted}
+              onMoveTask={onMoveTask}
             />
           )}
         </section>

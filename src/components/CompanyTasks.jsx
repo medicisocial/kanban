@@ -81,6 +81,7 @@ export default function CompanyTasks({
           onOpenCard={onOpenCard}
           onMarkScheduled={onMarkScheduled}
           onMarkPosted={onMarkPosted}
+          onMoveTask={onMoveTask}
         />
       )}
 
