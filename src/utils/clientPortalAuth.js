@@ -95,11 +95,37 @@ export const CLIENT_PIPELINE_COLUMNS = [
   { id: 'in-review', title: 'In Review' },
   { id: 'approved', title: 'Approved' },
   { id: 'scheduled', title: 'Scheduled' },
+  { id: 'posted', title: 'Posted' },
 ];
 
+function parseScheduledDateTime(dueDate, dueTime) {
+  const scheduledAt = new Date(`${dueDate}T00:00:00`);
+  if (dueTime) {
+    const [hours, minutes] = dueTime.split(':').map(Number);
+    scheduledAt.setHours(hours, minutes, 0, 0);
+    return scheduledAt;
+  }
+  scheduledAt.setHours(23, 59, 59, 999);
+  return scheduledAt;
+}
+
+/** Client portal only — scheduled reels past their post time (or marked posted). */
+export function isClientPortalPosted(card, now = new Date()) {
+  if (card.contentType === 'Story') return false;
+  if (card.postedAt) return true;
+  if (card.columnId !== 'scheduled' || !card.dueDate) return false;
+  return now >= parseScheduledDateTime(card.dueDate, card.dueTime);
+}
+
+export function getClientPipelineDisplayColumn(card) {
+  if (card.contentType === 'Story') return null;
+  if (card.columnId === 'scheduled' && isClientPortalPosted(card)) return 'posted';
+  if (CLIENT_PIPELINE_COLUMNS.some((column) => column.id === card.columnId)) return card.columnId;
+  return null;
+}
+
 export function getClientPipelineCards(cards) {
-  const allowed = new Set(CLIENT_PIPELINE_COLUMNS.map((col) => col.id));
-  return cards.filter((card) => allowed.has(card.columnId) && card.contentType !== 'Story');
+  return cards.filter((card) => getClientPipelineDisplayColumn(card) !== null);
 }
 
 export function getClientShootCards(cards) {

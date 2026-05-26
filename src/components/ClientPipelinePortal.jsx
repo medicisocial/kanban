@@ -1,5 +1,9 @@
 import { getContentTypeStyle } from '../constants';
-import { CLIENT_PIPELINE_COLUMNS, getClientPipelineCards } from '../utils/clientPortalAuth';
+import {
+  CLIENT_PIPELINE_COLUMNS,
+  getClientPipelineCards,
+  getClientPipelineDisplayColumn,
+} from '../utils/clientPortalAuth';
 import { formatScheduledDateTime } from '../utils';
 
 export default function ClientPipelinePortal({ cards, clientColor }) {
@@ -10,13 +14,15 @@ export default function ClientPipelinePortal({ cards, clientColor }) {
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-white">Content pipeline</h2>
         <p className="mt-1 text-sm text-gray-400">
-          Where your content stands — in review, approved, or scheduled to post.
+          Where your content stands — in review, approved, scheduled, or posted.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {CLIENT_PIPELINE_COLUMNS.map((column) => {
-          const columnCards = pipelineCards.filter((card) => card.columnId === column.id);
+          const columnCards = pipelineCards.filter(
+            (card) => getClientPipelineDisplayColumn(card) === column.id,
+          );
           return (
             <section
               key={column.id}
