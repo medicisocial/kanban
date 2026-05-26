@@ -20,7 +20,6 @@ import {
 import { getCalendarPortalClient } from "./utils/calendarShare";
 import { withStoryOccurrence, parseStoryOccurrenceNotes } from "./utils/calendar";
 import { createCard, COLUMNS } from "./constants";
-import { useEditorTasks } from "./hooks/useEditorTasks";
 import { useAccountManagerTasks } from "./hooks/useAccountManagerTasks";
 import { buildSendBackForEditingUpdates } from "./utils/editorTodo";
 import { useAdminTasks } from "./hooks/useAdminTasks";
@@ -58,11 +57,6 @@ function AppShell() {
     markApproved,
     markDeclined,
   } = useVideoIdeas();
-  const {
-    taskOrder,
-    syncTaskOrder,
-    reorderTasks,
-  } = useEditorTasks();
   const {
     taskOrder: amTaskOrder,
     syncQueueOrder: syncAmQueueOrder,
@@ -497,7 +491,6 @@ function AppShell() {
       {activeView === "todo" && (
         <CompanyTasks
           cards={cards}
-          taskOrder={taskOrder}
           adminTasks={adminTasks}
           search={search}
           clientFilter={clientFilter}
@@ -507,8 +500,6 @@ function AppShell() {
           onToggleAdminTaskComplete={toggleAdminTaskComplete}
           onDeleteAdminTask={deleteAdminTask}
           onOpenCard={handleCardClick}
-          onSyncTaskOrder={syncTaskOrder}
-          onReorderTasks={reorderTasks}
           onMarkScheduled={handleMarkScheduled}
           onMarkPosted={handleMarkPosted}
           onSubmitForReview={handleSubmitForReview}

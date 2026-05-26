@@ -158,15 +158,17 @@ export function buildInitialTaskOrder(tasks) {
 export function compareEditorTasks(a, b) {
   if (a.completed !== b.completed) return a.completed ? 1 : -1;
 
-  const dateA = a.dueDate || '9999-99-99';
-  const dateB = b.dueDate || '9999-99-99';
-  if (dateA !== dateB) return dateA.localeCompare(dateB);
-
-  const kindOrder = { edit: 0, oneoff: 1, approve: 2 };
-  const kindDiff = (kindOrder[a.kind] ?? 9) - (kindOrder[b.kind] ?? 9);
-  if (kindDiff !== 0) return kindDiff;
+  const keyA = getEditorPostSortKey(a);
+  const keyB = getEditorPostSortKey(b);
+  if (keyA !== keyB) return keyA.localeCompare(keyB);
 
   return (a.title || '').localeCompare(b.title || '');
+}
+
+function getEditorPostSortKey(task) {
+  if (!task.postDate) return '9999-99-99T99:99';
+  const time = task.dueTime || '99:99';
+  return `${task.postDate}T${time}`;
 }
 
 export function groupEditorTasksByDate(tasks, todayKey = toDateKey(new Date())) {

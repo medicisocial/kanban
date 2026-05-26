@@ -5,7 +5,6 @@ import AdminTodo from './AdminTodo';
 
 export default function CompanyTasks({
   cards,
-  taskOrder,
   adminTasks,
   search,
   clientFilter,
@@ -15,8 +14,6 @@ export default function CompanyTasks({
   onToggleAdminTaskComplete,
   onDeleteAdminTask,
   onOpenCard,
-  onSyncTaskOrder,
-  onReorderTasks,
   onMarkScheduled,
   onMarkPosted,
   onSubmitForReview,
@@ -58,7 +55,6 @@ export default function CompanyTasks({
         <EditorTodo
           embedded
           cards={cards}
-          taskOrder={taskOrder}
           search={search}
           clientFilter={clientFilter}
           onAddOneOffTask={onAddOneOffTask}
@@ -67,8 +63,6 @@ export default function CompanyTasks({
           onSubmitForReview={onSubmitForReview}
           onSendBackForEditing={onSendBackForEditing}
           onMoveTask={onMoveTask}
-          onSyncTaskOrder={onSyncTaskOrder}
-          onReorderTasks={onReorderTasks}
         />
       )}
 

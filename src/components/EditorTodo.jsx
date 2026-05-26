@@ -1,19 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { useMemo, useState } from 'react';
 import { TEAM_MEMBERS, getContentTypeStyle } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import { formatScheduledDateTime } from '../utils';
@@ -113,7 +98,7 @@ function EditorTodoItem({
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
             {task.assignedTo && <span>Assigned to {task.assignedTo}</span>}
             <span>On board · {task.columnId.replace('-', ' ')}</span>
-            {isOneOff && !task.dueDate && <span>No posting date</span>}
+            {isOneOff && !task.postDate && <span>No posting date</span>}
           </div>
         </button>
 
@@ -193,42 +178,7 @@ function EditorTodoItem({
   );
 }
 
-function SortableEditorTodoItem(props) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: props.task.id,
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="cursor-grab touch-none active:cursor-grabbing"
-      {...attributes}
-      {...listeners}
-    >
-      <EditorTodoItem {...props} />
-    </div>
-  );
-}
-
-function EditorTaskList({
-  tasks,
-  sensors,
-  onDragEnd,
-  onOpenCard,
-  onDeleteOneOffTask,
-  onSubmitForReview,
-  onSendBackForEditing,
-  onMoveTask,
-  getClientColor,
-  emptyMessage,
-}) {
+function EditorTaskList({ tasks, emptyMessage, itemProps }) {
   if (tasks.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-white/10 px-4 py-10 text-center">
@@ -238,38 +188,15 @@ function EditorTaskList({
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-      <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-3">
-          {tasks.map((task) => (
-            <SortableEditorTodoItem
-              key={task.id}
-              task={task}
-              onOpenCard={onOpenCard}
-              onDeleteOneOff={onDeleteOneOffTask}
-              onSubmitForReview={onSubmitForReview}
-              onSendBackForEditing={onSendBackForEditing}
-              onMoveTask={onMoveTask}
-              getClientColor={getClientColor}
-            />
-          ))}
-        </div>
-      </SortableContext>
-    </DndContext>
+    <div className="space-y-3">
+      {tasks.map((task) => (
+        <EditorTodoItem key={task.id} task={task} {...itemProps} />
+      ))}
+    </div>
   );
 }
 
-function EditorTaskColumn({
-  title,
-  description,
-  count,
-  accentClass,
-  tasks,
-  sensors,
-  onDragEnd,
-  emptyMessage,
-  itemProps,
-}) {
+function EditorTaskColumn({ title, description, count, accentClass, tasks, emptyMessage, itemProps }) {
   return (
     <section className="min-w-0 rounded-2xl border border-white/10 bg-[#0d0d0d] p-4 sm:p-5">
       <div className="mb-4 border-b border-white/8 pb-4">
@@ -282,13 +209,7 @@ function EditorTaskColumn({
         <p className="mt-1 text-xs text-gray-500">{description}</p>
       </div>
 
-      <EditorTaskList
-        tasks={tasks}
-        sensors={sensors}
-        onDragEnd={onDragEnd}
-        emptyMessage={emptyMessage}
-        {...itemProps}
-      />
+      <EditorTaskList tasks={tasks} emptyMessage={emptyMessage} itemProps={itemProps} />
     </section>
   );
 }
@@ -296,7 +217,6 @@ function EditorTaskColumn({
 export default function EditorTodo({
   embedded = false,
   cards,
-  taskOrder,
   search,
   clientFilter,
   onAddOneOffTask,
@@ -305,18 +225,11 @@ export default function EditorTodo({
   onSubmitForReview,
   onSendBackForEditing,
   onMoveTask,
-  onSyncTaskOrder,
-  onReorderTasks,
 }) {
   const { getClientColor } = useClientsContext();
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [showCompleted, setShowCompleted] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
 
   const allTasks = useMemo(() => buildBoardEditorTasks(cards), [cards]);
 
@@ -331,13 +244,9 @@ export default function EditorTodo({
     [allTasks, search, assigneeFilter, clientFilter, showCompleted],
   );
 
-  useEffect(() => {
-    onSyncTaskOrder(filteredTasks.map((task) => task.id));
-  }, [filteredTasks, onSyncTaskOrder]);
-
   const orderedTasks = useMemo(
-    () => applyEditorTaskOrder(filteredTasks, taskOrder),
-    [filteredTasks, taskOrder],
+    () => applyEditorTaskOrder(filteredTasks),
+    [filteredTasks],
   );
 
   const { editing: editingTasks, inReview: reviewTasks } = useMemo(
@@ -348,12 +257,6 @@ export default function EditorTodo({
   const editCount = editingTasks.length;
   const approveCount = reviewTasks.length;
   const oneOffCount = filteredTasks.filter((t) => t.isOneOffProject && !t.completed).length;
-
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
-    if (!over) return;
-    onReorderTasks(active.id, over.id);
-  };
 
   const itemProps = {
     onOpenCard,
@@ -370,7 +273,7 @@ export default function EditorTodo({
         <div>
           <h2 className="text-xl font-semibold text-white">Editor tasks</h2>
           <p className="mt-1 text-sm text-gray-400">
-            Editing and review queues from the board — drag anywhere on a card to set priority within each column.
+            Editing and review queues from the board — sorted by post date and time, earliest first.
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
             <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-200">
@@ -439,8 +342,6 @@ export default function EditorTodo({
             count={editCount}
             accentClass="border-amber-500/30 bg-amber-500/10 text-amber-200"
             tasks={editingTasks}
-            sensors={sensors}
-            onDragEnd={handleDragEnd}
             emptyMessage="No videos waiting for edits."
             itemProps={itemProps}
           />
@@ -450,8 +351,6 @@ export default function EditorTodo({
             count={approveCount}
             accentClass="border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]"
             tasks={reviewTasks}
-            sensors={sensors}
-            onDragEnd={handleDragEnd}
             emptyMessage="No videos in review."
             itemProps={itemProps}
           />
