@@ -1,7 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { isPublicClientPortal } from '../utils/staffAuth';
-import { buildBackupPayload } from '../utils/dataBackup';
-import { pullIfRemoteNewer, pushWorkspace, syncWorkspace } from '../utils/cloudSync';
+import {
+  buildBackupPayloadForPush,
+  getLocalSyncMeta,
+  getWorkspaceDataSnapshot,
+} from '../utils/dataBackup';
+import {
+  LOCAL_PUSH_DEBOUNCE_MS,
+  pullIfRemoteNewer,
+  pushWorkspace,
+  REMOTE_POLL_MS,
+  syncWorkspace,
+} from '../utils/cloudSync';
 import { useStaffAuth } from './StaffAuthContext';
 
 const WorkspaceSyncContext = createContext(null);
@@ -11,8 +21,9 @@ export function WorkspaceSyncProvider({ children }) {
   const [syncReady, setSyncReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState('idle');
   const [syncError, setSyncError] = useState('');
-  const lastPushedRef = useRef('');
-  const localExportedAtRef = useRef(buildBackupPayload().exportedAt);
+  const [remoteUpdating, setRemoteUpdating] = useState(false);
+  const lastPushedRef = useRef(getLocalSyncMeta().snapshot || getWorkspaceDataSnapshot());
+  const pushInFlightRef = useRef(false);
 
   const shouldSync = authRequired && isAuthenticated && !isPublicClientPortal();
 
@@ -33,14 +44,27 @@ export function WorkspaceSyncProvider({ children }) {
         setSyncStatus('unavailable');
       } else {
         setSyncStatus(result.status);
-        localExportedAtRef.current = buildBackupPayload().exportedAt;
-        lastPushedRef.current = JSON.stringify(buildBackupPayload().data);
+        lastPushedRef.current = getLocalSyncMeta().snapshot || getWorkspaceDataSnapshot();
       }
     } catch (error) {
       setSyncError(error.message || 'Cloud sync failed.');
       setSyncStatus('error');
     } finally {
       setSyncReady(true);
+    }
+  }, [session]);
+
+  const checkRemoteUpdates = useCallback(async () => {
+    if (!session) return;
+
+    try {
+      const result = await pullIfRemoteNewer(session);
+      if (result.updated) {
+        setRemoteUpdating(true);
+        window.location.reload();
+      }
+    } catch {
+      /* ignore background poll errors */
     }
   }, [session]);
 
@@ -69,46 +93,56 @@ export function WorkspaceSyncProvider({ children }) {
     let cancelled = false;
 
     const watchLocalChanges = () => {
-      if (cancelled) return;
+      if (cancelled || pushInFlightRef.current) return;
 
-      const payload = buildBackupPayload();
-      const snapshot = JSON.stringify(payload.data);
+      const snapshot = getWorkspaceDataSnapshot();
       if (snapshot === lastPushedRef.current) return;
 
       clearTimeout(pushTimer);
       pushTimer = setTimeout(async () => {
+        if (cancelled || pushInFlightRef.current) return;
+
+        pushInFlightRef.current = true;
         try {
+          const payload = buildBackupPayloadForPush();
           await pushWorkspace(session, payload);
-          lastPushedRef.current = snapshot;
-          localExportedAtRef.current = payload.exportedAt;
-          if (!cancelled) setSyncStatus('in_sync');
+          lastPushedRef.current = getLocalSyncMeta().snapshot || snapshot;
+          if (!cancelled) {
+            setSyncError('');
+            setSyncStatus('in_sync');
+          }
         } catch (error) {
           if (!cancelled) {
             setSyncError(error.message || 'Could not save changes to cloud.');
             setSyncStatus('error');
           }
+        } finally {
+          pushInFlightRef.current = false;
         }
-      }, 2000);
+      }, LOCAL_PUSH_DEBOUNCE_MS);
     };
 
-    const changeInterval = setInterval(watchLocalChanges, 1500);
+    const changeInterval = setInterval(watchLocalChanges, 1000);
+    const pollRemote = setInterval(checkRemoteUpdates, REMOTE_POLL_MS);
 
-    const pollRemote = setInterval(async () => {
-      try {
-        const updated = await pullIfRemoteNewer(session, localExportedAtRef.current);
-        if (updated) window.location.reload();
-      } catch {
-        /* ignore background poll errors */
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkRemoteUpdates();
       }
-    }, 30000);
+    };
+
+    window.addEventListener('focus', checkRemoteUpdates);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       cancelled = true;
       clearInterval(changeInterval);
       clearInterval(pollRemote);
       clearTimeout(pushTimer);
+      window.removeEventListener('focus', checkRemoteUpdates);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [shouldSync, syncReady, session, syncStatus]);
+  }, [shouldSync, syncReady, session, syncStatus, checkRemoteUpdates]);
 
   const value = useMemo(
     () => ({
@@ -133,6 +167,14 @@ export function WorkspaceSyncProvider({ children }) {
 
   return (
     <WorkspaceSyncContext.Provider value={value}>
+      {remoteUpdating && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 px-6 text-center">
+          <div>
+            <p className="text-sm text-gray-200">Updating from another computer…</p>
+            <p className="mt-2 text-xs text-gray-500">Pulling the latest board changes.</p>
+          </div>
+        </div>
+      )}
       {syncStatus === 'unavailable' && shouldSync && (
         <div className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-200">
           Cloud sync is not set up yet — cards stay on this browser only. Use Export backup on one

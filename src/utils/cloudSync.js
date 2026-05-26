@@ -1,9 +1,16 @@
 import {
   applyBackupPayload,
   buildBackupPayload,
+  buildBackupPayloadForPush,
+  getLocalSyncMeta,
   getPayloadTimestamp,
   hasWorkspaceData,
+  isLocalWorkspaceDirty,
+  setLocalSyncMeta,
 } from './dataBackup';
+
+const REMOTE_POLL_MS = 4000;
+const LOCAL_PUSH_DEBOUNCE_MS = 1500;
 
 function authHeaders(session) {
   return {
@@ -11,6 +18,8 @@ function authHeaders(session) {
     'Content-Type': 'application/json',
   };
 }
+
+export { REMOTE_POLL_MS, LOCAL_PUSH_DEBOUNCE_MS };
 
 export async function fetchWorkspace(session) {
   const response = await fetch('/api/workspace', {
@@ -33,7 +42,7 @@ export async function fetchWorkspace(session) {
   return { unavailable: false, workspace };
 }
 
-export async function pushWorkspace(session, payload = buildBackupPayload()) {
+export async function pushWorkspace(session, payload = buildBackupPayloadForPush()) {
   const response = await fetch('/api/workspace', {
     method: 'PUT',
     headers: authHeaders(session),
@@ -52,7 +61,8 @@ export async function pushWorkspace(session, payload = buildBackupPayload()) {
     throw new Error('Could not save workspace to cloud.');
   }
 
-  return { unavailable: false };
+  setLocalSyncMeta(payload.exportedAt, JSON.stringify(payload.data));
+  return { unavailable: false, exportedAt: payload.exportedAt };
 }
 
 export async function syncWorkspace(session) {
@@ -67,7 +77,7 @@ export async function syncWorkspace(session) {
 
   if (!remoteHasData) {
     if (localHasData) {
-      await pushWorkspace(session, local);
+      await pushWorkspace(session, buildBackupPayloadForPush());
       return { status: 'uploaded' };
     }
     return { status: 'empty' };
@@ -81,22 +91,31 @@ export async function syncWorkspace(session) {
     return { status: 'downloaded', reload: true };
   }
 
-  if (localTime > remoteTime) {
-    await pushWorkspace(session, local);
+  if (localTime > remoteTime || isLocalWorkspaceDirty()) {
+    await pushWorkspace(session, buildBackupPayloadForPush());
     return { status: 'uploaded' };
   }
 
   return { status: 'in_sync' };
 }
 
-export async function pullIfRemoteNewer(session, localExportedAt) {
-  const { unavailable, workspace: remote } = await fetchWorkspace(session);
-  if (unavailable || !remote || !hasWorkspaceData(remote)) return false;
+export async function pullIfRemoteNewer(session) {
+  if (isLocalWorkspaceDirty()) {
+    return { updated: false, skippedDirty: true };
+  }
 
+  const { unavailable, workspace: remote } = await fetchWorkspace(session);
+  if (unavailable || !remote || !hasWorkspaceData(remote)) {
+    return { updated: false, skippedDirty: false };
+  }
+
+  const meta = getLocalSyncMeta();
   const remoteTime = getPayloadTimestamp(remote);
-  const localTime = new Date(localExportedAt).getTime();
-  if (remoteTime <= localTime) return false;
+  const localTime = getPayloadTimestamp({ exportedAt: meta.exportedAt });
+  if (remoteTime <= localTime) {
+    return { updated: false, skippedDirty: false };
+  }
 
   applyBackupPayload(remote);
-  return true;
+  return { updated: true, skippedDirty: false };
 }

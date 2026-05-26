@@ -31,7 +31,9 @@ const BACKUP_QUEUE_KEYS = [
 
 export const ALL_SYNC_STORAGE_KEYS = [...BACKUP_STORAGE_KEYS, ...BACKUP_QUEUE_KEYS];
 
-export function buildBackupPayload() {
+export const WORKSPACE_SYNC_META_KEY = 'medici-workspace-sync-meta';
+
+function readWorkspaceData() {
   const data = {};
   for (const key of ALL_SYNC_STORAGE_KEYS) {
     const raw = localStorage.getItem(key);
@@ -43,6 +45,51 @@ export function buildBackupPayload() {
       }
     }
   }
+  return data;
+}
+
+export function getWorkspaceDataSnapshot() {
+  return JSON.stringify(readWorkspaceData());
+}
+
+export function getLocalSyncMeta() {
+  try {
+    const raw = localStorage.getItem(WORKSPACE_SYNC_META_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    /* ignore */
+  }
+  return { exportedAt: null, snapshot: null };
+}
+
+export function setLocalSyncMeta(exportedAt, snapshot = getWorkspaceDataSnapshot()) {
+  localStorage.setItem(
+    WORKSPACE_SYNC_META_KEY,
+    JSON.stringify({ exportedAt, snapshot }),
+  );
+}
+
+export function isLocalWorkspaceDirty() {
+  const meta = getLocalSyncMeta();
+  if (!meta.snapshot) {
+    return hasWorkspaceData({ data: readWorkspaceData() });
+  }
+  return getWorkspaceDataSnapshot() !== meta.snapshot;
+}
+
+export function buildBackupPayload() {
+  const data = readWorkspaceData();
+  const meta = getLocalSyncMeta();
+  return {
+    version: BACKUP_VERSION,
+    exportedAt: meta.exportedAt || new Date(0).toISOString(),
+    app: 'medici-social-kanban',
+    data,
+  };
+}
+
+export function buildBackupPayloadForPush() {
+  const data = readWorkspaceData();
   return {
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
@@ -57,6 +104,11 @@ export function applyBackupPayload(payload) {
   for (const key of Object.keys(payload.data)) {
     localStorage.setItem(key, JSON.stringify(payload.data[key]));
   }
+
+  if (payload.exportedAt) {
+    setLocalSyncMeta(payload.exportedAt, JSON.stringify(payload.data));
+  }
+
   return true;
 }
 
@@ -86,7 +138,7 @@ export function getPayloadTimestamp(payload) {
 }
 
 export function exportBackupFile() {
-  const payload = buildBackupPayload();
+  const payload = buildBackupPayloadForPush();
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const stamp = new Date().toISOString().slice(0, 10);
