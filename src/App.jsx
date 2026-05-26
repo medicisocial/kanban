@@ -21,6 +21,7 @@ import { getCalendarPortalClient } from "./utils/calendarShare";
 import { withStoryOccurrence, parseStoryOccurrenceNotes } from "./utils/calendar";
 import { createCard, COLUMNS } from "./constants";
 import { useEditorTasks } from "./hooks/useEditorTasks";
+import { useAccountManagerTasks } from "./hooks/useAccountManagerTasks";
 import { buildSendBackForEditingUpdates } from "./utils/editorTodo";
 import { useAdminTasks } from "./hooks/useAdminTasks";
 import CompanyTasks from "./components/CompanyTasks";
@@ -64,6 +65,13 @@ function AppShell() {
     reorderTasks,
     resetTaskOrder,
   } = useEditorTasks();
+  const {
+    taskOrder: amTaskOrder,
+    syncQueueOrder: syncAmQueueOrder,
+    setQueueOrderFromIds: setAmQueueOrderFromIds,
+    reorderQueueTasks: reorderAmQueueTasks,
+    resetAllQueueOrders: resetAmQueueOrders,
+  } = useAccountManagerTasks();
   const {
     adminTasks,
     addAdminTask,
@@ -512,6 +520,11 @@ function AppShell() {
           onSubmitForReview={handleSubmitForReview}
           onSendBackForEditing={handleSendBackForEditing}
           onMoveTask={handleMoveEditorTask}
+          amTaskOrder={amTaskOrder}
+          onSyncAmQueueOrder={syncAmQueueOrder}
+          onSetAmQueueOrder={setAmQueueOrderFromIds}
+          onReorderAmQueueTasks={reorderAmQueueTasks}
+          onResetAmQueueOrders={resetAmQueueOrders}
         />
       )}
 

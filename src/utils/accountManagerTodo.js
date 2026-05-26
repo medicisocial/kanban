@@ -15,7 +15,7 @@ function buildScheduleTask(card, clientAccountManagers) {
     source: 'board',
     cardId: card.id,
     kind: 'schedule',
-    label: 'Scheduled',
+    label: 'Approved',
     title: card.title,
     client: card.client,
     contentType: card.contentType,
@@ -134,6 +134,24 @@ export function compareAccountManagerTasks(a, b) {
   const clientDiff = (a.client || '').localeCompare(b.client || '');
   if (clientDiff !== 0) return clientDiff;
   return compareEditorTasks(a, b);
+}
+
+export function applyAccountManagerTaskOrder(tasks, orderIds = []) {
+  if (!orderIds.length) {
+    return [...tasks].sort(compareAccountManagerTasks);
+  }
+
+  const orderMap = new Map(orderIds.map((id, index) => [id, index]));
+  return [...tasks].sort((a, b) => {
+    const aIndex = orderMap.has(a.id) ? orderMap.get(a.id) : Number.MAX_SAFE_INTEGER;
+    const bIndex = orderMap.has(b.id) ? orderMap.get(b.id) : Number.MAX_SAFE_INTEGER;
+    if (aIndex !== bIndex) return aIndex - bIndex;
+    return compareAccountManagerTasks(a, b);
+  });
+}
+
+export function buildInitialAccountManagerTaskOrder(tasks) {
+  return [...tasks].sort(compareAccountManagerTasks).map((task) => task.id);
 }
 
 export function groupAccountManagerTasksByClient(tasks) {
