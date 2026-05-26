@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { defaultPortalUsername } from '../utils/clientPortalAuth';
+import { loadCredentials } from '../hooks/useClientPortalCredentials';
 
 const inputClass =
   'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50';
@@ -9,6 +10,7 @@ export default function ClientPortalCredentialsModal({
   getCredential,
   onSaveCredential,
   onClearCredential,
+  onSyncToCloud,
   onClose,
 }) {
   const [drafts, setDrafts] = useState(() =>
@@ -20,24 +22,40 @@ export default function ClientPortalCredentialsModal({
     ),
   );
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
     setMessage('');
+    setError('');
     try {
+      const credentials = { ...loadCredentials() };
+
       for (const client of clients) {
         const draft = drafts[client];
         if (!draft?.username?.trim() && !draft?.password) {
-          onClearCredential(client);
+          if (!getCredential(client).passwordHash) {
+            onClearCredential(client);
+            delete credentials[client];
+          }
           continue;
         }
-        if (draft.password || getCredential(client).passwordHash) {
-          await onSaveCredential(client, draft.username, draft.password);
+        if (!draft.password && !getCredential(client).passwordHash) {
+          setError(`Set a password for ${client} before saving.`);
+          return;
         }
+        credentials[client] = await onSaveCredential(client, draft.username, draft.password);
       }
-      setMessage('Client portal logins saved. They sync to cloud with your next workspace sync.');
-      setTimeout(() => setMessage(''), 4000);
+
+      if (onSyncToCloud) {
+        await onSyncToCloud(credentials);
+      }
+
+      setMessage('Client portal logins saved and synced to cloud. Clients can sign in now.');
+      setTimeout(() => setMessage(''), 5000);
+    } catch (err) {
+      setError(err.message || 'Could not save client logins.');
     } finally {
       setSaving(false);
     }
@@ -110,6 +128,7 @@ export default function ClientPortalCredentialsModal({
           })}
         </div>
 
+        {error && <p className="px-5 pb-2 text-sm text-red-300">{error}</p>}
         {message && <p className="px-5 pb-2 text-sm text-emerald-300">{message}</p>}
 
         <div className="border-t border-white/5 px-5 py-4">
@@ -119,7 +138,7 @@ export default function ClientPortalCredentialsModal({
             disabled={saving}
             className="w-full rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white hover:bg-[#a00000] disabled:opacity-60"
           >
-            {saving ? 'Saving…' : 'Save client logins'}
+            {saving ? 'Saving to cloud…' : 'Save client logins'}
           </button>
         </div>
       </div>

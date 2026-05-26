@@ -16,6 +16,8 @@ function loadCredentials() {
   return {};
 }
 
+export { loadCredentials };
+
 export function useClientPortalCredentials() {
   const [credentials, setCredentials] = useState(loadCredentials);
 
@@ -36,7 +38,11 @@ export function useClientPortalCredentials() {
     } else if (credentials[client]?.passwordHash) {
       entry.passwordHash = credentials[client].passwordHash;
     }
-    setCredentials((prev) => ({ ...prev, [client]: entry }));
+    setCredentials((prev) => {
+      const next = { ...prev, [client]: entry };
+      localStorage.setItem(CLIENT_PORTAL_AUTH_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
     return entry;
   }, [credentials]);
 
@@ -44,6 +50,7 @@ export function useClientPortalCredentials() {
     setCredentials((prev) => {
       const next = { ...prev };
       delete next[client];
+      localStorage.setItem(CLIENT_PORTAL_AUTH_STORAGE_KEY, JSON.stringify(next));
       return next;
     });
   }, []);

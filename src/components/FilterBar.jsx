@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
+import { useStaffAuth } from '../context/StaffAuthContext';
+import { syncClientPortalCredentialsToCloud } from '../utils/clientPortalAdmin';
 import { exportBackupFile, importBackupFile } from '../utils/dataBackup';
 import AddClientModal from './AddClientModal';
 import ClientAssignmentsModal from './ClientAssignmentsModal';
@@ -15,6 +17,7 @@ export default function FilterBar({ clientFilter, onClientChange }) {
     setClientPortalCredential,
     clearClientPortalCredential,
   } = useClientsContext();
+  const { session } = useStaffAuth();
   const [showAddClient, setShowAddClient] = useState(false);
   const [showAssignments, setShowAssignments] = useState(false);
   const [showPortalLogins, setShowPortalLogins] = useState(false);
@@ -151,6 +154,7 @@ export default function FilterBar({ clientFilter, onClientChange }) {
           getCredential={getCredential}
           onSaveCredential={setClientPortalCredential}
           onClearCredential={clearClientPortalCredential}
+          onSyncToCloud={(credentials) => syncClientPortalCredentialsToCloud(session, credentials)}
           onClose={() => setShowPortalLogins(false)}
         />
       )}

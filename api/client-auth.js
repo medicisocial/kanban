@@ -29,6 +29,12 @@ export default async function handler(req, res) {
 
   const workspace = await loadWorkspace(redis);
   const authMap = getClientPortalAuthMap(workspace);
+  if (!Object.keys(authMap).length) {
+    return res.status(503).json({
+      error: 'No client portal logins are synced yet. Staff must save client logins under Filter → Client logins.',
+    });
+  }
+
   const brand = findBrandByUsername(authMap, username);
   if (!brand) {
     return res.status(401).json({ error: 'Invalid username or password.' });
