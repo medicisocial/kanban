@@ -66,8 +66,8 @@ export default function UnifiedLogin({ onAuthenticated }) {
 
       <div className="flex flex-1 items-center">
         <div className="mx-auto w-full max-w-screen-xl px-5 py-12 md:px-8 md:py-16 lg:py-20">
-          <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-2 lg:gap-20">
-            <section>
+          <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-[1fr_auto] lg:gap-16 xl:gap-24">
+            <section className="lg:max-w-xl">
               <p className={kickerClass}>Client portal</p>
 
               <h1 className="mt-5 font-serif text-4xl font-normal leading-[1.12] tracking-tight text-white md:text-5xl lg:text-[3.25rem] lg:leading-[1.1]">
@@ -80,13 +80,13 @@ export default function UnifiedLogin({ onAuthenticated }) {
               </p>
 
               <nav
-                className="mt-10 flex flex-wrap gap-x-5 gap-y-2 border-t border-white/[0.06] pt-8"
+                className="mt-10 flex flex-wrap gap-2 border-t border-white/[0.06] pt-8"
                 aria-label="Portal sections"
               >
                 {FEATURES.map((label) => (
                   <span
                     key={label}
-                    className="text-sm text-white/70 transition-colors duration-200 hover:text-red-500"
+                    className="border border-white/15 px-3 py-1.5 text-[11px] uppercase tracking-[0.18em] text-white/70 transition-colors duration-200 hover:border-red-700/50 hover:text-red-400"
                   >
                     {label}
                   </span>
@@ -94,14 +94,15 @@ export default function UnifiedLogin({ onAuthenticated }) {
               </nav>
             </section>
 
-            <section className="lg:border-l lg:border-white/10 lg:pl-16">
-              <p className={kickerClass}>Sign in</p>
+            <section className="lg:pt-1">
+              <div className="w-full max-w-md border border-white/10 bg-zinc-950/40 p-8 md:p-10 lg:ml-auto">
+                <p className={kickerClass}>Sign in</p>
 
-              <p className="mt-5 max-w-sm text-base leading-relaxed text-white/70">
-                Enter your brand credentials to access your portal.
-              </p>
+                <p className="mt-5 text-base leading-relaxed text-white/70">
+                  Enter your brand credentials to access your portal.
+                </p>
 
-              <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+                <form onSubmit={handleSubmit} className="mt-8 space-y-6">
                 <label className="block">
                   <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-zinc-300">
                     Username
@@ -157,6 +158,7 @@ export default function UnifiedLogin({ onAuthenticated }) {
                   Contact your account manager
                 </a>
               </p>
+              </div>
             </section>
           </div>
         </div>
