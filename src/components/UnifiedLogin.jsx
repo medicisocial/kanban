@@ -10,7 +10,7 @@ import { loginClientPortal } from '../utils/clientPortalAuth';
 const FEATURES = ['Ideas', 'Content review', 'Calendar', 'Shoot schedule'];
 
 const inputClass =
-  'select-dark w-full rounded-sm border border-white/[0.12] bg-transparent px-0 py-3 text-sm font-light text-[#f9f6f2] outline-none transition-colors duration-200 placeholder:text-white/25 focus:border-[#810100]/70';
+  'select-dark w-full rounded-sm border border-white/20 bg-white/[0.03] px-3 py-3 text-sm text-[#f9f6f2] outline-none transition-colors duration-200 placeholder:text-white/35 focus:border-[#810100] focus:bg-white/[0.05]';
 
 export default function UnifiedLogin({ onAuthenticated }) {
   const [username, setUsername] = useState('');
@@ -52,28 +52,34 @@ export default function UnifiedLogin({ onAuthenticated }) {
   return (
     <div className="flex min-h-screen flex-col bg-black px-6 py-16 sm:px-10 sm:py-24">
       <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center">
-        <header className="mb-16 text-center sm:mb-20">
-          <p className="text-[10px] font-medium uppercase tracking-[0.45em] text-white/40">
+        <header className="mb-14 text-center sm:mb-16">
+          <div
+            className="mx-auto mb-8 flex h-11 w-11 items-center justify-center border border-[#810100]"
+            aria-hidden
+          >
+            <span className="font-serif text-lg text-[#a82828]">M</span>
+          </div>
+          <p className="text-[10px] font-medium uppercase tracking-[0.45em] text-[#a82828]">
             Medici Social
           </p>
-          <h1 className="mt-6 font-serif text-[2.75rem] font-normal leading-[1.2] tracking-[0.02em] text-white sm:text-5xl sm:leading-[1.18]">
+          <h1 className="mt-5 font-serif text-[2.75rem] font-normal leading-[1.2] tracking-[0.02em] text-[#f9f6f2] sm:text-5xl sm:leading-[1.18]">
             Client
             <br />
             Portal
           </h1>
-          <p className="mx-auto mt-10 max-w-[320px] text-sm font-light leading-[1.85] text-white/45">
+          <p className="mx-auto mt-8 max-w-[340px] text-sm font-light leading-[1.8] text-white/70">
             Review ideas, follow your content pipeline, and stay ahead of calendar and shoot dates.
           </p>
         </header>
 
         <nav
-          className="mb-14 flex flex-wrap justify-center gap-x-3 gap-y-2"
+          className="mb-12 flex flex-wrap justify-center gap-x-3 gap-y-2"
           aria-label="Portal sections"
         >
           {FEATURES.map((label) => (
             <span
               key={label}
-              className="border border-white/15 px-3 py-1.5 text-[10px] font-normal uppercase tracking-[0.22em] text-white/40 transition-colors duration-200 hover:border-white/35 hover:text-white/70"
+              className="border border-[#810100]/40 px-3 py-1.5 text-[10px] font-normal uppercase tracking-[0.22em] text-white/75 transition-colors duration-200 hover:border-[#810100] hover:text-[#f9f6f2]"
             >
               {label}
             </span>
@@ -81,9 +87,9 @@ export default function UnifiedLogin({ onAuthenticated }) {
         </nav>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="space-y-8 border-t border-white/[0.08] pt-10">
+          <div className="space-y-7 border-t border-[#810100]/30 pt-9">
             <label className="block">
-              <span className="mb-3 block text-[10px] font-normal uppercase tracking-[0.28em] text-white/35">
+              <span className="mb-2.5 block text-[10px] font-medium uppercase tracking-[0.28em] text-[#a82828]">
                 Username
               </span>
               <input
@@ -98,7 +104,7 @@ export default function UnifiedLogin({ onAuthenticated }) {
             </label>
 
             <label className="block">
-              <span className="mb-3 block text-[10px] font-normal uppercase tracking-[0.28em] text-white/35">
+              <span className="mb-2.5 block text-[10px] font-medium uppercase tracking-[0.28em] text-[#a82828]">
                 Password
               </span>
               <input
@@ -113,7 +119,7 @@ export default function UnifiedLogin({ onAuthenticated }) {
           </div>
 
           {error && (
-            <p className="border border-[#810100]/30 px-4 py-3 text-xs font-light leading-relaxed text-white/60">
+            <p className="border border-[#810100]/50 bg-[#810100]/10 px-4 py-3 text-xs leading-relaxed text-[#f9f6f2]">
               {error}
             </p>
           )}
@@ -121,13 +127,13 @@ export default function UnifiedLogin({ onAuthenticated }) {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full border border-white/80 bg-transparent py-4 text-[11px] font-normal uppercase tracking-[0.32em] text-white transition-colors duration-300 hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-white"
+            className="w-full border border-[#810100] bg-[#810100] py-4 text-[11px] font-medium uppercase tracking-[0.32em] text-[#f9f6f2] transition-colors duration-300 hover:border-[#a00000] hover:bg-[#a00000] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? 'Signing in' : 'Sign in'}
           </button>
         </form>
 
-        <p className="mt-16 text-center text-[11px] font-light leading-relaxed tracking-wide text-white/30">
+        <p className="mt-14 text-center text-[11px] font-light leading-relaxed text-white/55">
           Need access? Contact your account manager.
         </p>
       </div>
