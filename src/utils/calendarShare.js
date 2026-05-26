@@ -1,4 +1,5 @@
 import { hasStoryRecurrence } from './calendar';
+import { encodeSharePayload, decodeSharePayload } from './sharePayload';
 
 export function getCalendarPortalClient() {
   const params = new URLSearchParams(window.location.search);
@@ -6,15 +7,71 @@ export function getCalendarPortalClient() {
   return client ? decodeURIComponent(client) : null;
 }
 
+function compactCalendarCard(card) {
+  return [
+    card.id,
+    card.title,
+    card.contentType,
+    card.dueDate || '',
+    card.dueTime || '',
+    card.storyRecurrenceDays || [],
+    card.storyOccurrenceNotes || {},
+    card.dropboxLink || '',
+    card.assignedTo || '',
+    card.platform || 'Instagram',
+    card.notes || '',
+  ];
+}
+
+function expandCalendarCard(client, tuple) {
+  const [
+    id,
+    title,
+    contentType,
+    dueDate,
+    dueTime,
+    storyRecurrenceDays,
+    storyOccurrenceNotes,
+    dropboxLink,
+    assignedTo,
+    platform,
+    notes,
+  ] = tuple;
+
+  return {
+    id,
+    client,
+    title,
+    contentType,
+    dueDate,
+    dueTime,
+    storyRecurrenceDays,
+    storyOccurrenceNotes,
+    dropboxLink,
+    assignedTo,
+    platform,
+    notes,
+  };
+}
+
+function expandCalendarSnapshot(data, client) {
+  if (data.v === 2 && Array.isArray(data.i)) {
+    return {
+      client,
+      cards: data.i.map((tuple) => expandCalendarCard(client, tuple)),
+    };
+  }
+
+  return data;
+}
+
 export function parseCalendarShareHash() {
   const hash = window.location.hash.slice(1);
   if (!hash) return null;
-  try {
-    const json = decodeURIComponent(escape(atob(hash)));
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
+  const data = decodeSharePayload(hash);
+  if (!data) return null;
+  const client = getCalendarPortalClient() || data.client;
+  return expandCalendarSnapshot(data, client);
 }
 
 export function snapshotCalendarCard(card) {
@@ -41,17 +98,10 @@ export function buildCalendarShareUrl(client, scheduledCards) {
       c.columnId === 'scheduled' &&
       (c.dueDate || hasStoryRecurrence(c)),
   );
-  const payload = btoa(
-    unescape(
-      encodeURIComponent(
-        JSON.stringify({
-          client,
-          cards: clientCards.map(snapshotCalendarCard),
-          sharedAt: Date.now(),
-        }),
-      ),
-    ),
-  );
+  const payload = encodeSharePayload({
+    v: 2,
+    i: clientCards.map(compactCalendarCard),
+  });
   const base = `${window.location.origin}${window.location.pathname}`;
   return `${base}?calendar=${encodeURIComponent(client)}#${payload}`;
 }

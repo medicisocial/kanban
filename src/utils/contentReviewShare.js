@@ -1,3 +1,5 @@
+import { encodeSharePayload, decodeSharePayload, decodeShareQueryParam } from './sharePayload';
+
 const RESPONSES_KEY = 'medici-social-content-review-responses';
 
 export function getContentReviewPortalClient() {
@@ -6,15 +8,32 @@ export function getContentReviewPortalClient() {
   return client ? decodeURIComponent(client) : null;
 }
 
+function expandContentSnapshot(data, client) {
+  if (data.v === 2 && Array.isArray(data.i)) {
+    return {
+      client,
+      cards: data.i.map(([id, title, contentType, dropboxLink, notes]) => ({
+        id,
+        client,
+        title,
+        contentType,
+        dropboxLink: dropboxLink || '',
+        notes: notes || '',
+        columnId: 'in-review',
+      })),
+    };
+  }
+
+  return data;
+}
+
 export function parseContentShareHash() {
   const hash = window.location.hash.slice(1);
   if (!hash) return null;
-  try {
-    const json = decodeURIComponent(escape(atob(hash)));
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
+  const data = decodeSharePayload(hash);
+  if (!data) return null;
+  const client = getContentReviewPortalClient() || data.client || data.c;
+  return expandContentSnapshot(data, client);
 }
 
 export function snapshotCard(card) {
@@ -30,17 +49,16 @@ export function snapshotCard(card) {
 }
 
 export function buildContentReviewShareUrl(client, reviewCards) {
-  const payload = btoa(
-    unescape(
-      encodeURIComponent(
-        JSON.stringify({
-          client,
-          cards: reviewCards.map(snapshotCard),
-          sharedAt: Date.now(),
-        }),
-      ),
-    ),
-  );
+  const payload = encodeSharePayload({
+    v: 2,
+    i: reviewCards.map((card) => [
+      card.id,
+      card.title,
+      card.contentType,
+      card.dropboxLink || '',
+      card.notes || '',
+    ]),
+  });
   const base = `${window.location.origin}${window.location.pathname}`;
   return `${base}?content=${encodeURIComponent(client)}#${payload}`;
 }
@@ -91,10 +109,39 @@ export function clearContentReviewResponses() {
   localStorage.removeItem(RESPONSES_KEY);
 }
 
+function compactContentResponse(response) {
+  return [
+    response.cardId,
+    response.action,
+    response.comment || '',
+    response.timestamp,
+    response.client,
+  ];
+}
+
+function expandContentResponses(data) {
+  if (data.v === 2 && Array.isArray(data.r)) {
+    return {
+      exportedAt: data.t || Date.now(),
+      responses: data.r.map(([cardId, action, comment, timestamp, client]) => ({
+        cardId,
+        action,
+        comment,
+        timestamp,
+        client,
+      })),
+    };
+  }
+
+  return data;
+}
+
 export function buildContentImportUrl(responses) {
-  const payload = btoa(
-    unescape(encodeURIComponent(JSON.stringify({ responses, exportedAt: Date.now() }))),
-  );
+  const payload = encodeSharePayload({
+    v: 2,
+    t: Date.now(),
+    r: responses.map(compactContentResponse),
+  });
   const base = `${window.location.origin}${window.location.pathname}`;
   return `${base}?importContent=${payload}`;
 }
@@ -103,12 +150,9 @@ export function parseContentImportParam() {
   const params = new URLSearchParams(window.location.search);
   const data = params.get('importContent');
   if (!data) return null;
-  try {
-    const json = decodeURIComponent(escape(atob(data)));
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
+  const parsed = decodeShareQueryParam(data);
+  if (!parsed) return null;
+  return expandContentResponses(parsed);
 }
 
 export function buildContentReviewDenyUpdates(card, comment, timestamp = Date.now()) {
