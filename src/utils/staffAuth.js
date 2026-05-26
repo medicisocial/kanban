@@ -30,11 +30,17 @@ export function isStaffAuthRequired() {
 
 export function isPublicClientPortal() {
   const params = new URLSearchParams(window.location.search);
+  if (params.get('portal') === '1' || params.get('portal') === 'true') return true;
   if (params.get('client')) return true;
   if (params.get('calendar')) return true;
   if (params.get('content')) return true;
   if (params.get('shoot') && params.get('date')) return true;
   return false;
+}
+
+export function isClientHubPortal() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('portal') === '1' || params.get('portal') === 'true';
 }
 
 export async function hashPassword(password) {

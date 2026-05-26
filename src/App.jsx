@@ -40,6 +40,24 @@ import StaffLogin from "./components/StaffLogin";
 import { ClientsProvider } from "./context/ClientsContext";
 import { StaffAuthProvider, useStaffAuth } from "./context/StaffAuthContext";
 import { WorkspaceSyncProvider } from "./context/WorkspaceSyncContext";
+import ClientPortalApp from "./ClientPortalApp";
+import { isClientHubPortal } from "./utils/staffAuth";
+
+export default function App() {
+  if (isClientHubPortal()) {
+    return <ClientPortalApp />;
+  }
+
+  return (
+    <StaffAuthProvider>
+      <WorkspaceSyncProvider>
+        <ClientsProvider>
+          <AppShell />
+        </ClientsProvider>
+      </WorkspaceSyncProvider>
+    </StaffAuthProvider>
+  );
+}
 
 function AppShell() {
   const importData = parseImportParam();
@@ -587,17 +605,5 @@ function AppShell() {
         />
       )}
     </div>
-  );
-}
-
-export default function App() {
-  return (
-    <StaffAuthProvider>
-      <WorkspaceSyncProvider>
-        <ClientsProvider>
-          <AppShell />
-        </ClientsProvider>
-      </WorkspaceSyncProvider>
-    </StaffAuthProvider>
   );
 }

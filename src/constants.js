@@ -118,6 +118,7 @@ export const EDITOR_TODO_STORAGE_KEY = 'medici-social-editor-todo';
 export const EDITOR_TODO_ORDER_KEY = 'medici-social-editor-todo-order';
 export const AM_TODO_ORDER_KEY = 'medici-social-am-todo-order';
 export const ADMIN_TASKS_STORAGE_KEY = 'medici-social-admin-tasks';
+export const CLIENT_PORTAL_AUTH_STORAGE_KEY = 'medici-client-portal-auth';
 
 export const IDEA_STATUSES = {
   pending: 'Pending Review',

@@ -118,7 +118,7 @@ function ClientCalendarDetail({ card, onClose }) {
   );
 }
 
-export default function ClientCalendarPortal({ client, cards }) {
+export default function ClientCalendarPortal({ client, cards, embedded = false }) {
   const { getClientColor } = useClientsContext();
   const [localCards, setLocalCards] = useState([]);
   const [focusDate, setFocusDate] = useState(() => getDefaultCalendarDate());
@@ -163,7 +163,8 @@ export default function ClientCalendarPortal({ client, cards }) {
   };
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className={embedded ? 'bg-black' : 'min-h-screen bg-black'}>
+      {!embedded && (
       <header className="border-b border-white/5 bg-black/95 px-4 py-6 sm:px-6">
         <div className="mx-auto flex max-w-[1800px] items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#810100] to-[#a00000] shadow-lg shadow-[#810100]/20">
@@ -176,6 +177,7 @@ export default function ClientCalendarPortal({ client, cards }) {
           </div>
         </div>
       </header>
+      )}
 
       <main className="mx-auto max-w-[1800px] px-4 py-4 sm:px-6">
         <p className="mb-4 text-sm text-gray-400">

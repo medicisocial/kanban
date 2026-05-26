@@ -1,0 +1,74 @@
+import { getRedis, loadWorkspace, saveWorkspace } from './_lib/redis.mjs';
+import {
+  getClientSessionFromRequest,
+  isClientSessionValid,
+} from './_lib/clientPortalAuth.mjs';
+
+const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
+const CONTENT_REVIEW_RESPONSES_KEY = 'medici-social-content-review-responses';
+
+function unauthorized(res) {
+  return res.status(401).json({ error: 'Unauthorized' });
+}
+
+function unavailable(res) {
+  return res.status(503).json({ error: 'Cloud sync is not configured.' });
+}
+
+function appendResponse(existing, response, idKey) {
+  const list = Array.isArray(existing) ? existing : [];
+  const filtered = list.filter((item) => item[idKey] !== response[idKey]);
+  return [...filtered, response];
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const session = getClientSessionFromRequest(req);
+  if (!isClientSessionValid(session)) return unauthorized(res);
+
+  const redis = getRedis();
+  if (!redis) return unavailable(res);
+
+  const { type, response } = req.body || {};
+  if (!response || typeof response !== 'object') {
+    return res.status(400).json({ error: 'Invalid response payload.' });
+  }
+
+  if (response.client && response.client !== session.brand) {
+    return res.status(403).json({ error: 'Forbidden.' });
+  }
+
+  const workspace = (await loadWorkspace(redis)) || {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    app: 'medici-social-kanban',
+    data: {},
+  };
+  workspace.data = workspace.data || {};
+
+  if (type === 'idea') {
+    const next = appendResponse(
+      workspace.data[CLIENT_RESPONSES_STORAGE_KEY],
+      { ...response, client: session.brand, timestamp: response.timestamp || Date.now() },
+      'ideaId',
+    );
+    workspace.data[CLIENT_RESPONSES_STORAGE_KEY] = next;
+  } else if (type === 'content') {
+    const next = appendResponse(
+      workspace.data[CONTENT_REVIEW_RESPONSES_KEY],
+      { ...response, client: session.brand, timestamp: response.timestamp || Date.now() },
+      'cardId',
+    );
+    workspace.data[CONTENT_REVIEW_RESPONSES_KEY] = next;
+  } else {
+    return res.status(400).json({ error: 'Unknown response type.' });
+  }
+
+  workspace.exportedAt = new Date().toISOString();
+  await saveWorkspace(redis, workspace);
+  return res.status(200).json({ ok: true });
+}

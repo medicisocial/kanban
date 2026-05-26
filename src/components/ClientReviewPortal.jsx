@@ -13,6 +13,8 @@ export default function ClientReviewPortal({
   ideas,
   onApprove,
   onDecline,
+  useCloudSync = false,
+  onCloudQueueResponse,
 }) {
   const { getClientColor } = useClientsContext();
   const [localIdeas, setLocalIdeas] = useState([]);
@@ -22,19 +24,32 @@ export default function ClientReviewPortal({
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (useCloudSync) {
+      const pending = ideas.filter(
+        (idea) => idea.client === client && idea.status === 'pending' && !respondedIds.includes(idea.id),
+      );
+      setLocalIdeas(pending);
+      setDone(pending.length === 0);
+      return;
+    }
+
     const snapshot = parseShareHash();
     const merged = mergePortalIdeas(ideas, client, snapshot).filter(
       (idea) => !respondedIds.includes(idea.id),
     );
     setLocalIdeas(merged);
     setDone(merged.length === 0);
-  }, [ideas, client, respondedIds]);
+  }, [ideas, client, respondedIds, useCloudSync]);
 
   const clientColor = getClientColor(client);
-  const canSyncLocally = ideas.some((i) => i.client === client);
+  const canSyncLocally = !useCloudSync && ideas.some((i) => i.client === client);
 
   const recordResponse = (response) => {
     setSessionResponses((prev) => [...prev.filter((r) => r.ideaId !== response.ideaId), response]);
+    if (useCloudSync && onCloudQueueResponse) {
+      onCloudQueueResponse(response);
+      return;
+    }
     if (!canSyncLocally) {
       queueClientResponse(response);
     }
@@ -149,7 +164,7 @@ export default function ClientReviewPortal({
             <p className="mt-2 text-sm text-gray-400">
               Thank you for reviewing your video ideas.
             </p>
-            {sessionResponses.length > 0 && !canSyncLocally && (
+            {sessionResponses.length > 0 && !useCloudSync && !canSyncLocally && (
               <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4 text-left">
                 <p className="text-sm text-gray-300">Send your approvals to Medici Social</p>
                 <p className="mt-1 text-xs text-gray-500">

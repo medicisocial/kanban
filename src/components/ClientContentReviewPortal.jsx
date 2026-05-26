@@ -13,6 +13,8 @@ export default function ClientContentReviewPortal({
   cards,
   onApprove,
   onDeny,
+  useCloudSync = false,
+  onCloudQueueResponse,
 }) {
   const { getClientColor } = useClientsContext();
   const [localCards, setLocalCards] = useState([]);
@@ -22,16 +24,28 @@ export default function ClientContentReviewPortal({
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (useCloudSync) {
+      const pending = cards.filter(
+        (card) =>
+          card.client === client &&
+          card.columnId === 'in-review' &&
+          !respondedIds.includes(card.id),
+      );
+      setLocalCards(pending);
+      setDone(pending.length === 0);
+      return;
+    }
+
     const snapshot = parseContentShareHash();
     const merged = mergePortalCards(cards, client, snapshot).filter(
       (card) => !respondedIds.includes(card.id),
     );
     setLocalCards(merged);
     setDone(merged.length === 0);
-  }, [cards, client, respondedIds]);
+  }, [cards, client, respondedIds, useCloudSync]);
 
   const clientColor = getClientColor(client);
-  const canSyncLocally = cards.some(
+  const canSyncLocally = !useCloudSync && cards.some(
     (c) => c.client === client && c.columnId === 'in-review',
   );
 
@@ -40,6 +54,10 @@ export default function ClientContentReviewPortal({
       ...prev.filter((r) => r.cardId !== response.cardId),
       response,
     ]);
+    if (useCloudSync && onCloudQueueResponse) {
+      onCloudQueueResponse(response);
+      return;
+    }
     if (!canSyncLocally) {
       queueContentReviewResponse(response);
     }
@@ -156,7 +174,7 @@ export default function ClientContentReviewPortal({
             <p className="mt-2 text-sm text-gray-400">
               Thank you for reviewing your content.
             </p>
-            {sessionResponses.length > 0 && !canSyncLocally && (
+            {sessionResponses.length > 0 && !useCloudSync && !canSyncLocally && (
               <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4 text-left">
                 <p className="text-sm text-gray-300">Send your feedback to Medici Social</p>
                 <p className="mt-1 text-xs text-gray-500">

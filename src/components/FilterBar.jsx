@@ -3,11 +3,21 @@ import { useClientsContext } from '../context/ClientsContext';
 import { exportBackupFile, importBackupFile } from '../utils/dataBackup';
 import AddClientModal from './AddClientModal';
 import ClientAssignmentsModal from './ClientAssignmentsModal';
+import ClientPortalCredentialsModal from './ClientPortalCredentialsModal';
 
 export default function FilterBar({ clientFilter, onClientChange }) {
-  const { clients, addClient, clientAccountManagers, setClientAccountManager } = useClientsContext();
+  const {
+    clients,
+    addClient,
+    clientAccountManagers,
+    setClientAccountManager,
+    getCredential,
+    setClientPortalCredential,
+    clearClientPortalCredential,
+  } = useClientsContext();
   const [showAddClient, setShowAddClient] = useState(false);
   const [showAssignments, setShowAssignments] = useState(false);
+  const [showPortalLogins, setShowPortalLogins] = useState(false);
   const [backupMessage, setBackupMessage] = useState('');
   const importInputRef = useRef(null);
 
@@ -81,6 +91,14 @@ export default function FilterBar({ clientFilter, onClientChange }) {
           AM assignments
         </button>
 
+        <button
+          type="button"
+          onClick={() => setShowPortalLogins(true)}
+          className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:bg-white/10 hover:text-white"
+        >
+          Client logins
+        </button>
+
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -124,6 +142,16 @@ export default function FilterBar({ clientFilter, onClientChange }) {
           clientAccountManagers={clientAccountManagers}
           onClose={() => setShowAssignments(false)}
           onSetClientAccountManager={setClientAccountManager}
+        />
+      )}
+
+      {showPortalLogins && (
+        <ClientPortalCredentialsModal
+          clients={clients}
+          getCredential={getCredential}
+          onSaveCredential={setClientPortalCredential}
+          onClearCredential={clearClientPortalCredential}
+          onClose={() => setShowPortalLogins(false)}
         />
       )}
     </>
