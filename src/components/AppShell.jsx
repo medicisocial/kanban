@@ -23,8 +23,7 @@ import { createCard, COLUMNS } from "../constants";
 import { buildSendBackForEditingUpdates } from "../utils/editorTodo";
 import { useAdminTasks } from "../hooks/useAdminTasks";
 import CompanyTasks from "./CompanyTasks";
-import Navbar from "./Navbar";
-import FilterBar from "./FilterBar";
+import AdminConsoleLayout from "./clientPortal/AdminConsoleLayout";
 import KanbanBoard from "./KanbanBoard";
 import Calendar from "./Calendar";
 import ShootDay from "./ShootDay";
@@ -60,7 +59,7 @@ export default function AppShell({ onSignOut }) {
     toggleAdminTaskComplete,
     deleteAdminTask,
   } = useAdminTasks();
-  const { authRequired, ready, logout } = useStaffAuth();
+  const { authRequired, ready, logout, session } = useStaffAuth();
 
   const [selectedCard, setSelectedCard] = useState(null);
   const [search, setSearch] = useState("");
@@ -475,27 +474,31 @@ export default function AppShell({ onSignOut }) {
     onSignOut?.();
   };
 
+  const syncTotal = responseCount + contentReviewResponseCount + shootResponseCount;
+
   return (
-    <div className="min-h-screen bg-black">
-      <Navbar
-        search={search}
-        onSearchChange={setSearch}
-        activeView={activeView}
-        onViewChange={setActiveView}
-        onSignOut={authRequired ? handleSignOut : undefined}
-      />
-
-      <FilterBar clientFilter={clientFilter} onClientChange={setClientFilter} />
-
-      <ClientSyncBanner
-        ideaCount={responseCount}
-        contentReviewCount={contentReviewResponseCount}
-        shootCount={shootResponseCount}
-        onApplyIdeas={handleApplyClientResponses}
-        onApplyContentReview={handleApplyContentReviewResponses}
-        onApplyShoot={handleApplyShootResponses}
-      />
-
+    <AdminConsoleLayout
+      activeView={activeView}
+      onViewChange={setActiveView}
+      search={search}
+      onSearchChange={setSearch}
+      notificationCount={syncTotal}
+      profileLabel={session?.username || 'Staff'}
+      onSignOut={authRequired ? handleSignOut : undefined}
+      clientFilter={clientFilter}
+      onClientChange={setClientFilter}
+      topBanner={
+        <ClientSyncBanner
+          embedded
+          ideaCount={responseCount}
+          contentReviewCount={contentReviewResponseCount}
+          shootCount={shootResponseCount}
+          onApplyIdeas={handleApplyClientResponses}
+          onApplyContentReview={handleApplyContentReviewResponses}
+          onApplyShoot={handleApplyShootResponses}
+        />
+      }
+    >
       {activeView === "ideas" && (
         <VideoIdeas
           ideas={ideas}
@@ -512,8 +515,8 @@ export default function AppShell({ onSignOut }) {
       )}
 
       {activeView === "board" && (
-        <>
-          <ContentReviewSharePanel cards={cards} />
+        <section>
+          <ContentReviewSharePanel cards={cards} clientFilter={clientFilter} />
           <KanbanBoard
             cards={cards}
             onAddCard={addCard}
@@ -522,8 +525,9 @@ export default function AppShell({ onSignOut }) {
             onMoveCard={moveCard}
             clientFilter={clientFilter}
             search={search}
+            embedded
           />
-        </>
+        </section>
       )}
 
       {activeView === "calendar" && (
@@ -534,6 +538,7 @@ export default function AppShell({ onSignOut }) {
           onCardClick={handleCardClick}
           onAddCalendarPost={handleAddCalendarPost}
           onRemoveFromCalendar={handleRemoveFromCalendar}
+          embedded
         />
       )}
 
@@ -543,6 +548,7 @@ export default function AppShell({ onSignOut }) {
           adminTasks={adminTasks}
           search={search}
           clientFilter={clientFilter}
+          embedded
           onAddOneOffTask={addOneOffProject}
           onDeleteOneOffTask={handleDeleteOneOffProject}
           onAddAdminTask={addAdminTask}
@@ -572,6 +578,7 @@ export default function AppShell({ onSignOut }) {
           onEnsurePlan={ensurePlan}
           onRemoveFromSchedule={handleRemoveFromShootSchedule}
           onRemoveClientShoot={handleRemoveClientShoot}
+          embedded
         />
       )}
 
@@ -584,6 +591,6 @@ export default function AppShell({ onSignOut }) {
           onDelete={handleDelete}
         />
       )}
-    </div>
+    </AdminConsoleLayout>
   );
 }

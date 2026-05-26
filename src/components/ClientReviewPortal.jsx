@@ -1,12 +1,15 @@
-import { useState, useEffect } from "react";
-import { useClientsContext } from "../context/ClientsContext";
+import { useState, useEffect, useMemo } from 'react';
+import { useClientsContext } from '../context/ClientsContext';
 import {
   parseShareHash,
   mergePortalIdeas,
   buildImportUrl,
   queueClientResponse,
-} from "../utils/clientShare";
-import VideoIdeaCard from "./VideoIdeaCard";
+} from '../utils/clientShare';
+import VideoIdeaCard from './VideoIdeaCard';
+import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
+import ClientIdeasTable from './clientPortal/ClientIdeasTable';
+import { surfacePanelClass } from './clientPortal/clientPortalUi';
 
 export default function ClientReviewPortal({
   client,
@@ -15,8 +18,10 @@ export default function ClientReviewPortal({
   onDecline,
   useCloudSync = false,
   onCloudQueueResponse,
+  embedded = false,
+  searchQuery = '',
 }) {
-  const { getClientColor } = useClientsContext();
+  const { getClientColor, getClientAccountManager, getClientLogo } = useClientsContext();
   const [localIdeas, setLocalIdeas] = useState([]);
   const [done, setDone] = useState(false);
   const [sessionResponses, setSessionResponses] = useState([]);
@@ -42,7 +47,14 @@ export default function ClientReviewPortal({
   }, [ideas, client, respondedIds, useCloudSync]);
 
   const clientColor = getClientColor(client);
+  const accountManager = getClientAccountManager(client);
+  const clientLogo = getClientLogo(client);
   const canSyncLocally = !useCloudSync && ideas.some((i) => i.client === client);
+
+  const pendingIds = useMemo(
+    () => localIdeas.map((idea) => idea.id),
+    [localIdeas],
+  );
 
   const recordResponse = (response) => {
     setSessionResponses((prev) => [...prev.filter((r) => r.ideaId !== response.ideaId), response]);
@@ -60,12 +72,12 @@ export default function ClientReviewPortal({
   };
 
   const handleApprove = (ideaId, comment) => {
-    const idea = localIdeas.find((i) => i.id === ideaId);
+    const idea = localIdeas.find((i) => i.id === ideaId) || ideas.find((i) => i.id === ideaId);
     if (!idea) return;
 
     const response = {
       ideaId,
-      action: "approved",
+      action: 'approved',
       comment,
       client,
       idea,
@@ -84,12 +96,12 @@ export default function ClientReviewPortal({
   };
 
   const handleDecline = (ideaId, comment) => {
-    const idea = localIdeas.find((i) => i.id === ideaId);
+    const idea = localIdeas.find((i) => i.id === ideaId) || ideas.find((i) => i.id === ideaId);
     if (!idea) return;
 
     const response = {
       ideaId,
-      action: "declined",
+      action: 'declined',
       comment,
       client,
       idea,
@@ -114,11 +126,53 @@ export default function ClientReviewPortal({
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      window.prompt("Copy this link and send it to Medici Social:", url);
+      window.prompt('Copy this link and send it to Medici Social:', url);
     }
   };
 
   const pendingCount = localIdeas.length;
+  const brandIdeas = useMemo(
+    () => ideas.filter((idea) => idea.client === client),
+    [ideas, client],
+  );
+
+  if (embedded) {
+    return (
+      <section>
+        <ClientPortalSectionHeader
+          title="Ideas"
+          description="Review and approve video concepts submitted for your brand. Pending items require your decision before production begins."
+        >
+          {pendingCount > 0 && (
+            <span className="border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-amber-200/90">
+              {pendingCount} pending
+            </span>
+          )}
+        </ClientPortalSectionHeader>
+
+        {brandIdeas.length === 0 ? (
+          <div className={`${surfacePanelClass} px-6 py-16 text-center`}>
+            <h3 className="text-base font-semibold text-white">No ideas yet</h3>
+            <p className="mt-2 text-sm text-white/50">
+              Your account team will submit concepts here for your review.
+            </p>
+          </div>
+        ) : (
+          <ClientIdeasTable
+            ideas={ideas}
+            client={client}
+            clientColor={clientColor}
+            accountManager={accountManager}
+            clientLogo={clientLogo}
+            searchQuery={searchQuery}
+            onApprove={handleApprove}
+            onDecline={handleDecline}
+            pendingIds={pendingIds}
+          />
+        )}
+      </section>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black">
@@ -142,7 +196,7 @@ export default function ClientReviewPortal({
               Review the ideas below. Approve the ones you want us to produce.
             </p>
             <p className="mb-6 text-xs text-gray-500">
-              {pendingCount} idea{pendingCount === 1 ? "" : "s"} waiting for your feedback
+              {pendingCount} idea{pendingCount === 1 ? '' : 's'} waiting for your feedback
             </p>
 
             <div className="space-y-4">
@@ -175,7 +229,7 @@ export default function ClientReviewPortal({
                   onClick={copyImportLink}
                   className="mt-3 rounded-lg bg-[#810100] px-4 py-2 text-sm font-medium text-white hover:bg-[#a00000]"
                 >
-                  {copied ? "Link copied!" : "Copy approval link"}
+                  {copied ? 'Link copied!' : 'Copy approval link'}
                 </button>
               </div>
             )}

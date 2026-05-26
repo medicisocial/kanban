@@ -17,6 +17,8 @@ import CalendarWeekView from './CalendarWeekView';
 import CalendarMonthView from './CalendarMonthView';
 import CardTitleLink from './CardTitleLink';
 import { formatTime } from '../utils';
+import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
+import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 function ClientCalendarDetail({ card, onClose }) {
   const typeStyle = getContentTypeStyle(card.contentType);
@@ -118,7 +120,7 @@ function ClientCalendarDetail({ card, onClose }) {
   );
 }
 
-export default function ClientCalendarPortal({ client, cards, embedded = false }) {
+export default function ClientCalendarPortal({ client, cards, embedded = false, searchQuery = '' }) {
   const { getClientColor } = useClientsContext();
   const [localCards, setLocalCards] = useState([]);
   const [focusDate, setFocusDate] = useState(() => getDefaultCalendarDate());
@@ -132,9 +134,20 @@ export default function ClientCalendarPortal({ client, cards, embedded = false }
     setLocalCards(merged.filter((c) => c.client === client));
   }, [cards, client]);
 
+  const clientColor = getClientColor(client);
+  const query = searchQuery.trim().toLowerCase();
+  const visibleCards = query
+    ? localCards.filter(
+        (card) =>
+          card.title?.toLowerCase().includes(query) ||
+          card.contentType?.toLowerCase().includes(query),
+      )
+    : localCards;
+  const totalScheduled = visibleCards.length;
+
   const cardsByDate = useMemo(() => {
-    const posts = getScheduledPosts(localCards);
-    const stories = getScheduledStories(localCards);
+    const posts = getScheduledPosts(visibleCards);
+    const stories = getScheduledStories(visibleCards);
     const postsByDate = groupCardsByDate(posts);
     const storiesByDate = buildStoryCalendarByDate(stories, focusDate, viewMode);
     const merged = { ...postsByDate };
@@ -143,9 +156,7 @@ export default function ClientCalendarPortal({ client, cards, embedded = false }
       merged[dateKey].sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'));
     }
     return merged;
-  }, [localCards, focusDate, viewMode]);
-  const clientColor = getClientColor(client);
-  const totalScheduled = localCards.length;
+  }, [visibleCards, focusDate, viewMode]);
 
   const goPrev = () => {
     setFocusDate((d) => (viewMode === 'week' ? addWeeks(d, -1) : addMonths(d, -1)));
@@ -162,79 +173,66 @@ export default function ClientCalendarPortal({ client, cards, embedded = false }
     setViewMode('week');
   };
 
-  return (
-    <div className={embedded ? 'bg-black' : 'min-h-screen bg-black'}>
-      {!embedded && (
-      <header className="border-b border-white/5 bg-black/95 px-4 py-6 sm:px-6">
-        <div className="mx-auto flex max-w-[1800px] items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#810100] to-[#a00000] shadow-lg shadow-[#810100]/20">
-            <span className="text-sm font-bold text-white">M</span>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Medici Social</p>
-            <h1 className="text-lg font-semibold text-white">Content Calendar</h1>
-            <p className="text-sm" style={{ color: clientColor }}>{client}</p>
-          </div>
-        </div>
-      </header>
-      )}
+  const navBtnClass = embedded
+    ? `${btnSecondaryClass} px-3 py-1.5 text-[11px] normal-case tracking-normal`
+    : 'rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-white/10 hover:text-white';
 
-      <main className="mx-auto max-w-[1800px] px-4 py-4 sm:px-6">
+  const calendarBody = (
+    <>
+      {!embedded && (
         <p className="mb-4 text-sm text-gray-400">
           {totalScheduled} scheduled post{totalScheduled === 1 ? '' : 's'} — your content only, no other clients.
         </p>
+      )}
 
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={goPrev}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-white/10 hover:text-white"
-            >
-              ← {viewMode === 'week' ? 'Prev Week' : 'Prev Month'}
-            </button>
-            <button
-              type="button"
-              onClick={goToday}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-white/10 hover:text-white"
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              onClick={goNext}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-white/10 hover:text-white"
-            >
-              {viewMode === 'week' ? 'Next Week' : 'Next Month'} →
-            </button>
-          </div>
-
-          <div className="flex rounded-lg border border-white/10 bg-white/5 p-0.5">
-            <button
-              type="button"
-              onClick={() => setViewMode('month')}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${
-                viewMode === 'month'
-                  ? 'bg-[#810100] text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Month
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('week')}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${
-                viewMode === 'week'
-                  ? 'bg-[#810100] text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Week
-            </button>
-          </div>
+      <div className={`mb-4 flex flex-wrap items-center justify-between gap-3 ${embedded ? '' : ''}`}>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={goPrev} className={navBtnClass}>
+            ← {viewMode === 'week' ? 'Prev Week' : 'Prev Month'}
+          </button>
+          <button type="button" onClick={goToday} className={navBtnClass}>
+            Today
+          </button>
+          <button type="button" onClick={goNext} className={navBtnClass}>
+            {viewMode === 'week' ? 'Next Week' : 'Next Month'} →
+          </button>
         </div>
 
+        <div className={`flex border border-white/10 bg-white/[0.03] p-0.5 ${embedded ? '' : 'rounded-lg bg-white/5'}`}>
+          <button
+            type="button"
+            onClick={() => setViewMode('month')}
+            className={
+              embedded
+                ? `px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition ${
+                    viewMode === 'month' ? `${btnPrimaryClass} py-1.5` : 'text-white/45 hover:text-white'
+                  }`
+                : `rounded-md px-4 py-1.5 text-sm font-medium transition ${
+                    viewMode === 'month' ? 'bg-[#810100] text-white' : 'text-gray-400 hover:text-white'
+                  }`
+            }
+          >
+            Month
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('week')}
+            className={
+              embedded
+                ? `px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition ${
+                    viewMode === 'week' ? `${btnPrimaryClass} py-1.5` : 'text-white/45 hover:text-white'
+                  }`
+                : `rounded-md px-4 py-1.5 text-sm font-medium transition ${
+                    viewMode === 'week' ? 'bg-[#810100] text-white' : 'text-gray-400 hover:text-white'
+                  }`
+            }
+          >
+            Week
+          </button>
+        </div>
+      </div>
+
+      <div className={embedded ? `${surfacePanelClass} p-4` : ''}>
         {viewMode === 'week' ? (
           <CalendarWeekView
             focusDate={focusDate}
@@ -251,6 +249,42 @@ export default function ClientCalendarPortal({ client, cards, embedded = false }
             hideClient
           />
         )}
+      </div>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <section>
+        <ClientPortalSectionHeader
+          title="Calendar"
+          description={`${totalScheduled} scheduled post${totalScheduled === 1 ? '' : 's'} across your publishing calendar.`}
+        />
+        {calendarBody}
+        {selectedCard && (
+          <ClientCalendarDetail card={selectedCard} onClose={() => setSelectedCard(null)} />
+        )}
+      </section>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-black">
+      <header className="border-b border-white/5 bg-black/95 px-4 py-6 sm:px-6">
+        <div className="mx-auto flex max-w-[1800px] items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#810100] to-[#a00000] shadow-lg shadow-[#810100]/20">
+            <span className="text-sm font-bold text-white">M</span>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Medici Social</p>
+            <h1 className="text-lg font-semibold text-white">Content Calendar</h1>
+            <p className="text-sm" style={{ color: clientColor }}>{client}</p>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-[1800px] px-4 py-4 sm:px-6">
+        {calendarBody}
       </main>
 
       {selectedCard && (

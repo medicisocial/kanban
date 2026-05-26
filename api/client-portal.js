@@ -50,11 +50,13 @@ export default async function handler(req, res) {
   const brand = session.brand;
   const clientStore = data[CLIENTS_STORAGE_KEY] || {};
   const colors = clientStore.colors || {};
+  const logos = clientStore.logos || {};
 
   return res.status(200).json({
     brand,
     exportedAt: workspace?.exportedAt || null,
     clientColor: colors[brand] || null,
+    clientLogo: logos[brand] || null,
     cards: filterForBrand(data[STORAGE_KEY], brand),
     ideas: filterForBrand(data[VIDEO_IDEAS_STORAGE_KEY], brand),
     plans: filterPlansForBrand(data[SHOOT_PLANS_STORAGE_KEY], brand),

@@ -2,7 +2,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { COLUMN_BG } from '../constants';
 import KanbanCard from './KanbanCard';
 
-export default function KanbanColumn({ column, cards, onAddCard, onCardClick, onDeleteCard }) {
+export default function KanbanColumn({ column, cards, onAddCard, onCardClick, onDeleteCard, embedded = false }) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
     data: { type: 'column', columnId: column.id },
@@ -11,22 +11,22 @@ export default function KanbanColumn({ column, cards, onAddCard, onCardClick, on
   return (
     <div
       ref={setNodeRef}
-      className={`flex w-[280px] shrink-0 flex-col rounded-xl sm:w-[300px] ${
-        COLUMN_BG[column.id] || 'bg-[#111111]'
-      } ${isOver ? 'ring-2 ring-[#810100]/50 bg-[#a00000]/5' : ''}`}
-      style={{ minHeight: 'calc(100vh - 180px)' }}
+      className={`flex w-[280px] shrink-0 flex-col border border-white/10 sm:w-[300px] ${
+        COLUMN_BG[column.id] || 'bg-white/[0.03]'
+      } ${isOver ? 'ring-1 ring-[#810100]/50 bg-[#a00000]/5' : ''}`}
+      style={{ minHeight: embedded ? '520px' : 'calc(100vh - 180px)' }}
     >
-      <div className="flex items-center justify-between px-3 pb-2 pt-3">
+      <div className="flex items-center justify-between border-b border-white/10 px-3 py-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-[#f9f6f2]">{column.title}</h2>
-          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-white/10 px-1.5 text-xs font-medium text-gray-400">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-white/80">{column.title}</h2>
+          <span className="border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[10px] tabular-nums text-white/45">
             {cards.length}
           </span>
         </div>
         <button
           type="button"
           onClick={() => onAddCard(column.id)}
-          className={`flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition hover:bg-white/10 hover:text-white ${
+          className={`flex h-7 w-7 items-center justify-center border border-white/10 text-white/50 transition hover:border-white/20 hover:bg-white/[0.05] hover:text-white ${
             column.id === 'finished' ? 'invisible pointer-events-none' : ''
           }`}
           aria-label={`Add card to ${column.title}`}
@@ -52,7 +52,7 @@ export default function KanbanColumn({ column, cards, onAddCard, onCardClick, on
         ))}
 
         {cards.length === 0 && (
-          <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-white/10 py-12 text-xs text-gray-500">
+          <div className="flex flex-1 items-center justify-center border border-dashed border-white/10 py-12 text-[10px] uppercase tracking-wider text-white/35">
             {column.id === 'finished' ? 'Approved one-off projects land here when done' : 'Drop cards here'}
           </div>
         )}

@@ -15,6 +15,7 @@ import { COLUMNS } from '../constants';
 import { filterCards, getBoardCards } from '../utils';
 import KanbanColumn from './KanbanColumn';
 import CardPreview from './CardPreview';
+import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 
 const COLUMN_IDS = new Set(COLUMNS.map((c) => c.id));
 
@@ -57,6 +58,7 @@ export default function KanbanBoard({
   onMoveCard,
   clientFilter,
   search,
+  embedded = false,
 }) {
   const [activeCard, setActiveCard] = useState(null);
 
@@ -135,8 +137,15 @@ export default function KanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="w-full overflow-x-auto scroll-px-4 pb-6 sm:scroll-px-6">
-        <div className="flex justify-center px-4 sm:px-6">
+      {embedded && (
+        <ClientPortalSectionHeader
+          title="Board"
+          description="Drag cards across columns to track production from editing through scheduled and posted."
+        />
+      )}
+
+      <div className={`w-full overflow-x-auto ${embedded ? 'pb-2' : 'scroll-px-4 pb-6 sm:scroll-px-6'}`}>
+        <div className={embedded ? 'flex w-max gap-3' : 'flex justify-center px-4 sm:px-6'}>
           <div className="flex w-max gap-3">
             {COLUMNS.map((column) => (
               <KanbanColumn
@@ -146,6 +155,7 @@ export default function KanbanBoard({
                 onAddCard={onAddCard}
                 onCardClick={onCardClick}
                 onDeleteCard={onDeleteCard}
+                embedded={embedded}
               />
             ))}
           </div>

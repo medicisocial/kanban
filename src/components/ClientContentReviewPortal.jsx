@@ -7,6 +7,9 @@ import {
   queueContentReviewResponse,
 } from '../utils/contentReviewShare';
 import ContentReviewCard from './ContentReviewCard';
+import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
+import ClientTasksTable from './clientPortal/ClientTasksTable';
+import { surfacePanelClass } from './clientPortal/clientPortalUi';
 
 export default function ClientContentReviewPortal({
   client,
@@ -15,8 +18,10 @@ export default function ClientContentReviewPortal({
   onDeny,
   useCloudSync = false,
   onCloudQueueResponse,
+  embedded = false,
+  searchQuery = '',
 }) {
-  const { getClientColor } = useClientsContext();
+  const { getClientColor, getClientAccountManager, getClientLogo } = useClientsContext();
   const [localCards, setLocalCards] = useState([]);
   const [done, setDone] = useState(false);
   const [sessionResponses, setSessionResponses] = useState([]);
@@ -45,6 +50,8 @@ export default function ClientContentReviewPortal({
   }, [cards, client, respondedIds, useCloudSync]);
 
   const clientColor = getClientColor(client);
+  const accountManager = getClientAccountManager(client);
+  const clientLogo = getClientLogo(client);
   const canSyncLocally = !useCloudSync && cards.some(
     (c) => c.client === client && c.columnId === 'in-review',
   );
@@ -130,6 +137,37 @@ export default function ClientContentReviewPortal({
   };
 
   const pendingCount = localCards.length;
+
+  if (embedded) {
+    return (
+      <section>
+        <ClientPortalSectionHeader
+          title="Tasks"
+          description="Content awaiting your approval before scheduling. Approve when ready, or submit revision notes for your production team."
+        />
+
+        {done ? (
+          <div className={`${surfacePanelClass} px-6 py-16 text-center`}>
+            <h3 className="text-base font-semibold text-white">No open tasks</h3>
+            <p className="mt-2 text-sm text-white/50">
+              All content has been reviewed. New deliverables will appear here when ready.
+            </p>
+          </div>
+        ) : (
+          <ClientTasksTable
+            cards={localCards}
+            client={client}
+            clientColor={clientColor}
+            accountManager={accountManager}
+            clientLogo={clientLogo}
+            searchQuery={searchQuery}
+            onApprove={handleApprove}
+            onDeny={handleDeny}
+          />
+        )}
+      </section>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black">
