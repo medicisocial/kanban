@@ -106,7 +106,12 @@ function AppShell() {
   };
 
   const handleMarkScheduled = (cardId) => {
-    moveCard(cardId, "scheduled");
+    const card = cards.find((c) => c.id === cardId);
+    if (!card || card.columnId === "scheduled") return;
+    updateCard(cardId, {
+      columnId: "scheduled",
+      status: "Scheduled",
+    });
   };
 
   const handleMarkPosted = (cardId, occurrenceDate) => {

@@ -127,7 +127,79 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onAppr
   );
 }
 
-function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted }) {
+function ApprovedScheduleTaskCard({ task, getClientColor, onOpenCard, onMarkScheduled }) {
+  const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
+  const clientColor = getClientColor(task.client);
+  const openCard = () => onOpenCard(task.card);
+
+  return (
+    <article className="rounded-xl border border-white/8 bg-[#111111] p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${kindStyles.schedule}`}
+            >
+              {task.label}
+            </span>
+            {task.contentType && typeStyle && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeStyle.label}`}
+                style={{ backgroundColor: `${typeStyle.border}22` }}
+              >
+                {task.contentType}
+              </span>
+            )}
+          </div>
+
+          <button type="button" onClick={openCard} className="text-left hover:text-[#fca5a5]">
+            <div className="flex flex-wrap items-baseline gap-2">
+              <h3 className="text-sm font-semibold text-white">{task.title}</h3>
+              {task.dueDate && (
+                <TaskPostSchedule postDate={task.dueDate} dueTime={task.dueTime} />
+              )}
+            </div>
+          </button>
+
+          {task.client && (
+            <p className="mt-1 text-xs font-medium" style={{ color: clientColor }}>
+              {task.client}
+            </p>
+          )}
+
+          {task.notes && (
+            <p className="mt-2 line-clamp-2 text-xs text-gray-400">{task.notes}</p>
+          )}
+
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
+            {task.assignedTo && <span>Editor: {task.assignedTo}</span>}
+            {task.accountManager && <span>AM: {task.accountManager}</span>}
+            <span>Approved · ready for calendar</span>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-col gap-2">
+          <button
+            type="button"
+            onClick={openCard}
+            className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-white/5 hover:text-white"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => onMarkScheduled(task.cardId)}
+            className="rounded-lg bg-[#810100] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#a00000]"
+          >
+            Scheduled
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const badgeStyle = kindStyles[task.kind] || kindStyles.schedule;
   const canMarkPosted = task.kind === 'publish' || task.kind === 'post-story';
@@ -184,7 +256,6 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPos
             {task.contentType === 'Story' && (
               <span>{formatStoryScheduleSummary(task.card)}</span>
             )}
-            {task.kind === 'schedule' && <span>Approved · ready for calendar</span>}
           </div>
         </div>
 
@@ -196,15 +267,6 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPos
           >
             Edit
           </button>
-          {task.kind === 'schedule' && (
-            <button
-              type="button"
-              onClick={() => onMarkScheduled(task.cardId)}
-              className="rounded-lg bg-[#810100] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#a00000]"
-            >
-              Scheduled
-            </button>
-          )}
           {canMarkPosted && (
             <button
               type="button"
@@ -279,6 +341,15 @@ export default function AccountManagerTodo({
   const orderedPostsTasks = useMemo(
     () => applyAccountManagerTaskOrder(filterAccountManagerTasks(postsTodoTasks, filterOptions)),
     [postsTodoTasks, filterOptions],
+  );
+
+  const visiblePostsTasks = useMemo(
+    () =>
+      orderedPostsTasks.filter((task) => {
+        const card = cards.find((c) => c.id === task.cardId);
+        return card?.columnId === 'approved';
+      }),
+    [orderedPostsTasks, cards],
   );
 
   const todayLabel = formatAccountManagerDateLabel(todayKey, todayKey);
@@ -381,7 +452,6 @@ export default function AccountManagerTodo({
                   task={task}
                   getClientColor={getClientColor}
                   onOpenCard={onOpenCard}
-                  onMarkScheduled={onMarkScheduled}
                   onMarkPosted={onMarkPosted}
                 />
               )}
@@ -394,15 +464,15 @@ export default function AccountManagerTodo({
             <div className="flex flex-wrap items-center justify-center gap-2">
               <h3 className="text-lg font-semibold text-white">Posts & other content · overall to-do</h3>
               <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200">
-                {orderedPostsTasks.length} tasks
+                {visiblePostsTasks.length} tasks
               </span>
             </div>
             <p className="mt-2 text-sm text-gray-400">
-              Approved posts ready to mark scheduled on the board.
+              Approved posts ready to mark scheduled — they leave this list and move to the Scheduled column on the board.
             </p>
           </div>
 
-          {orderedPostsTasks.length === 0 ? (
+          {visiblePostsTasks.length === 0 ? (
             <div className="rounded-xl border border-dashed border-white/10 px-6 py-10 text-center">
               <p className="text-sm text-gray-400">Nothing on the to-do list right now.</p>
               <p className="mt-1 text-xs text-gray-500">
@@ -411,15 +481,14 @@ export default function AccountManagerTodo({
             </div>
           ) : (
             <TaskList
-              tasks={orderedPostsTasks}
+              tasks={visiblePostsTasks}
               renderItem={(task) => (
-                <TaskCard
+                <ApprovedScheduleTaskCard
                   key={task.id}
                   task={task}
                   getClientColor={getClientColor}
                   onOpenCard={onOpenCard}
                   onMarkScheduled={onMarkScheduled}
-                  onMarkPosted={onMarkPosted}
                 />
               )}
             />
