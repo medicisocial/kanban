@@ -104,23 +104,17 @@ export function buildStoryTasksToday(cards, todayKey = toDateKey(new Date()), cl
   return tasks.sort(compareAccountManagerTasks);
 }
 
-/** Overall to-do for non-story content: approved posts to schedule, plus publish due today or overdue. */
-export function buildPostsTodoTasks(cards, clientAccountManagers = {}, todayKey = toDateKey(new Date())) {
+/** Approved posts waiting to be marked scheduled on the board. */
+export function buildPostsTodoTasks(cards, clientAccountManagers = {}) {
   const tasks = [];
 
   for (const card of cards) {
     if (card.contentType === 'Story') continue;
     if (card.isOneOffProject) continue;
     if (card.postedAt) continue;
+    if (card.columnId !== 'approved') continue;
 
-    if (card.columnId === 'approved') {
-      tasks.push(buildScheduleTask(card, clientAccountManagers));
-      continue;
-    }
-
-    if (card.columnId === 'scheduled' && card.dueDate && !card.postedAt && card.dueDate <= todayKey) {
-      tasks.push(buildPublishTask(card, card.dueDate, clientAccountManagers));
-    }
+    tasks.push(buildScheduleTask(card, clientAccountManagers));
   }
 
   return tasks.sort(compareAccountManagerTasks);

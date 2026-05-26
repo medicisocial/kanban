@@ -112,10 +112,10 @@ function loadCards() {
 
 function withColumnDate(columnId, dueDate, isOneOffProject = false) {
   if (isOneOffProject) return dueDate || '';
-  if ((columnId === 'scheduled' || columnId === 'editing') && !dueDate) {
+  if (columnId === 'editing' && !dueDate) {
     return toDateKey(new Date());
   }
-  return dueDate;
+  return dueDate || '';
 }
 
 const ONE_OFF_ALLOWED_COLUMNS = ['editing', 'in-review', 'approved', 'finished'];

@@ -257,8 +257,8 @@ export default function AccountManagerTodo({
     [cards, clientAccountManagers],
   );
   const postsTodoTasks = useMemo(
-    () => buildPostsTodoTasks(cards, clientAccountManagers, todayKey),
-    [cards, clientAccountManagers, todayKey],
+    () => buildPostsTodoTasks(cards, clientAccountManagers),
+    [cards, clientAccountManagers],
   );
 
   const filterOptions = useMemo(
@@ -398,7 +398,7 @@ export default function AccountManagerTodo({
               </span>
             </div>
             <p className="mt-2 text-sm text-gray-400">
-              Approved posts to schedule, plus posts due today or overdue.
+              Approved posts ready to mark scheduled on the board.
             </p>
           </div>
 
