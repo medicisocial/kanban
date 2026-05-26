@@ -10,8 +10,7 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
   const clientColor = getClientColor(card.client);
   const scheduleSummary = formatStoryScheduleSummary(card);
   const hasStorySchedule = hasStoryRecurrence(card) || hasStoryDailyRange(card);
-  const occurrenceDate = card.occurrenceDate || card.dueDate;
-  const isPosted = isCalendarEventPosted(card, occurrenceDate);
+  const isPosted = isCalendarEventPosted(card);
   const columnMeta = COLUMNS.find((col) => col.id === card.columnId);
   const boardStatus = isPosted ? 'Posted' : (columnMeta?.title ?? null);
   const statusClass = isPosted

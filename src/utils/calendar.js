@@ -161,11 +161,8 @@ export function isStoryPostedOnDate(card, dateKey) {
   return parseStoryPostedDates(card?.storyPostedDates).includes(dateKey);
 }
 
-export function isCalendarEventPosted(card, dateKey) {
-  if (card?.contentType === 'Story') {
-    const occurrenceDate = dateKey || card.occurrenceDate;
-    return occurrenceDate ? isStoryPostedOnDate(card, occurrenceDate) : false;
-  }
+export function isCalendarEventPosted(card) {
+  if (card?.contentType === 'Story') return false;
   return Boolean(card?.postedAt);
 }
 
@@ -260,7 +257,9 @@ export function expandStoriesForRange(cards, rangeStart, rangeEnd) {
 
   for (const card of cards) {
     const pushOccurrence = (dateKey) => {
-      occurrences.push({ card, dateKey });
+      if (!isStoryPostedOnDate(card, dateKey)) {
+        occurrences.push({ card, dateKey });
+      }
     };
 
     if (hasStoryDailyRange(card)) {
