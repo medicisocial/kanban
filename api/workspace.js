@@ -2,12 +2,38 @@ import { Redis } from '@upstash/redis';
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
 
 const WORKSPACE_KEY = 'medici:workspace';
+const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
 
 function getRedis() {
   const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
   if (!url || !token) return null;
   return new Redis({ url, token });
+}
+
+function mergeWorkspacePayload(remote, incoming) {
+  if (!remote?.data) return incoming;
+  if (!incoming?.data) return incoming;
+
+  const merged = {
+    ...remote,
+    ...incoming,
+    data: {
+      ...remote.data,
+      ...incoming.data,
+    },
+  };
+
+  const remoteAuth = remote.data[CLIENT_PORTAL_AUTH_KEY];
+  const incomingAuth = incoming.data[CLIENT_PORTAL_AUTH_KEY];
+  if (remoteAuth && typeof remoteAuth === 'object') {
+    merged.data[CLIENT_PORTAL_AUTH_KEY] = {
+      ...remoteAuth,
+      ...(incomingAuth && typeof incomingAuth === 'object' ? incomingAuth : {}),
+    };
+  }
+
+  return merged;
 }
 
 function unauthorized(res) {
@@ -42,8 +68,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid workspace payload.' });
     }
 
-    await redis.set(WORKSPACE_KEY, payload);
-    return res.status(200).json({ ok: true, exportedAt: payload.exportedAt || null });
+    const remote = await redis.get(WORKSPACE_KEY);
+    const merged = mergeWorkspacePayload(remote, payload);
+    await redis.set(WORKSPACE_KEY, merged);
+    return res.status(200).json({ ok: true, exportedAt: merged.exportedAt || null });
   }
 
   res.setHeader('Allow', 'GET, PUT');

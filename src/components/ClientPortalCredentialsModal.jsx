@@ -89,6 +89,9 @@ export default function ClientPortalCredentialsModal({
             return (
               <div key={client} className="rounded-xl border border-white/8 bg-[#0d0d0d] p-4">
                 <p className="mb-3 text-sm font-medium text-white">{client}</p>
+                <p className="mb-3 text-xs text-gray-500">
+                  Default username: <span className="text-gray-300">{defaultPortalUsername(client)}</span>
+                </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="block">
                     <span className="mb-1 block text-xs text-gray-500">Username</span>

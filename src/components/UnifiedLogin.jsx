@@ -32,15 +32,16 @@ export default function UnifiedLogin({ onAuthenticated }) {
         }
       }
 
+      let clientError = 'Invalid username or password.';
       try {
         await loginClientPortal(username, password);
         onAuthenticated('client');
         return;
-      } catch {
-        /* try client login below */
+      } catch (err) {
+        clientError = err.message || clientError;
       }
 
-      setError('Invalid username or password.');
+      setError(clientError);
     } finally {
       setSubmitting(false);
     }
