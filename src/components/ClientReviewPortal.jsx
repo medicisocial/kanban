@@ -4,6 +4,7 @@ import {
   parseShareHash,
   mergePortalIdeas,
   buildImportUrl,
+  queueClientResponse,
 } from "../utils/clientShare";
 import VideoIdeaCard from "./VideoIdeaCard";
 
@@ -17,20 +18,30 @@ export default function ClientReviewPortal({
   const [localIdeas, setLocalIdeas] = useState([]);
   const [done, setDone] = useState(false);
   const [sessionResponses, setSessionResponses] = useState([]);
+  const [respondedIds, setRespondedIds] = useState([]);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const snapshot = parseShareHash();
-    const merged = mergePortalIdeas(ideas, client, snapshot);
+    const merged = mergePortalIdeas(ideas, client, snapshot).filter(
+      (idea) => !respondedIds.includes(idea.id),
+    );
     setLocalIdeas(merged);
     setDone(merged.length === 0);
-  }, [ideas, client]);
+  }, [ideas, client, respondedIds]);
 
   const clientColor = getClientColor(client);
   const canSyncLocally = ideas.some((i) => i.client === client);
 
   const recordResponse = (response) => {
     setSessionResponses((prev) => [...prev.filter((r) => r.ideaId !== response.ideaId), response]);
+    if (!canSyncLocally) {
+      queueClientResponse(response);
+    }
+  };
+
+  const markResponded = (ideaId) => {
+    setRespondedIds((prev) => (prev.includes(ideaId) ? prev : [...prev, ideaId]));
   };
 
   const handleApprove = (ideaId, comment) => {
@@ -46,6 +57,7 @@ export default function ClientReviewPortal({
       timestamp: Date.now(),
     };
 
+    markResponded(ideaId);
     recordResponse(response);
     if (canSyncLocally) onApprove(ideaId, comment, idea);
 
@@ -69,6 +81,7 @@ export default function ClientReviewPortal({
       timestamp: Date.now(),
     };
 
+    markResponded(ideaId);
     recordResponse(response);
     if (canSyncLocally) onDecline(ideaId, comment, idea);
 

@@ -18,14 +18,17 @@ export default function ClientContentReviewPortal({
   const [localCards, setLocalCards] = useState([]);
   const [done, setDone] = useState(false);
   const [sessionResponses, setSessionResponses] = useState([]);
+  const [respondedIds, setRespondedIds] = useState([]);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const snapshot = parseContentShareHash();
-    const merged = mergePortalCards(cards, client, snapshot);
+    const merged = mergePortalCards(cards, client, snapshot).filter(
+      (card) => !respondedIds.includes(card.id),
+    );
     setLocalCards(merged);
     setDone(merged.length === 0);
-  }, [cards, client]);
+  }, [cards, client, respondedIds]);
 
   const clientColor = getClientColor(client);
   const canSyncLocally = cards.some(
@@ -42,6 +45,10 @@ export default function ClientContentReviewPortal({
     }
   };
 
+  const markResponded = (cardId) => {
+    setRespondedIds((prev) => (prev.includes(cardId) ? prev : [...prev, cardId]));
+  };
+
   const handleApprove = (cardId, comment) => {
     const card = localCards.find((c) => c.id === cardId);
     if (!card) return;
@@ -55,6 +62,7 @@ export default function ClientContentReviewPortal({
       timestamp: Date.now(),
     };
 
+    markResponded(cardId);
     recordResponse(response);
     if (canSyncLocally) onApprove(cardId, comment, card);
 
@@ -81,6 +89,7 @@ export default function ClientContentReviewPortal({
       timestamp: Date.now(),
     };
 
+    markResponded(cardId);
     recordResponse(response);
     if (canSyncLocally) onDeny(cardId, comment, card);
 

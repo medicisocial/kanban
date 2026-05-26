@@ -316,6 +316,51 @@ function AppShell() {
   };
 
   useEffect(() => {
+    const syncPendingClientUpdates = () => {
+      const contentResponses = loadContentReviewResponses();
+      if (contentResponses.length) {
+        applyContentReviewResponses(cards, contentResponses, { updateCard });
+      }
+      setContentReviewResponseCount(loadContentReviewResponses().length);
+
+      const ideaResponses = loadClientResponses();
+      if (ideaResponses.length) {
+        applyClientResponses(ideas, ideaResponses, {
+          markApproved,
+          markDeclined,
+          ensureIdeaExists: () => {},
+          createCardFromIdea,
+          addIdea,
+        });
+      }
+      setResponseCount(loadClientResponses().length);
+
+      const shootResponses = loadShootResponses();
+      if (shootResponses.length) {
+        let applied = 0;
+        for (const submission of shootResponses) {
+          applied += applyShootSubmission(submission, cards, { updateCard, updatePlan });
+        }
+        if (applied > 0) clearShootResponses();
+      }
+      setShootResponseCount(loadShootResponses().length);
+    };
+
+    syncPendingClientUpdates();
+    window.addEventListener("storage", syncPendingClientUpdates);
+    return () => window.removeEventListener("storage", syncPendingClientUpdates);
+  }, [
+    cards,
+    ideas,
+    updateCard,
+    updatePlan,
+    markApproved,
+    markDeclined,
+    createCardFromIdea,
+    addIdea,
+  ]);
+
+  useEffect(() => {
     if (!importData?.responses?.length) return;
     const applied = applyClientResponses(ideas, importData.responses, {
       markApproved,
@@ -329,6 +374,7 @@ function AppShell() {
       alert(`Imported ${applied} client approval${applied === 1 ? "" : "s"} to the board.`);
       setActiveView("board");
     }
+    setResponseCount(loadClientResponses().length);
   }, []);
 
   useEffect(() => {
@@ -348,6 +394,7 @@ function AppShell() {
   useEffect(() => {
     if (!contentImportData?.responses?.length) return;
     const applied = applyContentReviewResponses(cards, contentImportData.responses, { updateCard });
+    setContentReviewResponseCount(loadContentReviewResponses().length);
     if (applied > 0) {
       window.history.replaceState({}, "", window.location.pathname);
       alert(`Imported ${applied} content review response${applied === 1 ? "" : "s"} to the board.`);
