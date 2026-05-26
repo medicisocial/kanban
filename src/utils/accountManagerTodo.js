@@ -3,30 +3,7 @@ import {
   toDateKey,
   withStoryOccurrence,
 } from './calendar';
-import { COLUMNS } from '../constants';
 import { compareEditorTasks, formatEditorDateLabel } from './editorTodo';
-
-const ACCOUNT_MANAGER_REVIEW_STATUS_COLUMN_IDS = [
-  'editing',
-  'not-approved',
-  'in-review',
-  'approved',
-  'scheduled',
-];
-
-const ACCOUNT_MANAGER_ONE_OFF_REVIEW_STATUS_COLUMN_IDS = [
-  'editing',
-  'in-review',
-  'approved',
-  'finished',
-];
-
-export function getAccountManagerReviewStatusOptions(isOneOffProject = false) {
-  const allowed = isOneOffProject
-    ? ACCOUNT_MANAGER_ONE_OFF_REVIEW_STATUS_COLUMN_IDS
-    : ACCOUNT_MANAGER_REVIEW_STATUS_COLUMN_IDS;
-  return COLUMNS.filter((col) => allowed.includes(col.id));
-}
 
 export function resolveAccountManager(card, clientAccountManagers = {}) {
   return card.accountManager || clientAccountManagers[card.client] || '';

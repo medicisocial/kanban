@@ -82,6 +82,7 @@ export default function CompanyTasks({
           onMarkScheduled={onMarkScheduled}
           onMarkPosted={onMarkPosted}
           onMoveTask={onMoveTask}
+          onSendBackForEditing={onSendBackForEditing}
         />
       )}
 

@@ -11,22 +11,152 @@ import {
   formatAccountManagerDateLabel,
   groupAccountManagerTasksByClient,
   groupAccountManagerTasksByDate,
-  getAccountManagerReviewStatusOptions,
 } from '../utils/accountManagerTodo';
+import { getEditorTaskStatusOptions, groupEditorTasksByDate } from '../utils/editorTodo';
+import NeedsEditsModal from './NeedsEditsModal';
+
 const kindStyles = {
-  'in-review': 'border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]',
   schedule: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200',
   publish: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
   'post-story': 'border-blue-500/30 bg-blue-500/10 text-blue-200',
 };
 
-function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted, onMoveTask }) {
+const inReviewKindStyle = 'border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]';
+
+function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onRequestEdits }) {
+  const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
+  const clientColor = getClientColor(task.client);
+  const statusOptions = getEditorTaskStatusOptions(task.isOneOffProject);
+
+  const openCard = () => onOpenCard(task.card);
+
+  return (
+    <article className="rounded-xl border border-white/8 bg-[#111111] p-4">
+      <div className="flex flex-wrap items-start gap-3">
+        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] text-gray-400">
+          →
+        </span>
+
+        <button
+          type="button"
+          onClick={openCard}
+          className="min-w-0 flex-1 cursor-pointer rounded-lg text-left transition hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#810100]/50"
+        >
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${inReviewKindStyle}`}>
+              {task.label}
+            </span>
+            {task.contentType && typeStyle && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeStyle.label}`}
+                style={{ backgroundColor: `${typeStyle.border}22` }}
+              >
+                {task.contentType}
+              </span>
+            )}
+          </div>
+
+          <h3 className="text-sm font-semibold text-white">{task.title}</h3>
+
+          <p className="mt-1 text-xs font-medium" style={{ color: clientColor }}>
+            {task.client}
+          </p>
+
+          {task.clientComment && (
+            <p className="mt-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-200">
+              Client notes: {task.clientComment}
+            </p>
+          )}
+
+          {task.notes && (
+            <p className="mt-2 line-clamp-2 text-xs text-gray-400">{task.notes}</p>
+          )}
+
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
+            {task.assignedTo && <span>Assigned to {task.assignedTo}</span>}
+            <span>On board · {task.columnId.replace('-', ' ')}</span>
+          </div>
+        </button>
+
+        <div className="flex shrink-0 flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+          <label className="block">
+            <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-500">
+              Board status
+            </span>
+            <select
+              value={task.columnId}
+              onChange={(e) => onMoveTask?.(task.cardId, e.target.value)}
+              className="select-dark w-full min-w-[130px] rounded-lg border border-white/10 bg-[#1a1a1a] px-2 py-1.5 text-xs text-[#f9f6f2] outline-none focus:border-[#810100]/50"
+              aria-label={`Board status for ${task.title}`}
+            >
+              {statusOptions.map((col) => (
+                <option key={col.id} value={col.id}>
+                  {col.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={openCard}
+            className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-white/5 hover:text-white"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => onRequestEdits(task.card)}
+            className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 transition hover:bg-amber-500/20"
+          >
+            Needs edits
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function InReviewTaskList({ tasks, getClientColor, onOpenCard, onMoveTask, onRequestEdits, todayKey }) {
+  if (tasks.length === 0) {
+    return null;
+  }
+
+  const groupedTasks = groupEditorTasksByDate(tasks, todayKey);
+
+  return (
+    <div className="space-y-6">
+      {groupedTasks.map((group) => (
+        <section key={group.key}>
+          <h4
+            className={`mb-3 text-center text-xs font-semibold uppercase tracking-wider ${
+              group.key === 'overdue' ? 'text-red-300' : 'text-gray-500'
+            }`}
+          >
+            {group.label}
+          </h4>
+          <div className="space-y-3">
+            {group.tasks.map((task) => (
+              <InReviewTaskCard
+                key={task.id}
+                task={task}
+                getClientColor={getClientColor}
+                onOpenCard={onOpenCard}
+                onMoveTask={onMoveTask}
+                onRequestEdits={onRequestEdits}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const badgeStyle = kindStyles[task.kind] || kindStyles.schedule;
   const canMarkPosted = task.kind === 'publish' || task.kind === 'post-story';
   const clientColor = getClientColor(task.client);
-  const reviewStatusOptions =
-    task.kind === 'in-review' ? getAccountManagerReviewStatusOptions(task.isOneOffProject) : [];
 
   const openCard = () => onOpenCard(task.card);
 
@@ -69,12 +199,6 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPos
             </p>
           )}
 
-          {task.clientComment && (
-            <p className="mt-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-200">
-              Client notes: {task.clientComment}
-            </p>
-          )}
-
           {task.notes && (
             <p className="mt-2 line-clamp-2 text-xs text-gray-400">{task.notes}</p>
           )}
@@ -89,26 +213,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPos
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2" onClick={(e) => e.stopPropagation()}>
-          {task.kind === 'in-review' && (
-            <label className="block">
-              <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-500">
-                Board status
-              </span>
-              <select
-                value={task.columnId}
-                onChange={(e) => onMoveTask?.(task.cardId, e.target.value)}
-                className="select-dark w-full min-w-[130px] rounded-lg border border-white/10 bg-[#1a1a1a] px-2 py-1.5 text-xs text-[#f9f6f2] outline-none focus:border-[#810100]/50"
-                aria-label={`Board status for ${task.title}`}
-              >
-                {reviewStatusOptions.map((col) => (
-                  <option key={col.id} value={col.id}>
-                    {col.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+        <div className="flex shrink-0 flex-col gap-2">
           <button
             type="button"
             onClick={openCard}
@@ -140,7 +245,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPos
   );
 }
 
-function ClientGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted, onMoveTask }) {
+function ClientGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted }) {
   const groups = useMemo(() => groupAccountManagerTasksByClient(tasks), [tasks]);
 
   return (
@@ -164,7 +269,6 @@ function ClientGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled,
                 onOpenCard={onOpenCard}
                 onMarkScheduled={onMarkScheduled}
                 onMarkPosted={onMarkPosted}
-                onMoveTask={onMoveTask}
               />
             ))}
           </div>
@@ -174,7 +278,7 @@ function ClientGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled,
   );
 }
 
-function DateGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted, onMoveTask }) {
+function DateGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted }) {
   const todayKey = toDateKey(new Date());
   const groups = useMemo(
     () => groupAccountManagerTasksByDate(tasks, todayKey),
@@ -200,7 +304,6 @@ function DateGroupedList({ tasks, getClientColor, onOpenCard, onMarkScheduled, o
                 onOpenCard={onOpenCard}
                 onMarkScheduled={onMarkScheduled}
                 onMarkPosted={onMarkPosted}
-                onMoveTask={onMoveTask}
               />
             ))}
           </div>
@@ -218,10 +321,12 @@ export default function AccountManagerTodo({
   onMarkScheduled,
   onMarkPosted,
   onMoveTask,
+  onSendBackForEditing,
 }) {
   const { getClientColor, clientAccountManagers } = useClientsContext();
   const todayKey = toDateKey(new Date());
   const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const [needsEditsCard, setNeedsEditsCard] = useState(null);
 
   const storyTasksToday = useMemo(
     () => buildStoryTasksToday(cards, todayKey, clientAccountManagers),
@@ -257,6 +362,11 @@ export default function AccountManagerTodo({
   );
 
   const todayLabel = formatAccountManagerDateLabel(todayKey, todayKey);
+
+  const handleNeedsEditsSubmit = (cardId, comment) => {
+    onSendBackForEditing?.(cardId, comment);
+    setNeedsEditsCard(null);
+  };
 
   return (
     <div>
@@ -307,13 +417,13 @@ export default function AccountManagerTodo({
               </p>
             </div>
           ) : (
-            <DateGroupedList
+            <InReviewTaskList
               tasks={filteredInReviewTasks}
               getClientColor={getClientColor}
               onOpenCard={onOpenCard}
-              onMarkScheduled={onMarkScheduled}
-              onMarkPosted={onMarkPosted}
               onMoveTask={onMoveTask}
+              onRequestEdits={setNeedsEditsCard}
+              todayKey={todayKey}
             />
           )}
         </section>
@@ -343,7 +453,6 @@ export default function AccountManagerTodo({
               onOpenCard={onOpenCard}
               onMarkScheduled={onMarkScheduled}
               onMarkPosted={onMarkPosted}
-              onMoveTask={onMoveTask}
             />
           )}
         </section>
@@ -375,11 +484,18 @@ export default function AccountManagerTodo({
               onOpenCard={onOpenCard}
               onMarkScheduled={onMarkScheduled}
               onMarkPosted={onMarkPosted}
-              onMoveTask={onMoveTask}
             />
           )}
         </section>
       </div>
+
+      {needsEditsCard && (
+        <NeedsEditsModal
+          card={needsEditsCard}
+          onClose={() => setNeedsEditsCard(null)}
+          onSubmit={handleNeedsEditsSubmit}
+        />
+      )}
     </div>
   );
 }

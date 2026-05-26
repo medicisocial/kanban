@@ -26,6 +26,22 @@ export function getEditorTaskStatusOptions(isOneOffProject = false) {
   return COLUMNS.filter((col) => allowed.includes(col.id));
 }
 
+export function buildSendBackForEditingUpdates(card, comment = '') {
+  const trimmed = (comment || '').trim();
+  const updates = {
+    columnId: 'editing',
+    status: 'Editing',
+  };
+
+  if (trimmed) {
+    const stamp = new Date().toLocaleDateString();
+    updates.clientComment = trimmed;
+    updates.notes = `${card.notes || ''}\n\nRevision notes (${stamp}): ${trimmed}`.trim();
+  }
+
+  return updates;
+}
+
 export function getEditorTaskKind(columnId) {
   if (EDIT_TASK_COLUMNS.includes(columnId)) return 'edit';
   if (APPROVE_TASK_COLUMNS.includes(columnId)) return 'approve';

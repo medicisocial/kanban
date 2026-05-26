@@ -21,6 +21,7 @@ import { getCalendarPortalClient } from "./utils/calendarShare";
 import { withStoryOccurrence, parseStoryOccurrenceNotes } from "./utils/calendar";
 import { createCard, COLUMNS } from "./constants";
 import { useEditorTasks } from "./hooks/useEditorTasks";
+import { buildSendBackForEditingUpdates } from "./utils/editorTodo";
 import { useAdminTasks } from "./hooks/useAdminTasks";
 import CompanyTasks from "./components/CompanyTasks";
 import Navbar from "./components/Navbar";
@@ -123,8 +124,10 @@ function AppShell() {
     moveCard(cardId, "in-review");
   };
 
-  const handleSendBackForEditing = (cardId) => {
-    moveCard(cardId, "editing");
+  const handleSendBackForEditing = (cardId, comment = '') => {
+    const card = cards.find((c) => c.id === cardId);
+    if (!card) return;
+    updateCard(cardId, buildSendBackForEditingUpdates(card, comment));
   };
 
   const handleMoveEditorTask = (cardId, columnId) => {

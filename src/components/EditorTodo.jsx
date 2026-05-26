@@ -116,7 +116,7 @@ function EditorTodoItem({
 
           {task.clientComment && (
             <p className="mt-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-200">
-              Client notes: {task.clientComment}
+              {task.columnId === 'editing' ? 'Revision notes' : 'Client notes'}: {task.clientComment}
             </p>
           )}
 
