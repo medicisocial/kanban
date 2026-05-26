@@ -53,16 +53,12 @@ export default function UnifiedLogin({ onAuthenticated }) {
     <div className="flex min-h-screen flex-col bg-black px-6 py-16 sm:px-10 sm:py-24">
       <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center">
         <header className="mb-14 text-center sm:mb-16">
-          <div
-            className="mx-auto mb-8 flex h-11 w-11 items-center justify-center border border-[#810100]"
-            aria-hidden
-          >
-            <span className="font-serif text-lg text-[#a82828]">M</span>
-          </div>
-          <p className="text-[10px] font-medium uppercase tracking-[0.45em] text-[#a82828]">
-            Medici Social
-          </p>
-          <h1 className="mt-5 font-serif text-[2.75rem] font-normal leading-[1.2] tracking-[0.02em] text-[#f9f6f2] sm:text-5xl sm:leading-[1.18]">
+          <img
+            src="/medici-social-logo.png"
+            alt="Medici Social"
+            className="mx-auto mb-10 h-auto w-full max-w-[300px]"
+          />
+          <h1 className="font-serif text-[2.75rem] font-normal leading-[1.2] tracking-[0.02em] text-[#f9f6f2] sm:text-5xl sm:leading-[1.18]">
             Client
             <br />
             Portal

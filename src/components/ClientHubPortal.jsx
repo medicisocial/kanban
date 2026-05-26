@@ -43,12 +43,16 @@ export default function ClientHubPortal({ onSignOut }) {
     <div className="min-h-screen bg-black">
       <header className="border-b border-white/5 bg-black/95 px-4 py-4 sm:px-6">
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#810100] to-[#a00000]">
-              <span className="text-sm font-bold text-white">M</span>
-            </div>
+          <div className="flex items-center gap-4">
+            <img
+              src="/medici-social-logo.png"
+              alt="Medici Social"
+              className="h-9 w-auto shrink-0"
+            />
             <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Medici Social</p>
+              <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/45">
+                Client portal
+              </p>
               <h1 className="text-lg font-semibold text-white" style={{ color: clientColor }}>
                 {brand}
               </h1>
