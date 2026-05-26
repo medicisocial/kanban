@@ -45,15 +45,15 @@ export default function ClientHubPortal({ onSignOut }) {
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <img
-              src="/medici-social-logo.png"
+              src="/medici-social-logo-nav.png"
               alt="Medici Social"
-              className="h-9 w-auto shrink-0"
+              className="h-9 w-auto shrink-0 object-contain"
             />
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/45">
+              <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/50">
                 Client portal
               </p>
-              <h1 className="text-lg font-semibold text-white" style={{ color: clientColor }}>
+              <h1 className="text-lg font-semibold" style={{ color: clientColor }}>
                 {brand}
               </h1>
             </div>

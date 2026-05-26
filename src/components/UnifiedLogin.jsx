@@ -10,7 +10,7 @@ import { loginClientPortal } from '../utils/clientPortalAuth';
 const FEATURES = ['Ideas', 'Content review', 'Calendar', 'Shoot schedule'];
 
 const inputClass =
-  'select-dark w-full rounded-sm border border-white/20 bg-white/[0.03] px-3 py-3 text-sm text-[#f9f6f2] outline-none transition-colors duration-200 placeholder:text-white/35 focus:border-[#810100] focus:bg-white/[0.05]';
+  'select-dark w-full rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3 text-sm text-white outline-none transition-all duration-200 placeholder:text-zinc-500 focus:border-zinc-600 focus:ring-1 focus:ring-red-600/30';
 
 export default function UnifiedLogin({ onAuthenticated }) {
   const [username, setUsername] = useState('');
@@ -50,89 +50,109 @@ export default function UnifiedLogin({ onAuthenticated }) {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-black px-6 py-16 sm:px-10 sm:py-24">
-      <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center">
-        <header className="mb-14 text-center sm:mb-16">
+    <main className="min-h-screen bg-black text-white">
+      <div className="mx-auto grid min-h-screen max-w-screen-xl grid-cols-1 items-center gap-12 px-5 py-16 md:px-8 lg:grid-cols-2 lg:gap-16 lg:py-24">
+        <section className="flex flex-col justify-center">
           <img
-            src="/medici-social-logo.png"
+            src="/medici-social-logo-nav.png"
             alt="Medici Social"
-            className="mx-auto mb-10 h-auto w-full max-w-[300px]"
+            className="h-10 w-auto object-contain"
           />
-          <h1 className="font-serif text-[2.75rem] font-normal leading-[1.2] tracking-[0.02em] text-[#f9f6f2] sm:text-5xl sm:leading-[1.18]">
-            Client
-            <br />
-            Portal
-          </h1>
-          <p className="mx-auto mt-8 max-w-[340px] text-sm font-light leading-[1.8] text-white/70">
-            Review ideas, follow your content pipeline, and stay ahead of calendar and shoot dates.
+
+          <p className="mt-10 text-xs font-medium uppercase tracking-[0.35em] text-red-500">
+            Client portal
           </p>
-        </header>
 
-        <nav
-          className="mb-12 flex flex-wrap justify-center gap-x-3 gap-y-2"
-          aria-label="Portal sections"
-        >
-          {FEATURES.map((label) => (
-            <span
-              key={label}
-              className="border border-[#810100]/40 px-3 py-1.5 text-[10px] font-normal uppercase tracking-[0.22em] text-white/75 transition-colors duration-200 hover:border-[#810100] hover:text-[#f9f6f2]"
-            >
-              {label}
-            </span>
-          ))}
-        </nav>
+          <h1 className="mt-5 font-serif text-4xl font-normal leading-[1.12] tracking-tight text-white md:text-5xl lg:text-[3.25rem] lg:leading-[1.1]">
+            Every brand has a story worth telling well.
+          </h1>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="space-y-7 border-t border-[#810100]/30 pt-9">
-            <label className="block">
-              <span className="mb-2.5 block text-[10px] font-medium uppercase tracking-[0.28em] text-[#a82828]">
-                Username
-              </span>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-                className={inputClass}
-                autoFocus
-                required
-              />
-            </label>
+          <p className="mt-6 max-w-md text-base leading-relaxed text-white/60 md:text-lg md:leading-relaxed">
+            Your private hub for ideas, content review, pipeline status, calendar, and shoot
+            schedules — all in one editorial-standard workspace.
+          </p>
 
-            <label className="block">
-              <span className="mb-2.5 block text-[10px] font-medium uppercase tracking-[0.28em] text-[#a82828]">
-                Password
-              </span>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                className={inputClass}
-                required
-              />
-            </label>
-          </div>
-
-          {error && (
-            <p className="border border-[#810100]/50 bg-[#810100]/10 px-4 py-3 text-xs leading-relaxed text-[#f9f6f2]">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full border border-[#810100] bg-[#810100] py-4 text-[11px] font-medium uppercase tracking-[0.32em] text-[#f9f6f2] transition-colors duration-300 hover:border-[#a00000] hover:bg-[#a00000] disabled:cursor-not-allowed disabled:opacity-50"
+          <nav
+            className="mt-10 flex flex-wrap gap-x-5 gap-y-2"
+            aria-label="Portal sections"
           >
-            {submitting ? 'Signing in' : 'Sign in'}
-          </button>
-        </form>
+            {FEATURES.map((label) => (
+              <span
+                key={label}
+                className="text-sm text-white/60 transition-colors duration-200 hover:text-red-500"
+              >
+                {label}
+              </span>
+            ))}
+          </nav>
+        </section>
 
-        <p className="mt-14 text-center text-[11px] font-light leading-relaxed text-white/55">
-          Need access? Contact your account manager.
-        </p>
+        <section className="flex flex-col justify-center lg:border-l lg:border-white/10 lg:pl-16">
+          <div className="mx-auto w-full max-w-md lg:mx-0">
+            <h2 className="font-serif text-2xl text-white md:text-3xl">Sign in</h2>
+            <p className="mt-3 text-sm leading-relaxed text-white/60">
+              Enter your brand credentials to access your portal.
+            </p>
+
+            <form onSubmit={handleSubmit} className="mt-10 space-y-6">
+              <label className="block">
+                <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-zinc-400">
+                  Username
+                </span>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  className={inputClass}
+                  autoFocus
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-zinc-400">
+                  Password
+                </span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className={inputClass}
+                  required
+                />
+              </label>
+
+              {error && (
+                <p className="rounded-lg border border-red-900/40 bg-red-950/30 px-4 py-3 text-sm text-red-200">
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex w-full items-center justify-center rounded-full bg-red-700 px-5 py-3 text-sm font-medium text-white transition-all duration-300 hover:scale-[1.02] hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+              >
+                {submitting ? 'Signing in…' : 'Sign in'}
+              </button>
+            </form>
+
+            <p className="mt-10 text-center text-xs leading-relaxed text-zinc-500 lg:text-left">
+              Need access?{' '}
+              <a
+                href="https://www.medicisocial.com/contact"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white/60 transition-colors duration-200 hover:text-red-500 hover-underline"
+              >
+                Contact your account manager
+              </a>
+            </p>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
