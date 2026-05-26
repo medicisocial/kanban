@@ -17,6 +17,7 @@ export default function CompanyTasks({
   onMarkScheduled,
   onMarkPosted,
   onSubmitForReview,
+  onApproveReview,
   onSendBackForEditing,
   onMoveTask,
 }) {
@@ -58,6 +59,7 @@ export default function CompanyTasks({
           onDeleteOneOffTask={onDeleteOneOffTask}
           onOpenCard={onOpenCard}
           onSubmitForReview={onSubmitForReview}
+          onApproveReview={onApproveReview}
           onSendBackForEditing={onSendBackForEditing}
           onMoveTask={onMoveTask}
         />
@@ -71,6 +73,7 @@ export default function CompanyTasks({
           onOpenCard={onOpenCard}
           onMarkScheduled={onMarkScheduled}
           onMarkPosted={onMarkPosted}
+          onApproveReview={onApproveReview}
           onMoveTask={onMoveTask}
           onSendBackForEditing={onSendBackForEditing}
         />

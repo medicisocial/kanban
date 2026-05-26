@@ -22,7 +22,7 @@ const kindStyles = {
 
 const inReviewKindStyle = 'border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]';
 
-function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onRequestEdits }) {
+function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onApproveReview, onRequestEdits }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const clientColor = getClientColor(task.client);
   const statusOptions = getEditorTaskStatusOptions(task.isOneOffProject);
@@ -106,6 +106,13 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onRequ
             className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-white/5 hover:text-white"
           >
             Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => onApproveReview?.(task.cardId)}
+            className="rounded-lg bg-[#810100] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#a00000]"
+          >
+            Approve
           </button>
           <button
             type="button"
@@ -232,6 +239,7 @@ export default function AccountManagerTodo({
   onOpenCard,
   onMarkScheduled,
   onMarkPosted,
+  onApproveReview,
   onMoveTask,
   onSendBackForEditing,
 }) {
@@ -249,8 +257,8 @@ export default function AccountManagerTodo({
     [cards, clientAccountManagers],
   );
   const postsTodoTasks = useMemo(
-    () => buildPostsTodoTasks(cards, clientAccountManagers),
-    [cards, clientAccountManagers],
+    () => buildPostsTodoTasks(cards, clientAccountManagers, todayKey),
+    [cards, clientAccountManagers, todayKey],
   );
 
   const filterOptions = useMemo(
@@ -317,7 +325,7 @@ export default function AccountManagerTodo({
               </span>
             </div>
             <p className="mt-2 text-sm text-gray-400">
-              Content in internal review before client approval.
+              Approve content or send it back to the editor with revision notes.
             </p>
           </div>
 
@@ -338,6 +346,7 @@ export default function AccountManagerTodo({
                   getClientColor={getClientColor}
                   onOpenCard={onOpenCard}
                   onMoveTask={onMoveTask}
+                  onApproveReview={onApproveReview}
                   onRequestEdits={setNeedsEditsCard}
                 />
               )}
@@ -389,7 +398,7 @@ export default function AccountManagerTodo({
               </span>
             </div>
             <p className="mt-2 text-sm text-gray-400">
-              Approved posts to schedule, plus upcoming and overdue publish dates.
+              Approved posts to schedule, plus posts due today or overdue.
             </p>
           </div>
 

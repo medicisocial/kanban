@@ -117,6 +117,10 @@ function AppShell() {
     moveCard(cardId, "in-review");
   };
 
+  const handleApproveReview = (cardId) => {
+    moveCard(cardId, "approved");
+  };
+
   const handleSendBackForEditing = (cardId, comment = '') => {
     const card = cards.find((c) => c.id === cardId);
     if (!card) return;
@@ -545,6 +549,7 @@ function AppShell() {
           onMarkScheduled={handleMarkScheduled}
           onMarkPosted={handleMarkPosted}
           onSubmitForReview={handleSubmitForReview}
+          onApproveReview={handleApproveReview}
           onSendBackForEditing={handleSendBackForEditing}
           onMoveTask={handleMoveEditorTask}
         />

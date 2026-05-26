@@ -10,6 +10,7 @@ import {
   splitEditorTasksByQueue,
 } from '../utils/editorTodo';
 import AddEditorTaskModal from './AddEditorTaskModal';
+import NeedsEditsModal from './NeedsEditsModal';
 
 const kindStyles = {
   edit: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
@@ -27,6 +28,8 @@ function EditorTodoItem({
   onOpenCard,
   onDeleteOneOff,
   onSubmitForReview,
+  onApproveReview,
+  onRequestEdits,
   onSendBackForEditing,
   onMoveTask,
   getClientColor,
@@ -135,13 +138,22 @@ function EditorTodoItem({
             </button>
           )}
           {task.kind === 'approve' && (
-            <button
-              type="button"
-              onClick={() => onSendBackForEditing?.(task.cardId)}
-              className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 transition hover:bg-amber-500/20"
-            >
-              Needs edits
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => onApproveReview?.(task.cardId)}
+                className="rounded-lg bg-[#810100] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#a00000]"
+              >
+                Approve
+              </button>
+              <button
+                type="button"
+                onClick={() => onRequestEdits?.(task.card)}
+                className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 transition hover:bg-amber-500/20"
+              >
+                Needs edits
+              </button>
+            </>
           )}
           {isOneOff && task.columnId === 'approved' && (
             <button
@@ -221,6 +233,7 @@ export default function EditorTodo({
   onDeleteOneOffTask,
   onOpenCard,
   onSubmitForReview,
+  onApproveReview,
   onSendBackForEditing,
   onMoveTask,
 }) {
@@ -228,6 +241,7 @@ export default function EditorTodo({
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [showCompleted, setShowCompleted] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [needsEditsCard, setNeedsEditsCard] = useState(null);
 
   const allTasks = useMemo(() => buildBoardEditorTasks(cards), [cards]);
 
@@ -260,9 +274,16 @@ export default function EditorTodo({
     onOpenCard,
     onDeleteOneOffTask,
     onSubmitForReview,
+    onApproveReview,
+    onRequestEdits: setNeedsEditsCard,
     onSendBackForEditing,
     onMoveTask,
     getClientColor,
+  };
+
+  const handleNeedsEditsSubmit = (cardId, comment) => {
+    onSendBackForEditing?.(cardId, comment);
+    setNeedsEditsCard(null);
   };
 
   return (
@@ -345,7 +366,7 @@ export default function EditorTodo({
           />
           <EditorTaskColumn
             title="In review"
-            description="Cards in In Review — internal QC before client approval."
+            description="Cards in In Review — approve or send back with revision notes."
             count={approveCount}
             accentClass="border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]"
             tasks={reviewTasks}
@@ -360,6 +381,14 @@ export default function EditorTodo({
           onClose={() => setShowAddModal(false)}
           onAdd={onAddOneOffTask}
           defaultAssignee={assigneeFilter !== 'all' ? assigneeFilter : undefined}
+        />
+      )}
+
+      {needsEditsCard && (
+        <NeedsEditsModal
+          card={needsEditsCard}
+          onClose={() => setNeedsEditsCard(null)}
+          onSubmit={handleNeedsEditsSubmit}
         />
       )}
     </div>
