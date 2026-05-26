@@ -32,19 +32,22 @@ export function useClientPortalCredentials() {
 
   const setClientPortalCredential = useCallback(async (client, username, password) => {
     const trimmedUser = (username || defaultPortalUsername(client)).trim();
+    const existing = loadCredentials()[client];
     const entry = { username: trimmedUser, passwordHash: '' };
+
     if (password) {
       entry.passwordHash = await hashPassword(password);
-    } else if (credentials[client]?.passwordHash) {
-      entry.passwordHash = credentials[client].passwordHash;
+    } else if (existing?.passwordHash) {
+      entry.passwordHash = existing.passwordHash;
     }
+
     setCredentials((prev) => {
       const next = { ...prev, [client]: entry };
       localStorage.setItem(CLIENT_PORTAL_AUTH_STORAGE_KEY, JSON.stringify(next));
       return next;
     });
     return entry;
-  }, [credentials]);
+  }, []);
 
   const clearClientPortalCredential = useCallback((client) => {
     setCredentials((prev) => {

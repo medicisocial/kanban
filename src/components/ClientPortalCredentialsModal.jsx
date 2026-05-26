@@ -9,7 +9,6 @@ export default function ClientPortalCredentialsModal({
   clients,
   getCredential,
   onSaveCredential,
-  onClearCredential,
   onSyncToCloud,
   onClose,
 }) {
@@ -29,31 +28,60 @@ export default function ClientPortalCredentialsModal({
     setSaving(true);
     setMessage('');
     setError('');
+
     try {
       const credentials = { ...loadCredentials() };
+      let changed = false;
 
       for (const client of clients) {
         const draft = drafts[client];
-        if (!draft?.username?.trim() && !draft?.password) {
-          if (!getCredential(client).passwordHash) {
-            onClearCredential(client);
-            delete credentials[client];
+
+        if (!draft?.password) {
+          const existingUsername = credentials[client]?.username || getCredential(client).username;
+          if (
+            draft.username?.trim() &&
+            draft.username.trim() !== existingUsername &&
+            (credentials[client]?.passwordHash || getCredential(client).passwordHash)
+          ) {
+            credentials[client] = await onSaveCredential(client, draft.username, '');
+            changed = true;
           }
           continue;
         }
-        if (!draft.password && !getCredential(client).passwordHash) {
-          setError(`Set a password for ${client} before saving.`);
+
+        credentials[client] = await onSaveCredential(client, draft.username, draft.password);
+        if (!credentials[client]?.passwordHash) {
+          setError(`Could not save password for ${client}. Try again.`);
           return;
         }
-        credentials[client] = await onSaveCredential(client, draft.username, draft.password);
+        changed = true;
+      }
+
+      if (!changed) {
+        setError('Enter a password for at least one brand to save.');
+        return;
       }
 
       if (onSyncToCloud) {
-        await onSyncToCloud(credentials);
+        const result = await onSyncToCloud(credentials);
+        const savedCount = result?.brands?.length || 0;
+        setMessage(
+          savedCount
+            ? `Saved ${savedCount} client login${savedCount === 1 ? '' : 's'} to cloud. Clients can sign in now.`
+            : 'Saved locally but cloud sync returned no active logins. Check your connection and try again.',
+        );
+      } else {
+        setMessage('Client portal logins saved locally.');
       }
 
-      setMessage('Client portal logins saved and synced to cloud. Clients can sign in now.');
-      setTimeout(() => setMessage(''), 5000);
+      setDrafts((prev) => {
+        const next = { ...prev };
+        for (const client of clients) {
+          if (next[client]) next[client] = { ...next[client], password: '' };
+        }
+        return next;
+      });
+      setTimeout(() => setMessage(''), 6000);
     } catch (err) {
       setError(err.message || 'Could not save client logins.');
     } finally {
@@ -88,7 +116,14 @@ export default function ClientPortalCredentialsModal({
             const draft = drafts[client] || { username: defaultPortalUsername(client), password: '' };
             return (
               <div key={client} className="rounded-xl border border-white/8 bg-[#0d0d0d] p-4">
-                <p className="mb-3 text-sm font-medium text-white">{client}</p>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-white">{client}</p>
+                  {cred.passwordHash && (
+                    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">
+                      Password set
+                    </span>
+                  )}
+                </div>
                 <p className="mb-3 text-xs text-gray-500">
                   Default username: <span className="text-gray-300">{defaultPortalUsername(client)}</span>
                 </p>

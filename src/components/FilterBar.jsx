@@ -15,7 +15,6 @@ export default function FilterBar({ clientFilter, onClientChange }) {
     setClientAccountManager,
     getCredential,
     setClientPortalCredential,
-    clearClientPortalCredential,
   } = useClientsContext();
   const { session } = useStaffAuth();
   const [showAddClient, setShowAddClient] = useState(false);
@@ -153,7 +152,6 @@ export default function FilterBar({ clientFilter, onClientChange }) {
           clients={clients}
           getCredential={getCredential}
           onSaveCredential={setClientPortalCredential}
-          onClearCredential={clearClientPortalCredential}
           onSyncToCloud={(credentials) => syncClientPortalCredentialsToCloud(session, credentials)}
           onClose={() => setShowPortalLogins(false)}
         />

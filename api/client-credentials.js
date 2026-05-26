@@ -1,6 +1,8 @@
 import { getRedis, loadWorkspace, saveWorkspace } from './_lib/redis.mjs';
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
 
+import { mergeClientPortalAuth } from './_lib/clientPortalAuth.mjs';
+
 const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
 
 function unauthorized(res) {
@@ -39,12 +41,17 @@ export default async function handler(req, res) {
     data: {},
   };
   workspace.data = workspace.data || {};
-  workspace.data[CLIENT_PORTAL_AUTH_KEY] = {
-    ...(workspace.data[CLIENT_PORTAL_AUTH_KEY] || {}),
-    ...credentials,
-  };
+  workspace.data[CLIENT_PORTAL_AUTH_KEY] = mergeClientPortalAuth(
+    workspace.data[CLIENT_PORTAL_AUTH_KEY] || {},
+    credentials,
+  );
   workspace.exportedAt = new Date().toISOString();
 
   await saveWorkspace(redis, workspace);
-  return res.status(200).json({ ok: true, brands: Object.keys(workspace.data[CLIENT_PORTAL_AUTH_KEY]) });
+  const savedAuth = workspace.data[CLIENT_PORTAL_AUTH_KEY];
+  const brandsWithPasswords = Object.entries(savedAuth)
+    .filter(([, entry]) => entry?.passwordHash)
+    .map(([brand]) => brand);
+
+  return res.status(200).json({ ok: true, brands: brandsWithPasswords });
 }

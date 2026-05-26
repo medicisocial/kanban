@@ -1,5 +1,6 @@
 import { Redis } from '@upstash/redis';
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
+import { mergeClientPortalAuth } from './_lib/clientPortalAuth.mjs';
 
 const WORKSPACE_KEY = 'medici:workspace';
 const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
@@ -26,11 +27,11 @@ function mergeWorkspacePayload(remote, incoming) {
 
   const remoteAuth = remote.data[CLIENT_PORTAL_AUTH_KEY];
   const incomingAuth = incoming.data[CLIENT_PORTAL_AUTH_KEY];
-  if (remoteAuth && typeof remoteAuth === 'object') {
-    merged.data[CLIENT_PORTAL_AUTH_KEY] = {
-      ...remoteAuth,
-      ...(incomingAuth && typeof incomingAuth === 'object' ? incomingAuth : {}),
-    };
+  if (remoteAuth || incomingAuth) {
+    merged.data[CLIENT_PORTAL_AUTH_KEY] = mergeClientPortalAuth(
+      remoteAuth && typeof remoteAuth === 'object' ? remoteAuth : {},
+      incomingAuth && typeof incomingAuth === 'object' ? incomingAuth : {},
+    );
   }
 
   return merged;
