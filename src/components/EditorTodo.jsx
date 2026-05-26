@@ -20,10 +20,8 @@ import { toDateKey } from '../utils/calendar';
 import {
   applyEditorTaskOrder,
   buildBoardEditorTasks,
-  buildInitialTaskOrder,
   formatEditorDateLabel,
   getEditorTaskStatusOptions,
-  groupEditorTasksByDate,
   filterEditorTasks,
   splitEditorTasksByQueue,
 } from '../utils/editorTodo';
@@ -35,10 +33,13 @@ const kindStyles = {
   oneoff: 'border-white/20 bg-white/5 text-[#f9f6f2]',
 };
 
+const interactiveProps = {
+  onPointerDown: (e) => e.stopPropagation(),
+  onClick: (e) => e.stopPropagation(),
+};
+
 function EditorTodoItem({
   task,
-  sortable = false,
-  dragHandleProps = null,
   onOpenCard,
   onDeleteOneOff,
   onSubmitForReview,
@@ -61,26 +62,12 @@ function EditorTodoItem({
     <article
       className={`rounded-xl border border-white/8 bg-[#111111] p-4 transition ${
         task.completed ? 'opacity-60' : ''
-      } ${sortable ? 'touch-none' : ''}`}
+      }`}
     >
       <div className="flex flex-wrap items-start gap-3">
-        {sortable && dragHandleProps ? (
-          <button
-            type="button"
-            className="mt-0.5 flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 active:cursor-grabbing hover:bg-white/10 hover:text-white"
-            aria-label={`Drag to reorder ${task.title}`}
-            onClick={(e) => e.stopPropagation()}
-            {...dragHandleProps}
-          >
-            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path d="M7 4a1 1 0 110 2 1 1 0 010-2zm6 0a1 1 0 110 2 1 1 0 010-2zM7 9a1 1 0 110 2 1 1 0 010-2zm6 0a1 1 0 110 2 1 1 0 010-2zM7 14a1 1 0 110 2 1 1 0 010-2zm6 0a1 1 0 110 2 1 1 0 010-2z" />
-            </svg>
-          </button>
-        ) : (
-          <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] text-gray-400">
-            →
-          </span>
-        )}
+        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] text-gray-400">
+          →
+        </span>
 
         <button
           type="button"
@@ -131,7 +118,7 @@ function EditorTodoItem({
           </div>
         </button>
 
-        <div className="flex shrink-0 flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+        <div className="flex shrink-0 flex-col gap-2" {...interactiveProps}>
           <label className="block">
             <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-500">
               Board status
@@ -219,19 +206,20 @@ function SortableEditorTodoItem(props) {
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
-      <EditorTodoItem
-        {...props}
-        sortable
-        dragHandleProps={{ ...attributes, ...listeners }}
-      />
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="cursor-grab touch-none active:cursor-grabbing"
+      {...attributes}
+      {...listeners}
+    >
+      <EditorTodoItem {...props} />
     </div>
   );
 }
 
 function EditorTaskList({
   tasks,
-  sortMode,
   sensors,
   onDragEnd,
   onOpenCard,
@@ -251,61 +239,27 @@ function EditorTaskList({
     );
   }
 
-  if (sortMode === 'custom') {
-    return (
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-3">
-            {tasks.map((task) => (
-              <SortableEditorTodoItem
-                key={task.id}
-                task={task}
-                onOpenCard={onOpenCard}
-                onDeleteOneOff={onDeleteOneOffTask}
-                onSubmitForReview={onSubmitForReview}
-                onSendBackForEditing={onSendBackForEditing}
-                onMoveTask={onMoveTask}
-                getClientColor={getClientColor}
-                showDateBadge
-                todayKey={todayKey}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
-    );
-  }
-
-  const groupedTasks = groupEditorTasksByDate(tasks, todayKey);
-
   return (
-    <div className="space-y-6">
-      {groupedTasks.map((group) => (
-        <section key={group.key}>
-          <h4
-            className={`mb-3 text-xs font-semibold uppercase tracking-wider ${
-              group.key === 'overdue' ? 'text-red-300' : 'text-gray-500'
-            }`}
-          >
-            {group.label}
-          </h4>
-          <div className="space-y-3">
-            {group.tasks.map((task) => (
-              <EditorTodoItem
-                key={task.id}
-                task={task}
-                onOpenCard={onOpenCard}
-                onDeleteOneOff={onDeleteOneOffTask}
-                onSubmitForReview={onSubmitForReview}
-                onSendBackForEditing={onSendBackForEditing}
-                onMoveTask={onMoveTask}
-                getClientColor={getClientColor}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-3">
+          {tasks.map((task) => (
+            <SortableEditorTodoItem
+              key={task.id}
+              task={task}
+              onOpenCard={onOpenCard}
+              onDeleteOneOff={onDeleteOneOffTask}
+              onSubmitForReview={onSubmitForReview}
+              onSendBackForEditing={onSendBackForEditing}
+              onMoveTask={onMoveTask}
+              getClientColor={getClientColor}
+              showDateBadge
+              todayKey={todayKey}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
 
@@ -315,7 +269,6 @@ function EditorTaskColumn({
   count,
   accentClass,
   tasks,
-  sortMode,
   sensors,
   onDragEnd,
   emptyMessage,
@@ -336,7 +289,6 @@ function EditorTaskColumn({
 
       <EditorTaskList
         tasks={tasks}
-        sortMode={sortMode}
         sensors={sensors}
         onDragEnd={onDragEnd}
         emptyMessage={emptyMessage}
@@ -360,19 +312,16 @@ export default function EditorTodo({
   onSendBackForEditing,
   onMoveTask,
   onSyncTaskOrder,
-  onSetTaskOrder,
   onReorderTasks,
-  onResetTaskOrder,
 }) {
   const { getClientColor } = useClientsContext();
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [showCompleted, setShowCompleted] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [sortMode, setSortMode] = useState(() => taskOrder.length > 0 ? 'custom' : 'date');
   const todayKey = toDateKey(new Date());
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
@@ -394,8 +343,8 @@ export default function EditorTodo({
   }, [filteredTasks, onSyncTaskOrder]);
 
   const orderedTasks = useMemo(
-    () => applyEditorTaskOrder(filteredTasks, sortMode === 'custom' ? taskOrder : []),
-    [filteredTasks, sortMode, taskOrder],
+    () => applyEditorTaskOrder(filteredTasks, taskOrder),
+    [filteredTasks, taskOrder],
   );
 
   const { editing: editingTasks, inReview: reviewTasks } = useMemo(
@@ -407,26 +356,11 @@ export default function EditorTodo({
   const approveCount = reviewTasks.length;
   const oneOffCount = filteredTasks.filter((t) => t.isOneOffProject && !t.completed).length;
 
-  const handleSortModeChange = (mode) => {
-    if (mode === 'custom' && !taskOrder.length && filteredTasks.length) {
-      onSetTaskOrder(buildInitialTaskOrder(filteredTasks));
-    }
-    if (mode === 'date') {
-      onResetTaskOrder();
-    }
-    setSortMode(mode);
-  };
-
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (!over) return;
     onReorderTasks(active.id, over.id);
   };
-
-  const sortModeClass = (mode) =>
-    `rounded-md px-3 py-1.5 text-sm font-medium transition ${
-      sortMode === mode ? 'bg-[#810100] text-white' : 'text-gray-400 hover:text-white'
-    }`;
 
   const itemProps = {
     onOpenCard,
@@ -443,7 +377,7 @@ export default function EditorTodo({
         <div>
           <h2 className="text-xl font-semibold text-white">Editor tasks</h2>
           <p className="mt-1 text-sm text-gray-400">
-            Editing and review queues from the board — drag within a column to set priority.
+            Editing and review queues from the board — drag anywhere on a card to set priority within each column.
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
             <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-200">
@@ -470,15 +404,6 @@ export default function EditorTodo({
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <div className="flex rounded-lg border border-white/10 bg-white/5 p-0.5">
-          <button type="button" onClick={() => handleSortModeChange('date')} className={sortModeClass('date')}>
-            By date
-          </button>
-          <button type="button" onClick={() => handleSortModeChange('custom')} className={sortModeClass('custom')}>
-            Custom order
-          </button>
-        </div>
-
         <label className="flex items-center gap-2 text-sm text-gray-400">
           <span>Editor</span>
           <select
@@ -506,10 +431,6 @@ export default function EditorTodo({
         </label>
       </div>
 
-      {sortMode === 'custom' && (
-        <p className="mb-4 text-xs text-gray-500">Drag tasks using the grip handle to rearrange within each column.</p>
-      )}
-
       {orderedTasks.length === 0 ? (
         <div className="rounded-xl border border-dashed border-white/10 px-6 py-16 text-center">
           <p className="text-sm text-gray-400">Nothing on the list right now.</p>
@@ -525,7 +446,6 @@ export default function EditorTodo({
             count={editCount}
             accentClass="border-amber-500/30 bg-amber-500/10 text-amber-200"
             tasks={editingTasks}
-            sortMode={sortMode}
             sensors={sensors}
             onDragEnd={handleDragEnd}
             emptyMessage="No videos waiting for edits."
@@ -538,7 +458,6 @@ export default function EditorTodo({
             count={approveCount}
             accentClass="border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]"
             tasks={reviewTasks}
-            sortMode={sortMode}
             sensors={sensors}
             onDragEnd={handleDragEnd}
             emptyMessage="No videos in review."

@@ -21,15 +21,12 @@ import { formatStoryScheduleSummary, toDateKey } from '../utils/calendar';
 import {
   applyAccountManagerTaskOrder,
   buildInReviewTasks,
-  buildInitialAccountManagerTaskOrder,
   buildPostsTodoTasks,
   buildStoryTasksToday,
   filterAccountManagerTasks,
   formatAccountManagerDateLabel,
-  groupAccountManagerTasksByClient,
-  groupAccountManagerTasksByDate,
 } from '../utils/accountManagerTodo';
-import { getEditorTaskStatusOptions, groupEditorTasksByDate } from '../utils/editorTodo';
+import { getEditorTaskStatusOptions } from '../utils/editorTodo';
 import NeedsEditsModal from './NeedsEditsModal';
 
 const kindStyles = {
@@ -40,31 +37,12 @@ const kindStyles = {
 
 const inReviewKindStyle = 'border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]';
 
-function DragHandleButton({ dragHandleProps, label }) {
-  return (
-    <button
-      type="button"
-      className="mt-0.5 flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 active:cursor-grabbing hover:bg-white/10 hover:text-white"
-      aria-label={label}
-      onClick={(e) => e.stopPropagation()}
-      {...dragHandleProps}
-    >
-      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-        <path d="M7 4a1 1 0 110 2 1 1 0 010-2zm6 0a1 1 0 110 2 1 1 0 010-2zM7 9a1 1 0 110 2 1 1 0 010-2zm6 0a1 1 0 110 2 1 1 0 010-2zM7 14a1 1 0 110 2 1 1 0 010-2zm6 0a1 1 0 110 2 1 1 0 010-2z" />
-      </svg>
-    </button>
-  );
-}
+const interactiveProps = {
+  onPointerDown: (e) => e.stopPropagation(),
+  onClick: (e) => e.stopPropagation(),
+};
 
-function InReviewTaskCard({
-  task,
-  getClientColor,
-  onOpenCard,
-  onMoveTask,
-  onRequestEdits,
-  sortable = false,
-  dragHandleProps = null,
-}) {
+function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onRequestEdits }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const clientColor = getClientColor(task.client);
   const statusOptions = getEditorTaskStatusOptions(task.isOneOffProject);
@@ -72,19 +50,11 @@ function InReviewTaskCard({
   const openCard = () => onOpenCard(task.card);
 
   return (
-    <article
-      className={`rounded-xl border border-white/8 bg-[#111111] p-4 transition ${
-        sortable ? 'touch-none' : ''
-      }`}
-    >
+    <article className="rounded-xl border border-white/8 bg-[#111111] p-4">
       <div className="flex flex-wrap items-start gap-3">
-        {sortable && dragHandleProps ? (
-          <DragHandleButton dragHandleProps={dragHandleProps} label={`Drag to reorder ${task.title}`} />
-        ) : (
-          <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] text-gray-400">
-            →
-          </span>
-        )}
+        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] text-gray-400">
+          →
+        </span>
 
         <button
           type="button"
@@ -127,7 +97,7 @@ function InReviewTaskCard({
           </div>
         </button>
 
-        <div className="flex shrink-0 flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+        <div className="flex shrink-0 flex-col gap-2" {...interactiveProps}>
           <label className="block">
             <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-500">
               Board status
@@ -177,25 +147,19 @@ function SortableInReviewTaskCard(props) {
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
-      <InReviewTaskCard
-        {...props}
-        sortable
-        dragHandleProps={{ ...attributes, ...listeners }}
-      />
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="cursor-grab touch-none active:cursor-grabbing"
+      {...attributes}
+      {...listeners}
+    >
+      <InReviewTaskCard {...props} />
     </div>
   );
 }
 
-function TaskCard({
-  task,
-  getClientColor,
-  onOpenCard,
-  onMarkScheduled,
-  onMarkPosted,
-  sortable = false,
-  dragHandleProps = null,
-}) {
+function TaskCard({ task, getClientColor, onOpenCard, onMarkScheduled, onMarkPosted }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const badgeStyle = kindStyles[task.kind] || kindStyles.schedule;
   const canMarkPosted = task.kind === 'publish' || task.kind === 'post-story';
@@ -204,16 +168,8 @@ function TaskCard({
   const openCard = () => onOpenCard(task.card);
 
   return (
-    <article
-      className={`rounded-xl border border-white/8 bg-[#111111] p-4 transition ${
-        sortable ? 'touch-none' : ''
-      }`}
-    >
-      <div className="flex flex-wrap items-start gap-3">
-        {sortable && dragHandleProps && (
-          <DragHandleButton dragHandleProps={dragHandleProps} label={`Drag to reorder ${task.title}`} />
-        )}
-
+    <article className="rounded-xl border border-white/8 bg-[#111111] p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <span
@@ -264,7 +220,7 @@ function TaskCard({
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2">
+        <div className="flex shrink-0 flex-col gap-2" {...interactiveProps}>
           <button
             type="button"
             onClick={openCard}
@@ -308,217 +264,31 @@ function SortableTaskCard(props) {
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
-      <TaskCard
-        {...props}
-        sortable
-        dragHandleProps={{ ...attributes, ...listeners }}
-      />
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="cursor-grab touch-none active:cursor-grabbing"
+      {...attributes}
+      {...listeners}
+    >
+      <TaskCard {...props} />
     </div>
   );
 }
 
-function SortableFlatTaskList({ tasks, sensors, onDragEnd, renderSortableItem }) {
-  return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-      <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-3">
-          {tasks.map((task) => renderSortableItem(task))}
-        </div>
-      </SortableContext>
-    </DndContext>
-  );
-}
-
-function InReviewTaskList({
-  tasks,
-  sortMode,
-  sensors,
-  onDragEnd,
-  getClientColor,
-  onOpenCard,
-  onMoveTask,
-  onRequestEdits,
-  todayKey,
-}) {
+function SortableTaskList({ tasks, sensors, onDragEnd, renderItem }) {
   if (tasks.length === 0) {
     return null;
   }
 
-  if (sortMode === 'custom') {
-    return (
-      <SortableFlatTaskList
-        tasks={tasks}
-        sensors={sensors}
-        onDragEnd={onDragEnd}
-        renderSortableItem={(task) => (
-          <SortableInReviewTaskCard
-            key={task.id}
-            task={task}
-            getClientColor={getClientColor}
-            onOpenCard={onOpenCard}
-            onMoveTask={onMoveTask}
-            onRequestEdits={onRequestEdits}
-          />
-        )}
-      />
-    );
-  }
-
-  const groupedTasks = groupEditorTasksByDate(tasks, todayKey);
-
   return (
-    <div className="space-y-6">
-      {groupedTasks.map((group) => (
-        <section key={group.key}>
-          <h4
-            className={`mb-3 text-center text-xs font-semibold uppercase tracking-wider ${
-              group.key === 'overdue' ? 'text-red-300' : 'text-gray-500'
-            }`}
-          >
-            {group.label}
-          </h4>
-          <div className="space-y-3">
-            {group.tasks.map((task) => (
-              <InReviewTaskCard
-                key={task.id}
-                task={task}
-                getClientColor={getClientColor}
-                onOpenCard={onOpenCard}
-                onMoveTask={onMoveTask}
-                onRequestEdits={onRequestEdits}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
-  );
-}
-
-function ClientGroupedList({
-  tasks,
-  sortMode,
-  sensors,
-  onDragEnd,
-  getClientColor,
-  onOpenCard,
-  onMarkScheduled,
-  onMarkPosted,
-}) {
-  const groups = useMemo(() => groupAccountManagerTasksByClient(tasks), [tasks]);
-
-  if (sortMode === 'custom') {
-    return (
-      <SortableFlatTaskList
-        tasks={tasks}
-        sensors={sensors}
-        onDragEnd={onDragEnd}
-        renderSortableItem={(task) => (
-          <SortableTaskCard
-            key={task.id}
-            task={task}
-            getClientColor={getClientColor}
-            onOpenCard={onOpenCard}
-            onMarkScheduled={onMarkScheduled}
-            onMarkPosted={onMarkPosted}
-          />
-        )}
-      />
-    );
-  }
-
-  return (
-    <div className="space-y-8">
-      {groups.map((group) => (
-        <section key={group.client}>
-          <h4 className="mb-3 flex items-center justify-center gap-2 text-center text-sm font-semibold uppercase tracking-wider text-gray-400">
-            <span
-              className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: getClientColor(group.client) }}
-            />
-            {group.client}
-            <span className="font-normal normal-case text-gray-500">({group.tasks.length})</span>
-          </h4>
-          <div className="space-y-3">
-            {group.tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                getClientColor={getClientColor}
-                onOpenCard={onOpenCard}
-                onMarkScheduled={onMarkScheduled}
-                onMarkPosted={onMarkPosted}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
-  );
-}
-
-function DateGroupedList({
-  tasks,
-  sortMode,
-  sensors,
-  onDragEnd,
-  getClientColor,
-  onOpenCard,
-  onMarkScheduled,
-  onMarkPosted,
-  todayKey,
-}) {
-  const groups = useMemo(
-    () => groupAccountManagerTasksByDate(tasks, todayKey),
-    [tasks, todayKey],
-  );
-
-  if (sortMode === 'custom') {
-    return (
-      <SortableFlatTaskList
-        tasks={tasks}
-        sensors={sensors}
-        onDragEnd={onDragEnd}
-        renderSortableItem={(task) => (
-          <SortableTaskCard
-            key={task.id}
-            task={task}
-            getClientColor={getClientColor}
-            onOpenCard={onOpenCard}
-            onMarkScheduled={onMarkScheduled}
-            onMarkPosted={onMarkPosted}
-          />
-        )}
-      />
-    );
-  }
-
-  return (
-    <div className="space-y-8">
-      {groups.map((group) => (
-        <section key={group.key}>
-          <h4 className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-gray-400">
-            {group.label}
-            <span className="ml-2 font-normal normal-case text-gray-500">
-              ({group.tasks.length})
-            </span>
-          </h4>
-          <div className="space-y-3">
-            {group.tasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                getClientColor={getClientColor}
-                onOpenCard={onOpenCard}
-                onMarkScheduled={onMarkScheduled}
-                onMarkPosted={onMarkPosted}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-3">
+          {tasks.map((task) => renderItem(task))}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
 
@@ -533,22 +303,15 @@ export default function AccountManagerTodo({
   onSendBackForEditing,
   amTaskOrder,
   onSyncAmQueueOrder,
-  onSetAmQueueOrder,
   onReorderAmQueueTasks,
-  onResetAmQueueOrders,
 }) {
   const { getClientColor, clientAccountManagers } = useClientsContext();
   const todayKey = toDateKey(new Date());
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [needsEditsCard, setNeedsEditsCard] = useState(null);
-  const [sortMode, setSortMode] = useState(() =>
-    ['inReview', 'stories', 'posts'].some((queue) => amTaskOrder[queue]?.length > 0)
-      ? 'custom'
-      : 'grouped',
-  );
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
@@ -598,27 +361,18 @@ export default function AccountManagerTodo({
   }, [filteredPostsTasks, onSyncAmQueueOrder]);
 
   const orderedInReviewTasks = useMemo(
-    () => applyAccountManagerTaskOrder(
-      filteredInReviewTasks,
-      sortMode === 'custom' ? amTaskOrder.inReview : [],
-    ),
-    [filteredInReviewTasks, sortMode, amTaskOrder.inReview],
+    () => applyAccountManagerTaskOrder(filteredInReviewTasks, amTaskOrder.inReview),
+    [filteredInReviewTasks, amTaskOrder.inReview],
   );
 
   const orderedStoryTasks = useMemo(
-    () => applyAccountManagerTaskOrder(
-      filteredStoryTasks,
-      sortMode === 'custom' ? amTaskOrder.stories : [],
-    ),
-    [filteredStoryTasks, sortMode, amTaskOrder.stories],
+    () => applyAccountManagerTaskOrder(filteredStoryTasks, amTaskOrder.stories),
+    [filteredStoryTasks, amTaskOrder.stories],
   );
 
   const orderedPostsTasks = useMemo(
-    () => applyAccountManagerTaskOrder(
-      filteredPostsTasks,
-      sortMode === 'custom' ? amTaskOrder.posts : [],
-    ),
-    [filteredPostsTasks, sortMode, amTaskOrder.posts],
+    () => applyAccountManagerTaskOrder(filteredPostsTasks, amTaskOrder.posts),
+    [filteredPostsTasks, amTaskOrder.posts],
   );
 
   const todayLabel = formatAccountManagerDateLabel(todayKey, todayKey);
@@ -627,28 +381,6 @@ export default function AccountManagerTodo({
     onSendBackForEditing?.(cardId, comment);
     setNeedsEditsCard(null);
   };
-
-  const handleSortModeChange = (mode) => {
-    if (mode === 'custom') {
-      if (!amTaskOrder.inReview.length && filteredInReviewTasks.length) {
-        onSetAmQueueOrder('inReview', buildInitialAccountManagerTaskOrder(filteredInReviewTasks));
-      }
-      if (!amTaskOrder.stories.length && filteredStoryTasks.length) {
-        onSetAmQueueOrder('stories', buildInitialAccountManagerTaskOrder(filteredStoryTasks));
-      }
-      if (!amTaskOrder.posts.length && filteredPostsTasks.length) {
-        onSetAmQueueOrder('posts', buildInitialAccountManagerTaskOrder(filteredPostsTasks));
-      }
-    } else {
-      onResetAmQueueOrders();
-    }
-    setSortMode(mode);
-  };
-
-  const sortModeClass = (mode) =>
-    `rounded-md px-3 py-1.5 text-sm font-medium transition ${
-      sortMode === mode ? 'bg-[#810100] text-white' : 'text-gray-400 hover:text-white'
-    }`;
 
   return (
     <div>
@@ -659,16 +391,7 @@ export default function AccountManagerTodo({
         </p>
       </div>
 
-      <div className="mb-8 flex flex-wrap items-center justify-center gap-4">
-        <div className="flex rounded-lg border border-white/10 bg-white/5 p-0.5">
-          <button type="button" onClick={() => handleSortModeChange('grouped')} className={sortModeClass('grouped')}>
-            By group
-          </button>
-          <button type="button" onClick={() => handleSortModeChange('custom')} className={sortModeClass('custom')}>
-            Custom order
-          </button>
-        </div>
-
+      <div className="mb-8 flex justify-center">
         <label className="flex items-center gap-2 text-sm text-gray-400">
           <span>Account manager</span>
           <select
@@ -685,12 +408,6 @@ export default function AccountManagerTodo({
           </select>
         </label>
       </div>
-
-      {sortMode === 'custom' && (
-        <p className="mb-4 text-center text-xs text-gray-500">
-          Drag tasks using the grip handle to rearrange within each column.
-        </p>
-      )}
 
       <div className="mx-auto grid max-w-[1680px] grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start">
         <section className="min-w-0 rounded-2xl border border-[#810100]/20 bg-[#0d0d0d] p-5 sm:p-6">
@@ -714,19 +431,23 @@ export default function AccountManagerTodo({
               </p>
             </div>
           ) : (
-            <InReviewTaskList
+            <SortableTaskList
               tasks={orderedInReviewTasks}
-              sortMode={sortMode}
               sensors={sensors}
               onDragEnd={(event) => {
                 const { active, over } = event;
                 if (over) onReorderAmQueueTasks('inReview', active.id, over.id);
               }}
-              getClientColor={getClientColor}
-              onOpenCard={onOpenCard}
-              onMoveTask={onMoveTask}
-              onRequestEdits={setNeedsEditsCard}
-              todayKey={todayKey}
+              renderItem={(task) => (
+                <SortableInReviewTaskCard
+                  key={task.id}
+                  task={task}
+                  getClientColor={getClientColor}
+                  onOpenCard={onOpenCard}
+                  onMoveTask={onMoveTask}
+                  onRequestEdits={setNeedsEditsCard}
+                />
+              )}
             />
           )}
         </section>
@@ -750,18 +471,23 @@ export default function AccountManagerTodo({
               </p>
             </div>
           ) : (
-            <ClientGroupedList
+            <SortableTaskList
               tasks={orderedStoryTasks}
-              sortMode={sortMode}
               sensors={sensors}
               onDragEnd={(event) => {
                 const { active, over } = event;
                 if (over) onReorderAmQueueTasks('stories', active.id, over.id);
               }}
-              getClientColor={getClientColor}
-              onOpenCard={onOpenCard}
-              onMarkScheduled={onMarkScheduled}
-              onMarkPosted={onMarkPosted}
+              renderItem={(task) => (
+                <SortableTaskCard
+                  key={task.id}
+                  task={task}
+                  getClientColor={getClientColor}
+                  onOpenCard={onOpenCard}
+                  onMarkScheduled={onMarkScheduled}
+                  onMarkPosted={onMarkPosted}
+                />
+              )}
             />
           )}
         </section>
@@ -787,19 +513,23 @@ export default function AccountManagerTodo({
               </p>
             </div>
           ) : (
-            <DateGroupedList
+            <SortableTaskList
               tasks={orderedPostsTasks}
-              sortMode={sortMode}
               sensors={sensors}
               onDragEnd={(event) => {
                 const { active, over } = event;
                 if (over) onReorderAmQueueTasks('posts', active.id, over.id);
               }}
-              getClientColor={getClientColor}
-              onOpenCard={onOpenCard}
-              onMarkScheduled={onMarkScheduled}
-              onMarkPosted={onMarkPosted}
-              todayKey={todayKey}
+              renderItem={(task) => (
+                <SortableTaskCard
+                  key={task.id}
+                  task={task}
+                  getClientColor={getClientColor}
+                  onOpenCard={onOpenCard}
+                  onMarkScheduled={onMarkScheduled}
+                  onMarkPosted={onMarkPosted}
+                />
+              )}
             />
           )}
         </section>

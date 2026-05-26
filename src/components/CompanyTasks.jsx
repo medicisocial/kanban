@@ -16,9 +16,7 @@ export default function CompanyTasks({
   onDeleteAdminTask,
   onOpenCard,
   onSyncTaskOrder,
-  onSetTaskOrder,
   onReorderTasks,
-  onResetTaskOrder,
   onMarkScheduled,
   onMarkPosted,
   onSubmitForReview,
@@ -26,9 +24,7 @@ export default function CompanyTasks({
   onMoveTask,
   amTaskOrder,
   onSyncAmQueueOrder,
-  onSetAmQueueOrder,
   onReorderAmQueueTasks,
-  onResetAmQueueOrders,
 }) {
   const [activeRole, setActiveRole] = useState('editor');
 
@@ -72,9 +68,7 @@ export default function CompanyTasks({
           onSendBackForEditing={onSendBackForEditing}
           onMoveTask={onMoveTask}
           onSyncTaskOrder={onSyncTaskOrder}
-          onSetTaskOrder={onSetTaskOrder}
           onReorderTasks={onReorderTasks}
-          onResetTaskOrder={onResetTaskOrder}
         />
       )}
 
@@ -90,9 +84,7 @@ export default function CompanyTasks({
           onSendBackForEditing={onSendBackForEditing}
           amTaskOrder={amTaskOrder}
           onSyncAmQueueOrder={onSyncAmQueueOrder}
-          onSetAmQueueOrder={onSetAmQueueOrder}
           onReorderAmQueueTasks={onReorderAmQueueTasks}
-          onResetAmQueueOrders={onResetAmQueueOrders}
         />
       )}
 

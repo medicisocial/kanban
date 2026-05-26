@@ -61,16 +61,12 @@ function AppShell() {
   const {
     taskOrder,
     syncTaskOrder,
-    setTaskOrderFromIds,
     reorderTasks,
-    resetTaskOrder,
   } = useEditorTasks();
   const {
     taskOrder: amTaskOrder,
     syncQueueOrder: syncAmQueueOrder,
-    setQueueOrderFromIds: setAmQueueOrderFromIds,
     reorderQueueTasks: reorderAmQueueTasks,
-    resetAllQueueOrders: resetAmQueueOrders,
   } = useAccountManagerTasks();
   const {
     adminTasks,
@@ -512,9 +508,7 @@ function AppShell() {
           onDeleteAdminTask={deleteAdminTask}
           onOpenCard={handleCardClick}
           onSyncTaskOrder={syncTaskOrder}
-          onSetTaskOrder={setTaskOrderFromIds}
           onReorderTasks={reorderTasks}
-          onResetTaskOrder={resetTaskOrder}
           onMarkScheduled={handleMarkScheduled}
           onMarkPosted={handleMarkPosted}
           onSubmitForReview={handleSubmitForReview}
@@ -522,9 +516,7 @@ function AppShell() {
           onMoveTask={handleMoveEditorTask}
           amTaskOrder={amTaskOrder}
           onSyncAmQueueOrder={syncAmQueueOrder}
-          onSetAmQueueOrder={setAmQueueOrderFromIds}
           onReorderAmQueueTasks={reorderAmQueueTasks}
-          onResetAmQueueOrders={resetAmQueueOrders}
         />
       )}
 
