@@ -1,7 +1,7 @@
 import { COLUMNS, getContentTypeStyle, PLATFORM_ICON } from "../constants";
 import { useClientsContext } from "../context/ClientsContext";
 import { formatTime } from "../utils";
-import { formatStoryScheduleSummary, hasStoryDailyRange, hasStoryRecurrence } from "../utils/calendar";
+import { formatStoryScheduleSummary, hasStoryDailyRange, hasStoryRecurrence, isCalendarEventPosted } from "../utils/calendar";
 import CardTitleLink from "./CardTitleLink";
 
 export default function CalendarEvent({ card, onClick, onRemove, compact = false, hideClient = false }) {
@@ -10,10 +10,13 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
   const clientColor = getClientColor(card.client);
   const scheduleSummary = formatStoryScheduleSummary(card);
   const hasStorySchedule = hasStoryRecurrence(card) || hasStoryDailyRange(card);
+  const occurrenceDate = card.occurrenceDate || card.dueDate;
+  const isPosted = isCalendarEventPosted(card, occurrenceDate);
   const columnMeta = COLUMNS.find((col) => col.id === card.columnId);
-  const boardStatus = columnMeta?.title ?? null;
-  const statusClass =
-    card.columnId === 'scheduled'
+  const boardStatus = isPosted ? 'Posted' : (columnMeta?.title ?? null);
+  const statusClass = isPosted
+    ? 'text-gray-400'
+    : card.columnId === 'scheduled'
       ? 'text-emerald-300'
       : card.columnId === 'approved'
         ? 'text-blue-300'
@@ -46,8 +49,9 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
         }}
         className="group/event relative mb-1 w-full cursor-pointer rounded px-1.5 py-1 text-left transition hover:brightness-125"
         style={{
-          backgroundColor: typeStyle.border + "33",
+          backgroundColor: typeStyle.border + (isPosted ? "22" : "33"),
           borderLeft: `2px solid ${typeStyle.border}`,
+          opacity: isPosted ? 0.72 : 1,
         }}
         title={eventTitle}
       >
@@ -99,6 +103,7 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
         backgroundColor: typeStyle.bg,
         borderLeftColor: typeStyle.border,
         borderLeftWidth: "3px",
+        opacity: isPosted ? 0.78 : 1,
       }}
     >
       <button
