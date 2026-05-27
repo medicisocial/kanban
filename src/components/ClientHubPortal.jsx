@@ -9,6 +9,7 @@ import ClientProfilePortal from './ClientProfilePortal';
 import ClientPortalHome from './ClientPortalHome';
 import ClientUnifiedCalendarsPortal from './ClientUnifiedCalendarsPortal';
 import ClientPortalLayout from './clientPortal/ClientPortalLayout';
+import ClientPortalNotificationsPanel from './clientPortal/ClientPortalNotificationsPanel';
 import { filterEvents } from '../utils/eventsCalendar';
 import { createEvent } from '../constants';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
@@ -20,6 +21,7 @@ export default function ClientHubPortal({ onSignOut }) {
   const { getClientColor, getClientLogo } = useClientsContext();
   const [activeTab, setActiveTab] = useState('home');
   const [calendarTab, setCalendarTab] = useState('content');
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const handleTabChange = (tab) => {
     if (tab === 'events') {
@@ -28,6 +30,7 @@ export default function ClientHubPortal({ onSignOut }) {
       return;
     }
     setActiveTab(tab);
+    setNotificationsOpen(false);
   };
 
   const clientColor = portalData?.clientColor || getClientColor(brand);
@@ -123,6 +126,21 @@ export default function ClientHubPortal({ onSignOut }) {
       onRefresh={() => refreshPortalData()}
       onSignOut={handleSignOut}
       notificationCount={notificationCount}
+      notificationsOpen={notificationsOpen}
+      onNotificationsOpenChange={setNotificationsOpen}
+      notificationPanel={
+        <ClientPortalNotificationsPanel
+          brand={brand}
+          ideas={ideas}
+          cards={cards}
+          contacts={profileContacts}
+          socialLogins={profileSocialLogins}
+          clientLogo={clientLogo}
+          clientColor={clientColor}
+          onNavigate={handleTabChange}
+          onClose={() => setNotificationsOpen(false)}
+        />
+      }
       navBadges={navBadges}
     >
       {loadingData && !portalData && (

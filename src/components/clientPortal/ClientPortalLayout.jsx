@@ -40,6 +40,9 @@ export default function ClientPortalLayout({
   onRefresh,
   onSignOut,
   notificationCount = 0,
+  notificationPanel,
+  notificationsOpen,
+  onNotificationsOpenChange,
   navBadges = {},
   children,
 }) {
@@ -58,7 +61,9 @@ export default function ClientPortalLayout({
       activeTab={activeTab}
       onTabChange={onTabChange}
       notificationCount={notificationCount}
-      onNotificationClick={() => onTabChange('home')}
+      notificationPanel={notificationPanel}
+      notificationsOpen={notificationsOpen}
+      onNotificationsOpenChange={onNotificationsOpenChange}
       onProfileClick={() => onTabChange('profile')}
       onSignOut={onSignOut}
       sidebarFooter={
