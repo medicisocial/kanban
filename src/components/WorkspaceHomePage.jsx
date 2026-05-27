@@ -1,7 +1,6 @@
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import {
-  PortalPipelineMetric,
-  PortalRolePanel,
+  PortalRoleSummary,
 } from './clientPortal/PortalOverviewPanels';
 import { buildWorkspaceHomeSummary, buildMyWorkGreeting } from '../utils/workspaceHome';
 import { buildTodayTimeline, buildTodayHeadline } from '../utils/todayTimeline';
@@ -174,54 +173,34 @@ export default function WorkspaceHomePage({
 
   const showAmQueue = !myWorkOnly || summaryWithToday.showAccountManagerQueue;
 
-  const pipelineGroups = [
+  const pipelineRoles = [
     {
       label: 'Content creator',
-      items: [
-        {
-          label: 'To create',
-          value: summary.toCreateCount,
-          onClick: () => onNavigate('todo', { tasksRole: 'creator' }),
-        },
-      ],
+      count: summary.toCreateCount,
+      subtitle:
+        summary.shootsTodayCount > 0
+          ? `${summary.toCreateCount} to create · ${summary.shootsTodayCount} shoot${summary.shootsTodayCount === 1 ? '' : 's'} today`
+          : `${summary.toCreateCount} to create`,
+      onClick: () => onNavigate('todo', { tasksRole: 'creator' }),
     },
     {
       label: 'Editor',
-      items: [
-        {
-          label: 'Editing',
-          value: summary.editingCount,
-          onClick: () => onNavigate('todo', { tasksRole: 'editor' }),
-        },
-      ],
+      count: summary.editingCount,
+      subtitle: `${summary.editingCount} in editing`,
+      onClick: () => onNavigate('todo', { tasksRole: 'editor' }),
     },
   ];
 
   if (showAmQueue) {
-    pipelineGroups.push({
+    const amTotal =
+      summary.inReviewCount + summary.needsSchedulingCount + summary.needPostDateCount;
+    pipelineRoles.push({
       label: 'Account manager',
-      items: [
-        {
-          label: 'In review',
-          value: summary.inReviewCount,
-          onClick: () => onNavigate('todo', { tasksRole: 'account' }),
-        },
-        {
-          label: 'Scheduling',
-          value: summary.needsSchedulingCount,
-          onClick: () => onNavigate('todo', { tasksRole: 'account' }),
-        },
-        {
-          label: 'Post date',
-          value: summary.needPostDateCount,
-          onClick: () => onNavigate('todo', { tasksRole: 'account' }),
-        },
-      ],
+      count: amTotal,
+      subtitle: `${summary.inReviewCount} in review · ${summary.needsSchedulingCount} scheduling · ${summary.needPostDateCount} post date`,
+      onClick: () => onNavigate('todo', { tasksRole: 'account' }),
     });
   }
-
-  const corePipelineGroups = pipelineGroups.filter((group) => group.label !== 'Account manager');
-  const accountManagerGroup = pipelineGroups.find((group) => group.label === 'Account manager');
 
   const showTodayPanel = todayTimeline.items.length > 0;
 
@@ -248,34 +227,16 @@ export default function WorkspaceHomePage({
         </button>
       )}
 
-      <div className="mb-8 space-y-4">
-        <div className="overview-pipeline-grid">
-          {corePipelineGroups.map((group) => (
-            <PortalRolePanel key={group.label} label={group.label}>
-              {group.items.map((item) => (
-                <PortalPipelineMetric
-                  key={item.label}
-                  label={item.label}
-                  value={item.value}
-                  onClick={item.onClick}
-                />
-              ))}
-            </PortalRolePanel>
-          ))}
-        </div>
-
-        {accountManagerGroup && (
-          <PortalRolePanel label={accountManagerGroup.label} wide grid>
-            {accountManagerGroup.items.map((item) => (
-              <PortalPipelineMetric
-                key={item.label}
-                label={item.label}
-                value={item.value}
-                onClick={item.onClick}
-              />
-            ))}
-          </PortalRolePanel>
-        )}
+      <div className="overview-pipeline-row">
+        {pipelineRoles.map((role) => (
+          <PortalRoleSummary
+            key={role.label}
+            label={role.label}
+            count={role.count}
+            subtitle={role.subtitle}
+            onClick={role.onClick}
+          />
+        ))}
       </div>
 
       {showTodayPanel && (

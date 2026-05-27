@@ -25,7 +25,7 @@ export default function ClientPipelinePortal({ cards, clientColor, embedded = fa
   const filteredCards = pipelineCards;
 
   const content = (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <div className="overview-pipeline-row">
       {CLIENT_PIPELINE_COLUMNS.map((column) => {
         const columnCards = filteredCards.filter(
           (card) => getClientPipelineDisplayColumn(card) === column.id,

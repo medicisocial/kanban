@@ -21,6 +21,32 @@ export function PortalPipelineMetric({ label, value, onClick }) {
   return <div className={className}>{inner}</div>;
 }
 
+export function PortalRoleSummary({ label, count, subtitle, onClick }) {
+  const className = `overview-role-summary glass-surface${
+    onClick ? ' overview-role-summary-interactive' : ''
+  }`;
+
+  const inner = (
+    <>
+      <div className="overview-role-summary-head">
+        <h3 className="overview-role-title">{label}</h3>
+        <span className="overview-role-summary-count">{count}</span>
+      </div>
+      {subtitle && <p className="overview-role-summary-subtitle">{subtitle}</p>}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {inner}
+      </button>
+    );
+  }
+
+  return <div className={className}>{inner}</div>;
+}
+
 export function PortalRolePanel({ label, children, wide = false, grid = false, quad = false }) {
   const bodyClass = quad
     ? 'overview-role-panel-body-quad'

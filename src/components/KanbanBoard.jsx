@@ -66,7 +66,6 @@ export default function KanbanBoard({
   const [activeCard, setActiveCard] = useState(null);
   const [finishedExpanded, setFinishedExpanded] = useState(false);
   const [myCardsOnly, setMyCardsOnly] = useState(false);
-  const [focusGroup, setFocusGroup] = useState(null);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
@@ -85,10 +84,7 @@ export default function KanbanBoard({
     [cards, clientFilter, myCardsOnly, staffName, clientAccountManagers],
   );
 
-  const visibleGroups = useMemo(() => {
-    if (!focusGroup) return BOARD_COLUMN_GROUPS;
-    return BOARD_COLUMN_GROUPS.filter((group) => group.id === focusGroup || group.collapsible);
-  }, [focusGroup]);
+  const visibleGroups = BOARD_COLUMN_GROUPS;
 
   const cardsByColumn = useMemo(() => {
     const map = {};
@@ -166,45 +162,16 @@ export default function KanbanBoard({
               My cards
             </button>
           )}
-          {BOARD_COLUMN_GROUPS.filter((group) => !group.collapsible).map((group) => (
-            <button
-              key={group.id}
-              type="button"
-              onClick={() => setFocusGroup((current) => (current === group.id ? null : group.id))}
-              className={
-                focusGroup === group.id
-                  ? `${btnPrimaryClass} py-1.5 text-[10px]`
-                  : `${btnSecondaryClass} py-1.5 text-[10px]`
-              }
-            >
-              {group.label}
-            </button>
-          ))}
-          {(myCardsOnly || focusGroup) && (
-            <button
-              type="button"
-              onClick={() => {
-                setMyCardsOnly(false);
-                setFocusGroup(null);
-              }}
-              className={`${btnSecondaryClass} py-1.5 text-[10px] text-white/45`}
-            >
-              Clear
-            </button>
-          )}
         </ClientPortalSectionHeader>
       )}
 
       {embedded && filteredCards.length === 0 && (
         <div className="mb-4 border border-dashed border-white/10 px-6 py-10 text-center">
           <p className="text-sm text-white/45">No cards match the current filters.</p>
-          {(myCardsOnly || focusGroup) && (
+          {myCardsOnly && (
             <button
               type="button"
-              onClick={() => {
-                setMyCardsOnly(false);
-                setFocusGroup(null);
-              }}
+              onClick={() => setMyCardsOnly(false)}
               className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}
             >
               Show all cards
@@ -213,10 +180,9 @@ export default function KanbanBoard({
         </div>
       )}
 
-      <div className={`w-full overflow-x-auto ${embedded ? 'pb-2' : 'scroll-px-4 pb-6 sm:scroll-px-6'}`}>
-        <div className={embedded ? 'flex w-max gap-3' : 'flex justify-center px-4 sm:px-6'}>
-          <div className="flex w-max gap-3">
-            {visibleGroups.map((group) => {
+      <div className={`flex w-full justify-center overflow-x-auto ${embedded ? 'pb-2' : 'scroll-px-4 pb-6 sm:scroll-px-6'}`}>
+        <div className="flex w-max gap-3 px-1">
+          {visibleGroups.map((group) => {
               const isArchive = group.collapsible;
               const solo = group.columnIds.length === 1;
               const primaryColumn = COLUMN_BY_ID[group.columnIds[0]];
@@ -289,8 +255,7 @@ export default function KanbanBoard({
                   </div>
                 </section>
               );
-            })}
-          </div>
+          })}
         </div>
       </div>
 
