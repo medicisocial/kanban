@@ -21,8 +21,8 @@ function isThisWeek(dateKey) {
   return date >= start && date < end;
 }
 
-function matchesStaff(card, staffName, clientAccountManagers, myWorkOnly) {
-  if (!myWorkOnly || !staffName) return true;
+function matchesStaff(card, staffName, clientAccountManagers, personalScope) {
+  if (!personalScope || !staffName) return true;
   return cardIsAssignedToStaff(card, staffName, clientAccountManagers);
 }
 
@@ -33,15 +33,8 @@ function cardNeedsScheduling(card) {
   return card.columnId === 'approved';
 }
 
-function matchesAccountManagerQueue(
-  card,
-  staffName,
-  clientAccountManagers,
-  myWorkOnly,
-  showAllAccountManagerQueue = false,
-) {
-  if (!myWorkOnly || !staffName) return true;
-  if (showAllAccountManagerQueue) return true;
+function matchesAccountManagerQueue(card, staffName, clientAccountManagers, personalScope) {
+  if (!personalScope || !staffName) return true;
   return cardIsAssignedToAccountManager(card, staffName, clientAccountManagers);
 }
 
@@ -54,9 +47,11 @@ export function buildWorkspaceHomeSummary({
   staffName = '',
   clientAccountManagers = {},
   myWorkOnly = false,
+  companyWideView = false,
   showAccountManagerQueue = true,
-  showAllAccountManagerQueue = false,
 }) {
+  const personalScope = myWorkOnly && !companyWideView;
+
   const matchesClient = (item) =>
     clientFilter === 'all' || item.client === clientFilter;
 
@@ -64,57 +59,60 @@ export function buildWorkspaceHomeSummary({
   const scopedIdeas = ideas.filter(matchesClient);
 
   const cardScope = (card) =>
-    matchesStaff(card, staffName, clientAccountManagers, myWorkOnly);
+    matchesStaff(card, staffName, clientAccountManagers, personalScope);
 
   const inReview = scopedCards.filter((c) => c.columnId === 'in-review');
   const myInReview = inReview.filter((c) =>
-    matchesAccountManagerQueue(
-      c,
-      staffName,
-      clientAccountManagers,
-      myWorkOnly,
-      showAllAccountManagerQueue,
-    ),
+    matchesAccountManagerQueue(c, staffName, clientAccountManagers, personalScope),
   );
   const toCreate = scopedCards.filter((c) => {
     if (c.columnId !== 'shoot') return false;
-    if (myWorkOnly && staffName) {
+    if (personalScope && staffName) {
       return cardIsAssignedToContentCreator(c, staffName);
     }
     return true;
   });
-  const editing = scopedCards.filter((c) => c.columnId === 'editing' && cardScope(c));
+  const editing = companyWideView
+    ? scopedCards.filter((c) => c.columnId === 'editing')
+    : scopedCards.filter((c) => c.columnId === 'editing' && cardScope(c));
   const pendingIdeas = scopedIdeas.filter((i) => i.status === 'pending');
-  const shootsToday = scopedCards.filter(
+  const shootsTodayAll = scopedCards.filter(
     (c) =>
       c.shootDate &&
       isToday(c.shootDate) &&
-      c.contentType !== 'Story' &&
-      cardScope(c),
+      c.contentType !== 'Story',
   );
-  const scheduledThisWeek = scopedCards.filter(
-    (c) => c.columnId === 'scheduled' && c.dueDate && isThisWeek(c.dueDate) && cardScope(c),
+  const shootsToday = companyWideView
+    ? shootsTodayAll
+    : scopedCards.filter(
+        (c) =>
+          c.shootDate &&
+          isToday(c.shootDate) &&
+          c.contentType !== 'Story' &&
+          cardScope(c),
+      );
+  const scheduledThisWeekAll = scopedCards.filter(
+    (c) => c.columnId === 'scheduled' && c.dueDate && isThisWeek(c.dueDate),
   );
+  const scheduledThisWeek = companyWideView
+    ? scheduledThisWeekAll
+    : scopedCards.filter(
+        (c) => c.columnId === 'scheduled' && c.dueDate && isThisWeek(c.dueDate) && cardScope(c),
+      );
   const needsSchedulingAll = scopedCards.filter(cardNeedsScheduling);
   const needsScheduling = needsSchedulingAll.filter((c) =>
-    matchesAccountManagerQueue(
-      c,
-      staffName,
-      clientAccountManagers,
-      myWorkOnly,
-      showAllAccountManagerQueue,
-    ),
+    matchesAccountManagerQueue(c, staffName, clientAccountManagers, personalScope),
   );
   const openAdminTasks = (adminTasks || []).filter((t) => !t.completed);
 
-  const includeAccountManagerQueue = !myWorkOnly || showAccountManagerQueue;
+  const includeAccountManagerQueue = !myWorkOnly || showAccountManagerQueue || companyWideView;
   const visibleInReview = includeAccountManagerQueue
-    ? myWorkOnly && staffName
+    ? personalScope && staffName
       ? myInReview
       : inReview
     : [];
   const visibleNeedsScheduling = includeAccountManagerQueue
-    ? myWorkOnly && staffName
+    ? personalScope && staffName
       ? needsScheduling
       : needsSchedulingAll
     : [];
@@ -123,7 +121,8 @@ export function buildWorkspaceHomeSummary({
     syncTotal,
     staffName,
     myWorkOnly,
-    showAccountManagerQueue: includeAccountManagerQueue,
+    companyWideView,
+    showAccountManagerQueue: !myWorkOnly || includeAccountManagerQueue,
     inReviewCount: visibleInReview.length,
     toCreateCount: toCreate.length,
     editingCount: editing.length,
@@ -153,6 +152,17 @@ export function buildMyWorkGreeting(firstName, summary) {
   const pipelineCount =
     summary.toCreateCount + summary.editingCount + summary.inReviewCount + summary.needsSchedulingCount;
   const activeCount = pipelineCount + summary.pendingIdeasCount;
+
+  if (summary.companyWideView) {
+    return {
+      eyebrow: 'My work',
+      title,
+      description:
+        activeCount > 0 || summary.shootsTodayCount > 0
+          ? 'Company-wide production at a glance — pipeline, reviews, and schedules.'
+          : "You're all caught up for now — nice work. Here's the full picture when something new comes in.",
+    };
+  }
 
   if (activeCount === 0 && summary.shootsTodayCount === 0) {
     return {

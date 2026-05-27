@@ -43,7 +43,7 @@ import CardModal from "./CardModal";
 import { useStaffAuth } from "../context/StaffAuthContext";
 import { useClientsContext } from "../context/ClientsContext";
 import { getDefaultWorkspaceView } from "../utils/getDefaultWorkspaceView";
-import { resolveStaffMemberName, staffHasAccountManagerQueueAccess, staffMemberHasRole } from "../utils/staffMembers";
+import { resolveStaffMemberName, staffHasAccountManagerQueueAccess, staffHasLeadershipWorkspaceAccess } from "../utils/staffMembers";
 import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
 import { usesPersonalWorkspaceView } from "../utils/staffAuth";
 
@@ -539,11 +539,10 @@ export default function AppShell({ onSignOut }) {
   const syncTotal = responseCount + contentReviewResponseCount + shootResponseCount;
   const staffName = resolveStaffMemberName(session, teamMembers);
   const myWorkOnly = usesPersonalWorkspaceView(session);
-  const showAccountManagerQueue = !myWorkOnly || staffHasAccountManagerQueueAccess(session, teamMembers);
-  const showAllAccountManagerQueue =
-    myWorkOnly &&
-    (staffMemberHasRole(session, teamMembers, 'Owner') ||
-      staffMemberHasRole(session, teamMembers, 'Creative Director'));
+  const companyWideView = myWorkOnly && staffHasLeadershipWorkspaceAccess(session, teamMembers);
+  const showAccountManagerQueue = !myWorkOnly
+    ? true
+    : staffHasAccountManagerQueueAccess(session, teamMembers) || companyWideView;
   const workspaceAlerts = useMemo(
     () =>
       buildWorkspaceAlerts({
@@ -598,8 +597,8 @@ export default function AppShell({ onSignOut }) {
           staffName={staffName}
           clientAccountManagers={clientAccountManagers}
           myWorkOnly={myWorkOnly}
+          companyWideView={companyWideView}
           showAccountManagerQueue={showAccountManagerQueue}
-          showAllAccountManagerQueue={showAllAccountManagerQueue}
           onNavigate={handleNavigate}
           onOpenCard={handleCardClick}
           onOpenNotifications={() => setNotificationsOpen(true)}

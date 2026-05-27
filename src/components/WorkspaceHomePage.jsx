@@ -35,8 +35,8 @@ export default function WorkspaceHomePage({
   staffName = '',
   clientAccountManagers = {},
   myWorkOnly = false,
+  companyWideView = false,
   showAccountManagerQueue = true,
-  showAllAccountManagerQueue = false,
   onNavigate,
   onOpenCard,
   onOpenNotifications,
@@ -50,8 +50,8 @@ export default function WorkspaceHomePage({
     staffName,
     clientAccountManagers,
     myWorkOnly,
+    companyWideView,
     showAccountManagerQueue,
-    showAllAccountManagerQueue,
   });
 
   const firstName = staffName.trim().split(/\s+/)[0] || '';
@@ -65,6 +65,8 @@ export default function WorkspaceHomePage({
     (clientFilter === 'all'
       ? 'Company-wide production at a glance — pipeline, reviews, and schedules.'
       : `Production at a glance for ${clientFilter}.`);
+
+  const showAmQueue = !myWorkOnly || summary.showAccountManagerQueue;
 
   return (
     <section>
@@ -92,7 +94,7 @@ export default function WorkspaceHomePage({
           value={summary.editingCount}
           onClick={() => onNavigate('todo', { tasksRole: 'editor' })}
         />
-        {summary.showAccountManagerQueue && (
+        {showAmQueue && (
           <>
             <StatCard
               label="In review"
@@ -146,7 +148,7 @@ export default function WorkspaceHomePage({
           )}
         </div>
 
-        {summary.showAccountManagerQueue && (
+        {showAmQueue && (
           <div className={`${surfacePanelClass} p-5`}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-white">Awaiting client review</h3>
@@ -188,7 +190,7 @@ export default function WorkspaceHomePage({
           </div>
         )}
 
-        {summary.showAccountManagerQueue && (
+        {showAmQueue && (
           <div className={`${surfacePanelClass} p-5`}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-white">Needs scheduling</h3>

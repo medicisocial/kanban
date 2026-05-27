@@ -30,12 +30,19 @@ export function cardIsAssignedToAccountManager(card, staffName, clientAccountMan
   return accountManager === normalized;
 }
 
+export function staffHasLeadershipWorkspaceAccess(session, teamMembers) {
+  if (!session?.username) return false;
+  return (
+    staffMemberHasRole(session, teamMembers, 'Owner') ||
+    staffMemberHasRole(session, teamMembers, 'Creative Director')
+  );
+}
+
 export function staffHasAccountManagerQueueAccess(session, teamMembers) {
   if (!session?.username) return false;
   return (
     staffMemberHasRole(session, teamMembers, 'Account Manager') ||
-    staffMemberHasRole(session, teamMembers, 'Owner') ||
-    staffMemberHasRole(session, teamMembers, 'Creative Director')
+    staffHasLeadershipWorkspaceAccess(session, teamMembers)
   );
 }
 
