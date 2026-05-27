@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { getContentTypeStyle } from '../constants';
+import { getContentTypeStyle, isOneOffProjectCard } from '../constants';
 import {
   addMonths,
   getDefaultCalendarDate,
@@ -38,6 +38,8 @@ function sortShootCards(a, b) {
 
 export default function PlanShootDateModal({ card, cards, plans, getPlan, onClose, onSave, onOpenCard, onAddItemToDay, onAddCardsToShoot }) {
   const initialDate = card.shootDate || '';
+  const isOneOff = isOneOffProjectCard(card);
+  const showAllShoots = isOneOff;
   const [focusDate, setFocusDate] = useState(() =>
     initialDate ? parseDateKey(initialDate) : getDefaultCalendarDate(),
   );
@@ -63,20 +65,26 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
     [cards, card.client],
   );
 
+  const calendarShootCards = useMemo(
+    () => (showAllShoots ? getShootCards(cards) : clientShootCards),
+    [showAllShoots, cards, clientShootCards],
+  );
+
   const markedDates = useMemo(() => {
     if (!plans) return {};
     const marks = {};
     for (const plan of Object.values(plans)) {
-      if (plan.client === card.client && plan.manual && plan.dateKey) {
-        marks[plan.dateKey] = 'Shoot planned';
+      if (!plan.manual || !plan.dateKey) continue;
+      if (showAllShoots || plan.client === card.client) {
+        marks[plan.dateKey] = showAllShoots ? 'Shoot planned' : 'Shoot planned';
       }
     }
     return marks;
-  }, [plans, card.client]);
+  }, [plans, card.client, showAllShoots]);
 
   const cardsByDate = useMemo(() => {
     const map = groupCardsByDate(
-      clientShootCards.filter((entry) => entry.id !== card.id).map(toCalendarDisplay),
+      calendarShootCards.filter((entry) => entry.id !== card.id).map(toCalendarDisplay),
     );
 
     if (selectedDate) {
@@ -91,14 +99,14 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
     }
 
     return map;
-  }, [clientShootCards, card, selectedDate, shootTime]);
+  }, [calendarShootCards, card, selectedDate, shootTime]);
 
-  const allClientShoots = useMemo(
+  const allVisibleShoots = useMemo(
     () =>
-      clientShootCards
+      calendarShootCards
         .filter((entry) => entry.id !== card.id && entry.shootDate)
         .sort(sortShootCards),
-    [clientShootCards, card.id],
+    [calendarShootCards, card.id],
   );
 
   const selectedDayShoots = useMemo(() => {
@@ -151,6 +159,10 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
     setSelectedDate(dateKey);
     setFocusDate(parseDateKey(dateKey));
     setError('');
+
+    if (showAllShoots && clickedCard.client !== card.client) {
+      return;
+    }
 
     const time = clickedCard.dueTime || clickedCard.shootTime;
     const endTime = clickedCard.shootEndTime;
@@ -214,8 +226,11 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
             <p className="text-xs font-medium uppercase tracking-wider text-[#fca5a5]">Shoot schedule</p>
             <h2 className="mt-1 text-lg font-semibold text-white">{card.title}</h2>
             <p className="mt-1 text-sm text-gray-400">
-              {card.client} shoot calendar · {allClientShoots.length} scheduled shoot
-              {allClientShoots.length === 1 ? '' : 's'} · click a day or shoot to select it
+              {showAllShoots
+                ? `All shoots · ${allVisibleShoots.length} scheduled · click a day or shoot to select it`
+                : `${card.client} shoot calendar · ${allVisibleShoots.length} scheduled shoot${
+                    allVisibleShoots.length === 1 ? '' : 's'
+                  } · click a day or shoot to select it`}
             </p>
           </div>
           <button
@@ -251,7 +266,9 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
             </div>
 
             <p className="mb-3 text-xs text-gray-500">
-              Click a day or an existing shoot to select it. Multiple reels or posts can share the same shoot day.
+              {showAllShoots
+                ? 'All agency shoots are shown so you can pick a day without conflicts. Click a day or existing shoot to select it.'
+                : 'Click a day or an existing shoot to select it. Multiple reels or posts can share the same shoot day.'}
             </p>
 
             <div className={`${surfacePanelClass} p-4`}>
@@ -263,7 +280,7 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
                 onCardClick={handleCalendarEventClick}
                 markedDates={markedDates}
                 overviewLabel="shoots"
-                hideClient
+                hideClient={!showAllShoots}
               />
             </div>
           </div>
@@ -317,7 +334,9 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
                 <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-gray-500">
                   {selectedDate
                     ? `On ${formatDate(selectedDate)}`
-                    : `${card.client} scheduled shoots`}
+                    : showAllShoots
+                      ? 'All scheduled shoots'
+                      : `${card.client} scheduled shoots`}
                 </p>
 
                 <div className="space-y-2">
@@ -340,11 +359,13 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
 
                   {selectedDate && selectedDayShoots.length === 0 && (
                     <p className="rounded-lg border border-dashed border-white/10 px-3 py-4 text-center text-xs text-gray-500">
-                      No other content scheduled to shoot for {card.client} on this day yet.
+                      {showAllShoots
+                        ? 'No other shoots scheduled on this day.'
+                        : `No other content scheduled to shoot for ${card.client} on this day yet.`}
                     </p>
                   )}
 
-                  {selectedDate && selectedSessionTime.shootTime && (
+                  {selectedDate && selectedSessionTime.shootTime && !showAllShoots && (
                     <p className="rounded-lg border border-[#810100]/20 bg-[#810100]/5 px-3 py-2 text-xs text-[#fca5a5]">
                       Existing shoot at {formatTime(selectedSessionTime.shootTime)}
                       {selectedSessionTime.shootEndTime
@@ -389,18 +410,20 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
                       card={entry}
                       onClick={(clickedCard) => onOpenCard?.(clickedCard)}
                       compact
-                      hideClient
+                      hideClient={!showAllShoots}
                     />
                   ))}
 
-                  {!selectedDate && allClientShoots.length === 0 && (
+                  {!selectedDate && allVisibleShoots.length === 0 && (
                     <p className="rounded-lg border border-dashed border-white/10 px-3 py-4 text-center text-xs text-gray-500">
-                      No other shoots on {card.client}&apos;s schedule yet.
+                      {showAllShoots
+                        ? 'No shoots scheduled yet.'
+                        : `No other shoots on ${card.client}'s schedule yet.`}
                     </p>
                   )}
 
                   {!selectedDate &&
-                    allClientShoots.map((entry) => (
+                    allVisibleShoots.map((entry) => (
                       <CalendarEvent
                         key={entry.id}
                         card={toCalendarDisplay(entry)}
@@ -412,7 +435,7 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
                           })
                         }
                         compact
-                        hideClient
+                        hideClient={!showAllShoots}
                       />
                     ))}
                 </div>
