@@ -7,14 +7,15 @@ import { getMeetingContactLabel, isRecurringMeeting } from '../utils/meetingsCal
 import { btnPrimaryClass, btnSecondaryClass, inputClass, selectClass } from './clientPortal/clientPortalUi';
 
 const CONTACT_TYPES = [
-  { value: 'internal', label: 'Internal team' },
   { value: 'client', label: 'Existing client' },
   { value: 'prospect', label: 'Prospective client' },
+  { value: 'internal', label: 'Internal team' },
 ];
 
-function getInitialContactType(meeting) {
+function getInitialContactType(meeting, defaultClient, lockedClient) {
   if (meeting?.prospectName) return 'prospect';
   if (meeting?.client) return 'client';
+  if (lockedClient || defaultClient) return 'client';
   return 'internal';
 }
 
@@ -44,9 +45,11 @@ export default function MeetingModal({
   const [date, setDate] = useState(meeting?.date || defaultDate || toDateKey(new Date()));
   const [time, setTime] = useState(meeting?.time || '');
   const [endTime, setEndTime] = useState(meeting?.endTime || '');
-  const [contactType, setContactType] = useState(() => getInitialContactType(meeting));
+  const [contactType, setContactType] = useState(() =>
+    getInitialContactType(meeting, defaultClient, lockedClient),
+  );
   const [client, setClient] = useState(
-    meeting?.client || lockedClient || defaultClient || clients[0] || '',
+    meeting?.client || lockedClient || defaultClient || '',
   );
   const [prospectName, setProspectName] = useState(meeting?.prospectName || '');
   const [location, setLocation] = useState(meeting?.location || '');
@@ -71,17 +74,6 @@ export default function MeetingModal({
 
   const handleContactTypeChange = (nextType) => {
     setContactType(nextType);
-    if (nextType === 'internal') {
-      setClient('');
-      setProspectName('');
-    } else if (nextType === 'client') {
-      setProspectName('');
-      if (!client) {
-        setClient(lockedClient || defaultClient || clients[0] || '');
-      }
-    } else {
-      setClient('');
-    }
   };
 
   const handleSubmit = (e) => {
@@ -95,6 +87,18 @@ export default function MeetingModal({
     }
     if (!date) {
       setError('Please pick a date.');
+      return;
+    }
+    if (!time) {
+      setError('Please enter a start time.');
+      return;
+    }
+    if (!endTime) {
+      setError('Please enter an end time.');
+      return;
+    }
+    if (endTime <= time) {
+      setError('End time must be after start time.');
       return;
     }
     if (contactType === 'client' && !client) {
@@ -207,6 +211,7 @@ export default function MeetingModal({
                 className={selectClass}
                 disabled={clientLocked}
               >
+                <option value="">Select client…</option>
                 {clients.map((name) => (
                   <option key={name} value={name}>
                     {name}
@@ -289,6 +294,7 @@ export default function MeetingModal({
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
                 className={inputClass}
+                required
               />
             </div>
             <div>
@@ -300,6 +306,7 @@ export default function MeetingModal({
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
                 className={inputClass}
+                required
               />
             </div>
           </div>
