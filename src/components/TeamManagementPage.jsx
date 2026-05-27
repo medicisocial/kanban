@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
+import { useStaffAuth } from '../context/StaffAuthContext';
 import { INTERNAL_TEAM_CLIENT } from '../constants';
+import { buildBackupPayloadForPush } from '../utils/dataBackup';
+import { pushWorkspace } from '../utils/cloudSync';
 import ClientLogoAvatar from './clientPortal/ClientLogoAvatar';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import TeamMemberDetailCard from './TeamMemberDetailCard';
@@ -34,6 +37,7 @@ export default function TeamManagementPage() {
     removeTeamMember,
     getClientColor,
   } = useClientsContext();
+  const { session } = useStaffAuth();
 
   const teamColor = getClientColor(INTERNAL_TEAM_CLIENT) || '#810100';
 
@@ -60,6 +64,15 @@ export default function TeamManagementPage() {
 
   const handleSaveMember = (id, draft) => {
     updateTeamMember(id, draft);
+    if (session) {
+      window.setTimeout(async () => {
+        try {
+          await pushWorkspace(session, buildBackupPayloadForPush());
+        } catch {
+          /* debounced sync will retry */
+        }
+      }, 200);
+    }
     setMessage('Team member saved.');
     setTimeout(() => setMessage(''), 3000);
     setSelectedMemberId(null);

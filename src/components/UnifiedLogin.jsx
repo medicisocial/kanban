@@ -5,7 +5,7 @@ import {
   saveStaffSession,
   verifyStaffCredentials,
 } from '../utils/staffAuth';
-import { verifyTeamMemberStaffCredentials } from '../utils/staffMembers';
+import { authenticateTeamMemberCredentials } from '../utils/teamAuth';
 import { loginClientPortal } from '../utils/clientPortalAuth';
 
 const labelClass =
@@ -46,10 +46,9 @@ export default function UnifiedLogin({ onAuthenticated, checking = false }) {
           return;
         }
 
-        const teamMember = verifyTeamMemberStaffCredentials(username, password);
-        if (teamMember) {
-          const loginName = teamMember.username?.trim() || teamMember.name;
-          const session = await createStaffSession(loginName);
+        const teamLoginName = await authenticateTeamMemberCredentials(username, password);
+        if (teamLoginName) {
+          const session = await createStaffSession(teamLoginName);
           saveStaffSession(session);
           onAuthenticated('staff');
           return;
@@ -96,7 +95,7 @@ export default function UnifiedLogin({ onAuthenticated, checking = false }) {
           </h1>
 
           <p className="mt-2 text-sm text-white/50">
-            Enter your credentials to access your brand workspace.
+            Sign in with your team or client portal credentials. Logins work from any computer once saved to cloud.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">

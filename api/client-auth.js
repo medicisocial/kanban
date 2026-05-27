@@ -31,7 +31,8 @@ export default async function handler(req, res) {
   const authMap = getClientPortalAuthMap(workspace);
   if (!Object.keys(authMap).length) {
     return res.status(503).json({
-      error: 'No client portal logins are synced yet. Staff must save client logins under Filter → Client logins.',
+      error:
+        'No client portal logins are synced yet. Staff must save portal users under Clients → Users (or Team logins) and confirm cloud sync.',
     });
   }
 

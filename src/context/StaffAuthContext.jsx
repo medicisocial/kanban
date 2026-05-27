@@ -10,7 +10,7 @@ import {
   saveStaffSession,
   verifyStaffCredentials,
 } from '../utils/staffAuth';
-import { verifyTeamMemberStaffCredentials } from '../utils/staffMembers';
+import { authenticateTeamMemberCredentials } from '../utils/teamAuth';
 
 const StaffAuthContext = createContext(null);
 
@@ -58,10 +58,9 @@ export function StaffAuthProvider({ children }) {
       return { ok: true };
     }
 
-    const teamMember = verifyTeamMemberStaffCredentials(username, password);
-    if (teamMember) {
-      const loginName = teamMember.username?.trim() || teamMember.name;
-      const nextSession = await createStaffSession(loginName);
+    const teamLoginName = await authenticateTeamMemberCredentials(username, password);
+    if (teamLoginName) {
+      const nextSession = await createStaffSession(teamLoginName);
       saveStaffSession(nextSession);
       setSession(nextSession);
       return { ok: true };
