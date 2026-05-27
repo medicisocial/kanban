@@ -7,11 +7,20 @@ export function cardIsAssignedToContentCreator(card, staffName) {
   return creator === staffName.trim().toLowerCase();
 }
 
+export function getToCreateQueueCards(cards, { staffName = '', personalScope = false } = {}) {
+  return getBoardCards(cards).filter((card) => {
+    if (card.columnId !== 'shoot') return false;
+    if (personalScope && staffName) {
+      return cardIsAssignedToContentCreator(card, staffName);
+    }
+    return true;
+  });
+}
+
 export function buildContentCreatorTasks(cards, { client, staffName = '' } = {}) {
-  const boardCards = getBoardCards(cards).filter((card) => card.columnId === 'shoot');
-  const filtered = filterCards(boardCards, { client }).filter((card) =>
-    cardIsAssignedToContentCreator(card, staffName),
-  );
+  const filtered = filterCards(getToCreateQueueCards(cards, { staffName, personalScope: Boolean(staffName) }), {
+    client,
+  });
 
   return filtered
     .map((card) => ({

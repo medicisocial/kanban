@@ -3,7 +3,7 @@ import {
   cardIsAssignedToStaff,
   cardIsAssignedToAccountManager,
 } from './staffMembers';
-import { cardIsAssignedToContentCreator } from './contentCreatorTodo';
+import { getToCreateQueueCards } from './contentCreatorTodo';
 
 function isToday(dateKey) {
   return dateKey === toDateKey(new Date());
@@ -65,13 +65,7 @@ export function buildWorkspaceHomeSummary({
   const myInReview = inReview.filter((c) =>
     matchesAccountManagerQueue(c, staffName, clientAccountManagers, personalScope),
   );
-  const toCreate = scopedCards.filter((c) => {
-    if (c.columnId !== 'shoot') return false;
-    if (personalScope && staffName) {
-      return cardIsAssignedToContentCreator(c, staffName);
-    }
-    return true;
-  });
+  const toCreate = getToCreateQueueCards(scopedCards, { staffName, personalScope });
   const editing = companyWideView
     ? scopedCards.filter((c) => c.columnId === 'editing')
     : scopedCards.filter((c) => c.columnId === 'editing' && cardScope(c));
