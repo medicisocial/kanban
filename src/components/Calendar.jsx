@@ -73,19 +73,11 @@ export default function Calendar({
     const active = calendarTab === tab;
     if (embedded) {
       return `px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition ${
-        active
-          ? tab === 'stories'
-            ? 'border border-sky-500/40 bg-sky-500/15 text-sky-200'
-            : `${btnPrimaryClass} py-1.5`
-          : 'text-white/45 hover:text-white'
+        active ? `${btnPrimaryClass} py-1.5` : 'text-white/45 hover:text-white'
       }`;
     }
     return `rounded-md px-4 py-1.5 text-sm font-medium transition ${
-      active
-        ? tab === 'stories'
-          ? 'bg-blue-600 text-white'
-          : 'bg-[#810100] text-white'
-        : 'text-gray-400 hover:text-white'
+      active ? 'bg-[#810100] text-white' : 'text-gray-400 hover:text-white'
     }`;
   };
 
@@ -93,27 +85,17 @@ export default function Calendar({
     const active = viewMode === mode;
     if (embedded) {
       return `px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition ${
-        active
-          ? isStories
-            ? 'border border-sky-500/40 bg-sky-500/15 text-sky-200'
-            : `${btnPrimaryClass} py-1.5`
-          : 'text-white/45 hover:text-white'
+        active ? `${btnPrimaryClass} py-1.5` : 'text-white/45 hover:text-white'
       }`;
     }
     return `rounded-md px-4 py-1.5 text-sm font-medium transition ${
-      active
-        ? isStories
-          ? 'bg-blue-600 text-white'
-          : 'bg-[#810100] text-white'
-        : 'text-gray-400 hover:text-white'
+      active ? 'bg-[#810100] text-white' : 'text-gray-400 hover:text-white'
     }`;
   };
 
   const addBtnClass = embedded
-    ? `${isStories ? 'border border-sky-500/40 bg-sky-600/80 hover:bg-sky-600' : btnPrimaryClass} px-4 py-1.5 text-[11px]`
-    : `rounded-lg px-4 py-1.5 text-sm font-medium text-white transition hover:opacity-90 ${
-        isStories ? 'bg-blue-600 hover:bg-blue-500' : 'bg-[#810100] hover:bg-[#a00000]'
-      }`;
+    ? `${btnPrimaryClass} px-4 py-1.5 text-[11px]`
+    : 'rounded-lg bg-[#810100] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#a00000]';
 
   const overviewLabel = isStories ? 'stories' : 'content';
 

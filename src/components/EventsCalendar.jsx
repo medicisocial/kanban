@@ -23,6 +23,7 @@ export default function EventsCalendar({
   onDeleteEvent,
   embedded = false,
   clientMode = false,
+  hideSectionHeader = false,
 }) {
   const [focusDate, setFocusDate] = useState(() => getDefaultCalendarDate());
   const [modal, setModal] = useState(null);
@@ -151,19 +152,23 @@ export default function EventsCalendar({
   return (
     <>
       {embedded ? (
-        <section>
-          <ClientPortalSectionHeader
-            title="Events Calendar"
-            description={
-              clientMode
-                ? 'Log upcoming events using your industry-specific form. Drafts save privately until you submit.'
-                : showAllClients
-                  ? 'View and manage events across all clients. Use the header filter to focus on one brand.'
-                  : `Showing events for ${effectiveClientFilter}. Change the header filter to view all clients.`
-            }
-          />
-          {body}
-        </section>
+        hideSectionHeader ? (
+          body
+        ) : (
+          <section>
+            <ClientPortalSectionHeader
+              title="Events Calendar"
+              description={
+                clientMode
+                  ? 'Log upcoming events using your industry-specific form. Drafts save privately until you submit.'
+                  : showAllClients
+                    ? 'View and manage events across all clients. Use the header filter to focus on one brand.'
+                    : `Showing events for ${effectiveClientFilter}. Change the header filter to view all clients.`
+              }
+            />
+            {body}
+          </section>
+        )
       ) : (
         <div className="mx-auto max-w-[1200px] px-4 py-4 sm:px-6">
           <div className="mb-6">

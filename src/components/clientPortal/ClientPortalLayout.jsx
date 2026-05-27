@@ -1,7 +1,6 @@
 import {
   IconBoard,
   IconCalendar,
-  IconEvents,
   IconHome,
   IconIdeas,
   IconShoots,
@@ -13,8 +12,7 @@ const NAV_ITEMS = [
   { id: 'home', label: 'Your tasks', Icon: IconHome },
   { id: 'ideas', label: 'Ideas', Icon: IconIdeas },
   { id: 'pipeline', label: 'Board', Icon: IconBoard },
-  { id: 'calendar', label: 'Content Calendar', Icon: IconCalendar },
-  { id: 'events', label: 'Events Calendar', Icon: IconEvents },
+  { id: 'calendar', label: 'Calendar', Icon: IconCalendar },
   { id: 'review', label: 'Content review', Icon: IconTasks },
   { id: 'shoots', label: 'Shoot Schedule', Icon: IconShoots },
 ];

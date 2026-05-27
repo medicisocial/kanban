@@ -3,12 +3,11 @@ import { useClientAuth } from '../context/ClientAuthContext';
 import { useClientsContext } from '../context/ClientsContext';
 import ClientReviewPortal from './ClientReviewPortal';
 import ClientContentReviewPortal from './ClientContentReviewPortal';
-import ClientCalendarPortal from './ClientCalendarPortal';
 import ClientPipelinePortal from './ClientPipelinePortal';
 import ClientShootSchedulePortal from './ClientShootSchedulePortal';
 import ClientProfilePortal from './ClientProfilePortal';
 import ClientPortalHome from './ClientPortalHome';
-import EventsCalendar from './EventsCalendar';
+import ClientUnifiedCalendarsPortal from './ClientUnifiedCalendarsPortal';
 import ClientPortalLayout from './clientPortal/ClientPortalLayout';
 import { filterEvents } from '../utils/eventsCalendar';
 import { createEvent } from '../constants';
@@ -20,6 +19,16 @@ export default function ClientHubPortal({ onSignOut }) {
     useClientAuth();
   const { getClientColor, getClientLogo } = useClientsContext();
   const [activeTab, setActiveTab] = useState('home');
+  const [calendarTab, setCalendarTab] = useState('content');
+
+  const handleTabChange = (tab) => {
+    if (tab === 'events') {
+      setCalendarTab('events');
+      setActiveTab('calendar');
+      return;
+    }
+    setActiveTab(tab);
+  };
 
   const clientColor = portalData?.clientColor || getClientColor(brand);
   const clientLogo = portalData?.clientLogo || getClientLogo(brand);
@@ -87,7 +96,7 @@ export default function ClientHubPortal({ onSignOut }) {
       clientColor={clientColor}
       clientLogo={clientLogo}
       activeTab={activeTab}
-      onTabChange={setActiveTab}
+      onTabChange={handleTabChange}
       onRefresh={() => refreshPortalData()}
       onSignOut={handleSignOut}
       notificationCount={notificationCount}
@@ -138,20 +147,15 @@ export default function ClientHubPortal({ onSignOut }) {
       )}
 
       {portalData && activeTab === 'calendar' && (
-        <ClientCalendarPortal client={brand} cards={cards} embedded />
-      )}
-
-      {portalData && activeTab === 'events' && (
-        <EventsCalendar
+        <ClientUnifiedCalendarsPortal
+          client={brand}
+          cards={cards}
           events={events}
-          scopedBrand={brand}
-          lockedClient={brand}
           businessType={businessType}
+          initialTab={calendarTab}
           onAddEvent={handleAddEvent}
           onUpdateEvent={handleUpdateEvent}
           onDeleteEvent={handleDeleteEvent}
-          clientMode
-          embedded
         />
       )}
 

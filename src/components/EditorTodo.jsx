@@ -13,6 +13,9 @@ import AddEditorTaskModal from './AddEditorTaskModal';
 import NeedsEditsModal from './NeedsEditsModal';
 import { btnPrimaryClass } from './clientPortal/clientPortalUi';
 
+const taskActionBtnClass =
+  'inline-flex items-center justify-center rounded-sm bg-white px-3 py-1.5 text-[10px] font-medium normal-case tracking-normal text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40';
+
 const kindStyles = {
   edit: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
   approve: 'border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]',
@@ -104,7 +107,7 @@ function EditorTodoItem({
           </div>
         </button>
 
-        <div className="flex shrink-0 flex-col gap-2" {...interactiveProps}>
+        <div className="flex shrink-0 flex-col gap-1.5" {...interactiveProps}>
           <label className="block">
             <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-500">
               Board status
@@ -122,18 +125,14 @@ function EditorTodoItem({
               ))}
             </select>
           </label>
-          <button
-            type="button"
-            onClick={openCard}
-            className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-white/5 hover:text-white"
-          >
+          <button type="button" onClick={openCard} className={taskActionBtnClass}>
             Edit
           </button>
           {task.kind === 'edit' && (
             <button
               type="button"
               onClick={() => onSubmitForReview?.(task.cardId)}
-              className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
+              className={taskActionBtnClass}
             >
               Mark done
             </button>
@@ -143,14 +142,14 @@ function EditorTodoItem({
               <button
                 type="button"
                 onClick={() => onApproveReview?.(task.cardId)}
-                className="rounded-lg bg-[#810100] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#a00000]"
+                className={taskActionBtnClass}
               >
                 Approve
               </button>
               <button
                 type="button"
                 onClick={() => onRequestEdits?.(task.card)}
-                className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 transition hover:bg-amber-500/20"
+                className={taskActionBtnClass}
               >
                 Needs edits
               </button>
@@ -160,7 +159,7 @@ function EditorTodoItem({
             <button
               type="button"
               onClick={() => onMoveTask?.(task.cardId, 'finished')}
-              className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
+              className={taskActionBtnClass}
             >
               Mark finished
             </button>
@@ -169,7 +168,7 @@ function EditorTodoItem({
             <button
               type="button"
               onClick={() => onSendBackForEditing?.(task.cardId)}
-              className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 transition hover:bg-amber-500/20"
+              className={taskActionBtnClass}
             >
               Back to editing
             </button>

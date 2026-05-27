@@ -115,7 +115,7 @@ function ClientCalendarDetail({ card, onClose }) {
   );
 }
 
-export default function ClientCalendarPortal({ client, cards, embedded = false }) {
+export default function ClientCalendarPortal({ client, cards, embedded = false, hideSectionHeader = false }) {
   const { getClientColor } = useClientsContext();
   const [localCards, setLocalCards] = useState([]);
   const [focusDate, setFocusDate] = useState(() => getDefaultCalendarDate());
@@ -244,16 +244,26 @@ export default function ClientCalendarPortal({ client, cards, embedded = false }
   );
 
   if (embedded) {
+    const content = (
+      <>
+        {calendarBody}
+        {selectedCard && (
+          <ClientCalendarDetail card={selectedCard} onClose={() => setSelectedCard(null)} />
+        )}
+      </>
+    );
+
+    if (hideSectionHeader) {
+      return content;
+    }
+
     return (
       <section>
         <ClientPortalSectionHeader
           title="Content Calendar"
           description={`${totalScheduled} scheduled post${totalScheduled === 1 ? '' : 's'} across your publishing calendar.`}
         />
-        {calendarBody}
-        {selectedCard && (
-          <ClientCalendarDetail card={selectedCard} onClose={() => setSelectedCard(null)} />
-        )}
+        {content}
       </section>
     );
   }

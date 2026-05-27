@@ -85,7 +85,7 @@ export default function ClientPortalHome({
               View board
             </button>
             <button type="button" onClick={() => onNavigate('calendar')} className={btnSecondaryClass}>
-              Content calendar
+              Calendar
             </button>
           </div>
         </div>
