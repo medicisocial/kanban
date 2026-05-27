@@ -12,11 +12,37 @@ const CONTACT_TYPES = [
   { value: 'internal', label: 'Internal team' },
 ];
 
-function getInitialContactType(meeting, defaultClient, lockedClient) {
+function getInitialContactType(meeting) {
   if (meeting?.prospectName) return 'prospect';
   if (meeting?.client) return 'client';
-  if (lockedClient || defaultClient) return 'client';
-  return 'internal';
+  if (meeting) return 'internal';
+  return 'client';
+}
+
+function selectAllOnFocus(event) {
+  event.target.select();
+}
+
+function MeetingTimeInput({ value, onChange, placeholder = 'Select time' }) {
+  return (
+    <div className="relative">
+      <input
+        type="time"
+        value={value}
+        onChange={onChange}
+        className={`${inputClass} w-full ${value ? '' : 'meeting-time-empty'}`}
+        required
+      />
+      {!value && (
+        <span
+          className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-white/30"
+          aria-hidden
+        >
+          {placeholder}
+        </span>
+      )}
+    </div>
+  );
 }
 
 function segmentBtnClass(active) {
@@ -45,9 +71,7 @@ export default function MeetingModal({
   const [date, setDate] = useState(meeting?.date || defaultDate || toDateKey(new Date()));
   const [time, setTime] = useState(meeting?.time || '');
   const [endTime, setEndTime] = useState(meeting?.endTime || '');
-  const [contactType, setContactType] = useState(() =>
-    getInitialContactType(meeting, defaultClient, lockedClient),
-  );
+  const [contactType, setContactType] = useState(() => getInitialContactType(meeting));
   const [client, setClient] = useState(
     meeting?.client || lockedClient || defaultClient || '',
   );
@@ -245,6 +269,8 @@ export default function MeetingModal({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                onFocus={selectAllOnFocus}
+                onClick={selectAllOnFocus}
                 className={inputClass}
               />
             </div>
@@ -275,6 +301,8 @@ export default function MeetingModal({
                 type="date"
                 value={recurrenceEndDate}
                 onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                onFocus={selectAllOnFocus}
+                onClick={selectAllOnFocus}
                 min={date}
                 className={inputClass}
               />
@@ -289,24 +317,20 @@ export default function MeetingModal({
               <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-white/50">
                 Start time
               </label>
-              <input
-                type="time"
+              <MeetingTimeInput
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className={inputClass}
-                required
+                placeholder="Start time"
               />
             </div>
             <div>
               <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-white/50">
                 End time
               </label>
-              <input
-                type="time"
+              <MeetingTimeInput
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className={inputClass}
-                required
+                placeholder="End time"
               />
             </div>
           </div>

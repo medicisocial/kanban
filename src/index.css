@@ -49,6 +49,29 @@ select option:hover {
   color: #ffffff;
 }
 
+/* Hide browser default time (e.g. 12:30 PM) until a value is chosen */
+.meeting-time-empty::-webkit-datetime-edit,
+.meeting-time-empty::-webkit-datetime-edit-fields-wrapper,
+.meeting-time-empty::-webkit-datetime-edit-text,
+.meeting-time-empty::-webkit-datetime-edit-hour-field,
+.meeting-time-empty::-webkit-datetime-edit-minute-field,
+.meeting-time-empty::-webkit-datetime-edit-ampm-field {
+  color: transparent;
+}
+
+.meeting-time-empty:focus::-webkit-datetime-edit,
+.meeting-time-empty:focus::-webkit-datetime-edit-fields-wrapper,
+.meeting-time-empty:focus::-webkit-datetime-edit-text,
+.meeting-time-empty:focus::-webkit-datetime-edit-hour-field,
+.meeting-time-empty:focus::-webkit-datetime-edit-minute-field,
+.meeting-time-empty:focus::-webkit-datetime-edit-ampm-field {
+  color: #f9f6f2;
+}
+
+.meeting-time-empty::-moz-focus-inner {
+  color: transparent;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
