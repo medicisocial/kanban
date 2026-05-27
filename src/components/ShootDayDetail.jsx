@@ -6,6 +6,8 @@ import {
   aggregateModelsWithSlots,
   aggregateNeeds,
   getShootDayTitle,
+  resolveShootDayTime,
+  resolveShootDayEndTime,
 } from "../utils/shootDay";
 import ShootDayItem from "./ShootDayItem";
 import ShootDayTimeline from "./ShootDayTimeline";
@@ -21,11 +23,14 @@ export default function ShootDayDetail({
   clientGroups,
   shootCount,
   hasShootDay,
+  cards,
   onCardClick,
   onUpdateCard,
   onAddShootDay,
   onAddShootItem,
   onAddShootItemForClient,
+  onAssignExistingToShoot,
+  onAddCardsToShoot,
   getPlan,
   onUpdatePlan,
   onRemoveFromSchedule,
@@ -80,6 +85,7 @@ export default function ShootDayDetail({
               onUpdateCard={onUpdateCard}
               onAddShootItem={onAddShootItem}
               onAddShootItemForClient={onAddShootItemForClient}
+              onAddCardsToShoot={onAddCardsToShoot}
               plan={getPlan(client, dateKey)}
               onUpdatePlan={(updates) => onUpdatePlan(client, dateKey, updates)}
               onRemoveFromSchedule={onRemoveFromSchedule}
@@ -101,6 +107,7 @@ function ClientShootSection({
   onUpdateCard,
   onAddShootItem,
   onAddShootItemForClient,
+  onAddCardsToShoot,
   plan,
   onUpdatePlan,
   onRemoveFromSchedule,
@@ -200,24 +207,60 @@ function ClientShootSection({
             <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
               Content schedule
             </h4>
-            <button
-              type="button"
-              onClick={() => onAddShootItemForClient(client)}
-              className="rounded-lg border border-white/10 px-2.5 py-1 text-xs text-gray-300 hover:bg-white/5"
-            >
-              + Add item
-            </button>
-          </div>
-          {clientCards.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-white/10 px-4 py-8 text-center">
-              <p className="text-sm text-gray-500">No content scheduled yet.</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  onAddCardsToShoot?.(client, dateKey, {
+                    shootTime: resolveShootDayTime(plan, clientCards),
+                    shootEndTime: resolveShootDayEndTime(plan, clientCards),
+                  })
+                }
+                className="rounded-lg border border-white/10 px-2.5 py-1 text-xs text-gray-300 hover:bg-white/5"
+              >
+                + From board
+              </button>
               <button
                 type="button"
                 onClick={() => onAddShootItemForClient(client)}
-                className="mt-3 rounded-lg bg-[#810100]/20 px-3 py-1.5 text-xs font-medium text-[#fca5a5] hover:bg-[#810100]/30"
+                className="rounded-lg border border-[#810100]/30 bg-[#810100]/10 px-2.5 py-1 text-xs font-medium text-[#fca5a5] hover:bg-[#810100]/20"
               >
-                Add first item
+                + New item
               </button>
+            </div>
+          </div>
+          {clientCards.length > 1 && (
+            <p className="mb-3 text-xs text-gray-500">
+              {clientCards.length} items on this shoot — add more reels or posts with the buttons above.
+            </p>
+          )}
+          {clientCards.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-white/10 px-4 py-8 text-center">
+              <p className="text-sm text-gray-500">No content scheduled yet.</p>
+              <p className="mt-1 text-xs text-gray-600">
+                Add multiple reels or posts to this shoot day.
+              </p>
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onAddCardsToShoot?.(client, dateKey, {
+                      shootTime: resolveShootDayTime(plan, clientCards),
+                      shootEndTime: resolveShootDayEndTime(plan, clientCards),
+                    })
+                  }
+                  className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-white/5"
+                >
+                  Add from board
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAddShootItemForClient(client)}
+                  className="rounded-lg bg-[#810100]/20 px-3 py-1.5 text-xs font-medium text-[#fca5a5] hover:bg-[#810100]/30"
+                >
+                  Create new item
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-3">

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CONTENT_TYPES } from "../constants";
 import { useClientsContext } from "../context/ClientsContext";
 import { getDefaultAssigneeForRole } from "../utils/teamMembers";
+import { formatDate } from "../utils";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30";
@@ -10,6 +11,8 @@ export default function AddShootDayModal({
   mode = "day",
   defaultDate,
   defaultClient,
+  lockClient = false,
+  lockDate = false,
   onClose,
   onAddDay,
   onAddItem,
@@ -29,7 +32,7 @@ export default function AddShootDayModal({
   });
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e, addAnother = false) => {
     e.preventDefault();
     setError("");
 
@@ -51,7 +54,11 @@ export default function AddShootDayModal({
         shootDate: form.shootDate,
         shootTime: form.shootTime,
         contentCreator: form.contentCreator,
-      });
+      }, { addAnother });
+      if (addAnother) {
+        setForm((prev) => ({ ...prev, title: "", shootTime: "" }));
+        return;
+      }
     } else {
       onAddDay({ client: form.client, shootDate: form.shootDate });
     }
@@ -71,6 +78,11 @@ export default function AddShootDayModal({
             <h2 className="text-lg font-semibold text-white">
               {isItem ? "Add shoot item" : "Add client shoot"}
             </h2>
+            {isItem && lockClient && lockDate && form.shootDate && (
+              <p className="mt-1 text-xs text-gray-500">
+                Adding to {form.client}&apos;s shoot on {formatDate(form.shootDate)}
+              </p>
+            )}
           </div>
           <button type="button" onClick={onClose} className="text-gray-400 hover:text-white">
             ✕
@@ -101,18 +113,22 @@ export default function AddShootDayModal({
           <div className={`grid grid-cols-1 gap-4 ${isItem ? "sm:grid-cols-2" : ""}`}>
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-gray-400">Client</span>
-              <select
-                value={form.client}
-                onChange={(e) => setForm({ ...form, client: e.target.value })}
-                className={inputClass}
-                autoFocus={!isItem}
-              >
-                {clients.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+              {lockClient ? (
+                <p className={inputClass}>{form.client}</p>
+              ) : (
+                <select
+                  value={form.client}
+                  onChange={(e) => setForm({ ...form, client: e.target.value })}
+                  className={inputClass}
+                  autoFocus={!isItem}
+                >
+                  {clients.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              )}
             </label>
 
             {isItem && (
@@ -136,12 +152,16 @@ export default function AddShootDayModal({
           <div className={`grid grid-cols-1 gap-4 ${isItem ? "sm:grid-cols-2" : ""}`}>
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-gray-400">Shoot date</span>
-              <input
-                type="date"
-                value={form.shootDate}
-                onChange={(e) => setForm({ ...form, shootDate: e.target.value })}
-                className={inputClass}
-              />
+              {lockDate ? (
+                <p className={inputClass}>{form.shootDate ? formatDate(form.shootDate) : "—"}</p>
+              ) : (
+                <input
+                  type="date"
+                  value={form.shootDate}
+                  onChange={(e) => setForm({ ...form, shootDate: e.target.value })}
+                  className={inputClass}
+                />
+              )}
             </label>
 
             {isItem && (
@@ -190,6 +210,15 @@ export default function AddShootDayModal({
           >
             Cancel
           </button>
+          {isItem && (
+            <button
+              type="button"
+              onClick={(e) => handleSubmit(e, true)}
+              className="flex-1 rounded-lg border border-[#810100]/40 py-2.5 text-sm font-medium text-[#fca5a5] hover:bg-[#810100]/10"
+            >
+              Add & add another
+            </button>
+          )}
           <button
             type="submit"
             className="flex-1 rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white hover:bg-[#a00000]"

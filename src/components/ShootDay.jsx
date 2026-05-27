@@ -27,6 +27,8 @@ export default function ShootDay({
   onCardClick,
   onUpdateCard,
   onAddShootItem,
+  onAssignExistingToShoot,
+  onAddCardsToShoot,
   getPlan,
   onUpdatePlan,
   onEnsurePlan,
@@ -199,7 +201,7 @@ export default function ShootDay({
         <p className="mb-4 text-xs text-gray-500">
           {viewMode === 'month'
             ? 'Click any day to open it, or add a client shoot manually.'
-            : 'Add items here or set a Shoot Date on any card.'}
+            : 'Add multiple reels or items per client shoot — use + New item or + From board.'}
         </p>
       )}
 
@@ -211,11 +213,14 @@ export default function ShootDay({
             clientGroups={clientGroups}
             shootCount={shootCards.length}
             hasShootDay={hasShootDay}
+            cards={cards}
             onCardClick={onCardClick}
             onUpdateCard={onUpdateCard}
             onAddShootDay={() => setShootModal({ mode: 'day' })}
             onAddShootItem={() => setShootModal({ mode: 'item' })}
-            onAddShootItemForClient={(client) => setShootModal({ mode: 'item', client })}
+            onAddShootItemForClient={(client) => setShootModal({ mode: 'item', client, lockFields: true })}
+            onAssignExistingToShoot={onAssignExistingToShoot}
+            onAddCardsToShoot={onAddCardsToShoot}
             getPlan={getPlan}
             onUpdatePlan={onUpdatePlan}
             onRemoveFromSchedule={onRemoveFromSchedule}
@@ -238,16 +243,21 @@ export default function ShootDay({
           mode={shootModal.mode}
           defaultDate={dateKey}
           defaultClient={shootModal.client || clientFilter}
+          lockClient={Boolean(shootModal.lockFields && shootModal.client)}
+          lockDate={Boolean(shootModal.lockFields)}
           onClose={() => setShootModal(null)}
           onAddDay={({ client, shootDate }) => {
             onEnsurePlan(client, shootDate);
             setFocusDate(inputValueToDate(shootDate));
             setViewMode('day');
           }}
-          onAddItem={(data) => {
-            onAddShootItem(data);
+          onAddItem={(data, options) => {
+            onAddShootItem(data, options);
             setFocusDate(inputValueToDate(data.shootDate));
             setViewMode('day');
+            if (!options?.addAnother) {
+              setShootModal(null);
+            }
           }}
         />
       )}

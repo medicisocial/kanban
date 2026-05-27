@@ -49,7 +49,16 @@ select option:hover {
   color: #ffffff;
 }
 
-/* Hide browser default time (e.g. 12:30 PM) until a value is chosen */
+/* Hide browser default date/time ghost text until focused or filled */
+.datetime-empty::-webkit-datetime-edit,
+.datetime-empty::-webkit-datetime-edit-fields-wrapper,
+.datetime-empty::-webkit-datetime-edit-text,
+.datetime-empty::-webkit-datetime-edit-hour-field,
+.datetime-empty::-webkit-datetime-edit-minute-field,
+.datetime-empty::-webkit-datetime-edit-ampm-field,
+.datetime-empty::-webkit-datetime-edit-day-field,
+.datetime-empty::-webkit-datetime-edit-month-field,
+.datetime-empty::-webkit-datetime-edit-year-field,
 .meeting-time-empty::-webkit-datetime-edit,
 .meeting-time-empty::-webkit-datetime-edit-fields-wrapper,
 .meeting-time-empty::-webkit-datetime-edit-text,
@@ -59,6 +68,15 @@ select option:hover {
   color: transparent;
 }
 
+.datetime-empty:focus::-webkit-datetime-edit,
+.datetime-empty:focus::-webkit-datetime-edit-fields-wrapper,
+.datetime-empty:focus::-webkit-datetime-edit-text,
+.datetime-empty:focus::-webkit-datetime-edit-hour-field,
+.datetime-empty:focus::-webkit-datetime-edit-minute-field,
+.datetime-empty:focus::-webkit-datetime-edit-ampm-field,
+.datetime-empty:focus::-webkit-datetime-edit-day-field,
+.datetime-empty:focus::-webkit-datetime-edit-month-field,
+.datetime-empty:focus::-webkit-datetime-edit-year-field,
 .meeting-time-empty:focus::-webkit-datetime-edit,
 .meeting-time-empty:focus::-webkit-datetime-edit-fields-wrapper,
 .meeting-time-empty:focus::-webkit-datetime-edit-text,
@@ -68,8 +86,14 @@ select option:hover {
   color: #f9f6f2;
 }
 
+.datetime-empty::-moz-focus-inner,
 .meeting-time-empty::-moz-focus-inner {
   color: transparent;
+}
+
+input:focus::placeholder,
+textarea:focus::placeholder {
+  opacity: 0;
 }
 
 ::-webkit-scrollbar {

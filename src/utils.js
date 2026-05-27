@@ -1,4 +1,5 @@
 import { addDays, parseDateKey, toDateKey } from './utils/calendar';
+import { isScheduledPostType } from './constants';
 
 export function formatDate(dateStr) {
   if (!dateStr) return '';
@@ -36,7 +37,7 @@ export function isOverdue(dateStr) {
 
 /** Scheduled non-story posts whose plan date has passed — off the board, still on calendar. */
 export function isPastScheduledBoardPost(card, todayKey = toDateKey(new Date())) {
-  if (card.contentType === 'Story' || card.isOneOffProject) return false;
+  if (!isScheduledPostType(card.contentType) || card.isOneOffProject) return false;
   if (card.columnId !== 'scheduled' || !card.dueDate) return false;
   return card.dueDate < todayKey;
 }

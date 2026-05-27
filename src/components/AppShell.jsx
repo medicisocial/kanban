@@ -40,6 +40,10 @@ import WorkspaceNotificationsPanel from "./WorkspaceNotificationsPanel";
 import HandoffModal from "./HandoffModal";
 import ClientManagementPage from "./ClientManagementPage";
 import TeamManagementPage from "./TeamManagementPage";
+import PlanPostDateModal from "./PlanPostDateModal";
+import PlanShootDateModal from "./PlanShootDateModal";
+import AddShootDayModal from "./AddShootDayModal";
+import AddExistingToShootModal from "./AddExistingToShootModal";
 import CardModal from "./CardModal";
 import { useStaffAuth } from "../context/StaffAuthContext";
 import { useClientsContext } from "../context/ClientsContext";
@@ -86,6 +90,10 @@ export default function AppShell({ onSignOut }) {
   const [shootFocus, setShootFocus] = useState(null);
   const [openMeetingRequest, setOpenMeetingRequest] = useState(null);
   const [handoffCard, setHandoffCard] = useState(null);
+  const [planDateCard, setPlanDateCard] = useState(null);
+  const [shootDateCard, setShootDateCard] = useState(null);
+  const [quickAddShootItem, setQuickAddShootItem] = useState(null);
+  const [assignToShoot, setAssignToShoot] = useState(null);
   const [responseCount, setResponseCount] = useState(() => loadClientResponses().length);
   const [contentReviewResponseCount, setContentReviewResponseCount] = useState(
     () => loadContentReviewResponses().length,
@@ -146,6 +154,18 @@ export default function AppShell({ onSignOut }) {
       return { ...fresh, occurrenceDate: prev.occurrenceDate };
     });
   }, [cards, selectedCard?.id]);
+
+  useEffect(() => {
+    if (!planDateCard) return;
+    const fresh = cards.find((c) => c.id === planDateCard.id);
+    if (fresh) setPlanDateCard(fresh);
+  }, [cards, planDateCard?.id]);
+
+  useEffect(() => {
+    if (!shootDateCard) return;
+    const fresh = cards.find((c) => c.id === shootDateCard.id);
+    if (fresh) setShootDateCard(fresh);
+  }, [cards, shootDateCard?.id]);
 
   useEffect(() => {
     if (authRequired && ready && !session && onSignOut) {
@@ -249,20 +269,39 @@ export default function AppShell({ onSignOut }) {
     );
   };
 
-  const handleAddShootItem = (data) => {
+  const handleAddShootItem = (data, { openCard = true, addAnother = false } = {}) => {
     ensurePlan(data.client, data.shootDate);
     const id = addShootItem(data);
-    setSelectedCard(
-      createCard({
-        ...data,
-        id,
-        columnId: "shoot",
-        status: "To Create",
-        shootDuration: 45,
-      }),
-    );
+    if (openCard && !addAnother) {
+      setSelectedCard(
+        createCard({
+          ...data,
+          id,
+          columnId: "shoot",
+          status: "To Create",
+          shootDuration: 45,
+        }),
+      );
+    }
     return id;
   };
+
+  const handleAssignExistingToShoot = (cardIds, { client, shootDate, shootTime = '', shootEndTime = '' }) => {
+    ensurePlan(client, shootDate);
+    for (const id of cardIds) {
+      const existing = cards.find((entry) => entry.id === id);
+      updateCard(id, {
+        shootDate,
+        shootTime: existing?.shootTime || shootTime || '',
+        shootEndTime: existing?.shootEndTime || shootEndTime || '',
+      });
+    }
+  };
+
+  const openAddCardsToShoot = useCallback((client, shootDate, { excludeCardIds = [], shootTime = '', shootEndTime = '' } = {}) => {
+    if (!client || !shootDate) return;
+    setAssignToShoot({ client, shootDate, excludeCardIds, shootTime, shootEndTime });
+  }, []);
 
   const handleRemoveFromShootSchedule = (card) => {
     if (
@@ -800,6 +839,7 @@ export default function AppShell({ onSignOut }) {
           onMoveTask={handleMoveEditorTask}
           onHandoff={handleHandoffRequest}
           onNavigate={handleNavigate}
+          onPlanPostDate={setPlanDateCard}
         />
       )}
 
@@ -814,6 +854,8 @@ export default function AppShell({ onSignOut }) {
           onCardClick={handleCardClick}
           onUpdateCard={updateCard}
           onAddShootItem={handleAddShootItem}
+          onAssignExistingToShoot={handleAssignExistingToShoot}
+          onAddCardsToShoot={openAddCardsToShoot}
           getPlan={getPlan}
           onUpdatePlan={updatePlan}
           onEnsurePlan={ensurePlan}
@@ -841,9 +883,86 @@ export default function AppShell({ onSignOut }) {
       {selectedCard && (
         <CardModal
           card={selectedCard}
+          cards={cards}
+          plans={plans}
           onClose={() => setSelectedCard(null)}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
+          onPlanPostDate={setPlanDateCard}
+          onPlanShootDate={setShootDateCard}
+          onAddCardsToShoot={openAddCardsToShoot}
+          onOpenCard={handleCardClick}
+        />
+      )}
+
+      {planDateCard && (
+        <PlanPostDateModal
+          card={planDateCard}
+          cards={cards}
+          onClose={() => setPlanDateCard(null)}
+          onSave={(cardId, updates) => updateCard(cardId, updates)}
+          onOpenCard={handleCardClick}
+        />
+      )}
+
+      {shootDateCard && (
+        <PlanShootDateModal
+          card={shootDateCard}
+          cards={cards}
+          plans={plans}
+          getPlan={getPlan}
+          onClose={() => setShootDateCard(null)}
+          onSave={(cardId, updates) => {
+            updateCard(cardId, updates);
+            if (updates.shootDate) {
+              ensurePlan(shootDateCard.client, updates.shootDate);
+            }
+          }}
+          onOpenCard={handleCardClick}
+          onAddItemToDay={(client, shootDate) => {
+            setQuickAddShootItem({ client, shootDate });
+          }}
+          onAddCardsToShoot={(client, shootDate, options) =>
+            openAddCardsToShoot(client, shootDate, {
+              excludeCardIds: [shootDateCard.id, ...(options?.excludeCardIds || [])],
+              shootTime: options?.shootTime || '',
+              shootEndTime: options?.shootEndTime || '',
+            })
+          }
+        />
+      )}
+
+      {assignToShoot && (
+        <AddExistingToShootModal
+          cards={cards}
+          client={assignToShoot.client}
+          dateKey={assignToShoot.shootDate}
+          shootTime={assignToShoot.shootTime}
+          shootEndTime={assignToShoot.shootEndTime}
+          excludeCardIds={assignToShoot.excludeCardIds}
+          onClose={() => setAssignToShoot(null)}
+          onAssign={(cardIds, data) => {
+            handleAssignExistingToShoot(cardIds, data);
+            setAssignToShoot(null);
+          }}
+        />
+      )}
+
+      {quickAddShootItem && (
+        <AddShootDayModal
+          mode="item"
+          defaultDate={quickAddShootItem.shootDate}
+          defaultClient={quickAddShootItem.client}
+          lockClient
+          lockDate
+          onClose={() => setQuickAddShootItem(null)}
+          onAddDay={() => {}}
+          onAddItem={(data, options) => {
+            handleAddShootItem(data, { addAnother: options?.addAnother });
+            if (!options?.addAnother) {
+              setQuickAddShootItem(null);
+            }
+          }}
         />
       )}
 

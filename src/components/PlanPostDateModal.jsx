@@ -9,18 +9,23 @@ import {
   parseDateKey,
   toDateKey,
 } from '../utils/calendar';
-import { formatDate, formatTime } from '../utils';
+import { formatDate, formatTime, formatScheduledDateTime } from '../utils';
 import CalendarMonthView from './CalendarMonthView';
 import CalendarEvent from './CalendarEvent';
+import TimeInput from './TimeInput';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
-const inputClass =
+const modalInputClass =
   'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30';
 
-function getClientPlanCalendarCards(cards, client, excludeCardId) {
-  return getCalendarPosts(cards).filter(
-    (c) => c.client === client && c.id !== excludeCardId,
-  );
+function getClientPlanCalendarCards(cards, client) {
+  return getCalendarPosts(cards).filter((c) => c.client === client);
+}
+
+function sortCalendarCards(a, b) {
+  const dateCmp = (a.dueDate || '').localeCompare(b.dueDate || '');
+  if (dateCmp !== 0) return dateCmp;
+  return (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99');
 }
 
 export default function PlanPostDateModal({ card, cards, onClose, onSave, onOpenCard }) {
@@ -45,16 +50,37 @@ export default function PlanPostDateModal({ card, cards, onClose, onSave, onOpen
   }, [onClose]);
 
   const clientCalendarCards = useMemo(
-    () => getClientPlanCalendarCards(cards, card.client, card.id),
-    [cards, card.client, card.id],
+    () => getClientPlanCalendarCards(cards, card.client),
+    [cards, card.client],
   );
 
-  const cardsByDate = useMemo(() => groupCardsByDate(clientCalendarCards), [clientCalendarCards]);
+  const cardsByDate = useMemo(() => {
+    const map = groupCardsByDate(
+      clientCalendarCards.filter((entry) => entry.id !== card.id),
+    );
+
+    if (selectedDate) {
+      const previewCard = { ...card, dueDate: selectedDate, dueTime };
+      const dayCards = [...(map[selectedDate] || []), previewCard];
+      dayCards.sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'));
+      map[selectedDate] = dayCards;
+    }
+
+    return map;
+  }, [clientCalendarCards, card, selectedDate, dueTime]);
+
+  const allClientPosts = useMemo(
+    () =>
+      clientCalendarCards
+        .filter((entry) => entry.id !== card.id && entry.dueDate)
+        .sort(sortCalendarCards),
+    [clientCalendarCards, card.id],
+  );
 
   const selectedDayPosts = useMemo(() => {
     if (!selectedDate) return [];
-    return cardsByDate[selectedDate] || [];
-  }, [cardsByDate, selectedDate]);
+    return (cardsByDate[selectedDate] || []).filter((entry) => entry.id !== card.id);
+  }, [cardsByDate, selectedDate, card.id]);
 
   const typeStyle = getContentTypeStyle(card.contentType);
 
@@ -82,7 +108,7 @@ export default function PlanPostDateModal({ card, cards, onClose, onSave, onOpen
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[260] flex items-center justify-center bg-black/70 p-2 backdrop-blur-sm sm:p-4"
+      className="fixed inset-0 z-[500] flex items-center justify-center bg-black/70 p-2 backdrop-blur-sm sm:p-4"
       onClick={onClose}
     >
       <form
@@ -90,12 +116,23 @@ export default function PlanPostDateModal({ card, cards, onClose, onSave, onOpen
         className="flex max-h-[96vh] w-full max-w-[min(1600px,98vw)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#111111] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="shrink-0 border-b border-white/5 px-5 py-4 sm:px-6">
-          <p className="text-xs font-medium uppercase tracking-wider text-violet-300">Target post date</p>
-          <h2 className="mt-1 text-lg font-semibold text-white">{card.title}</h2>
-          <p className="mt-1 text-sm text-gray-400">
-            {card.client} · {card.contentType} content calendar · click a post to open it
-          </p>
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-white/5 px-5 py-4 sm:px-6">
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wider text-violet-300">Target post date</p>
+            <h2 className="mt-1 text-lg font-semibold text-white">{card.title}</h2>
+            <p className="mt-1 text-sm text-gray-400">
+              {card.client} content calendar · {allClientPosts.length} scheduled post
+              {allClientPosts.length === 1 ? '' : 's'} · click a day or post to review
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-lg p-2 text-gray-400 transition hover:bg-white/5 hover:text-white"
+            aria-label="Close"
+          >
+            ×
+          </button>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto xl:flex-row">
@@ -132,34 +169,46 @@ export default function PlanPostDateModal({ card, cards, onClose, onSave, onOpen
                 onSelectDate={handleSelectDate}
                 onCardClick={handleCardClick}
                 overviewLabel="content"
+                hideClient
               />
             </div>
           </div>
 
           <div className="flex w-full shrink-0 flex-col xl:w-[340px] 2xl:w-[380px]">
             <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">Selected date</p>
-                <p className="mt-1 text-base font-semibold text-white">
-                  {selectedDate ? formatDate(selectedDate) : 'None selected'}
-                </p>
-              </div>
+              <div className={`${surfacePanelClass} space-y-4 p-4`}>
+                <div>
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">Publish schedule</p>
+                  <p className="mt-1 text-base font-semibold text-white">
+                    {selectedDate
+                      ? formatScheduledDateTime(selectedDate, dueTime)
+                      : 'Pick a date on the calendar'}
+                  </p>
+                </div>
 
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-medium text-gray-400">Publish time (optional)</span>
-                <input
-                  type="time"
-                  value={dueTime}
-                  onChange={(e) => setDueTime(e.target.value)}
-                  className={inputClass}
-                />
-              </label>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <p className="mb-1.5 text-xs font-medium text-gray-400">Date</p>
+                    <p className="rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-sm text-[#f9f6f2]">
+                      {selectedDate ? formatDate(selectedDate) : 'Not selected'}
+                    </p>
+                  </div>
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-medium text-gray-400">Publish time</span>
+                    <TimeInput
+                      value={dueTime}
+                      onChange={(e) => setDueTime(e.target.value)}
+                      inputClassName={modalInputClass}
+                    />
+                  </label>
+                </div>
+              </div>
 
               <div>
                 <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-gray-500">
                   {selectedDate
                     ? `On ${formatDate(selectedDate)}`
-                    : `${card.client} calendar`}
+                    : `${card.client} scheduled posts`}
                 </p>
 
                 <div className="space-y-2">
@@ -194,17 +243,22 @@ export default function PlanPostDateModal({ card, cards, onClose, onSave, onOpen
                     />
                   ))}
 
-                  {!selectedDate && clientCalendarCards.length === 0 && (
+                  {!selectedDate && allClientPosts.length === 0 && (
                     <p className="rounded-lg border border-dashed border-white/10 px-3 py-4 text-center text-xs text-gray-500">
                       No other posts on {card.client}&apos;s content calendar yet.
                     </p>
                   )}
 
-                  {!selectedDate && clientCalendarCards.length > 0 && (
-                    <p className="text-xs text-gray-500">
-                      Select a date to see what else is scheduled that day for {card.client}.
-                    </p>
-                  )}
+                  {!selectedDate &&
+                    allClientPosts.map((entry) => (
+                      <CalendarEvent
+                        key={entry.id}
+                        card={entry}
+                        onClick={handleCardClick}
+                        compact
+                        hideClient
+                      />
+                    ))}
                 </div>
               </div>
 
@@ -216,7 +270,7 @@ export default function PlanPostDateModal({ card, cards, onClose, onSave, onOpen
                 Cancel
               </button>
               <button type="submit" className={`${btnPrimaryClass} flex-1`}>
-                Set post date
+                Set post date & time
               </button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { DEFAULT_SHOOT_DURATIONS } from "../constants";
+import { DEFAULT_SHOOT_DURATIONS, needsShootSchedule } from "../constants";
 import { compareClientNames } from "./clients";
 import { toDateKey, addDays, addMonths, parseDateKey, isToday } from "./calendar";
 
@@ -35,6 +35,15 @@ export function groupCardsByShootDate(cards) {
 
 export function getShootCards(cards) {
   return cards.filter((c) => c.shootDate && c.contentType !== 'Story');
+}
+
+export function getUnscheduledShootCards(cards, client) {
+  return cards.filter(
+    (card) =>
+      card.client === client &&
+      needsShootSchedule(card.contentType) &&
+      !card.shootDate,
+  );
 }
 
 export function groupCardsByClient(cards, { getPlan, dateKey, clientOrder } = {}) {
@@ -463,6 +472,51 @@ export function buildShootDayTimelineSubtitle(client, cards, plan) {
   }
   if (plan?.location?.trim()) parts.push(plan.location.trim());
   return parts.join(' · ');
+}
+
+export function getClientUpcomingShoots(cards, plans, client) {
+  const dateKeys = new Set();
+
+  for (const card of getShootCards(cards)) {
+    if (card.client === client && card.shootDate) {
+      dateKeys.add(card.shootDate);
+    }
+  }
+
+  if (plans && typeof plans === 'object') {
+    for (const plan of Object.values(plans)) {
+      if (
+        plan.client === client &&
+        plan.dateKey &&
+        (plan.manual || plan.shootStartTime || plan.callTime)
+      ) {
+        dateKeys.add(plan.dateKey);
+      }
+    }
+  }
+
+  return [...dateKeys]
+    .sort()
+    .map((dateKey) => {
+      const plan = plans?.[getShootPlanKey(client, dateKey)] || {};
+      const dayCards = cards.filter(
+        (entry) =>
+          entry.client === client &&
+          entry.shootDate === dateKey &&
+          needsShootSchedule(entry.contentType),
+      );
+      const shootTime = resolveShootDayTime(plan, dayCards);
+      const shootEndTime = resolveShootDayEndTime(plan, dayCards);
+      return {
+        client,
+        dateKey,
+        shootTime,
+        shootEndTime,
+        cardCount: dayCards.length,
+        cards: sortCardsByShootTime(dayCards),
+        plan,
+      };
+    });
 }
 
 export function getShootPlanKey(client, dateKey) {

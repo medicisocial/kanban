@@ -27,6 +27,7 @@ export default function CompanyTasks({
   onMoveTask,
   onHandoff,
   onNavigate,
+  onPlanPostDate,
 }) {
   const [activeRole, setActiveRole] = useState(initialRole);
 
@@ -101,6 +102,7 @@ export default function CompanyTasks({
           onApproveReview={onApproveReview}
           onMoveTask={onMoveTask}
           onSendBackForEditing={onSendBackForEditing}
+          onPlanPostDate={onPlanPostDate}
         />
       )}
 

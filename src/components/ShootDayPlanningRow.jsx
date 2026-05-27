@@ -6,6 +6,7 @@ import {
 } from "../utils/shootDay";
 import ModelTagInput from "./ModelTagInput";
 import ShootLocationLink from "./ShootLocationLink";
+import TimeInput from "./TimeInput";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-2.5 py-1.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50";
@@ -110,14 +111,14 @@ export default function ShootDayPlanningRow({
           <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
             Start time
           </span>
-          <input
-            type="time"
+          <TimeInput
             value={card.shootTime || ""}
             onChange={(e) => handleShootTimeChange(e.target.value)}
             disabled={readOnly}
             min={timeMin}
             max={timeMax}
-            className={inputClass}
+            placeholder="Start time"
+            inputClassName={inputClass}
           />
           {timeMin && timeMax && (
             <p className="mt-1 text-[10px] text-gray-600">
@@ -130,14 +131,14 @@ export default function ShootDayPlanningRow({
           <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
             End time
           </span>
-          <input
-            type="time"
+          <TimeInput
             value={card.shootEndTime || ""}
             onChange={(e) => handleChange("shootEndTime", e.target.value)}
             disabled={readOnly}
             min={card.shootTime || timeMin}
             max={timeMax}
-            className={inputClass}
+            placeholder="End time"
+            inputClassName={inputClass}
           />
         </label>
 
@@ -239,23 +240,23 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-gray-400">Start time</span>
-            <input
-              type="time"
+            <TimeInput
               value={plan.shootStartTime || ""}
               onChange={(e) => onUpdatePlan({ shootStartTime: e.target.value })}
               disabled={readOnly}
-              className={inputClassWide}
+              placeholder="Start time"
+              inputClassName={inputClassWide}
             />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-gray-400">End time</span>
-            <input
-              type="time"
+            <TimeInput
               value={plan.shootEndTime || ""}
               onChange={(e) => onUpdatePlan({ shootEndTime: e.target.value })}
               disabled={readOnly}
               min={plan.shootStartTime || undefined}
-              className={inputClassWide}
+              placeholder="End time"
+              inputClassName={inputClassWide}
             />
           </label>
         </div>

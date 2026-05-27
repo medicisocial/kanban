@@ -1,3 +1,5 @@
+import { isScheduledPostType } from '../constants';
+
 export function getDefaultCalendarDate() {
   return new Date();
 }
@@ -351,7 +353,7 @@ export function getCalendarCards(cards) {
 
 export function getCalendarPosts(cards) {
   return cards.filter(
-    (c) => isStaffCalendarCard(c) && c.dueDate && c.contentType !== 'Story',
+    (c) => isStaffCalendarCard(c) && c.dueDate && isScheduledPostType(c.contentType),
   );
 }
 
@@ -369,7 +371,7 @@ export function getScheduledCards(cards) {
 
 export function getScheduledPosts(cards) {
   return cards.filter(
-    (c) => c.columnId === 'scheduled' && c.dueDate && c.contentType !== 'Story',
+    (c) => c.columnId === 'scheduled' && c.dueDate && isScheduledPostType(c.contentType),
   );
 }
 

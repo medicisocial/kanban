@@ -14,7 +14,6 @@ import {
 } from '../utils/accountManagerTodo';
 import { getEditorTaskStatusOptions } from '../utils/editorTodo';
 import NeedsEditsModal from './NeedsEditsModal';
-import PlanPostDateModal from './PlanPostDateModal';
 import { glassInsetClass, selectClass } from './clientPortal/clientPortalUi';
 import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
 
@@ -356,13 +355,13 @@ export default function AccountManagerTodo({
   onApproveReview,
   onMoveTask,
   onSendBackForEditing,
+  onPlanPostDate,
 }) {
   const { getClientColor, clientAccountManagers, getMemberNamesForRole } = useClientsContext();
   const accountManagers = getMemberNamesForRole('Account Manager');
   const todayKey = toDateKey(new Date());
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [needsEditsCard, setNeedsEditsCard] = useState(null);
-  const [planDateCard, setPlanDateCard] = useState(null);
 
   const storyTasksToday = useMemo(
     () => buildStoryTasksToday(cards, todayKey, clientAccountManagers),
@@ -473,7 +472,7 @@ export default function AccountManagerTodo({
                   task={task}
                   getClientColor={getClientColor}
                   onOpenCard={onOpenCard}
-                  onPlanDate={setPlanDateCard}
+                  onPlanDate={onPlanPostDate}
                 />
               )}
             />
@@ -569,16 +568,6 @@ export default function AccountManagerTodo({
           card={needsEditsCard}
           onClose={() => setNeedsEditsCard(null)}
           onSubmit={handleNeedsEditsSubmit}
-        />
-      )}
-
-      {planDateCard && (
-        <PlanPostDateModal
-          card={planDateCard}
-          cards={cards}
-          onClose={() => setPlanDateCard(null)}
-          onSave={(cardId, updates) => onUpdateCard?.(cardId, updates)}
-          onOpenCard={onOpenCard}
         />
       )}
     </div>

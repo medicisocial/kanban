@@ -225,7 +225,13 @@ export default function MeetingsCalendar({
 
       {modal && (
         <MeetingModal
+          key={
+            modal.mode === 'edit'
+              ? `${modal.meeting.id}-${modal.occurrenceDate || modal.meeting.date}`
+              : `add-${modal.defaultDate || 'new'}`
+          }
           meeting={modal.mode === 'add' ? null : modal.meeting}
+          meetings={meetings}
           defaultClient={scopedBrand || (clientFilter !== 'all' ? clientFilter : undefined)}
           lockedClient={lockedClient}
           defaultDate={modal.defaultDate}
@@ -233,6 +239,14 @@ export default function MeetingsCalendar({
           onClose={() => setModal(null)}
           onSave={handleSave}
           onDelete={onDeleteMeeting}
+          onMeetingClick={(clickedMeeting) => {
+            if (clickedMeeting.id === '__draft__') return;
+            setModal({
+              mode: 'edit',
+              meeting: clickedMeeting,
+              occurrenceDate: clickedMeeting.occurrenceDate || clickedMeeting.date,
+            });
+          }}
         />
       )}
     </>

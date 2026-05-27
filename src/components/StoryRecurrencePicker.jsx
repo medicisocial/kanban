@@ -1,4 +1,5 @@
 import { WEEKDAY_OPTIONS } from "../utils/calendar";
+import DateInput from "./DateInput";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50";
@@ -60,22 +61,22 @@ export default function StoryRecurrencePicker({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-gray-400">Start date</span>
-            <input
-              type="date"
+            <DateInput
               value={startDate || ""}
               onChange={(e) => onStartDateChange(e.target.value)}
-              className={inputClass}
+              placeholder="Start date"
+              inputClassName={inputClass}
               required
             />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-gray-400">End date</span>
-            <input
-              type="date"
+            <DateInput
               value={endDate || ""}
               onChange={(e) => onEndDateChange(e.target.value)}
               min={startDate || undefined}
-              className={inputClass}
+              placeholder="End date"
+              inputClassName={inputClass}
               required
             />
           </label>
@@ -104,11 +105,11 @@ export default function StoryRecurrencePicker({
           </div>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-gray-400">Starts from (optional)</span>
-            <input
-              type="date"
+            <DateInput
               value={startDate || ""}
               onChange={(e) => onStartDateChange(e.target.value)}
-              className={inputClass}
+              placeholder="Start date"
+              inputClassName={inputClass}
             />
           </label>
         </>

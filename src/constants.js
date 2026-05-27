@@ -66,6 +66,13 @@ export const CONTENT_TYPES = [
   'One-off Project',
 ];
 
+/** Feed posts that require an explicit plan/publish date on the content calendar. */
+export const SCHEDULED_POST_CONTENT_TYPES = ['Reel', 'Carousel', 'Static Post'];
+
+export function isScheduledPostType(contentType) {
+  return SCHEDULED_POST_CONTENT_TYPES.includes(contentType);
+}
+
 export const DEFAULT_SHOOT_DURATIONS = {
   Reel: 45,
   Story: 20,

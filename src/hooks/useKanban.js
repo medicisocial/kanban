@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEY, COLUMNS, PLATFORM, createCard, EDITOR_TODO_STORAGE_KEY } from '../constants';
+import { STORAGE_KEY, COLUMNS, PLATFORM, createCard, EDITOR_TODO_STORAGE_KEY, isScheduledPostType } from '../constants';
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
 import {
   toDateKey,
@@ -112,9 +112,9 @@ function loadCards() {
   return migrateLegacyOneOffTasks([]);
 }
 
-function withColumnDate(columnId, dueDate, isOneOffProject = false) {
+function withColumnDate(columnId, dueDate, { isOneOffProject = false, contentType = 'Reel' } = {}) {
   if (isOneOffProject) return dueDate || '';
-  if (columnId === 'editing' && !dueDate) {
+  if (columnId === 'editing' && !dueDate && !isScheduledPostType(contentType)) {
     return toDateKey(new Date());
   }
   return dueDate || '';
@@ -147,7 +147,7 @@ export function useKanban() {
         contentType: 'Reel',
         platform: PLATFORM,
         title: 'New task',
-        dueDate: withColumnDate(columnId, ''),
+        dueDate: withColumnDate(columnId, '', { contentType: 'Reel' }),
         dueTime: '',
         shootDate: '',
         shootTime: '',
@@ -222,7 +222,7 @@ export function useKanban() {
         const nextDueDate = withColumnDate(
           nextColumnId,
           updates.dueDate !== undefined ? updates.dueDate : card.dueDate,
-          isOneOff,
+          { isOneOffProject: isOneOff, contentType: updates.contentType ?? card.contentType },
         );
         return {
           ...card,
@@ -248,7 +248,10 @@ export function useKanban() {
           ...card,
           columnId: targetColumnId,
           status,
-          dueDate: withColumnDate(targetColumnId, card.dueDate, card.isOneOffProject),
+          dueDate: withColumnDate(targetColumnId, card.dueDate, {
+            isOneOffProject: card.isOneOffProject,
+            contentType: card.contentType,
+          }),
         };
       }),
     );
@@ -289,7 +292,10 @@ export function useKanban() {
       ...overrides,
       columnId,
       status: overrides.status || getStatusForColumn(columnId),
-      dueDate: withColumnDate(columnId, overrides.dueDate ?? '', isOneOff),
+      dueDate: withColumnDate(columnId, overrides.dueDate ?? '', {
+        isOneOffProject: isOneOff,
+        contentType: overrides.contentType || 'Reel',
+      }),
     });
     setCards((prev) => [...prev, card]);
     return card.id;

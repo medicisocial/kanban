@@ -5,6 +5,7 @@ import {
 } from './calendar';
 import { formatEditorDateLabel } from './editorTodo';
 import { isPastScheduledBoardPost } from '../utils';
+import { isScheduledPostType } from '../constants';
 import { cardIsAssignedToAccountManager } from './staffMembers';
 
 const COLUMN_SORT_ORDER = {
@@ -19,9 +20,10 @@ const COLUMN_SORT_ORDER = {
 
 export function cardNeedsPostDate(card) {
   if (card.isOneOffProject || card.contentType === 'One-off Project') return false;
+  if (!isScheduledPostType(card.contentType)) return false;
   if (card.dueDate) return false;
   if (card.postedAt) return false;
-  if (card.contentType === 'Story') return false;
+  if (card.columnId === 'finished') return false;
   return true;
 }
 
@@ -190,7 +192,7 @@ export function buildPostsTodoTasks(cards, clientAccountManagers = {}) {
   const tasks = [];
 
   for (const card of cards) {
-    if (card.contentType === 'Story') continue;
+    if (!isScheduledPostType(card.contentType)) continue;
     if (card.isOneOffProject) continue;
     if (card.postedAt) continue;
     if (card.columnId !== 'approved') continue;

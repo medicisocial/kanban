@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   CONTENT_TYPES,
@@ -7,12 +7,16 @@ import {
   getContentTypeStyle,
   needsShootSchedule,
   isOneOffProjectCard,
+  isScheduledPostType,
 } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import { hasStoryRecurrence, hasStoryDailyRange, getStoryScheduleMode, parseRecurrenceDays, parseStoryOccurrenceNotes } from '../utils/calendar';
-import { getDefaultShootEndTime, parseTimeToMinutes } from '../utils/shootDay';
+import { formatScheduledDateTime, formatDate, formatTime } from '../utils';
+import { getDefaultShootEndTime, parseTimeToMinutes, getClientUpcomingShoots } from '../utils/shootDay';
 import StoryRecurrencePicker from './StoryRecurrencePicker';
 import ModelTagInput from './ModelTagInput';
+import TimeInput from './TimeInput';
+import DateInput from './DateInput';
 import { btnPrimaryClass } from './clientPortal/clientPortalUi';
 
 const CARD_TABS = [
@@ -22,7 +26,18 @@ const CARD_TABS = [
   { id: 'references', label: 'References' },
 ];
 
-export default function CardModal({ card, onClose, onUpdate, onDelete }) {
+export default function CardModal({
+  card,
+  cards = [],
+  plans = {},
+  onClose,
+  onUpdate,
+  onDelete,
+  onPlanPostDate,
+  onPlanShootDate,
+  onAddCardsToShoot,
+  onOpenCard,
+}) {
   const overlayRef = useRef(null);
   const [activeTab, setActiveTab] = useState('details');
   const { clients, getClientAccountManager, getMemberNamesForRole } = useClientsContext();
@@ -46,10 +61,37 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
     };
   }, [onClose]);
 
+  const shootDayCards = useMemo(() => {
+    if (!card?.shootDate || !needsShootSchedule(card?.contentType)) return [];
+    return cards
+      .filter(
+        (entry) =>
+          entry.client === card.client &&
+          entry.shootDate === card.shootDate &&
+          needsShootSchedule(entry.contentType),
+      )
+      .sort((a, b) => a.title.localeCompare(b.title));
+  }, [cards, card?.client, card?.shootDate, card?.contentType]);
+
+  const upcomingShoots = useMemo(() => {
+    if (!card?.client || !needsShootSchedule(card?.contentType)) return [];
+    return getClientUpcomingShoots(cards, plans, card.client).filter(
+      (session) => session.dateKey !== card.shootDate,
+    );
+  }, [cards, plans, card?.client, card?.shootDate, card?.contentType]);
+
   if (!card) return null;
 
   const typeStyle = getContentTypeStyle(card.contentType);
   const isOneOff = isOneOffProjectCard(card);
+
+  const joinShootSession = (session) => {
+    onUpdate(card.id, {
+      shootDate: session.dateKey,
+      shootTime: session.shootTime || '',
+      shootEndTime: session.shootEndTime || '',
+    });
+  };
 
   const handleChange = (field, value) => {
     if (field === 'contentType' && value === 'Story') {
@@ -332,15 +374,154 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
           {activeTab === 'production' && !isOneOff && (
             <>
           {!isOneOff && needsShootSchedule(card.contentType) && (
-            <Field label="Shoot Date">
-              <input
-                type="date"
-                value={card.shootDate || ''}
-                onChange={(e) => handleChange('shootDate', e.target.value)}
-                className={inputClass}
-              />
-              <p className="mt-1 text-[10px] text-gray-500">When to film — appears on Scheduled shoots</p>
+            <Field label="Shoot date">
+              <div className="space-y-3">
+                {card.shootDate ? (
+                  <p className="text-sm text-white">
+                    {formatDate(card.shootDate)}
+                    {card.shootTime ? ` · ${formatTime(card.shootTime)}` : ''}
+                    {card.shootEndTime ? ` – ${formatTime(card.shootEndTime)}` : ''}
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-500">No shoot date set yet.</p>
+                )}
+                {onPlanShootDate && (
+                  <button
+                    type="button"
+                    onClick={() => onPlanShootDate(card)}
+                    className={`${btnPrimaryClass} w-full py-2.5 text-sm normal-case tracking-normal`}
+                  >
+                    {card.shootDate ? 'Change on calendar' : 'Pick on calendar'}
+                  </button>
+                )}
+                <p className="text-xs text-gray-500">
+                  Pick a day on the calendar, or join an existing shoot below.
+                </p>
+              </div>
             </Field>
+          )}
+
+          {!card.shootDate && upcomingShoots.length > 0 && needsShootSchedule(card.contentType) && (
+            <div className="rounded-lg border border-[#810100]/20 bg-[#810100]/5 p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#fca5a5]">
+                Join an existing {card.client} shoot
+              </p>
+              <ul className="space-y-2">
+                {upcomingShoots.map((session) => (
+                  <li
+                    key={session.dateKey}
+                    className="rounded-lg border border-white/10 bg-[#1a1a1a]/80 px-3 py-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-white">{formatDate(session.dateKey)}</p>
+                        <p className="mt-0.5 text-xs text-gray-400">
+                          {session.shootTime ? formatTime(session.shootTime) : 'Time TBD'}
+                          {session.shootEndTime ? ` – ${formatTime(session.shootEndTime)}` : ''}
+                          {session.cardCount > 0
+                            ? ` · ${session.cardCount} item${session.cardCount === 1 ? '' : 's'} scheduled`
+                            : ' · Shoot planned'}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => joinShootSession(session)}
+                          className="rounded-lg bg-[#810100] px-2.5 py-1 text-xs font-medium text-white hover:bg-[#a00000]"
+                        >
+                          Add this card
+                        </button>
+                        {onAddCardsToShoot && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onAddCardsToShoot(card.client, session.dateKey, {
+                                excludeCardIds: [card.id],
+                                shootTime: session.shootTime,
+                                shootEndTime: session.shootEndTime,
+                              })
+                            }
+                            className="rounded-lg border border-white/10 px-2.5 py-1 text-xs text-gray-300 hover:bg-white/5"
+                          >
+                            Add more cards
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {card.shootDate && needsShootSchedule(card.contentType) && (
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  On this shoot · {formatDate(card.shootDate)}
+                </p>
+                {onAddCardsToShoot && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sessionTime = shootDayCards.find((entry) => entry.shootTime)?.shootTime || card.shootTime || '';
+                      const sessionEnd =
+                        shootDayCards.find((entry) => entry.shootEndTime)?.shootEndTime || card.shootEndTime || '';
+                      onAddCardsToShoot(card.client, card.shootDate, {
+                        excludeCardIds: [card.id],
+                        shootTime: sessionTime,
+                        shootEndTime: sessionEnd,
+                      });
+                    }}
+                    className="rounded-lg border border-[#810100]/30 bg-[#810100]/10 px-2.5 py-1 text-xs font-medium text-[#fca5a5] hover:bg-[#810100]/20"
+                  >
+                    + Add cards
+                  </button>
+                )}
+              </div>
+              <ul className="space-y-2">
+                {shootDayCards.map((entry) => {
+                  const entryStyle = getContentTypeStyle(entry.contentType);
+                  const isCurrent = entry.id === card.id;
+                  return (
+                    <li
+                      key={entry.id}
+                      className={`rounded-lg border px-3 py-2 ${
+                        isCurrent
+                          ? 'border-[#810100]/40 bg-[#810100]/10'
+                          : 'border-white/10 bg-white/[0.02]'
+                      }`}
+                      style={isCurrent ? { borderLeftWidth: 3, borderLeftColor: entryStyle.border } : undefined}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-white">{entry.title}</p>
+                          <p className="mt-0.5 text-xs text-gray-500">
+                            <span className={entryStyle.label}>{entry.contentType}</span>
+                            {entry.shootTime ? ` · ${formatTime(entry.shootTime)}` : ''}
+                            {isCurrent ? ' · this card' : ''}
+                          </p>
+                        </div>
+                        {!isCurrent && onOpenCard && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenCard(entry)}
+                            className="shrink-0 text-xs text-gray-400 hover:text-white"
+                          >
+                            Open
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              {shootDayCards.length === 1 && (
+                <p className="mt-3 text-xs text-gray-500">
+                  Add more reels or posts to this shoot with the button above.
+                </p>
+              )}
+            </div>
           )}
 
           {showShootPlanning && (
@@ -350,20 +531,20 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Start time">
-                  <input
-                    type="time"
+                  <TimeInput
                     value={card.shootTime || ''}
                     onChange={(e) => handleChange('shootTime', e.target.value)}
-                    className={inputClass}
+                    placeholder="Start time"
+                    inputClassName={inputClass}
                   />
                 </Field>
                 <Field label="End time">
-                  <input
-                    type="time"
+                  <TimeInput
                     value={card.shootEndTime || ''}
                     onChange={(e) => handleChange('shootEndTime', e.target.value)}
+                    placeholder="End time"
                     min={card.shootTime || undefined}
-                    className={inputClass}
+                    inputClassName={inputClass}
                   />
                 </Field>
                 <Field label="Models / Talent">
@@ -398,26 +579,62 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
 
           {activeTab === 'schedule' && (
             <>
+          {!isOneOff && isScheduledPostType(card.contentType) ? (
+            <div className="space-y-4">
+              <Field label="Plan date">
+                <div className="space-y-3">
+                  {card.dueDate ? (
+                    <p className="text-sm text-white">
+                      {formatScheduledDateTime(card.dueDate, card.dueTime)}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-500">No plan date set yet.</p>
+                  )}
+                  {onPlanPostDate && (
+                    <button
+                      type="button"
+                      onClick={() => onPlanPostDate(card)}
+                      className={`${btnPrimaryClass} w-full py-2.5 text-sm normal-case tracking-normal`}
+                    >
+                      {card.dueDate ? 'Change on calendar' : 'Pick on calendar'}
+                    </button>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    Opens {card.client}&apos;s content calendar with all scheduled posts so you can pick a date and time.
+                  </p>
+                </div>
+              </Field>
+              <Field label={card.columnId === 'scheduled' ? 'Scheduled time' : 'Plan time'}>
+                <TimeInput
+                  value={card.dueTime || ''}
+                  onChange={(e) => handleChange('dueTime', e.target.value)}
+                  placeholder="Select time"
+                  inputClassName={inputClass}
+                />
+              </Field>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label={isOneOff ? 'Due date (optional)' : 'Plan date'}>
-              <input
-                type="date"
+              <DateInput
                 value={card.dueDate}
                 onChange={(e) => handleChange('dueDate', e.target.value)}
-                className={inputClass}
+                placeholder="Select date"
+                inputClassName={inputClass}
               />
             </Field>
             {!isOneOff && (
               <Field label={card.columnId === 'scheduled' ? 'Scheduled Time' : 'Plan time'}>
-                <input
-                  type="time"
+                <TimeInput
                   value={card.dueTime || ''}
                   onChange={(e) => handleChange('dueTime', e.target.value)}
-                  className={inputClass}
+                  placeholder="Select time"
+                  inputClassName={inputClass}
                 />
               </Field>
             )}
           </div>
+          )}
 
           {!isOneOff && card.contentType === 'Story' && ['scheduled', 'editing', 'in-review', 'approved'].includes(card.columnId) && (
             <StoryRecurrencePicker

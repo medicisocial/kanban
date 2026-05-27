@@ -15,6 +15,8 @@ export default function MeetingsMonthView({
   meetingsByDate,
   onMeetingClick,
   onDayClick,
+  onSelectDate,
+  selectedDateKey = '',
   showClientName = false,
 }) {
   const { getClientColor } = useClientsContext();
@@ -72,14 +74,24 @@ export default function MeetingsMonthView({
               const inMonth = day.getMonth() === month;
               const today = isToday(day);
 
+              const selected = selectedDateKey === key;
+
               return (
                 <button
                   key={key}
                   type="button"
-                  onClick={() => onDayClick?.(day, key)}
+                  onClick={() => {
+                    if (onSelectDate) {
+                      onSelectDate(day, key);
+                    } else {
+                      onDayClick?.(day, key);
+                    }
+                  }}
                   className={`calendar-grid-cell min-h-[108px] p-1.5 sm:min-h-[124px] sm:p-2 ${
                     !inMonth ? 'bg-black/20 opacity-45' : ''
-                  } ${today ? 'calendar-cell-today' : ''}`}
+                  } ${today ? 'calendar-cell-today' : ''} ${
+                    selected ? 'bg-violet-500/15 ring-2 ring-inset ring-violet-400/60' : ''
+                  }`}
                   aria-current={today ? 'date' : undefined}
                 >
                   <div className="mb-1 flex items-center justify-between">

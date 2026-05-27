@@ -19,6 +19,7 @@ export default function CalendarMonthView({
   overviewLabel = "overview",
   hideClient = false,
   expanded = false,
+  markedDates = {},
 }) {
   const year = focusDate.getFullYear();
   const month = focusDate.getMonth();
@@ -42,6 +43,7 @@ export default function CalendarMonthView({
             {week.map((day) => {
               const key = toDateKey(day);
               const dayCards = cardsByDate[key] || [];
+              const markedLabel = markedDates[key];
               const inMonth = day.getMonth() === month;
               const today = isToday(day);
 
@@ -84,9 +86,17 @@ export default function CalendarMonthView({
                     {dayCards.length > 0 && (
                       <span className="text-[10px] text-gray-500">{dayCards.length}</span>
                     )}
+                    {dayCards.length === 0 && markedLabel && (
+                      <span className="rounded-full bg-[#a00000]/20 px-1.5 py-0.5 text-[10px] font-medium text-[#fca5a5]">
+                        •
+                      </span>
+                    )}
                   </div>
 
                   <div className="space-y-0.5">
+                    {dayCards.length === 0 && markedLabel && inMonth && (
+                      <p className="px-1 text-[10px] font-medium text-[#fca5a5]/80">{markedLabel}</p>
+                    )}
                     {visibleCards.map((card) => (
                       <CalendarEvent
                         key={`${card.id}-${key}`}

@@ -1,4 +1,5 @@
 import { toDateKey } from './calendar';
+import { isScheduledPostType } from '../constants';
 import {
   cardIsAssignedToStaff,
   cardIsAssignedToAccountManager,
@@ -28,7 +29,7 @@ function matchesStaff(card, staffName, clientAccountManagers, personalScope) {
 }
 
 function cardNeedsScheduling(card) {
-  if (card.contentType === 'Story') return false;
+  if (!isScheduledPostType(card.contentType)) return false;
   if (card.isOneOffProject) return false;
   if (card.postedAt) return false;
   return card.columnId === 'approved';
