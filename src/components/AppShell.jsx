@@ -45,6 +45,7 @@ import { useClientsContext } from "../context/ClientsContext";
 import { getDefaultWorkspaceView } from "../utils/getDefaultWorkspaceView";
 import { resolveStaffMemberName } from "../utils/staffMembers";
 import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
+import { usesPersonalWorkspaceView } from "../utils/staffAuth";
 
 export default function AppShell({ onSignOut }) {
   const importData = parseImportParam();
@@ -529,6 +530,7 @@ export default function AppShell({ onSignOut }) {
 
   const syncTotal = responseCount + contentReviewResponseCount + shootResponseCount;
   const staffName = resolveStaffMemberName(session, teamMembers);
+  const myWorkOnly = usesPersonalWorkspaceView(session);
   const workspaceAlerts = useMemo(
     () =>
       buildWorkspaceAlerts({
@@ -537,9 +539,9 @@ export default function AppShell({ onSignOut }) {
         clientFilter,
         staffName,
         clientAccountManagers,
-        myWorkOnly: true,
+        myWorkOnly,
       }),
-    [cards, ideas, clientFilter, staffName, clientAccountManagers],
+    [cards, ideas, clientFilter, staffName, clientAccountManagers, myWorkOnly],
   );
   const notificationCount = syncTotal + workspaceAlerts.length;
 
@@ -571,6 +573,7 @@ export default function AppShell({ onSignOut }) {
       onSignOut={onSignOut ? handleSignOut : undefined}
       clientFilter={clientFilter}
       onClientChange={setClientFilter}
+      homeNavLabel={myWorkOnly ? 'My work' : 'Overview'}
     >
       {activeView === "home" && (
         <WorkspaceHomePage
@@ -581,6 +584,7 @@ export default function AppShell({ onSignOut }) {
           syncTotal={syncTotal}
           staffName={staffName}
           clientAccountManagers={clientAccountManagers}
+          myWorkOnly={myWorkOnly}
           onNavigate={setActiveView}
           onOpenCard={handleCardClick}
           onOpenNotifications={() => setNotificationsOpen(true)}

@@ -16,11 +16,7 @@ import { useClientsContext } from '../../context/ClientsContext';
 import { INTERNAL_TEAM_CLIENT } from '../../constants';
 import { readClientProfileImage } from '../../utils/clientImage';
 
-const NAV_SECTIONS = [
-  {
-    label: 'Overview',
-    items: [{ id: 'home', label: 'My work', Icon: IconHome }],
-  },
+const NAV_SECTIONS_BASE = [
   {
     label: 'Production',
     items: [
@@ -44,6 +40,16 @@ const NAV_SECTIONS = [
   },
 ];
 
+function buildNavSections(homeLabel) {
+  return [
+    {
+      label: 'Overview',
+      items: [{ id: 'home', label: homeLabel, Icon: IconHome }],
+    },
+    ...NAV_SECTIONS_BASE,
+  ];
+}
+
 export default function AdminConsoleLayout({
   activeView,
   onViewChange,
@@ -55,9 +61,11 @@ export default function AdminConsoleLayout({
   onSignOut,
   clientFilter,
   onClientChange,
+  homeNavLabel = 'Overview',
   children,
 }) {
   const admin = useWorkspaceAdmin({ clientFilter, onClientChange });
+  const navSections = buildNavSections(homeNavLabel);
   const { getClientColor, getClientLogo, setClientLogo } = useClientsContext();
   const teamColor = getClientColor(INTERNAL_TEAM_CLIENT);
   const teamLogo = getClientLogo(INTERNAL_TEAM_CLIENT);
@@ -104,7 +112,7 @@ export default function AdminConsoleLayout({
       <EnterprisePortalLayout
         productTitle="Operations Console"
         subtitle="Internal workspace"
-        navSections={NAV_SECTIONS}
+        navSections={navSections}
         activeTab={activeView}
         onTabChange={onViewChange}
         notificationCount={notificationCount}

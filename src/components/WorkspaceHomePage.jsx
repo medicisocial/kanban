@@ -34,6 +34,7 @@ export default function WorkspaceHomePage({
   syncTotal,
   staffName = '',
   clientAccountManagers = {},
+  myWorkOnly = false,
   onNavigate,
   onOpenCard,
   onOpenNotifications,
@@ -46,16 +47,22 @@ export default function WorkspaceHomePage({
     syncTotal,
     staffName,
     clientAccountManagers,
-    myWorkOnly: true,
+    myWorkOnly,
   });
 
-  const description = staffName
-    ? `Your queue at a glance — assigned to ${staffName}.`
-    : 'Today at a glance — production, reviews, and client updates.';
+  const title = myWorkOnly ? 'My work' : 'Overview';
+
+  const description = myWorkOnly
+    ? staffName
+      ? `Your queue at a glance — assigned to ${staffName}.`
+      : 'Your assigned production, reviews, and schedules.'
+    : clientFilter === 'all'
+      ? 'Company-wide production at a glance — pipeline, reviews, and schedules.'
+      : `Production at a glance for ${clientFilter}.`;
 
   return (
     <section>
-      <ClientPortalSectionHeader title="My work" description={description} />
+      <ClientPortalSectionHeader title={title} description={description} />
 
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-6">
         {summary.syncTotal > 0 && (

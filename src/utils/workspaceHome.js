@@ -30,7 +30,7 @@ export function buildWorkspaceHomeSummary({
   syncTotal = 0,
   staffName = '',
   clientAccountManagers = {},
-  myWorkOnly = true,
+  myWorkOnly = false,
 }) {
   const matchesClient = (item) =>
     clientFilter === 'all' || item.client === clientFilter;

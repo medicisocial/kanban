@@ -45,9 +45,6 @@ export function isStaffSessionValid(session) {
   if (!session?.username || !session?.expires || !session?.signature) return false;
   if (Date.now() > session.expires) return false;
 
-  const expectedUser = getConfiguredUsername();
-  if (session.username.toLowerCase() !== expectedUser.toLowerCase()) return false;
-
   const expectedSignature = createSessionSignature(session.username, session.expires);
   return timingSafeEqual(session.signature, expectedSignature);
 }

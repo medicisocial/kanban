@@ -96,11 +96,25 @@ export async function isStaffSessionValid(session) {
   if (!isStaffAuthConfigured()) return false;
   if (Date.now() > session.expires) return false;
 
-  const expectedUser = getConfiguredUsername();
-  if (session.username.toLowerCase() !== expectedUser.toLowerCase()) return false;
-
   const expectedSignature = await createSessionSignature(session.username, session.expires);
   return timingSafeEqual(session.signature, expectedSignature);
+}
+
+export function getConfiguredStaffUsername() {
+  return getConfiguredUsername();
+}
+
+/** Shared Medici Social ops login (e.g. medicisocial) — company-wide view, not personal queue. */
+export function isSharedOperationsLogin(session) {
+  if (!session?.username) return false;
+  const configured = getConfiguredUsername();
+  if (!configured) return false;
+  return session.username.trim().toLowerCase() === configured.toLowerCase();
+}
+
+export function usesPersonalWorkspaceView(session) {
+  if (!session?.username) return false;
+  return !isSharedOperationsLogin(session);
 }
 
 export function loadStaffSession() {

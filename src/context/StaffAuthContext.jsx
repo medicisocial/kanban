@@ -10,6 +10,7 @@ import {
   saveStaffSession,
   verifyStaffCredentials,
 } from '../utils/staffAuth';
+import { verifyTeamMemberStaffCredentials } from '../utils/staffMembers';
 
 const StaffAuthContext = createContext(null);
 
@@ -50,14 +51,23 @@ export function StaffAuthProvider({ children }) {
     }
 
     const ok = await verifyStaffCredentials(username, password);
-    if (!ok) {
-      return { ok: false, error: 'Invalid username or password.' };
+    if (ok) {
+      const nextSession = await createStaffSession(username);
+      saveStaffSession(nextSession);
+      setSession(nextSession);
+      return { ok: true };
     }
 
-    const nextSession = await createStaffSession(username);
-    saveStaffSession(nextSession);
-    setSession(nextSession);
-    return { ok: true };
+    const teamMember = verifyTeamMemberStaffCredentials(username, password);
+    if (teamMember) {
+      const loginName = teamMember.username?.trim() || teamMember.name;
+      const nextSession = await createStaffSession(loginName);
+      saveStaffSession(nextSession);
+      setSession(nextSession);
+      return { ok: true };
+    }
+
+    return { ok: false, error: 'Invalid username or password.' };
   }, []);
 
   const logout = useCallback(() => {

@@ -1,4 +1,4 @@
-import { memberMatchesRole } from './teamMembers';
+import { memberMatchesRole, loadTeamMembersFromStorage } from './teamMembers';
 
 export function resolveStaffMemberName(session, teamMembers) {
   if (!session?.username) return '';
@@ -40,4 +40,19 @@ export function staffMemberHasRole(session, teamMembers, role) {
   );
   if (!member) return false;
   return memberMatchesRole(member, role);
+}
+
+/** Team member console login — username + password from Team settings. */
+export function verifyTeamMemberStaffCredentials(username, password) {
+  const key = username.trim().toLowerCase();
+  if (!key || !password) return null;
+
+  const member = loadTeamMembersFromStorage().find(
+    (entry) =>
+      entry.username?.trim().toLowerCase() === key ||
+      entry.name?.trim().toLowerCase() === key,
+  );
+
+  if (!member?.password || member.password !== password) return null;
+  return member;
 }

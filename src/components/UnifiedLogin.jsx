@@ -5,6 +5,7 @@ import {
   saveStaffSession,
   verifyStaffCredentials,
 } from '../utils/staffAuth';
+import { verifyTeamMemberStaffCredentials } from '../utils/staffMembers';
 import { loginClientPortal } from '../utils/clientPortalAuth';
 
 const labelClass =
@@ -40,6 +41,15 @@ export default function UnifiedLogin({ onAuthenticated }) {
         const staffOk = await verifyStaffCredentials(username, password);
         if (staffOk) {
           const session = await createStaffSession(username);
+          saveStaffSession(session);
+          onAuthenticated('staff');
+          return;
+        }
+
+        const teamMember = verifyTeamMemberStaffCredentials(username, password);
+        if (teamMember) {
+          const loginName = teamMember.username?.trim() || teamMember.name;
+          const session = await createStaffSession(loginName);
           saveStaffSession(session);
           onAuthenticated('staff');
           return;
