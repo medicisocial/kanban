@@ -176,17 +176,19 @@ export default function WorkspaceHomePage({
   const pipelineRoles = [
     {
       label: 'Content creator',
-      count: summary.toCreateCount,
-      subtitle:
-        summary.shootsTodayCount > 0
-          ? `${summary.toCreateCount} to create · ${summary.shootsTodayCount} shoot${summary.shootsTodayCount === 1 ? '' : 's'} today`
-          : `${summary.toCreateCount} to create`,
+      count: summary.toCreateCount + summary.shootsTodayCount,
+      tone: 'creator',
+      details: [
+        { label: 'To create', value: summary.toCreateCount },
+        { label: 'Shoots today', value: summary.shootsTodayCount },
+      ],
       onClick: () => onNavigate('todo', { tasksRole: 'creator' }),
     },
     {
       label: 'Editor',
       count: summary.editingCount,
-      subtitle: `${summary.editingCount} in editing`,
+      tone: 'editor',
+      details: [{ label: 'Editing', value: summary.editingCount }],
       onClick: () => onNavigate('todo', { tasksRole: 'editor' }),
     },
   ];
@@ -197,7 +199,12 @@ export default function WorkspaceHomePage({
     pipelineRoles.push({
       label: 'Account manager',
       count: amTotal,
-      subtitle: `${summary.inReviewCount} in review · ${summary.needsSchedulingCount} scheduling · ${summary.needPostDateCount} post date`,
+      tone: 'account',
+      details: [
+        { label: 'In review', value: summary.inReviewCount },
+        { label: 'Scheduling', value: summary.needsSchedulingCount },
+        { label: 'Post date', value: summary.needPostDateCount },
+      ],
       onClick: () => onNavigate('todo', { tasksRole: 'account' }),
     });
   }
@@ -233,7 +240,8 @@ export default function WorkspaceHomePage({
             key={role.label}
             label={role.label}
             count={role.count}
-            subtitle={role.subtitle}
+            details={role.details}
+            tone={role.tone}
             onClick={role.onClick}
           />
         ))}

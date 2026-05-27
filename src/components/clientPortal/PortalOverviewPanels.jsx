@@ -21,8 +21,8 @@ export function PortalPipelineMetric({ label, value, onClick }) {
   return <div className={className}>{inner}</div>;
 }
 
-export function PortalRoleSummary({ label, count, subtitle, onClick }) {
-  const className = `overview-role-summary glass-surface${
+export function PortalRoleSummary({ label, count, details = [], tone = 'default', onClick }) {
+  const className = `overview-role-summary glass-surface overview-role-summary-${tone}${
     onClick ? ' overview-role-summary-interactive' : ''
   }`;
 
@@ -30,9 +30,22 @@ export function PortalRoleSummary({ label, count, subtitle, onClick }) {
     <div className="overview-role-summary-body">
       <div className="overview-role-summary-copy">
         <h3 className="overview-role-summary-title">{label}</h3>
-        {subtitle && <p className="overview-role-summary-subtitle">{subtitle}</p>}
+        {details.length > 0 ? (
+          <div className="overview-role-summary-details">
+            {details.map((item) => (
+              <span key={item.label} className="overview-role-summary-chip">
+                {item.label}
+                <strong>{item.value}</strong>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="overview-role-summary-empty">All clear</p>
+        )}
       </div>
-      <span className="overview-role-summary-count">{count}</span>
+      <div className="overview-role-summary-count-well" data-zero={count === 0 ? '' : undefined}>
+        <span className="overview-role-summary-count">{count}</span>
+      </div>
     </div>
   );
 

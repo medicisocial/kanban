@@ -962,33 +962,47 @@ select option:hover {
 }
 
 .overview-role-summary {
-  width: min(100%, 300px);
-  padding: 1rem 1.25rem;
+  width: min(100%, 320px);
+  padding: 1rem 1.125rem;
   text-align: left;
   border: none;
   background: transparent;
   cursor: default;
 }
 
+.overview-role-summary-creator {
+  border-left: 2px solid rgba(245, 158, 11, 0.38);
+}
+
+.overview-role-summary-editor {
+  border-left: 2px solid rgba(59, 130, 246, 0.38);
+}
+
+.overview-role-summary-account {
+  border-left: 2px solid rgba(167, 139, 250, 0.38);
+}
+
 .overview-role-summary-interactive {
+  width: min(100%, 320px);
   cursor: pointer;
   transition:
     border-color 0.25s ease,
     background-color 0.25s ease,
-    transform 0.25s ease;
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .overview-role-summary-interactive:hover {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.035);
+  transform: translateY(-1px);
 }
 
 .overview-role-summary-body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.125rem;
-  min-height: 3.25rem;
+  gap: 1rem;
 }
 
 .overview-role-summary-copy {
@@ -997,30 +1011,75 @@ select option:hover {
 }
 
 .overview-role-summary-title {
-  margin: 0;
-  font-size: 0.875rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: -0.01em;
-  line-height: 1.3;
-  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.overview-role-summary-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.overview-role-summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.overview-role-summary-chip strong {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.overview-role-summary-empty {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.overview-role-summary-count-well {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.5rem;
+  min-height: 3.5rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.26);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.overview-role-summary-count-well[data-zero] {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.overview-role-summary-count-well[data-zero] .overview-role-summary-count {
+  color: rgba(255, 255, 255, 0.38);
 }
 
 .overview-role-summary-count {
-  flex-shrink: 0;
-  align-self: center;
-  font-size: 2rem;
+  font-size: 1.875rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.04em;
   line-height: 1;
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.overview-role-summary-subtitle {
-  margin: 0.375rem 0 0;
-  font-size: 0.6875rem;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.36);
+  color: rgba(255, 255, 255, 0.88);
 }
 
 @media (min-width: 768px) {
