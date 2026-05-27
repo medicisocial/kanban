@@ -1057,6 +1057,10 @@ select option:hover {
   align-self: center;
 }
 
+.overview-role-summary-body-lift .overview-role-summary-copy {
+  transform: translateY(-0.5rem);
+}
+
 .overview-role-summary-chip {
   display: inline-flex;
   align-items: center;

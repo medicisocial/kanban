@@ -21,13 +21,24 @@ export function PortalPipelineMetric({ label, value, onClick }) {
   return <div className={className}>{inner}</div>;
 }
 
-export function PortalRoleSummary({ label, count, details = [], onClick, centerCount = false }) {
+export function PortalRoleSummary({
+  label,
+  count,
+  details = [],
+  onClick,
+  centerCount = false,
+  liftContent = false,
+}) {
   const className = `overview-role-summary glass-surface${
     onClick ? ' overview-role-summary-interactive' : ''
   }`;
 
   const inner = (
-    <div className="overview-role-summary-body">
+    <div
+      className={`overview-role-summary-body${
+        liftContent ? ' overview-role-summary-body-lift' : ''
+      }`}
+    >
       <div className="overview-role-summary-copy">
         <h3 className="overview-role-summary-title">{label}</h3>
         {details.length > 0 ? (

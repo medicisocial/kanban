@@ -240,6 +240,7 @@ export default function WorkspaceHomePage({
             details={role.details}
             onClick={role.onClick}
             centerCount={role.label === 'Account manager'}
+            liftContent={role.label === 'Content creator' || role.label === 'Editor'}
           />
         ))}
       </div>
