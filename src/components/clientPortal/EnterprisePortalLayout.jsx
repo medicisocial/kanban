@@ -10,6 +10,17 @@ const SIDEBAR_COLLAPSED_KEY = 'portal-sidebar-collapsed';
 const SIDEBAR_WIDTH_EXPANDED = 280;
 const SIDEBAR_WIDTH_COLLAPSED = 72;
 
+function getDropdownPosition(button) {
+  if (!button) {
+    return { top: 72, right: 16 };
+  }
+  const rect = button.getBoundingClientRect();
+  return {
+    top: rect.bottom + 8,
+    right: Math.max(16, window.innerWidth - rect.right),
+  };
+}
+
 function SidebarBrand({
   brandLayout = false,
   brandName,
@@ -163,6 +174,7 @@ export default function EnterprisePortalLayout({
   sidebarLogoMessageIsError = false,
   onSignOut,
   onProfileClick,
+  onNotificationClick,
   sidebarFooter,
   headerFilter,
   topBanner,
@@ -252,9 +264,41 @@ export default function EnterprisePortalLayout({
     onSignOut?.();
   };
 
+  const toggleNotifications = () => {
+    setProfileOpen(false);
+    const nextOpen = !notificationsOpen;
+    if (nextOpen) {
+      setNotificationMenuStyle(getDropdownPosition(notificationButtonRef.current));
+    }
+    if (onNotificationsOpenChange) {
+      onNotificationsOpenChange(nextOpen);
+    } else {
+      setInternalNotificationsOpen(nextOpen);
+    }
+  };
+
+  const toggleProfile = () => {
+    const nextOpen = !profileOpen;
+    if (nextOpen) {
+      setNotificationMenuStyle(null);
+      if (onNotificationsOpenChange) {
+        onNotificationsOpenChange(false);
+      } else {
+        setInternalNotificationsOpen(false);
+      }
+      setProfileMenuStyle(getDropdownPosition(profileButtonRef.current));
+    }
+    setProfileOpen(nextOpen);
+  };
+
+  const resolvedNotificationMenuStyle =
+    notificationMenuStyle ?? getDropdownPosition(notificationButtonRef.current);
+
+  const resolvedProfileMenuStyle =
+    profileMenuStyle ?? getDropdownPosition(profileButtonRef.current);
+
   const profileMenu =
     profileOpen &&
-    profileMenuStyle &&
     (onProfileClick || onSignOut) &&
     createPortal(
       <>
@@ -266,7 +310,10 @@ export default function EnterprisePortalLayout({
         />
         <div
           className="portal-dropdown-panel fixed z-[210] w-72"
-          style={{ top: profileMenuStyle.top, right: profileMenuStyle.right }}
+          style={{
+            top: resolvedProfileMenuStyle.top,
+            right: resolvedProfileMenuStyle.right,
+          }}
           role="menu"
         >
           <div className="portal-dropdown-header">
@@ -334,19 +381,27 @@ export default function EnterprisePortalLayout({
 
   const notificationsMenu =
     notificationsOpen &&
-    notificationPanel &&
-    notificationMenuStyle &&
+    (notificationPanel || onNotificationClick) &&
     createPortal(
       <>
         <button
           type="button"
           className="portal-dropdown-backdrop fixed inset-0 z-[200] cursor-default"
           aria-label="Close notifications"
-          onClick={() => setNotificationsOpen(false)}
+          onClick={() => {
+            if (onNotificationsOpenChange) {
+              onNotificationsOpenChange(false);
+            } else {
+              setInternalNotificationsOpen(false);
+            }
+          }}
         />
         <div
           className="portal-dropdown-panel portal-dropdown-panel-wide fixed z-[210]"
-          style={{ top: notificationMenuStyle.top, right: notificationMenuStyle.right }}
+          style={{
+            top: resolvedNotificationMenuStyle.top,
+            right: resolvedNotificationMenuStyle.right,
+          }}
         >
           <div className="portal-dropdown-header py-3">
             <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/38">
@@ -354,7 +409,11 @@ export default function EnterprisePortalLayout({
             </p>
           </div>
           <div className="portal-dropdown-body-flush max-h-[min(70vh,480px)] overflow-y-auto">
-            {notificationPanel}
+            {notificationPanel || (
+              <div className="px-4 py-5">
+                <p className="text-sm text-white/50">You&apos;re all caught up.</p>
+              </div>
+            )}
           </div>
         </div>
       </>,
@@ -446,7 +505,7 @@ export default function EnterprisePortalLayout({
       </aside>
 
       <div className="relative z-10 flex min-w-0 flex-1 flex-col">
-        <header className="shrink-0 border-b border-white/[0.06] bg-black/50 px-4 py-3 backdrop-blur-md md:px-8 md:py-4">
+        <header className="relative z-30 shrink-0 border-b border-white/[0.06] bg-black/50 px-4 py-3 backdrop-blur-md md:px-8 md:py-4">
           <div className="flex items-center gap-3 md:gap-4">
             <button
               type="button"
@@ -468,16 +527,13 @@ export default function EnterprisePortalLayout({
               )}
             </div>
 
-            <div className="flex shrink-0 items-center gap-2 md:gap-3">
+            <div className="relative z-30 flex shrink-0 items-center gap-2 md:gap-3">
               <div className="relative">
                 <button
                   ref={notificationButtonRef}
                   type="button"
-                  onClick={() => {
-                    setProfileOpen(false);
-                    setNotificationsOpen((open) => !open);
-                  }}
-                  className="portal-icon-btn relative flex h-10 w-10 items-center justify-center text-white/55"
+                  onClick={toggleNotifications}
+                  className="portal-icon-btn relative z-30 flex h-10 w-10 cursor-pointer items-center justify-center text-white/55"
                   title="Notifications"
                   aria-label={
                     notificationCount > 0
@@ -499,11 +555,8 @@ export default function EnterprisePortalLayout({
                 <button
                   ref={profileButtonRef}
                   type="button"
-                  onClick={() => {
-                    setNotificationsOpen(false);
-                    setProfileOpen((open) => !open);
-                  }}
-                  className={`portal-profile-btn flex items-center py-1 ${
+                  onClick={toggleProfile}
+                  className={`portal-profile-btn relative z-30 flex cursor-pointer items-center py-1 ${
                     brandLayout ? 'pl-0 pr-0' : 'gap-2.5 pl-1 pr-2.5'
                   }`}
                   aria-expanded={profileOpen}
