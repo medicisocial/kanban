@@ -1,4 +1,5 @@
 import ClientPortalUsersEditor from './clientPortal/ClientPortalUsersEditor';
+import { useClientsContext } from '../context/ClientsContext';
 
 export default function ClientPortalCredentialsModal({
   clients,
@@ -10,6 +11,7 @@ export default function ClientPortalCredentialsModal({
   description = 'Internal team logins for Medici Social. Separate from client brand access.',
   saveLabel = 'Save team users',
 }) {
+  const { getClientColor } = useClientsContext();
   const teamClient = clients[0];
 
   if (!teamClient) return null;
@@ -36,6 +38,7 @@ export default function ClientPortalCredentialsModal({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           <ClientPortalUsersEditor
             client={teamClient}
+            clientColor={getClientColor(teamClient)}
             getClientUsers={getClientUsers}
             onSaveClientUsers={onSaveClientUsers}
             onSyncToCloud={onSyncToCloud}

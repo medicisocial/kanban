@@ -1,7 +1,9 @@
 import { getRedis, loadWorkspace, saveWorkspace } from './_lib/redis.mjs';
 import {
   getClientSessionFromRequest,
+  getClientPortalAuthMap,
   isClientSessionValid,
+  normalizeBrandUsers,
 } from './_lib/clientPortalAuth.mjs';
 import { normalizeClientContacts, mergeClientSocialLogins } from './_lib/clientProfile.mjs';
 
@@ -9,6 +11,7 @@ const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
 const CONTENT_REVIEW_RESPONSES_KEY = 'medici-social-content-review-responses';
 const EVENTS_STORAGE_KEY = 'medici-social-events';
 const CLIENTS_STORAGE_KEY = 'medici-social-clients';
+const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
 
 function unauthorized(res) {
   return res.status(401).json({ error: 'Unauthorized' });
@@ -139,6 +142,25 @@ export default async function handler(req, res) {
     }
 
     workspace.data[CLIENTS_STORAGE_KEY] = nextStore;
+
+    if (Object.prototype.hasOwnProperty.call(response, 'userAvatar')) {
+      const authMap = getClientPortalAuthMap(workspace);
+      const sessionUsername = session.username.trim().toLowerCase();
+      const brandUsers = normalizeBrandUsers(authMap[brand]);
+      const updatedUsers = brandUsers.map((user) => {
+        if (user.username.toLowerCase() !== sessionUsername) return user;
+        if (!response.userAvatar) {
+          const { avatar, ...rest } = user;
+          return rest;
+        }
+        return { ...user, avatar: response.userAvatar };
+      });
+
+      workspace.data[CLIENT_PORTAL_AUTH_KEY] = {
+        ...authMap,
+        [brand]: updatedUsers,
+      };
+    }
   } else {
     return res.status(400).json({ error: 'Unknown response type.' });
   }

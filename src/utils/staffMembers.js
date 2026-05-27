@@ -1,16 +1,25 @@
 import { memberMatchesRole, loadTeamMembersFromStorage } from './teamMembers';
 
-export function resolveStaffMemberName(session, teamMembers) {
-  if (!session?.username || !Array.isArray(teamMembers)) return session?.username?.trim() || '';
+export function resolveStaffMember(session, teamMembers) {
+  if (!session?.username || !Array.isArray(teamMembers)) return null;
 
   const key = session.username.trim().toLowerCase();
-  const member = teamMembers.find(
-    (entry) =>
-      entry.username?.trim().toLowerCase() === key ||
-      entry.name?.trim().toLowerCase() === key,
+  return (
+    teamMembers.find(
+      (entry) =>
+        entry.username?.trim().toLowerCase() === key ||
+        entry.name?.trim().toLowerCase() === key,
+    ) || null
   );
+}
 
-  return member?.name || session.username.trim();
+export function resolveStaffMemberName(session, teamMembers) {
+  const member = resolveStaffMember(session, teamMembers);
+  return member?.name || session?.username?.trim() || '';
+}
+
+export function resolveStaffMemberAvatar(session, teamMembers) {
+  return resolveStaffMember(session, teamMembers)?.avatar || null;
 }
 
 export function getStaffFirstName(name) {
@@ -60,13 +69,7 @@ export function cardIsAssignedToStaff(card, staffName, clientAccountManagers = {
 }
 
 export function staffMemberHasRole(session, teamMembers, role) {
-  if (!session?.username || !Array.isArray(teamMembers)) return false;
-  const key = session.username.trim().toLowerCase();
-  const member = teamMembers.find(
-    (entry) =>
-      entry.username?.trim().toLowerCase() === key ||
-      entry.name?.trim().toLowerCase() === key,
-  );
+  const member = resolveStaffMember(session, teamMembers);
   if (!member) return false;
   return memberMatchesRole(member, role);
 }

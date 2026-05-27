@@ -14,6 +14,7 @@ import {
 } from '../utils/clientLogo';
 import ClientLogoAvatar from './clientPortal/ClientLogoAvatar';
 import LogoCropEditor from './clientPortal/LogoCropEditor';
+import ProfilePhotoEditor from './clientPortal/ProfilePhotoEditor';
 import ClientContactsEditor from './clientPortal/ClientContactsEditor';
 import ClientSocialLoginsEditor from './clientPortal/ClientSocialLoginsEditor';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
@@ -44,11 +45,14 @@ export default function ClientProfilePortal({
   businessType,
   contacts = [],
   socialLogins = {},
+  userAvatar,
+  userDisplayName,
   onSaveProfile,
 }) {
   const [previewSrc, setPreviewSrc] = useState(null);
   const [logoCrop, setLogoCrop] = useState(DEFAULT_LOGO_CROP);
   const [pendingLogo, setPendingLogo] = useState(undefined);
+  const [pendingUserAvatar, setPendingUserAvatar] = useState(undefined);
   const [draftContacts, setDraftContacts] = useState(contacts);
   const [draftSocialLogins, setDraftSocialLogins] = useState(() =>
     normalizeClientSocialLogins(socialLogins),
@@ -67,11 +71,12 @@ export default function ClientProfilePortal({
       y: normalized?.y ?? DEFAULT_LOGO_CROP.y,
     });
     setPendingLogo(undefined);
+    setPendingUserAvatar(undefined);
     setDraftContacts(contacts);
     setDraftSocialLogins(normalizeClientSocialLogins(socialLogins));
     setMessage('');
     setError('');
-  }, [client, clientLogo, contacts, socialLogins]);
+  }, [client, clientLogo, contacts, socialLogins, userAvatar]);
 
   const applyLogoDraft = (src, crop) => {
     setPreviewSrc(src);
@@ -111,6 +116,7 @@ export default function ClientProfilePortal({
 
   const hasChanges =
     pendingLogo !== undefined ||
+    pendingUserAvatar !== undefined ||
     JSON.stringify(normalizeClientContacts(draftContacts)) !==
       JSON.stringify(normalizeClientContacts(contacts)) ||
     !socialLoginsMatch(draftSocialLogins, socialLogins);
@@ -129,8 +135,13 @@ export default function ClientProfilePortal({
         payload.logo =
           pendingLogo === null ? null : await bakeLogoCrop(pendingLogo);
       }
+      if (pendingUserAvatar !== undefined) {
+        payload.userAvatar =
+          pendingUserAvatar === null ? null : await bakeLogoCrop(pendingUserAvatar);
+      }
       await onSaveProfile(payload);
       setPendingLogo(undefined);
+      setPendingUserAvatar(undefined);
       setMessage('Profile saved.');
       setTimeout(() => setMessage(''), 4000);
     } catch (err) {
@@ -144,12 +155,27 @@ export default function ClientProfilePortal({
     <section>
       <ClientPortalSectionHeader
         title="Settings"
-        description="Update your brand photo, contacts, and social logins. Business type and brand color are managed by Medici Social."
+        description="Update your profile photo, brand photo, contacts, and social logins. Business type and brand color are managed by Medici Social."
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-        <div className={`${surfacePanelClass} space-y-5 p-5`}>
-          <div className={`${glassInsetClass} space-y-4 p-4`}>
+        <div className="space-y-6">
+          <div className={`${surfacePanelClass} space-y-5 p-5`}>
+            <ProfilePhotoEditor
+              avatar={userAvatar}
+              name={userDisplayName || client}
+              color={clientColor}
+              label="Your profile photo"
+              hint="This photo appears on your account menu. Zoom and drag to fit the circle."
+              onPendingChange={setPendingUserAvatar}
+            />
+          </div>
+
+          <div className={`${surfacePanelClass} space-y-5 p-5`}>
+            <span className="block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+              Brand photo
+            </span>
+            <div className={`${glassInsetClass} space-y-4 p-4`}>
             {previewSrc ? (
               <LogoCropEditor src={previewSrc} crop={logoCrop} onCropChange={handleCropChange} />
             ) : (
@@ -220,6 +246,7 @@ export default function ClientProfilePortal({
               <p className="text-sm text-white/75">{clientColor}</p>
             </div>
             <p className="mt-1.5 text-[10px] text-white/35">Set by your Medici Social team.</p>
+          </div>
           </div>
         </div>
 

@@ -44,7 +44,7 @@ import CardModal from "./CardModal";
 import { useStaffAuth } from "../context/StaffAuthContext";
 import { useClientsContext } from "../context/ClientsContext";
 import { getDefaultWorkspaceView } from "../utils/getDefaultWorkspaceView";
-import { resolveStaffMemberName, staffHasAccountManagerQueueAccess, staffHasLeadershipWorkspaceAccess } from "../utils/staffMembers";
+import { resolveStaffMemberName, resolveStaffMemberAvatar, staffHasAccountManagerQueueAccess, staffHasLeadershipWorkspaceAccess } from "../utils/staffMembers";
 import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
 import { buildWorkspaceHomeSummary, buildNavBadgeCounts } from "../utils/workspaceHome";
 import { usesPersonalWorkspaceView } from "../utils/staffAuth";
@@ -555,6 +555,7 @@ export default function AppShell({ onSignOut }) {
 
   const syncTotal = responseCount + contentReviewResponseCount + shootResponseCount;
   const staffName = resolveStaffMemberName(session, teamMembers);
+  const staffAvatar = resolveStaffMemberAvatar(session, teamMembers);
   const myWorkOnly = usesPersonalWorkspaceView(session);
   const companyWideView = !myWorkOnly || staffHasLeadershipWorkspaceAccess(session, teamMembers);
   const showAccountManagerQueue = !myWorkOnly
@@ -693,7 +694,8 @@ export default function AppShell({ onSignOut }) {
           onNavigate={handleNotificationNavigate}
         />
       }
-      profileLabel={session?.username || 'Staff'}
+      profileLabel={staffName || session?.username || 'Staff'}
+      profileLogo={staffAvatar}
       onSignOut={onSignOut ? handleSignOut : undefined}
       clientFilter={clientFilter}
       onClientChange={setClientFilter}

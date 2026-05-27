@@ -116,6 +116,8 @@ export default function ClientHubPortal({ onSignOut }) {
       client={brand}
       clientColor={clientColor}
       clientLogo={clientLogo}
+      userAvatar={portalData?.userAvatar}
+      userDisplayName={portalData?.userDisplayName}
       activeTab={activeTab}
       onTabChange={handleTabChange}
       onRefresh={() => refreshPortalData()}
@@ -199,6 +201,8 @@ export default function ClientHubPortal({ onSignOut }) {
           businessType={businessType}
           contacts={profileContacts}
           socialLogins={profileSocialLogins}
+          userAvatar={portalData?.userAvatar}
+          userDisplayName={portalData?.userDisplayName}
           onSaveProfile={savePortalProfile}
         />
       )}

@@ -1,5 +1,12 @@
+import { bakeLogoCrop, normalizeClientLogo, serializeClientLogo } from './clientLogo';
+
 export function createClientPortalUserId() {
   return crypto.randomUUID();
+}
+
+function normalizeUserAvatar(avatar) {
+  const normalized = normalizeClientLogo(avatar);
+  return normalized ? serializeClientLogo(normalized) : null;
 }
 
 export function normalizeClientUser(user, fallbackId) {
@@ -13,6 +20,7 @@ export function normalizeClientUser(user, fallbackId) {
     username,
     passwordHash,
     displayName,
+    avatar: normalizeUserAvatar(user.avatar),
   };
 }
 
@@ -39,6 +47,22 @@ export function countConfiguredClientLogins(credentials) {
   );
 }
 
+export async function resolveUserAvatarDraft(draftAvatar, existingAvatar) {
+  if (draftAvatar === undefined) {
+    return existingAvatar ?? null;
+  }
+  if (draftAvatar === null) {
+    return null;
+  }
+  if (!draftAvatar?.src) {
+    return existingAvatar ?? null;
+  }
+  const normalized = normalizeClientLogo(draftAvatar);
+  if (!normalized) return existingAvatar ?? null;
+  const baked = await bakeLogoCrop(normalized);
+  return baked || normalizeUserAvatar(normalized);
+}
+
 export function mergeBrandUserDrafts(existingUsers, draftUsers, hashPassword) {
   return Promise.all(
     draftUsers.map(async (draft) => {
@@ -53,11 +77,14 @@ export function mergeBrandUserDrafts(existingUsers, draftUsers, hashPassword) {
         passwordHash = await hashPassword(draft.password);
       }
 
+      const avatar = await resolveUserAvatarDraft(draft.avatar, existing?.avatar);
+
       return {
         id: draft.id || existing?.id || createClientPortalUserId(),
         username: draft.username.trim(),
         passwordHash,
         displayName: draft.displayName?.trim() || existing?.displayName || '',
+        avatar,
       };
     }),
   );

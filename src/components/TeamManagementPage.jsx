@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
+import { INTERNAL_TEAM_CLIENT } from '../constants';
+import ClientLogoAvatar from './clientPortal/ClientLogoAvatar';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import TeamMemberDetailCard from './TeamMemberDetailCard';
 import {
@@ -30,7 +32,10 @@ export default function TeamManagementPage() {
     addTeamMember,
     updateTeamMember,
     removeTeamMember,
+    getClientColor,
   } = useClientsContext();
+
+  const teamColor = getClientColor(INTERNAL_TEAM_CLIENT) || '#810100';
 
   const [newName, setNewName] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState(null);
@@ -118,7 +123,16 @@ export default function TeamManagementPage() {
               className={`portal-nav-item ${surfacePanelClass} w-full px-4 py-4 text-left transition-colors duration-300 hover:border-white/15 sm:px-5`}
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
+                <div className="flex min-w-0 items-start gap-3">
+                  <ClientLogoAvatar
+                    logo={member.avatar}
+                    name={member.name}
+                    color={teamColor}
+                    size="lg"
+                    initialsVariant="neutral"
+                    ringClassName="ring-1 ring-white/10"
+                  />
+                  <div className="min-w-0">
                   <p className="font-medium tracking-tight text-white">{member.name}</p>
                   <div className="mt-2">
                     <RoleSummary roles={member.roles} />
@@ -130,6 +144,7 @@ export default function TeamManagementPage() {
                         .join(' · ')}
                     </p>
                   )}
+                </div>
                 </div>
                 <span className="shrink-0 text-[10px] font-medium uppercase tracking-[0.2em] text-white/30">
                   Edit

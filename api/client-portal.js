@@ -1,7 +1,9 @@
 import { getRedis, loadWorkspace, saveWorkspace } from './_lib/redis.mjs';
 import {
   getClientSessionFromRequest,
+  getClientPortalAuthMap,
   isClientSessionValid,
+  normalizeBrandUsers,
 } from './_lib/clientPortalAuth.mjs';
 import {
   normalizeClientContacts,
@@ -72,6 +74,11 @@ export default async function handler(req, res) {
   const businessTypes = clientStore.businessTypes || {};
   const contacts = clientStore.contacts || {};
   const socialLogins = clientStore.socialLogins || {};
+  const authMap = getClientPortalAuthMap(workspace);
+  const brandUsers = normalizeBrandUsers(authMap[brand]);
+  const sessionUsername = session.username.trim().toLowerCase();
+  const currentUser =
+    brandUsers.find((user) => user.username.toLowerCase() === sessionUsername) || null;
 
   return res.status(200).json({
     brand,
@@ -81,6 +88,8 @@ export default async function handler(req, res) {
     businessType: normalizeBusinessType(businessTypes[brand] || '') || null,
     contacts: normalizeClientContacts(contacts[brand]),
     socialLogins: normalizeClientSocialLogins(socialLogins[brand]),
+    userAvatar: currentUser?.avatar || null,
+    userDisplayName: currentUser?.displayName || session.username,
     cards: filterForBrand(data[STORAGE_KEY], brand).map(stripInternalCardFields),
     ideas: filterForBrand(data[VIDEO_IDEAS_STORAGE_KEY], brand),
     plans: filterPlansForBrand(data[SHOOT_PLANS_STORAGE_KEY], brand),

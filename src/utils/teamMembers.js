@@ -8,6 +8,7 @@ import {
   TEAM_ROLES,
   TEAM_STORAGE_KEY,
 } from '../constants';
+import { normalizeClientLogo, serializeClientLogo } from './clientLogo';
 
 export { TEAM_ROLES, TEAM_LEADERSHIP_ROLES, TEAM_OPERATIONAL_ROLES, TEAM_ROLE_COVERAGE };
 
@@ -20,6 +21,11 @@ export function memberMatchesRole(member, role) {
       member.roles.includes(leadershipRole) &&
       TEAM_ROLE_COVERAGE[leadershipRole]?.includes(role),
   );
+}
+
+function normalizeMemberAvatar(avatar) {
+  const normalized = normalizeClientLogo(avatar);
+  return normalized ? serializeClientLogo(normalized) : null;
 }
 
 export function getEffectiveRoles(member) {
@@ -47,6 +53,7 @@ export function normalizeTeamMember(member, fallbackId) {
     password: typeof member.password === 'string' ? member.password : '',
     email: member.email?.trim() || '',
     phone: member.phone?.trim() || '',
+    avatar: normalizeMemberAvatar(member.avatar),
   };
 }
 
@@ -70,6 +77,7 @@ export function mergeTeamMemberUpdates(member, updates) {
       password,
       email: updates.email !== undefined ? updates.email.trim() : member.email,
       phone: updates.phone !== undefined ? updates.phone.trim() : member.phone,
+      avatar: updates.avatar !== undefined ? normalizeMemberAvatar(updates.avatar) : member.avatar,
     },
     member.id,
   );

@@ -3,6 +3,28 @@ import { createHash, randomUUID } from 'crypto';
 const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+function clampPercent(value) {
+  const num = Number(value);
+  if (Number.isNaN(num)) return 50;
+  return Math.min(100, Math.max(0, num));
+}
+
+function normalizeUserAvatar(avatar) {
+  if (!avatar) return null;
+  if (typeof avatar === 'string') {
+    return { src: avatar, zoom: 1, x: 50, y: 50 };
+  }
+  if (typeof avatar === 'object' && avatar.src) {
+    return {
+      src: avatar.src,
+      zoom: Math.min(3, Math.max(1, Number(avatar.zoom) || 1)),
+      x: clampPercent(avatar.x ?? 50),
+      y: clampPercent(avatar.y ?? 50),
+    };
+  }
+  return null;
+}
+
 function getSessionSecret() {
   return (process.env.STAFF_PASSWORD_HASH || process.env.CLIENT_PORTAL_SESSION_SECRET || 'medici-client-portal')
     .trim()
@@ -37,6 +59,7 @@ function normalizeClientUser(user, fallbackId) {
     username,
     passwordHash,
     displayName,
+    avatar: normalizeUserAvatar(user.avatar),
   };
 }
 
@@ -68,6 +91,9 @@ function mergeBrandUsers(existingUsers, incomingUsers) {
       username,
       passwordHash,
       displayName: incoming.displayName || previous?.displayName || '',
+      avatar: Object.prototype.hasOwnProperty.call(incoming, 'avatar')
+        ? normalizeUserAvatar(incoming.avatar)
+        : normalizeUserAvatar(previous?.avatar),
     });
   }
 

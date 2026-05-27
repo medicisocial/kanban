@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { TEAM_LEADERSHIP_ROLES, TEAM_OPERATIONAL_ROLES, TEAM_ROLE_DESCRIPTIONS } from '../constants';
+import { TEAM_LEADERSHIP_ROLES, TEAM_OPERATIONAL_ROLES, TEAM_ROLE_DESCRIPTIONS, INTERNAL_TEAM_CLIENT } from '../constants';
+import { useClientsContext } from '../context/ClientsContext';
+import { bakeLogoCrop } from '../utils/clientLogo';
+import ProfilePhotoEditor from './clientPortal/ProfilePhotoEditor';
 import PasswordField from './clientPortal/PasswordField';
 import {
   btnGhostClass,
@@ -29,6 +32,7 @@ function buildDraft(member) {
     password: member.password || '',
     email: member.email || '',
     phone: member.phone || '',
+    pendingAvatar: undefined,
   };
 }
 
@@ -39,8 +43,11 @@ export default function TeamMemberDetailCard({
   onRemove,
   onClose,
 }) {
+  const { getClientColor } = useClientsContext();
+  const memberColor = getClientColor(INTERNAL_TEAM_CLIENT) || '#810100';
   const [draft, setDraft] = useState(() => buildDraft(member));
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setDraft(buildDraft(member));
@@ -56,7 +63,7 @@ export default function TeamMemberDetailCard({
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!draft.name.trim()) {
       setError('Enter a name.');
       return;
@@ -65,7 +72,31 @@ export default function TeamMemberDetailCard({
       setError('Assign at least one role.');
       return;
     }
-    onSave(member.id, draft);
+
+    setSaving(true);
+    setError('');
+
+    try {
+      const payload = {
+        name: draft.name,
+        roles: draft.roles,
+        username: draft.username,
+        password: draft.password,
+        email: draft.email,
+        phone: draft.phone,
+      };
+
+      if (draft.pendingAvatar !== undefined) {
+        payload.avatar =
+          draft.pendingAvatar === null ? null : await bakeLogoCrop(draft.pendingAvatar);
+      }
+
+      onSave(member.id, payload);
+    } catch (err) {
+      setError(err.message || 'Could not save photo.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleRemove = () => {
@@ -90,6 +121,17 @@ export default function TeamMemberDetailCard({
         </div>
 
         <div className="max-h-[min(70vh,640px)] space-y-4 overflow-y-auto px-5 py-5">
+          <ProfilePhotoEditor
+            avatar={member.avatar}
+            name={draft.name || member.name}
+            color={memberColor}
+            compact
+            label="Profile photo"
+            onPendingChange={(pending) =>
+              setDraft((prev) => ({ ...prev, pendingAvatar: pending }))
+            }
+          />
+
           <label className="block">
             <span className="mb-1.5 block text-[10px] uppercase tracking-[0.22em] text-white/40">
               Full name
@@ -215,8 +257,8 @@ export default function TeamMemberDetailCard({
             <button type="button" onClick={onClose} className={btnSecondaryClass}>
               Cancel
             </button>
-            <button type="button" onClick={handleSave} className={btnPrimaryClass}>
-              Save
+            <button type="button" onClick={handleSave} disabled={saving} className={`${btnPrimaryClass} disabled:opacity-60`}>
+              {saving ? 'Saving…' : 'Save'}
             </button>
           </div>
         </div>

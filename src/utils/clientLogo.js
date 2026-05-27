@@ -1,7 +1,13 @@
-import { encodeCanvas, loadImage } from './clientImage';
+import {
+  BAKED_MAX_DATA_URL_LENGTH,
+  IMAGE_BAKE_OUTPUT_SIZE,
+  computeBakeOutputSize,
+  encodeCanvas,
+  loadImage,
+} from './clientImage';
 
 export const DEFAULT_LOGO_CROP = { zoom: 1, x: 50, y: 50 };
-export const LOGO_OUTPUT_SIZE = 640;
+export const LOGO_OUTPUT_SIZE = IMAGE_BAKE_OUTPUT_SIZE;
 
 export function normalizeClientLogo(logo) {
   if (!logo) return null;
@@ -46,32 +52,36 @@ export function logoCropStyle(crop) {
 }
 
 /** Render crop + zoom into a sharp square image (avoids grainy CSS upscaling). */
-export async function bakeLogoCrop(logo, outputSize = LOGO_OUTPUT_SIZE) {
+export async function bakeLogoCrop(logo, outputSize) {
   const normalized = normalizeClientLogo(logo);
   if (!normalized?.src) return null;
 
   const img = await loadImage(normalized.src);
   const { zoom, x, y } = normalized;
+  const resolvedSize = outputSize ?? computeBakeOutputSize(img, zoom);
 
   const canvas = document.createElement('canvas');
-  canvas.width = outputSize;
-  canvas.height = outputSize;
+  canvas.width = resolvedSize;
+  canvas.height = resolvedSize;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not render photo.');
 
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
-  const coverScale = Math.max(outputSize / img.width, outputSize / img.height) * zoom;
+  const coverScale = Math.max(resolvedSize / img.width, resolvedSize / img.height) * zoom;
   const drawW = img.width * coverScale;
   const drawH = img.height * coverScale;
-  const drawX = (outputSize - drawW) * (x / 100);
-  const drawY = (outputSize - drawH) * (y / 100);
+  const drawX = (resolvedSize - drawW) * (x / 100);
+  const drawY = (resolvedSize - drawH) * (y / 100);
 
   ctx.drawImage(img, drawX, drawY, drawW, drawH);
 
   return serializeClientLogo({
-    src: encodeCanvas(canvas, { preferPng: true }),
+    src: encodeCanvas(canvas, {
+      preferPng: true,
+      maxLength: BAKED_MAX_DATA_URL_LENGTH,
+    }),
     zoom: 1,
     x: 50,
     y: 50,

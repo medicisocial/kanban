@@ -412,6 +412,7 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
               </p>
               <ClientPortalUsersEditor
                 client={selectedClient}
+                clientColor={getClientColor(selectedClient)}
                 getClientUsers={getClientUsers}
                 onSaveClientUsers={setClientPortalUsers}
                 onSyncToCloud={(credentials) => syncClientPortalCredentialsToCloud(session, credentials)}

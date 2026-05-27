@@ -7,6 +7,7 @@ import {
 import { updatePortalPasswordVault, getPortalPasswordForUser } from '../../utils/clientPortalPasswordVault';
 import { loadCredentials } from '../../hooks/useClientPortalCredentials';
 import PasswordField from './PasswordField';
+import ProfilePhotoEditor from './ProfilePhotoEditor';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 
 export function nextDefaultUsername(client, users) {
@@ -30,6 +31,8 @@ function buildDraftUsers(client, getClientUsers) {
       displayName: user.displayName || '',
       username: user.username,
       password: getPortalPasswordForUser(client, user.id),
+      avatar: user.avatar || null,
+      pendingAvatar: undefined,
     }));
   }
   return [
@@ -38,12 +41,15 @@ function buildDraftUsers(client, getClientUsers) {
       displayName: '',
       username: defaultPortalUsername(client),
       password: '',
+      avatar: null,
+      pendingAvatar: undefined,
     },
   ];
 }
 
 export default function ClientPortalUsersEditor({
   client,
+  clientColor = '#810100',
   getClientUsers,
   onSaveClientUsers,
   onSyncToCloud,
@@ -149,6 +155,7 @@ export default function ClientPortalUsersEditor({
           displayName: user.displayName,
           username: user.username,
           password: user.password,
+          avatar: user.pendingAvatar !== undefined ? user.pendingAvatar : undefined,
         })),
       );
 
@@ -210,6 +217,15 @@ export default function ClientPortalUsersEditor({
                   </button>
                 )}
               </div>
+
+              <ProfilePhotoEditor
+                avatar={user.pendingAvatar !== undefined ? user.pendingAvatar : user.avatar}
+                name={user.displayName || user.username}
+                color={clientColor}
+                compact
+                label="Profile photo"
+                onPendingChange={(pending) => updateUser(user.id, { pendingAvatar: pending })}
+              />
 
               <div className="grid gap-3 sm:grid-cols-3">
                 <label className="block sm:col-span-1">

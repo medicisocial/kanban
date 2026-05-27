@@ -33,6 +33,8 @@ export default function ClientPortalLayout({
   client,
   clientColor,
   clientLogo,
+  userAvatar,
+  userDisplayName,
   activeTab,
   onTabChange,
   onRefresh,
@@ -47,8 +49,8 @@ export default function ClientPortalLayout({
       brandName={client}
       brandColor={clientColor}
       brandLogo={clientLogo}
-      profileLogo={clientLogo}
-      profileLabel={client}
+      profileLogo={userAvatar}
+      profileLabel={userDisplayName || client}
       profileColor={clientColor}
       subtitle="Client workspace"
       navSections={NAV_SECTIONS}

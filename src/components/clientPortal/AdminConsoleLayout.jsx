@@ -58,6 +58,7 @@ export default function AdminConsoleLayout({
   notificationsOpen,
   onNotificationsOpenChange,
   profileLabel,
+  profileLogo,
   onSignOut,
   clientFilter,
   onClientChange,
@@ -108,6 +109,7 @@ export default function AdminConsoleLayout({
         notificationsOpen={notificationsOpen}
         onNotificationsOpenChange={onNotificationsOpenChange}
         profileLabel={profileLabel || 'Staff'}
+        profileLogo={profileLogo}
         profileColor={teamColor}
         sidebarLogoUrl={teamLogo}
         onSidebarLogoClick={() => setLogoModalOpen(true)}
