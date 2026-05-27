@@ -111,7 +111,7 @@ export default function ClientShootSchedulePortal({
     <div className="mx-auto max-w-[900px] px-4 py-6 sm:px-6">
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-white">Shoot schedule</h2>
-        <p className="mt-1 text-sm text-gray-400">Upcoming shoot days and content planned for each session.</p>
+        <p className="mt-1 text-sm text-gray-400">Upcoming scheduled shoots and content planned for each session.</p>
       </div>
       {content}
     </div>

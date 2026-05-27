@@ -23,6 +23,22 @@ export function resolveCardAccountManager(card, clientAccountManagers) {
   return card.accountManager || clientAccountManagers[card.client] || '';
 }
 
+export function cardIsAssignedToAccountManager(card, staffName, clientAccountManagers = {}) {
+  if (!staffName) return true;
+  const normalized = staffName.trim().toLowerCase();
+  const accountManager = resolveCardAccountManager(card, clientAccountManagers)?.trim().toLowerCase() || '';
+  return accountManager === normalized;
+}
+
+export function staffHasAccountManagerQueueAccess(session, teamMembers) {
+  if (!session?.username) return false;
+  return (
+    staffMemberHasRole(session, teamMembers, 'Account Manager') ||
+    staffMemberHasRole(session, teamMembers, 'Owner') ||
+    staffMemberHasRole(session, teamMembers, 'Creative Director')
+  );
+}
+
 export function cardIsAssignedToStaff(card, staffName, clientAccountManagers = {}) {
   if (!staffName) return true;
 

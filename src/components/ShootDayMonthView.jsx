@@ -23,7 +23,7 @@ export default function ShootDayMonthView({
 
   return (
     <div className="flex flex-col">
-      <p className="mb-3 text-sm text-gray-400">{formatMonthYear(focusDate)} shoot schedule</p>
+      <p className="mb-3 text-sm text-gray-400">{formatMonthYear(focusDate)} scheduled shoots</p>
 
       <div className="overflow-x-auto rounded-xl border border-white/5 bg-[#111111]">
         <div className="grid grid-cols-7 border-b border-white/5">

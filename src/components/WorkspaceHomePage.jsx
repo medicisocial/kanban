@@ -35,6 +35,8 @@ export default function WorkspaceHomePage({
   staffName = '',
   clientAccountManagers = {},
   myWorkOnly = false,
+  showAccountManagerQueue = true,
+  showAllAccountManagerQueue = false,
   onNavigate,
   onOpenCard,
   onOpenNotifications,
@@ -48,6 +50,8 @@ export default function WorkspaceHomePage({
     staffName,
     clientAccountManagers,
     myWorkOnly,
+    showAccountManagerQueue,
+    showAllAccountManagerQueue,
   });
 
   const firstName = staffName.trim().split(/\s+/)[0] || '';
@@ -88,16 +92,20 @@ export default function WorkspaceHomePage({
           value={summary.editingCount}
           onClick={() => onNavigate('todo', { tasksRole: 'editor' })}
         />
-        <StatCard
-          label="In review"
-          value={summary.inReviewCount}
-          onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-        />
-        <StatCard
-          label="Need scheduling"
-          value={summary.needsSchedulingCount}
-          onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-        />
+        {summary.showAccountManagerQueue && (
+          <>
+            <StatCard
+              label="In review"
+              value={summary.inReviewCount}
+              onClick={() => onNavigate('todo', { tasksRole: 'account' })}
+            />
+            <StatCard
+              label="Need scheduling"
+              value={summary.needsSchedulingCount}
+              onClick={() => onNavigate('todo', { tasksRole: 'account' })}
+            />
+          </>
+        )}
         <StatCard label="Pending ideas" value={summary.pendingIdeasCount} onClick={() => onNavigate('ideas')} />
         <StatCard label="Shoots today" value={summary.shootsTodayCount} onClick={() => onNavigate('shoot')} />
       </div>
@@ -138,88 +146,92 @@ export default function WorkspaceHomePage({
           )}
         </div>
 
-        <div className={`${surfacePanelClass} p-5`}>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold text-white">Awaiting client review</h3>
-            <button
-              type="button"
-              onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-              className={`${btnSecondaryClass} py-1.5 text-[10px]`}
-            >
-              Account manager tasks
-            </button>
-          </div>
-          {summary.inReview.length === 0 ? (
-            <div className="text-center py-6">
-              <p className="text-sm text-white/40">Nothing in client review right now.</p>
+        {summary.showAccountManagerQueue && (
+          <div className={`${surfacePanelClass} p-5`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-white">Awaiting client review</h3>
               <button
                 type="button"
                 onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-                className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}
+                className={`${btnSecondaryClass} py-1.5 text-[10px]`}
               >
-                Open account manager tasks
+                Account manager tasks
               </button>
             </div>
-          ) : (
-            <ul className="space-y-2">
-              {summary.inReview.map((card) => (
-                <li key={card.id}>
-                  <button
-                    type="button"
-                    onClick={() => onOpenCard?.(card)}
-                    className="w-full border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-left transition hover:border-white/12"
-                  >
-                    <p className="text-sm font-medium text-white">{card.title}</p>
-                    <p className="mt-0.5 text-xs text-white/45">{card.client} · {card.contentType}</p>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+            {summary.inReview.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-white/40">Nothing in client review right now.</p>
+                <button
+                  type="button"
+                  onClick={() => onNavigate('todo', { tasksRole: 'account' })}
+                  className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}
+                >
+                  Open account manager tasks
+                </button>
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {summary.inReview.map((card) => (
+                  <li key={card.id}>
+                    <button
+                      type="button"
+                      onClick={() => onOpenCard?.(card)}
+                      className="w-full border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-left transition hover:border-white/12"
+                    >
+                      <p className="text-sm font-medium text-white">{card.title}</p>
+                      <p className="mt-0.5 text-xs text-white/45">{card.client} · {card.contentType}</p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
-        <div className={`${surfacePanelClass} p-5`}>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold text-white">Needs scheduling</h3>
-            <button
-              type="button"
-              onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-              className={`${btnSecondaryClass} py-1.5 text-[10px]`}
-            >
-              Account manager tasks
-            </button>
-          </div>
-          {summary.needsScheduling.length === 0 ? (
-            <div className="text-center py-6">
-              <p className="text-sm text-white/40">No approved posts waiting to be scheduled.</p>
+        {summary.showAccountManagerQueue && (
+          <div className={`${surfacePanelClass} p-5`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-white">Needs scheduling</h3>
               <button
                 type="button"
                 onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-                className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}
+                className={`${btnSecondaryClass} py-1.5 text-[10px]`}
               >
-                Open account manager tasks
+                Account manager tasks
               </button>
             </div>
-          ) : (
-            <ul className="space-y-2">
-              {summary.needsScheduling.map((card) => (
-                <li key={card.id}>
-                  <button
-                    type="button"
-                    onClick={() => onOpenCard?.(card)}
-                    className="w-full border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-left transition hover:border-white/12"
-                  >
-                    <p className="text-sm font-medium text-white">{card.title}</p>
-                    <p className="mt-0.5 text-xs text-white/45">
-                      {card.client} · {card.contentType}
-                      {card.dueDate ? ` · Plan ${formatDate(card.dueDate)}` : ''}
-                    </p>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+            {summary.needsScheduling.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-white/40">No approved posts waiting to be scheduled.</p>
+                <button
+                  type="button"
+                  onClick={() => onNavigate('todo', { tasksRole: 'account' })}
+                  className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}
+                >
+                  Open account manager tasks
+                </button>
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {summary.needsScheduling.map((card) => (
+                  <li key={card.id}>
+                    <button
+                      type="button"
+                      onClick={() => onOpenCard?.(card)}
+                      className="w-full border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-left transition hover:border-white/12"
+                    >
+                      <p className="text-sm font-medium text-white">{card.title}</p>
+                      <p className="mt-0.5 text-xs text-white/45">
+                        {card.client} · {card.contentType}
+                        {card.dueDate ? ` · Plan ${formatDate(card.dueDate)}` : ''}
+                      </p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         <div className={`${surfacePanelClass} p-5 lg:col-span-2`}>
           <div className="mb-4 flex items-center justify-between gap-3">
