@@ -970,18 +970,6 @@ select option:hover {
   cursor: default;
 }
 
-.overview-role-summary-creator {
-  border-left: 2px solid rgba(245, 158, 11, 0.38);
-}
-
-.overview-role-summary-editor {
-  border-left: 2px solid rgba(59, 130, 246, 0.38);
-}
-
-.overview-role-summary-account {
-  border-left: 2px solid rgba(167, 139, 250, 0.38);
-}
-
 .overview-role-summary-interactive {
   width: min(100%, 320px);
   cursor: pointer;

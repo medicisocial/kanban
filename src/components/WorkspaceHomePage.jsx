@@ -177,7 +177,6 @@ export default function WorkspaceHomePage({
     {
       label: 'Content creator',
       count: summary.toCreateCount + summary.shootsTodayCount,
-      tone: 'creator',
       details: [
         { label: 'To create', value: summary.toCreateCount },
         { label: 'Shoots today', value: summary.shootsTodayCount },
@@ -187,7 +186,6 @@ export default function WorkspaceHomePage({
     {
       label: 'Editor',
       count: summary.editingCount,
-      tone: 'editor',
       details: [{ label: 'Editing', value: summary.editingCount }],
       onClick: () => onNavigate('todo', { tasksRole: 'editor' }),
     },
@@ -199,7 +197,6 @@ export default function WorkspaceHomePage({
     pipelineRoles.push({
       label: 'Account manager',
       count: amTotal,
-      tone: 'account',
       details: [
         { label: 'In review', value: summary.inReviewCount },
         { label: 'Scheduling', value: summary.needsSchedulingCount },
@@ -241,7 +238,6 @@ export default function WorkspaceHomePage({
             label={role.label}
             count={role.count}
             details={role.details}
-            tone={role.tone}
             onClick={role.onClick}
           />
         ))}
