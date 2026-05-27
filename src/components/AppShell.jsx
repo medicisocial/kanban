@@ -750,8 +750,6 @@ export default function AppShell({ onSignOut }) {
             onMoveCard={handleMoveCard}
             clientFilter={clientFilter}
             embedded
-            staffName={staffName}
-            clientAccountManagers={clientAccountManagers}
           />
         </section>
       )}

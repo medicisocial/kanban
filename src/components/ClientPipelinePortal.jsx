@@ -25,7 +25,8 @@ export default function ClientPipelinePortal({ cards, clientColor, embedded = fa
   const filteredCards = pipelineCards;
 
   const content = (
-    <div className="overview-pipeline-row">
+    <div className="flex w-full justify-center overflow-x-auto pb-2">
+      <div className="flex w-max gap-3 px-1">
       {CLIENT_PIPELINE_COLUMNS.map((column) => {
         const columnCards = filteredCards.filter(
           (card) => getClientPipelineDisplayColumn(card) === column.id,
@@ -83,6 +84,7 @@ export default function ClientPipelinePortal({ cards, clientColor, embedded = fa
           </section>
         );
       })}
+      </div>
     </div>
   );
 

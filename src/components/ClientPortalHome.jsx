@@ -1,9 +1,5 @@
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import {
-  PortalPipelineMetric,
-  PortalRolePanel,
-  PortalTaskSection,
-} from './clientPortal/PortalOverviewPanels';
+import { PortalRoleSummary, PortalTaskSection } from './clientPortal/PortalOverviewPanels';
 import { buildClientPortalTasks } from '../utils/clientPortalTasks';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
@@ -31,6 +27,45 @@ export default function ClientPortalHome({
     clientLogo,
   });
 
+  const glanceCards = [
+    {
+      label: 'Open tasks',
+      count: summary.totalOpen,
+      details: [
+        { label: 'Ideas', value: summary.pendingIdeasCount },
+        { label: 'Content', value: summary.reviewCount },
+        { label: 'Profile', value: summary.setupCount },
+      ].filter((item) => item.value > 0),
+      onClick:
+        summary.totalOpen > 0
+          ? () => onNavigate(summary.actionItems[0]?.tab || summary.setupTasks[0]?.tab || 'review')
+          : undefined,
+      centerCount: true,
+    },
+    {
+      label: 'Ideas to review',
+      count: summary.pendingIdeasCount,
+      details:
+        summary.pendingIdeasCount > 0
+          ? [{ label: 'Pending', value: summary.pendingIdeasCount }]
+          : [],
+      onClick: summary.pendingIdeasCount > 0 ? () => onNavigate('ideas') : undefined,
+    },
+    {
+      label: 'Content to approve',
+      count: summary.reviewCount,
+      details:
+        summary.reviewCount > 0 ? [{ label: 'In review', value: summary.reviewCount }] : [],
+      onClick: summary.reviewCount > 0 ? () => onNavigate('review') : undefined,
+    },
+    {
+      label: 'Profile setup',
+      count: summary.setupCount,
+      details: summary.setupCount > 0 ? [{ label: 'Items', value: summary.setupCount }] : [],
+      onClick: summary.setupCount > 0 ? () => onNavigate('profile') : undefined,
+    },
+  ];
+
   return (
     <section>
       <ClientPortalSectionHeader
@@ -38,33 +73,17 @@ export default function ClientPortalHome({
         description="Everything waiting on you — idea approvals, content reviews, and profile setup."
       />
 
-      <div className="mb-8">
-        <PortalRolePanel label="At a glance" quad>
-          <PortalPipelineMetric
-            label="Open tasks"
-            value={summary.totalOpen}
-            onClick={
-              summary.totalOpen > 0
-                ? () => onNavigate(summary.actionItems[0]?.tab || summary.setupTasks[0]?.tab || 'review')
-                : undefined
-            }
+      <div className="overview-pipeline-row overview-pipeline-row-wide mb-8">
+        {glanceCards.map((item) => (
+          <PortalRoleSummary
+            key={item.label}
+            label={item.label}
+            count={item.count}
+            details={item.details}
+            onClick={item.onClick}
+            centerCount={item.centerCount}
           />
-          <PortalPipelineMetric
-            label="Ideas to review"
-            value={summary.pendingIdeasCount}
-            onClick={summary.pendingIdeasCount > 0 ? () => onNavigate('ideas') : undefined}
-          />
-          <PortalPipelineMetric
-            label="Content to approve"
-            value={summary.reviewCount}
-            onClick={summary.reviewCount > 0 ? () => onNavigate('review') : undefined}
-          />
-          <PortalPipelineMetric
-            label="Profile setup"
-            value={summary.setupCount}
-            onClick={summary.setupCount > 0 ? () => onNavigate('profile') : undefined}
-          />
-        </PortalRolePanel>
+        ))}
       </div>
 
       {summary.totalOpen === 0 ? (

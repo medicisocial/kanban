@@ -16,7 +16,6 @@ import { filterCards, getBoardCards } from '../utils';
 import KanbanColumn from './KanbanColumn';
 import CardPreview from './CardPreview';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import { btnPrimaryClass, btnSecondaryClass } from './clientPortal/clientPortalUi';
 
 const COLUMN_IDS = new Set(COLUMNS.map((c) => c.id));
 const COLUMN_BY_ID = Object.fromEntries(COLUMNS.map((c) => [c.id, c]));
@@ -60,12 +59,9 @@ export default function KanbanBoard({
   onMoveCard,
   clientFilter,
   embedded = false,
-  staffName = '',
-  clientAccountManagers = {},
 }) {
   const [activeCard, setActiveCard] = useState(null);
   const [finishedExpanded, setFinishedExpanded] = useState(false);
-  const [myCardsOnly, setMyCardsOnly] = useState(false);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
@@ -74,14 +70,8 @@ export default function KanbanBoard({
   );
 
   const filteredCards = useMemo(
-    () =>
-      filterCards(getBoardCards(cards), {
-        client: clientFilter,
-        assigneeFilter: myCardsOnly,
-        staffName,
-        clientAccountManagers,
-      }),
-    [cards, clientFilter, myCardsOnly, staffName, clientAccountManagers],
+    () => filterCards(getBoardCards(cards), { client: clientFilter }),
+    [cards, clientFilter],
   );
 
   const visibleGroups = BOARD_COLUMN_GROUPS;
@@ -151,32 +141,11 @@ export default function KanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      {embedded && (
-        <ClientPortalSectionHeader title="Pipeline" compact>
-          {staffName && (
-            <button
-              type="button"
-              onClick={() => setMyCardsOnly((value) => !value)}
-              className={myCardsOnly ? `${btnPrimaryClass} py-1.5 text-[10px]` : `${btnSecondaryClass} py-1.5 text-[10px]`}
-            >
-              My cards
-            </button>
-          )}
-        </ClientPortalSectionHeader>
-      )}
+      {embedded && <ClientPortalSectionHeader title="Pipeline" compact />}
 
       {embedded && filteredCards.length === 0 && (
         <div className="mb-4 border border-dashed border-white/10 px-6 py-10 text-center">
           <p className="text-sm text-white/45">No cards match the current filters.</p>
-          {myCardsOnly && (
-            <button
-              type="button"
-              onClick={() => setMyCardsOnly(false)}
-              className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}
-            >
-              Show all cards
-            </button>
-          )}
         </div>
       )}
 

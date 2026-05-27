@@ -239,6 +239,7 @@ export default function WorkspaceHomePage({
             count={role.count}
             details={role.details}
             onClick={role.onClick}
+            centerCount={role.label === 'Account manager'}
           />
         ))}
       </div>

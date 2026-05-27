@@ -21,7 +21,7 @@ export function PortalPipelineMetric({ label, value, onClick }) {
   return <div className={className}>{inner}</div>;
 }
 
-export function PortalRoleSummary({ label, count, details = [], onClick }) {
+export function PortalRoleSummary({ label, count, details = [], onClick, centerCount = false }) {
   const className = `overview-role-summary glass-surface${
     onClick ? ' overview-role-summary-interactive' : ''
   }`;
@@ -43,7 +43,12 @@ export function PortalRoleSummary({ label, count, details = [], onClick }) {
           <p className="overview-role-summary-empty">All clear</p>
         )}
       </div>
-      <div className="overview-role-summary-count-well" data-zero={count === 0 ? '' : undefined}>
+      <div
+        className={`overview-role-summary-count-well${
+          centerCount ? ' overview-role-summary-count-well-centered' : ''
+        }`}
+        data-zero={count === 0 ? '' : undefined}
+      >
         <span className="overview-role-summary-count">{count}</span>
       </div>
     </div>
