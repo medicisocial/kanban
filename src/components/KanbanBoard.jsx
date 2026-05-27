@@ -61,6 +61,7 @@ export default function KanbanBoard({
   embedded = false,
 }) {
   const [activeCard, setActiveCard] = useState(null);
+  const [dragPreview, setDragPreview] = useState(null);
   const [finishedExpanded, setFinishedExpanded] = useState(false);
 
   const sensors = useSensors(
@@ -76,10 +77,19 @@ export default function KanbanBoard({
 
   const visibleGroups = BOARD_COLUMN_GROUPS;
 
+  const boardCards = useMemo(() => {
+    if (!dragPreview) return filteredCards;
+    return filteredCards.map((card) =>
+      card.id === dragPreview.cardId
+        ? { ...card, columnId: dragPreview.previewColumnId }
+        : card,
+    );
+  }, [filteredCards, dragPreview]);
+
   const cardsByColumn = useMemo(() => {
     const map = {};
     COLUMNS.forEach((col) => {
-      map[col.id] = filteredCards.filter((c) => {
+      map[col.id] = boardCards.filter((c) => {
         if (c.columnId !== col.id) return false;
         if (col.id === 'finished') return c.isOneOffProject;
         if (c.isOneOffProject) {
@@ -89,11 +99,18 @@ export default function KanbanBoard({
       });
     });
     return map;
-  }, [filteredCards]);
+  }, [boardCards]);
 
 
   const handleDragStart = useCallback((event) => {
     const card = cards.find((c) => c.id === event.active.id);
+    if (card) {
+      setDragPreview({
+        cardId: card.id,
+        originColumnId: card.columnId,
+        previewColumnId: card.columnId,
+      });
+    }
     setActiveCard(card || null);
   }, [cards]);
 
@@ -107,29 +124,32 @@ export default function KanbanBoard({
     const targetColumnId = resolveColumnId(over, cards);
     if (!targetColumnId) return;
 
-    const activeCardData = cards.find((c) => c.id === active.id);
-    if (!activeCardData || activeCardData.columnId === targetColumnId) return;
-
-    onMoveCard(active.id, targetColumnId);
-  }, [cards, onMoveCard]);
+    setDragPreview((prev) => {
+      if (!prev || prev.cardId !== active.id) return prev;
+      if (prev.previewColumnId === targetColumnId) return prev;
+      return { ...prev, previewColumnId: targetColumnId };
+    });
+  }, [cards]);
 
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
+    const originColumnId = dragPreview?.originColumnId;
     setActiveCard(null);
+    setDragPreview(null);
 
     if (!over) return;
 
     const targetColumnId = resolveColumnId(over, cards);
     if (!targetColumnId) return;
 
-    const card = cards.find((c) => c.id === active.id);
-    if (card && card.columnId !== targetColumnId) {
+    if (originColumnId && originColumnId !== targetColumnId) {
       onMoveCard(active.id, targetColumnId);
     }
-  }, [cards, onMoveCard]);
+  }, [cards, dragPreview, onMoveCard]);
 
   const handleDragCancel = useCallback(() => {
     setActiveCard(null);
+    setDragPreview(null);
   }, []);
 
   return (

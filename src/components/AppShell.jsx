@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useKanban } from "../hooks/useKanban";
 import { useVideoIdeas, applyClientResponses } from "../hooks/useVideoIdeas";
 import { useShootPlans } from "../hooks/useShootPlans";
+import { useUndoHistory } from "../hooks/useUndoHistory";
+import { beginBatch, endBatch, runWithoutUndoCapture } from "../utils/undoHistory";
 import { getClientPortalClient, loadClientResponses, parseImportParam } from "../utils/clientShare";
 import {
   getShootPortalParams,
@@ -58,10 +60,11 @@ export default function AppShell({ onSignOut }) {
   const shootImportData = parseShootImportParam();
   const contentImportData = parseContentImportParam();
 
-  const { cards, addCard, addCalendarPost, addShootItem, createCardFromIdea, updateCard, deleteCard, moveCard, markAsPosted, addOneOffProject } = useKanban();
-  const { plans, getPlan, updatePlan, ensurePlan, deletePlan } = useShootPlans();
+  const { cards, replaceCards, addCard, addCalendarPost, addShootItem, createCardFromIdea, updateCard, deleteCard, moveCard, markAsPosted, addOneOffProject } = useKanban();
+  const { plans, replacePlans, getPlan, updatePlan, ensurePlan, deletePlan } = useShootPlans();
   const {
     ideas,
+    replaceIdeas,
     addIdea,
     updateIdea,
     deleteIdea,
@@ -71,14 +74,30 @@ export default function AppShell({ onSignOut }) {
   } = useVideoIdeas();
   const {
     adminTasks,
+    replaceAdminTasks,
     addAdminTask,
     toggleAdminTaskComplete,
     deleteAdminTask,
   } = useAdminTasks();
-  const { events, addEvent, updateEvent, deleteEvent } = useEvents();
-  const { meetings, addMeeting, updateMeeting, deleteMeeting } = useMeetings();
+  const { events, replaceEvents, addEvent, updateEvent, deleteEvent } = useEvents();
+  const { meetings, replaceMeetings, addMeeting, updateMeeting, deleteMeeting } = useMeetings();
   const { authRequired, ready, logout, session } = useStaffAuth();
   const { teamMembers, clientAccountManagers } = useClientsContext();
+
+  const { canUndo, undo } = useUndoHistory({
+    cards,
+    plans,
+    ideas,
+    adminTasks,
+    events,
+    meetings,
+    replaceCards,
+    replacePlans,
+    replaceIdeas,
+    replaceAdminTasks,
+    replaceEvents,
+    replaceMeetings,
+  });
 
   const [selectedCard, setSelectedCard] = useState(null);
   const [clientFilter, setClientFilter] = useState("all");
@@ -133,6 +152,13 @@ export default function AppShell({ onSignOut }) {
     }
     setActiveView(view);
   }, []);
+
+  useEffect(() => {
+    if (!selectedCard) return;
+    if (!cards.some((c) => c.id === selectedCard.id)) {
+      setSelectedCard(null);
+    }
+  }, [cards, selectedCard?.id]);
 
   useEffect(() => {
     if (!ready || viewInitialized) return;
@@ -225,13 +251,18 @@ export default function AppShell({ onSignOut }) {
 
   const handleConfirmHandoff = (note) => {
     if (!handoffCard) return;
-    moveCard(handoffCard.id, "editing");
-    if (note) {
-      const existing = handoffCard.notes?.trim();
-      const stamped = `[Handoff ${new Date().toLocaleDateString()}] ${note}`;
-      updateCard(handoffCard.id, {
-        notes: existing ? `${existing}\n\n${stamped}` : stamped,
-      });
+    beginBatch();
+    try {
+      moveCard(handoffCard.id, "editing");
+      if (note) {
+        const existing = handoffCard.notes?.trim();
+        const stamped = `[Handoff ${new Date().toLocaleDateString()}] ${note}`;
+        updateCard(handoffCard.id, {
+          notes: existing ? `${existing}\n\n${stamped}` : stamped,
+        });
+      }
+    } finally {
+      endBatch();
     }
     setHandoffCard(null);
   };
@@ -270,8 +301,14 @@ export default function AppShell({ onSignOut }) {
   };
 
   const handleAddShootItem = (data, { openCard = true, addAnother = false } = {}) => {
-    ensurePlan(data.client, data.shootDate);
-    const id = addShootItem(data);
+    beginBatch();
+    let id;
+    try {
+      ensurePlan(data.client, data.shootDate);
+      id = addShootItem(data);
+    } finally {
+      endBatch();
+    }
     if (openCard && !addAnother) {
       setSelectedCard(
         createCard({
@@ -287,14 +324,19 @@ export default function AppShell({ onSignOut }) {
   };
 
   const handleAssignExistingToShoot = (cardIds, { client, shootDate, shootTime = '', shootEndTime = '' }) => {
-    ensurePlan(client, shootDate);
-    for (const id of cardIds) {
-      const existing = cards.find((entry) => entry.id === id);
-      updateCard(id, {
-        shootDate,
-        shootTime: existing?.shootTime || shootTime || '',
-        shootEndTime: existing?.shootEndTime || shootEndTime || '',
-      });
+    beginBatch();
+    try {
+      ensurePlan(client, shootDate);
+      for (const id of cardIds) {
+        const existing = cards.find((entry) => entry.id === id);
+        updateCard(id, {
+          shootDate,
+          shootTime: existing?.shootTime || shootTime || '',
+          shootEndTime: existing?.shootEndTime || shootEndTime || '',
+        });
+      }
+    } finally {
+      endBatch();
     }
   };
 
@@ -329,15 +371,20 @@ export default function AppShell({ onSignOut }) {
       : `Delete ${client}'s shoot on this day?`;
     if (!window.confirm(message)) return;
 
-    for (const card of clientCards) {
-      const clears = { shootDate: '', shootTime: '', shootEndTime: '' };
-      if (card.isOneOffProject || card.contentType === 'One-off Project') {
-        clears.dueDate = '';
-        clears.dueTime = '';
+    beginBatch();
+    try {
+      for (const card of clientCards) {
+        const clears = { shootDate: '', shootTime: '', shootEndTime: '' };
+        if (card.isOneOffProject || card.contentType === 'One-off Project') {
+          clears.dueDate = '';
+          clears.dueTime = '';
+        }
+        updateCard(card.id, clears);
       }
-      updateCard(card.id, clears);
+      deletePlan(client, dateKey);
+    } finally {
+      endBatch();
     }
-    deletePlan(client, dateKey);
     setSelectedCard((prev) =>
       prev?.client === client && prev?.shootDate === dateKey
         ? { ...prev, shootDate: "", shootTime: "", shootEndTime: "" }
@@ -349,40 +396,45 @@ export default function AppShell({ onSignOut }) {
     (client, fromDateKey, toDateKey) => {
       if (!client || !fromDateKey || !toDateKey || fromDateKey === toDateKey) return;
 
-      cards
-        .filter(
-          (card) =>
-            card.client === client &&
-            card.shootDate === fromDateKey &&
-            card.contentType !== "Story",
-        )
-        .forEach((card) => {
-          updateCard(card.id, { shootDate: toDateKey });
-        });
+      beginBatch();
+      try {
+        cards
+          .filter(
+            (card) =>
+              card.client === client &&
+              card.shootDate === fromDateKey &&
+              card.contentType !== "Story",
+          )
+          .forEach((card) => {
+            updateCard(card.id, { shootDate: toDateKey });
+          });
 
-      const oldPlan = getPlan(client, fromDateKey);
-      const hadShootContent =
-        oldPlan.manual ||
-        cards.some(
-          (card) =>
-            card.client === client &&
-            card.shootDate === fromDateKey &&
-            card.contentType !== "Story",
-        );
+        const oldPlan = getPlan(client, fromDateKey);
+        const hadShootContent =
+          oldPlan.manual ||
+          cards.some(
+            (card) =>
+              card.client === client &&
+              card.shootDate === fromDateKey &&
+              card.contentType !== "Story",
+          );
 
-      if (hadShootContent) {
-        updatePlan(client, toDateKey, {
-          title: oldPlan.title || "",
-          location: oldPlan.location || "",
-          callTime: oldPlan.callTime || "",
-          shootStartTime: oldPlan.shootStartTime || "",
-          shootEndTime: oldPlan.shootEndTime || "",
-          sessionModels: oldPlan.sessionModels || "",
-          sessionNeeds: oldPlan.sessionNeeds || "",
-          notes: oldPlan.notes || "",
-          manual: true,
-        });
-        deletePlan(client, fromDateKey);
+        if (hadShootContent) {
+          updatePlan(client, toDateKey, {
+            title: oldPlan.title || "",
+            location: oldPlan.location || "",
+            callTime: oldPlan.callTime || "",
+            shootStartTime: oldPlan.shootStartTime || "",
+            shootEndTime: oldPlan.shootEndTime || "",
+            sessionModels: oldPlan.sessionModels || "",
+            sessionNeeds: oldPlan.sessionNeeds || "",
+            notes: oldPlan.notes || "",
+            manual: true,
+          });
+          deletePlan(client, fromDateKey);
+        }
+      } finally {
+        endBatch();
       }
 
       setSelectedCard((prev) => {
@@ -428,8 +480,13 @@ export default function AppShell({ onSignOut }) {
   const handleApproveIdea = (ideaId, clientComment) => {
     const idea = ideas.find((i) => i.id === ideaId);
     if (!idea || idea.status !== "pending") return;
-    const boardCardId = createCardFromIdea({ ...idea, clientComment });
-    markApproved(ideaId, clientComment, boardCardId);
+    beginBatch();
+    try {
+      const boardCardId = createCardFromIdea({ ...idea, clientComment });
+      markApproved(ideaId, clientComment, boardCardId);
+    } finally {
+      endBatch();
+    }
   };
 
   const handleDeclineIdea = (ideaId, clientComment) => {
@@ -439,30 +496,46 @@ export default function AppShell({ onSignOut }) {
   const handlePortalApprove = (ideaId, clientComment, ideaSnapshot) => {
     const idea = ideas.find((i) => i.id === ideaId) || ideaSnapshot;
     if (ideas.some((i) => i.id === ideaId && i.status !== "pending")) return;
-    if (!ideas.some((i) => i.id === ideaId)) {
-      addIdea(idea);
+    beginBatch();
+    try {
+      if (!ideas.some((i) => i.id === ideaId)) {
+        addIdea(idea);
+      }
+      const boardCardId = createCardFromIdea({ ...idea, clientComment });
+      markApproved(ideaId, clientComment, boardCardId);
+    } finally {
+      endBatch();
     }
-    const boardCardId = createCardFromIdea({ ...idea, clientComment });
-    markApproved(ideaId, clientComment, boardCardId);
   };
 
   const handlePortalDecline = (ideaId, clientComment, ideaSnapshot) => {
-    if (!ideas.some((i) => i.id === ideaId)) {
-      addIdea(ideaSnapshot);
+    beginBatch();
+    try {
+      if (!ideas.some((i) => i.id === ideaId)) {
+        addIdea(ideaSnapshot);
+      }
+      markDeclined(ideaId, clientComment);
+    } finally {
+      endBatch();
     }
-    markDeclined(ideaId, clientComment);
   };
 
   const handleApplyClientResponses = () => {
     const responses = loadClientResponses();
     if (!responses.length) return;
-    const applied = applyClientResponses(ideas, responses, {
-      markApproved,
-      markDeclined,
-      ensureIdeaExists: () => {},
-      createCardFromIdea,
-      addIdea,
-    });
+    beginBatch();
+    let applied;
+    try {
+      applied = applyClientResponses(ideas, responses, {
+        markApproved,
+        markDeclined,
+        ensureIdeaExists: () => {},
+        createCardFromIdea,
+        addIdea,
+      });
+    } finally {
+      endBatch();
+    }
     setResponseCount(0);
     alert(`Applied ${applied} client response${applied === 1 ? "" : "s"} to the board.`);
   };
@@ -486,7 +559,13 @@ export default function AppShell({ onSignOut }) {
   const handleApplyContentReviewResponses = () => {
     const responses = loadContentReviewResponses();
     if (!responses.length) return;
-    const applied = applyContentReviewResponses(cards, responses, { updateCard });
+    beginBatch();
+    let applied;
+    try {
+      applied = applyContentReviewResponses(cards, responses, { updateCard });
+    } finally {
+      endBatch();
+    }
     setContentReviewResponseCount(0);
     alert(`Applied ${applied} content review response${applied === 1 ? "" : "s"} to the board.`);
   };
@@ -494,9 +573,14 @@ export default function AppShell({ onSignOut }) {
   const handleApplyShootResponses = () => {
     const responses = loadShootResponses();
     if (!responses.length) return;
+    beginBatch();
     let applied = 0;
-    for (const submission of responses) {
-      applied += applyShootSubmission(submission, cards, { updateCard, updatePlan });
+    try {
+      for (const submission of responses) {
+        applied += applyShootSubmission(submission, cards, { updateCard, updatePlan });
+      }
+    } finally {
+      endBatch();
     }
     clearShootResponses();
     setShootResponseCount(0);
@@ -517,32 +601,34 @@ export default function AppShell({ onSignOut }) {
 
   useEffect(() => {
     const syncPendingClientUpdates = () => {
-      const contentResponses = loadContentReviewResponses();
-      if (contentResponses.length) {
-        applyContentReviewResponses(cards, contentResponses, { updateCard });
-      }
-      setContentReviewResponseCount(loadContentReviewResponses().length);
-
-      const ideaResponses = loadClientResponses();
-      if (ideaResponses.length) {
-        applyClientResponses(ideas, ideaResponses, {
-          markApproved,
-          markDeclined,
-          ensureIdeaExists: () => {},
-          createCardFromIdea,
-          addIdea,
-        });
-      }
-      setResponseCount(loadClientResponses().length);
-
-      const shootResponses = loadShootResponses();
-      if (shootResponses.length) {
-        let applied = 0;
-        for (const submission of shootResponses) {
-          applied += applyShootSubmission(submission, cards, { updateCard, updatePlan });
+      runWithoutUndoCapture(() => {
+        const contentResponses = loadContentReviewResponses();
+        if (contentResponses.length) {
+          applyContentReviewResponses(cards, contentResponses, { updateCard });
         }
-        if (applied > 0) clearShootResponses();
-      }
+
+        const ideaResponses = loadClientResponses();
+        if (ideaResponses.length) {
+          applyClientResponses(ideas, ideaResponses, {
+            markApproved,
+            markDeclined,
+            ensureIdeaExists: () => {},
+            createCardFromIdea,
+            addIdea,
+          });
+        }
+
+        const shootResponses = loadShootResponses();
+        if (shootResponses.length) {
+          let applied = 0;
+          for (const submission of shootResponses) {
+            applied += applyShootSubmission(submission, cards, { updateCard, updatePlan });
+          }
+          if (applied > 0) clearShootResponses();
+        }
+      });
+      setContentReviewResponseCount(loadContentReviewResponses().length);
+      setResponseCount(loadClientResponses().length);
       setShootResponseCount(loadShootResponses().length);
     };
 
@@ -750,6 +836,8 @@ export default function AppShell({ onSignOut }) {
       onClientChange={setClientFilter}
       homeNavLabel={companyWideView && myWorkOnly ? 'Overview' : myWorkOnly ? 'My work' : 'Overview'}
       navBadges={navBadges}
+      canUndo={canUndo}
+      onUndo={undo}
     >
       {activeView === "home" && (
         <WorkspaceHomePage
@@ -930,9 +1018,14 @@ export default function AppShell({ onSignOut }) {
           getPlan={getPlan}
           onClose={() => setShootDateCard(null)}
           onSave={(cardId, updates) => {
-            updateCard(cardId, updates);
-            if (updates.shootDate) {
-              ensurePlan(shootDateCard.client, updates.shootDate);
+            beginBatch();
+            try {
+              updateCard(cardId, updates);
+              if (updates.shootDate) {
+                ensurePlan(shootDateCard.client, updates.shootDate);
+              }
+            } finally {
+              endBatch();
             }
           }}
           onOpenCard={handleCardClick}

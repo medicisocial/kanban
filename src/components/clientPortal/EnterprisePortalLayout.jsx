@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { IconBell, IconChevronLeft, IconClose, IconMenu, IconSettings } from './ClientPortalIcons';
+import { IconBell, IconChevronLeft, IconClose, IconMenu, IconSettings, IconUndo } from './ClientPortalIcons';
 import ClientLogoAvatar from './ClientLogoAvatar';
 import PortalSidebarNav from './PortalSidebarNav';
 import { clientInitials } from './clientPortalUi';
@@ -175,6 +175,8 @@ export default function EnterprisePortalLayout({
   onSignOut,
   onProfileClick,
   onNotificationClick,
+  canUndo = false,
+  onUndo,
   sidebarFooter,
   headerFilter,
   topBanner,
@@ -528,6 +530,20 @@ export default function EnterprisePortalLayout({
             </div>
 
             <div className="relative z-30 flex shrink-0 items-center gap-2 md:gap-3">
+              {onUndo && (
+                <button
+                  type="button"
+                  onClick={onUndo}
+                  disabled={!canUndo}
+                  className="portal-icon-btn flex h-10 items-center gap-1.5 px-2.5 text-white/55 disabled:cursor-not-allowed disabled:opacity-30 md:px-3"
+                  title={canUndo ? 'Undo last action (Ctrl+Z)' : 'Nothing to undo'}
+                  aria-label={canUndo ? 'Undo last action' : 'Nothing to undo'}
+                >
+                  <IconUndo className="h-5 w-5 shrink-0" />
+                  <span className="hidden text-xs font-medium md:inline">Undo</span>
+                </button>
+              )}
+
               <div className="relative">
                 <button
                   ref={notificationButtonRef}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { EVENTS_STORAGE_KEY, createEvent } from '../constants';
+import { notifyMutation } from '../utils/undoHistory';
 
 function loadEvents() {
   try {
@@ -21,13 +22,19 @@ export function useEvents() {
     localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
   }, [events]);
 
+  const replaceEvents = useCallback((next) => {
+    setEvents(next);
+  }, []);
+
   const addEvent = useCallback((data) => {
+    notifyMutation();
     const event = createEvent(data);
     setEvents((prev) => [...prev, event]);
     return event.id;
   }, []);
 
   const updateEvent = useCallback((id, updates) => {
+    notifyMutation();
     setEvents((prev) =>
       prev.map((event) =>
         event.id === id ? { ...event, ...updates, updatedAt: Date.now() } : event,
@@ -36,11 +43,13 @@ export function useEvents() {
   }, []);
 
   const deleteEvent = useCallback((id) => {
+    notifyMutation();
     setEvents((prev) => prev.filter((event) => event.id !== id));
   }, []);
 
   return {
     events,
+    replaceEvents,
     addEvent,
     updateEvent,
     deleteEvent,

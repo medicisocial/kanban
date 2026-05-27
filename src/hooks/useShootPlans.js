@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { SHOOT_PLANS_STORAGE_KEY } from "../constants";
 import { getShootPlanKey } from "../utils/shootDay";
+import { notifyMutation } from "../utils/undoHistory";
 
 function loadPlans() {
   try {
@@ -44,7 +45,12 @@ export function useShootPlans() {
     [plans],
   );
 
+  const replacePlans = useCallback((next) => {
+    setPlans(next);
+  }, []);
+
   const updatePlan = useCallback((client, dateKey, updates) => {
+    notifyMutation();
     const key = getShootPlanKey(client, dateKey);
     setPlans((prev) => ({
       ...prev,
@@ -57,6 +63,7 @@ export function useShootPlans() {
   }, []);
 
   const ensurePlan = useCallback((client, dateKey) => {
+    notifyMutation();
     const key = getShootPlanKey(client, dateKey);
     setPlans((prev) => ({
       ...prev,
@@ -69,6 +76,7 @@ export function useShootPlans() {
   }, []);
 
   const deletePlan = useCallback((client, dateKey) => {
+    notifyMutation();
     const key = getShootPlanKey(client, dateKey);
     setPlans((prev) => {
       const next = { ...prev };
@@ -77,5 +85,5 @@ export function useShootPlans() {
     });
   }, []);
 
-  return { plans, getPlan, updatePlan, ensurePlan, deletePlan };
+  return { plans, replacePlans, getPlan, updatePlan, ensurePlan, deletePlan };
 }

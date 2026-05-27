@@ -64,6 +64,8 @@ export default function AdminConsoleLayout({
   onClientChange,
   homeNavLabel = 'Overview',
   navBadges = {},
+  canUndo = false,
+  onUndo,
   children,
 }) {
   const admin = useWorkspaceAdmin({ clientFilter, onClientChange });
@@ -117,6 +119,8 @@ export default function AdminConsoleLayout({
         sidebarLogoMessageIsError={logoMessageIsError}
         onSignOut={onSignOut}
         headerFilter={admin.clientFilterSelect}
+        canUndo={canUndo}
+        onUndo={onUndo}
       >
         {children}
       </EnterprisePortalLayout>

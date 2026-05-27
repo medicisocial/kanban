@@ -99,6 +99,19 @@ export function IconSearch({ className = 'h-4 w-4' }) {
   );
 }
 
+export function IconUndo({ className = 'h-4 w-4' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+      <path d="M9 7H5v4" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M5 11a7 7 0 1 0 1.6-4.4L5 11"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function IconBell({ className = 'h-4 w-4' }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>

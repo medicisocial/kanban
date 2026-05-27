@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { STORAGE_KEY, COLUMNS, PLATFORM, createCard, EDITOR_TODO_STORAGE_KEY, isScheduledPostType, isOneOffProjectCard, syncOneOffScheduleFields } from '../constants';
+import { notifyMutation } from '../utils/undoHistory';
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
 import {
   toDateKey,
@@ -147,7 +148,12 @@ export function useKanban() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
   }, [cards]);
 
+  const replaceCards = useCallback((next) => {
+    setCards(next.map(normalizeCard));
+  }, []);
+
   const addCard = useCallback((columnId) => {
+    notifyMutation();
     const status = getStatusForColumn(columnId);
     setCards((prev) => [
       ...prev,
@@ -183,6 +189,7 @@ export function useKanban() {
   }, []);
 
   const createCardFromIdea = useCallback((idea) => {
+    notifyMutation();
     const cardId = crypto.randomUUID();
     const notes = [
       idea.description,
@@ -224,6 +231,7 @@ export function useKanban() {
   }, []);
 
   const updateCard = useCallback((id, updates) => {
+    notifyMutation();
     setCards((prev) =>
       prev.map((card) => {
         if (card.id !== id) return card;
@@ -247,10 +255,12 @@ export function useKanban() {
   }, []);
 
   const deleteCard = useCallback((id) => {
+    notifyMutation();
     setCards((prev) => prev.filter((card) => card.id !== id));
   }, []);
 
   const moveCard = useCallback((cardId, targetColumnId) => {
+    notifyMutation();
     const status = getStatusForColumn(targetColumnId);
     setCards((prev) =>
       prev.map((card) => {
@@ -270,6 +280,7 @@ export function useKanban() {
   }, []);
 
   const markAsPosted = useCallback((cardId, occurrenceDate) => {
+    notifyMutation();
     setCards((prev) =>
       prev.map((card) => {
         if (card.id !== cardId) return card;
@@ -298,6 +309,7 @@ export function useKanban() {
   }, []);
 
   const addCardWithDetails = useCallback((overrides = {}) => {
+    notifyMutation();
     const columnId = overrides.columnId || 'shoot';
     const isOneOff = Boolean(overrides.isOneOffProject);
     const card = createCard({
@@ -369,6 +381,7 @@ export function useKanban() {
 
   return {
     cards,
+    replaceCards,
     addCard,
     addCardWithDetails,
     addOneOffProject,

@@ -4,6 +4,7 @@ import {
   VIDEO_IDEAS_STORAGE_KEY,
 } from "../constants";
 import { loadClientResponses, clearClientResponses } from "../utils/clientShare";
+import { notifyMutation } from "../utils/undoHistory";
 
 function createIdea(overrides = {}) {
   return {
@@ -75,24 +76,33 @@ export function useVideoIdeas() {
     localStorage.setItem(VIDEO_IDEAS_STORAGE_KEY, JSON.stringify(ideas));
   }, [ideas]);
 
+  const replaceIdeas = useCallback((next) => {
+    setIdeas(next);
+  }, []);
+
   const addIdea = useCallback((ideaData) => {
+    notifyMutation();
     setIdeas((prev) => [...prev, createIdea(ideaData)]);
   }, []);
 
   const updateIdea = useCallback((id, updates) => {
+    notifyMutation();
     setIdeas((prev) => prev.map((i) => (i.id === id ? { ...i, ...updates } : i)));
   }, []);
 
   const deleteIdea = useCallback((id) => {
+    notifyMutation();
     setIdeas((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
   const deleteIdeas = useCallback((ids) => {
+    notifyMutation();
     const idSet = new Set(ids);
     setIdeas((prev) => prev.filter((i) => !idSet.has(i.id)));
   }, []);
 
   const markApproved = useCallback((id, clientComment, boardCardId) => {
+    notifyMutation();
     setIdeas((prev) =>
       prev.map((i) =>
         i.id === id
@@ -109,6 +119,7 @@ export function useVideoIdeas() {
   }, []);
 
   const markDeclined = useCallback((id, clientComment) => {
+    notifyMutation();
     setIdeas((prev) =>
       prev.map((i) =>
         i.id === id
@@ -124,6 +135,7 @@ export function useVideoIdeas() {
   }, []);
 
   const ensureIdeaExists = useCallback((ideaSnapshot) => {
+    notifyMutation();
     setIdeas((prev) => {
       if (prev.some((i) => i.id === ideaSnapshot.id)) return prev;
       return [...prev, createIdea(ideaSnapshot)];
@@ -136,6 +148,7 @@ export function useVideoIdeas() {
 
   return {
     ideas,
+    replaceIdeas,
     addIdea,
     updateIdea,
     deleteIdea,
