@@ -306,26 +306,36 @@ export default function AppShell({ onSignOut }) {
   const handleRemoveFromShootSchedule = (card) => {
     if (
       !window.confirm(
-        `Remove "${card.title}" from this shoot schedule? The card will stay on the board without a shoot date.`,
+        `Remove "${card.title}" from this shoot? The card will stay on the board without a shoot date.`,
       )
     ) {
       return;
     }
-    updateCard(card.id, { shootDate: "", shootTime: "", shootEndTime: "" });
+    const clears = { shootDate: '', shootTime: '', shootEndTime: '' };
+    if (card.isOneOffProject || card.contentType === 'One-off Project') {
+      clears.dueDate = '';
+      clears.dueTime = '';
+    }
+    updateCard(card.id, clears);
     setSelectedCard((prev) =>
-      prev?.id === card.id ? { ...prev, shootDate: "", shootTime: "", shootEndTime: "" } : prev,
+      prev?.id === card.id ? { ...prev, ...clears } : prev,
     );
   };
 
   const handleRemoveClientShoot = (client, dateKey, clientCards) => {
     const count = clientCards.length;
     const message = count
-      ? `Remove ${client}'s shoot from this day? ${count} item${count === 1 ? "" : "s"} will stay on the board but lose their shoot date.`
-      : `Remove ${client}'s shoot from this day?`;
+      ? `Delete ${client}'s shoot on this day? ${count} item${count === 1 ? '' : 's'} will stay on the board but lose their shoot date.`
+      : `Delete ${client}'s shoot on this day?`;
     if (!window.confirm(message)) return;
 
     for (const card of clientCards) {
-      updateCard(card.id, { shootDate: "", shootTime: "", shootEndTime: "" });
+      const clears = { shootDate: '', shootTime: '', shootEndTime: '' };
+      if (card.isOneOffProject || card.contentType === 'One-off Project') {
+        clears.dueDate = '';
+        clears.dueTime = '';
+      }
+      updateCard(card.id, clears);
     }
     deletePlan(client, dateKey);
     setSelectedCard((prev) =>

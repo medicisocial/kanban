@@ -15,6 +15,7 @@ export default function ShootDayMonthView({
   plans,
   onDayClick,
   getPlan,
+  onRemoveClientShoot,
 }) {
   const { clients: clientOrder, getClientColor } = useClientsContext();
   const year = focusDate.getFullYear();
@@ -86,17 +87,34 @@ export default function ShootDayMonthView({
                   <div className="space-y-0.5">
                     {clients.slice(0, 3).map((client) => {
                       const color = getClientColor(client);
+                      const clientCards = dayShoots.filter((card) => card.client === client);
                       return (
-                      <div
-                        key={client}
-                        className="truncate rounded px-1 py-0.5 text-[10px] font-medium"
-                        style={{
-                          backgroundColor: color + "33",
-                          color,
-                        }}
-                      >
-                        {client}
-                      </div>
+                        <div
+                          key={client}
+                          className="group/client flex items-center gap-0.5 rounded pr-0.5"
+                          style={{ backgroundColor: color + '33' }}
+                        >
+                          <span
+                            className="min-w-0 flex-1 truncate px-1 py-0.5 text-[10px] font-medium"
+                            style={{ color }}
+                          >
+                            {client}
+                          </span>
+                          {onRemoveClientShoot && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRemoveClientShoot(client, key, clientCards);
+                              }}
+                              className="shrink-0 rounded px-1 text-[10px] leading-none text-red-300/70 transition hover:bg-red-500/20 hover:text-red-300 sm:opacity-0 sm:group-hover/client:opacity-100"
+                              aria-label={`Delete ${client} shoot on ${key}`}
+                              title="Delete shoot"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
                       );
                     })}
                     {clients.length > 3 && (

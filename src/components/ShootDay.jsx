@@ -200,7 +200,7 @@ export default function ShootDay({
       {!embedded && (
         <p className="mb-4 text-xs text-gray-500">
           {viewMode === 'month'
-            ? 'Click any day to open it, or add a client shoot manually.'
+            ? 'Click a day to open it. Hover a client name and click × to delete that shoot.'
             : 'Add multiple reels or items per client shoot — use + New item or + From board.'}
         </p>
       )}
@@ -234,6 +234,7 @@ export default function ShootDay({
             plans={plans}
             onDayClick={handleDayClick}
             getPlan={getPlan}
+            onRemoveClientShoot={onRemoveClientShoot}
           />
         )}
       </div>
