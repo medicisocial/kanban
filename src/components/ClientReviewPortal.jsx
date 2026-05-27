@@ -19,7 +19,6 @@ export default function ClientReviewPortal({
   useCloudSync = false,
   onCloudQueueResponse,
   embedded = false,
-  searchQuery = '',
 }) {
   const { getClientColor, getClientLogo } = useClientsContext();
   const [localIdeas, setLocalIdeas] = useState([]);
@@ -162,7 +161,6 @@ export default function ClientReviewPortal({
             client={client}
             clientColor={clientColor}
             clientLogo={clientLogo}
-            searchQuery={searchQuery}
             onApprove={handleApprove}
             onDecline={handleDecline}
             pendingIds={pendingIds}

@@ -3,6 +3,7 @@ import {
   IconCalendar,
   IconEvents,
   IconIdeas,
+  IconSettings,
   IconShoots,
   IconTasks,
 } from './ClientPortalIcons';
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
   { id: 'events', label: 'Events Calendar', Icon: IconEvents },
   { id: 'review', label: 'Tasks', Icon: IconTasks },
   { id: 'shoots', label: 'Shoot Schedule', Icon: IconShoots },
+  { id: 'profile', label: 'Profile', Icon: IconSettings },
 ];
 
 export default function ClientPortalLayout({
@@ -26,8 +28,6 @@ export default function ClientPortalLayout({
   onRefresh,
   onSignOut,
   notificationCount = 0,
-  searchQuery,
-  onSearchChange,
   children,
 }) {
   return (
@@ -38,8 +38,6 @@ export default function ClientPortalLayout({
       navItems={NAV_ITEMS}
       activeTab={activeTab}
       onTabChange={onTabChange}
-      searchQuery={searchQuery}
-      onSearchChange={onSearchChange}
       notificationCount={notificationCount}
       onNotificationClick={() => onTabChange('ideas')}
       profileLabel={client}

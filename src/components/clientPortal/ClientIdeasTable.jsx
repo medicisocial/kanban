@@ -58,7 +58,6 @@ export default function ClientIdeasTable({
   client,
   clientColor,
   clientLogo,
-  searchQuery = '',
   onApprove,
   onDecline,
   pendingIds = [],
@@ -76,20 +75,10 @@ export default function ClientIdeasTable({
   };
 
   const filtered = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
     let rows = ideas.filter((idea) => idea.client === client);
 
     if (statusFilter !== 'all') {
       rows = rows.filter((idea) => idea.status === statusFilter);
-    }
-
-    if (query) {
-      rows = rows.filter(
-        (idea) =>
-          idea.title?.toLowerCase().includes(query) ||
-          idea.description?.toLowerCase().includes(query) ||
-          idea.contentType?.toLowerCase().includes(query),
-      );
     }
 
     const dir = sort.dir === 'asc' ? 1 : -1;
@@ -101,7 +90,7 @@ export default function ClientIdeasTable({
       const bv = (b[sort.key] || '').toString().toLowerCase();
       return av.localeCompare(bv) * dir;
     });
-  }, [ideas, client, statusFilter, searchQuery, sort]);
+  }, [ideas, client, statusFilter, sort]);
 
   const submitDecline = (ideaId) => {
     onDecline?.(ideaId, comment.trim());

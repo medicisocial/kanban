@@ -8,7 +8,6 @@ export default function UnifiedCalendarsPage({
   cards,
   events,
   clientFilter,
-  search,
   onCardClick,
   onAddCalendarPost,
   onRemoveFromCalendar,
@@ -43,7 +42,6 @@ export default function UnifiedCalendarsPage({
         <Calendar
           cards={cards}
           clientFilter={clientFilter}
-          search={search}
           onCardClick={onCardClick}
           onAddCalendarPost={onAddCalendarPost}
           onRemoveFromCalendar={onRemoveFromCalendar}
@@ -53,7 +51,6 @@ export default function UnifiedCalendarsPage({
         <EventsCalendar
           events={events}
           clientFilter={clientFilter}
-          search={search}
           onAddEvent={onAddEvent}
           onUpdateEvent={onUpdateEvent}
           onDeleteEvent={onDeleteEvent}

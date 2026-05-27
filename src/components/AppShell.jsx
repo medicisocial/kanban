@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useKanban } from "../hooks/useKanban";
 import { useVideoIdeas, applyClientResponses } from "../hooks/useVideoIdeas";
 import { useShootPlans } from "../hooks/useShootPlans";
@@ -35,13 +35,16 @@ import ClientReviewPortal from "./ClientReviewPortal";
 import ClientContentReviewPortal from "./ClientContentReviewPortal";
 import ClientCalendarPortal from "./ClientCalendarPortal";
 import ClientShootDayPortal from "./ClientShootDayPortal";
-import ClientSyncNotificationPanel from "./ClientSyncNotificationPanel";
+import WorkspaceNotificationsPanel from "./WorkspaceNotificationsPanel";
+import HandoffModal from "./HandoffModal";
 import ClientManagementPage from "./ClientManagementPage";
 import TeamManagementPage from "./TeamManagementPage";
 import CardModal from "./CardModal";
 import { useStaffAuth } from "../context/StaffAuthContext";
 import { useClientsContext } from "../context/ClientsContext";
 import { getDefaultWorkspaceView } from "../utils/getDefaultWorkspaceView";
+import { resolveStaffMemberName } from "../utils/staffMembers";
+import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
 
 export default function AppShell({ onSignOut }) {
   const importData = parseImportParam();
@@ -67,13 +70,14 @@ export default function AppShell({ onSignOut }) {
   } = useAdminTasks();
   const { events, addEvent, updateEvent, deleteEvent } = useEvents();
   const { authRequired, ready, logout, session } = useStaffAuth();
-  const { teamMembers } = useClientsContext();
+  const { teamMembers, clientAccountManagers } = useClientsContext();
 
   const [selectedCard, setSelectedCard] = useState(null);
-  const [search, setSearch] = useState("");
   const [clientFilter, setClientFilter] = useState("all");
   const [activeView, setActiveView] = useState("home");
   const [viewInitialized, setViewInitialized] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [handoffCard, setHandoffCard] = useState(null);
   const [responseCount, setResponseCount] = useState(() => loadClientResponses().length);
   const [contentReviewResponseCount, setContentReviewResponseCount] = useState(
     () => loadContentReviewResponses().length,
@@ -151,8 +155,34 @@ export default function AppShell({ onSignOut }) {
     updateCard(cardId, buildSendBackForEditingUpdates(card, comment));
   };
 
+  const handleMoveCard = (cardId, targetColumnId) => {
+    const card = cards.find((c) => c.id === cardId);
+    if (card?.columnId === "shoot" && targetColumnId === "editing") {
+      setHandoffCard(card);
+      return;
+    }
+    moveCard(cardId, targetColumnId);
+  };
+
   const handleMoveEditorTask = (cardId, columnId) => {
-    moveCard(cardId, columnId);
+    handleMoveCard(cardId, columnId);
+  };
+
+  const handleHandoffRequest = (card) => {
+    setHandoffCard(card);
+  };
+
+  const handleConfirmHandoff = (note) => {
+    if (!handoffCard) return;
+    moveCard(handoffCard.id, "editing");
+    if (note) {
+      const existing = handoffCard.notes?.trim();
+      const stamped = `[Handoff ${new Date().toLocaleDateString()}] ${note}`;
+      updateCard(handoffCard.id, {
+        notes: existing ? `${existing}\n\n${stamped}` : stamped,
+      });
+    }
+    setHandoffCard(null);
   };
 
   const handleDeleteOneOffProject = (cardId) => {
@@ -498,22 +528,43 @@ export default function AppShell({ onSignOut }) {
   };
 
   const syncTotal = responseCount + contentReviewResponseCount + shootResponseCount;
+  const staffName = resolveStaffMemberName(session, teamMembers);
+  const workspaceAlerts = useMemo(
+    () =>
+      buildWorkspaceAlerts({
+        cards,
+        ideas,
+        clientFilter,
+        staffName,
+        clientAccountManagers,
+        myWorkOnly: true,
+      }),
+    [cards, ideas, clientFilter, staffName, clientAccountManagers],
+  );
+  const notificationCount = syncTotal + workspaceAlerts.length;
+
+  const handleNotificationNavigate = (view) => {
+    setActiveView(view);
+    setNotificationsOpen(false);
+  };
 
   return (
     <AdminConsoleLayout
       activeView={activeView}
       onViewChange={setActiveView}
-      search={search}
-      onSearchChange={setSearch}
-      notificationCount={syncTotal}
+      notificationCount={notificationCount}
+      notificationsOpen={notificationsOpen}
+      onNotificationsOpenChange={setNotificationsOpen}
       notificationPanel={
-        <ClientSyncNotificationPanel
+        <WorkspaceNotificationsPanel
           ideaCount={responseCount}
           contentReviewCount={contentReviewResponseCount}
           shootCount={shootResponseCount}
+          alerts={workspaceAlerts}
           onApplyIdeas={handleApplyClientResponses}
           onApplyContentReview={handleApplyContentReviewResponses}
           onApplyShoot={handleApplyShootResponses}
+          onNavigate={handleNotificationNavigate}
         />
       }
       profileLabel={session?.username || 'Staff'}
@@ -528,8 +579,11 @@ export default function AppShell({ onSignOut }) {
           adminTasks={adminTasks}
           clientFilter={clientFilter}
           syncTotal={syncTotal}
+          staffName={staffName}
+          clientAccountManagers={clientAccountManagers}
           onNavigate={setActiveView}
           onOpenCard={handleCardClick}
+          onOpenNotifications={() => setNotificationsOpen(true)}
         />
       )}
 
@@ -537,7 +591,6 @@ export default function AppShell({ onSignOut }) {
         <VideoIdeas
           ideas={ideas}
           clientFilter={clientFilter}
-          search={search}
           onAddIdea={addIdea}
           onApprove={handleApproveIdea}
           onDecline={handleDeclineIdea}
@@ -555,10 +608,11 @@ export default function AppShell({ onSignOut }) {
             onAddCard={addCard}
             onCardClick={handleCardClick}
             onDeleteCard={handleDelete}
-            onMoveCard={moveCard}
+            onMoveCard={handleMoveCard}
             clientFilter={clientFilter}
-            search={search}
             embedded
+            staffName={staffName}
+            clientAccountManagers={clientAccountManagers}
           />
         </section>
       )}
@@ -568,7 +622,6 @@ export default function AppShell({ onSignOut }) {
           cards={cards}
           events={events}
           clientFilter={clientFilter}
-          search={search}
           onCardClick={handleCardClick}
           onAddCalendarPost={handleAddCalendarPost}
           onRemoveFromCalendar={handleRemoveFromCalendar}
@@ -582,7 +635,6 @@ export default function AppShell({ onSignOut }) {
         <CompanyTasks
           cards={cards}
           adminTasks={adminTasks}
-          search={search}
           clientFilter={clientFilter}
           embedded
           onAddOneOffTask={addOneOffProject}
@@ -597,6 +649,8 @@ export default function AppShell({ onSignOut }) {
           onApproveReview={handleApproveReview}
           onSendBackForEditing={handleSendBackForEditing}
           onMoveTask={handleMoveEditorTask}
+          onHandoff={handleHandoffRequest}
+          onNavigate={setActiveView}
         />
       )}
 
@@ -604,7 +658,6 @@ export default function AppShell({ onSignOut }) {
         <ShootDay
           cards={cards}
           clientFilter={clientFilter}
-          search={search}
           plans={plans}
           onCardClick={handleCardClick}
           onUpdateCard={updateCard}
@@ -619,7 +672,7 @@ export default function AppShell({ onSignOut }) {
       )}
 
       {activeView === "clients" && (
-        <ClientManagementPage cards={cards} />
+        <ClientManagementPage cards={cards} ideas={ideas} />
       )}
 
       {activeView === "team" && (
@@ -641,6 +694,13 @@ export default function AppShell({ onSignOut }) {
           onDelete={handleDelete}
         />
       )}
+
+      <HandoffModal
+        card={handoffCard}
+        editorName={handoffCard?.assignedTo}
+        onConfirm={handleConfirmHandoff}
+        onCancel={() => setHandoffCard(null)}
+      />
     </AdminConsoleLayout>
   );
 }

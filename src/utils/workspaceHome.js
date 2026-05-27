@@ -1,4 +1,5 @@
 import { toDateKey } from './calendar';
+import { cardIsAssignedToStaff } from './staffMembers';
 
 function isToday(dateKey) {
   return dateKey === toDateKey(new Date());
@@ -16,12 +17,20 @@ function isThisWeek(dateKey) {
   return date >= start && date < end;
 }
 
+function matchesStaff(card, staffName, clientAccountManagers, myWorkOnly) {
+  if (!myWorkOnly || !staffName) return true;
+  return cardIsAssignedToStaff(card, staffName, clientAccountManagers);
+}
+
 export function buildWorkspaceHomeSummary({
   cards,
   ideas,
   adminTasks,
   clientFilter = 'all',
   syncTotal = 0,
+  staffName = '',
+  clientAccountManagers = {},
+  myWorkOnly = true,
 }) {
   const matchesClient = (item) =>
     clientFilter === 'all' || item.client === clientFilter;
@@ -29,21 +38,32 @@ export function buildWorkspaceHomeSummary({
   const scopedCards = cards.filter(matchesClient);
   const scopedIdeas = ideas.filter(matchesClient);
 
+  const cardScope = (card) =>
+    matchesStaff(card, staffName, clientAccountManagers, myWorkOnly);
+
   const inReview = scopedCards.filter((c) => c.columnId === 'in-review');
-  const toCreate = scopedCards.filter((c) => c.columnId === 'shoot');
-  const editing = scopedCards.filter((c) => c.columnId === 'editing');
+  const toCreate = scopedCards.filter((c) => c.columnId === 'shoot' && cardScope(c));
+  const editing = scopedCards.filter((c) => c.columnId === 'editing' && cardScope(c));
   const pendingIdeas = scopedIdeas.filter((i) => i.status === 'pending');
   const shootsToday = scopedCards.filter(
-    (c) => c.shootDate && isToday(c.shootDate) && c.contentType !== 'Story',
+    (c) =>
+      c.shootDate &&
+      isToday(c.shootDate) &&
+      c.contentType !== 'Story' &&
+      cardScope(c),
   );
   const scheduledThisWeek = scopedCards.filter(
-    (c) => c.columnId === 'scheduled' && c.dueDate && isThisWeek(c.dueDate),
+    (c) => c.columnId === 'scheduled' && c.dueDate && isThisWeek(c.dueDate) && cardScope(c),
   );
   const openAdminTasks = (adminTasks || []).filter((t) => !t.completed);
 
+  const myInReview = inReview.filter(cardScope);
+
   return {
     syncTotal,
-    inReviewCount: inReview.length,
+    staffName,
+    myWorkOnly,
+    inReviewCount: myWorkOnly && staffName ? myInReview.length : inReview.length,
     toCreateCount: toCreate.length,
     editingCount: editing.length,
     pendingIdeasCount: pendingIdeas.length,
@@ -51,7 +71,7 @@ export function buildWorkspaceHomeSummary({
     scheduledThisWeekCount: scheduledThisWeek.length,
     openAdminTasksCount: openAdminTasks.length,
     shootsToday,
-    inReview: inReview.slice(0, 5),
+    inReview: (myWorkOnly && staffName ? myInReview : inReview).slice(0, 5),
     scheduledThisWeek: scheduledThisWeek.slice(0, 5),
   };
 }

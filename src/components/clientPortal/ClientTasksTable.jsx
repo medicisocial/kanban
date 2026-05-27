@@ -40,7 +40,6 @@ export default function ClientTasksTable({
   client,
   clientColor,
   clientLogo,
-  searchQuery = '',
   onApprove,
   onDeny,
 }) {
@@ -56,16 +55,7 @@ export default function ClientTasksTable({
   };
 
   const filtered = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
     let rows = [...cards];
-
-    if (query) {
-      rows = rows.filter(
-        (card) =>
-          card.title?.toLowerCase().includes(query) ||
-          card.contentType?.toLowerCase().includes(query),
-      );
-    }
 
     const dir = sort.dir === 'asc' ? 1 : -1;
     return rows.sort((a, b) => {
@@ -78,7 +68,7 @@ export default function ClientTasksTable({
       const bv = (b[sort.key] || '').toString().toLowerCase();
       return av.localeCompare(bv) * dir;
     });
-  }, [cards, searchQuery, sort]);
+  }, [cards, sort]);
 
   const submitDeny = (cardId) => {
     const trimmed = comment.trim();

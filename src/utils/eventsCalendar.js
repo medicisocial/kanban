@@ -1,23 +1,9 @@
-export function filterEvents(events, { client, search } = {}) {
+export function filterEvents(events, { client } = {}) {
   if (!Array.isArray(events)) return [];
   let list = events;
 
   if (client && client !== 'all') {
     list = list.filter((event) => event.client === client);
-  }
-
-  if (search) {
-    const query = search.toLowerCase();
-    list = list.filter((event) => {
-      const fieldText = event.fields
-        ? Object.values(event.fields).filter(Boolean).join(' ')
-        : '';
-      return [event.title, event.businessType, event.status, event.estimatedCovers, fieldText, event.client, event.time]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(query);
-    });
   }
 
   return list;

@@ -2,13 +2,13 @@ import { useState } from 'react';
 import EditorTodo from './EditorTodo';
 import AccountManagerTodo from './AccountManagerTodo';
 import AdminTodo from './AdminTodo';
+import ContentCreatorTodo from './ContentCreatorTodo';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import { btnPrimaryClass } from './clientPortal/clientPortalUi';
 
 export default function CompanyTasks({
   cards,
   adminTasks,
-  search,
   clientFilter,
   embedded = false,
   onAddOneOffTask,
@@ -23,8 +23,10 @@ export default function CompanyTasks({
   onApproveReview,
   onSendBackForEditing,
   onMoveTask,
+  onHandoff,
+  onNavigate,
 }) {
-  const [activeRole, setActiveRole] = useState('editor');
+  const [activeRole, setActiveRole] = useState('creator');
 
   const tabClass = (role) =>
     embedded
@@ -44,6 +46,9 @@ export default function CompanyTasks({
             : 'mb-6 flex flex-wrap justify-center rounded-lg border border-white/10 bg-white/5 p-0.5 w-fit gap-0.5 mx-auto'
         }
       >
+        <button type="button" onClick={() => setActiveRole('creator')} className={tabClass('creator')}>
+          Content creators
+        </button>
         <button type="button" onClick={() => setActiveRole('editor')} className={tabClass('editor')}>
           Editors
         </button>
@@ -55,11 +60,20 @@ export default function CompanyTasks({
         </button>
       </div>
 
+      {activeRole === 'creator' && (
+        <ContentCreatorTodo
+          cards={cards}
+          clientFilter={clientFilter}
+          onOpenCard={onOpenCard}
+          onHandoff={onHandoff}
+          onNavigate={onNavigate}
+        />
+      )}
+
       {activeRole === 'editor' && (
         <EditorTodo
           embedded
           cards={cards}
-          search={search}
           clientFilter={clientFilter}
           onAddOneOffTask={onAddOneOffTask}
           onDeleteOneOffTask={onDeleteOneOffTask}
@@ -74,7 +88,6 @@ export default function CompanyTasks({
       {activeRole === 'account' && (
         <AccountManagerTodo
           cards={cards}
-          search={search}
           clientFilter={clientFilter}
           onOpenCard={onOpenCard}
           onMarkScheduled={onMarkScheduled}
@@ -89,7 +102,6 @@ export default function CompanyTasks({
         <AdminTodo
           embedded
           adminTasks={adminTasks}
-          search={search}
           clientFilter={clientFilter}
           onAddAdminTask={onAddAdminTask}
           onToggleAdminTaskComplete={onToggleAdminTaskComplete}
@@ -104,7 +116,7 @@ export default function CompanyTasks({
       <section>
         <ClientPortalSectionHeader
           title="Team tasks"
-          description="Editor, account manager, and administrative worklists across all clients."
+          description="Content creator, editor, account manager, and administrative worklists across all clients."
         />
         {content}
       </section>
@@ -116,7 +128,7 @@ export default function CompanyTasks({
       <div className="mb-6 text-center">
         <h1 className="font-serif text-2xl font-semibold text-white">Company tasks</h1>
         <p className="mt-1 text-sm text-gray-400">
-          Worklists for editors, account managers, and administrative work.
+          Worklists for creators, editors, account managers, and administrative work.
         </p>
       </div>
       {content}

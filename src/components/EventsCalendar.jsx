@@ -18,7 +18,6 @@ export default function EventsCalendar({
   scopedBrand,
   lockedClient,
   businessType,
-  search,
   onAddEvent,
   onUpdateEvent,
   onDeleteEvent,
@@ -32,8 +31,8 @@ export default function EventsCalendar({
   const showAllClients = !clientMode && !scopedBrand && effectiveClientFilter === 'all';
 
   const visibleEvents = useMemo(
-    () => filterEvents(events, { client: effectiveClientFilter, search }),
-    [events, effectiveClientFilter, search],
+    () => filterEvents(events, { client: effectiveClientFilter }),
+    [events, effectiveClientFilter],
   );
 
   const eventsByDate = useMemo(

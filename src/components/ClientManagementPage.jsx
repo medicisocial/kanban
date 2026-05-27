@@ -12,7 +12,10 @@ import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader'
 import ClientPortalUsersEditor from './clientPortal/ClientPortalUsersEditor';
 import ClientContactsEditor from './clientPortal/ClientContactsEditor';
 import ClientSocialLoginsEditor from './clientPortal/ClientSocialLoginsEditor';
+import ClientSharePanel from './ClientSharePanel';
+import CalendarSharePanel from './CalendarSharePanel';
 import ContentReviewSharePanel from './ContentReviewSharePanel';
+import ClientPortalHealthChecklist from './ClientPortalHealthChecklist';
 import { btnPrimaryClass, btnSecondaryClass, selectClass } from './clientPortal/clientPortalUi';
 
 const TABS = [
@@ -23,7 +26,7 @@ const TABS = [
   { id: 'users', label: 'Portal users' },
 ];
 
-export default function ClientManagementPage({ initialTab = 'profile', onClientAdded, cards = [] }) {
+export default function ClientManagementPage({ initialTab = 'profile', onClientAdded, cards = [], ideas = [] }) {
   const {
     clients,
     addClient,
@@ -342,11 +345,24 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
           )}
 
           {activeTab === 'share' && (
-            <div key={`share-${selectedClient}`} className="portal-content-fade max-w-3xl space-y-4">
-              <p className="text-sm text-white/45">
-                Share review links with {selectedClient} when content is in the In Review column.
-              </p>
-              <ContentReviewSharePanel cards={cards} clientFilter={selectedClient} />
+            <div key={`share-${selectedClient}`} className="portal-content-fade max-w-3xl space-y-6">
+              <ClientPortalHealthChecklist
+                client={selectedClient}
+                getClientUsers={getClientUsers}
+                getClientContacts={getClientContacts}
+                getClientSocialLogins={getClientSocialLogins}
+                getClientBusinessType={getClientBusinessType}
+                getClientLogo={getClientLogo}
+                onGoToTab={setActiveTab}
+              />
+              <div className="space-y-4">
+                <p className="text-sm text-white/45">
+                  Share portal links with {selectedClient}. Ideas, calendar, and content review each have their own link.
+                </p>
+                <ClientSharePanel ideas={ideas} clientFilter={selectedClient} />
+                <CalendarSharePanel cards={cards} clientFilter={selectedClient} />
+                <ContentReviewSharePanel cards={cards} clientFilter={selectedClient} />
+              </div>
             </div>
           )}
 

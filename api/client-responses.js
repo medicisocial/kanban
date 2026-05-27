@@ -3,10 +3,12 @@ import {
   getClientSessionFromRequest,
   isClientSessionValid,
 } from './_lib/clientPortalAuth.mjs';
+import { normalizeClientContacts } from './_lib/clientProfile.mjs';
 
 const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
 const CONTENT_REVIEW_RESPONSES_KEY = 'medici-social-content-review-responses';
 const EVENTS_STORAGE_KEY = 'medici-social-events';
+const CLIENTS_STORAGE_KEY = 'medici-social-clients';
 
 function unauthorized(res) {
   return res.status(401).json({ error: 'Unauthorized' });
@@ -104,6 +106,32 @@ export default async function handler(req, res) {
     }
 
     workspace.data[EVENTS_STORAGE_KEY] = events;
+  } else if (type === 'profile') {
+    const brand = session.brand;
+    const clientStore = workspace.data[CLIENTS_STORAGE_KEY] || {};
+    const nextStore = {
+      names: Array.isArray(clientStore.names) ? clientStore.names : [],
+      colors: { ...(clientStore.colors || {}) },
+      logos: { ...(clientStore.logos || {}) },
+      businessTypes: { ...(clientStore.businessTypes || {}) },
+      accountManagers: { ...(clientStore.accountManagers || {}) },
+      contacts: { ...(clientStore.contacts || {}) },
+      socialLogins: { ...(clientStore.socialLogins || {}) },
+    };
+
+    if (Object.prototype.hasOwnProperty.call(response, 'logo')) {
+      if (response.logo) {
+        nextStore.logos[brand] = response.logo;
+      } else {
+        delete nextStore.logos[brand];
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(response, 'contacts')) {
+      nextStore.contacts[brand] = normalizeClientContacts(response.contacts);
+    }
+
+    workspace.data[CLIENTS_STORAGE_KEY] = nextStore;
   } else {
     return res.status(400).json({ error: 'Unknown response type.' });
   }

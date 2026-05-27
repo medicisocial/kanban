@@ -23,7 +23,6 @@ import { btnPrimaryClass, btnSecondaryClass, inputClass, surfacePanelClass } fro
 export default function ShootDay({
   cards,
   clientFilter,
-  search,
   plans,
   onCardClick,
   onUpdateCard,
@@ -43,8 +42,8 @@ export default function ShootDay({
   const dateKey = toDateKey(focusDate);
 
   const visibleShootCards = useMemo(
-    () => filterCards(getShootCards(cards), { client: clientFilter, search }),
-    [cards, clientFilter, search],
+    () => filterCards(getShootCards(cards), { client: clientFilter }),
+    [cards, clientFilter],
   );
 
   const shootsByDate = useMemo(

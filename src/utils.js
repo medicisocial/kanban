@@ -51,26 +51,13 @@ export function getBoardCards(cards) {
   });
 }
 
-export function filterCards(cards, { client, search }) {
+import { cardIsAssignedToStaff } from './utils/staffMembers';
+
+export function filterCards(cards, { client, assigneeFilter = false, staffName = '', clientAccountManagers = {} }) {
   return cards.filter((card) => {
     if (client && client !== 'all' && card.client !== client) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      const haystack = [
-        card.title,
-        card.client,
-        card.notes,
-        card.assignedTo,
-        card.contentType,
-        card.referenceMusic,
-        card.referenceVideo,
-        card.dropboxLink,
-        card.shootDate,
-        card.dueTime,
-      ]
-        .join(' ')
-        .toLowerCase();
-      if (!haystack.includes(q)) return false;
+    if (assigneeFilter && staffName && !cardIsAssignedToStaff(card, staffName, clientAccountManagers)) {
+      return false;
     }
     return true;
   });

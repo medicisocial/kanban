@@ -16,7 +16,7 @@ import { filterCards, getBoardCards } from '../utils';
 import KanbanColumn from './KanbanColumn';
 import CardPreview from './CardPreview';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import { btnSecondaryClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass } from './clientPortal/clientPortalUi';
 
 const COLUMN_IDS = new Set(COLUMNS.map((c) => c.id));
 const COLUMN_BY_ID = Object.fromEntries(COLUMNS.map((c) => [c.id, c]));
@@ -59,11 +59,14 @@ export default function KanbanBoard({
   onDeleteCard,
   onMoveCard,
   clientFilter,
-  search,
   embedded = false,
+  staffName = '',
+  clientAccountManagers = {},
 }) {
   const [activeCard, setActiveCard] = useState(null);
   const [finishedExpanded, setFinishedExpanded] = useState(false);
+  const [myCardsOnly, setMyCardsOnly] = useState(false);
+  const [focusGroup, setFocusGroup] = useState(null);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
@@ -72,9 +75,20 @@ export default function KanbanBoard({
   );
 
   const filteredCards = useMemo(
-    () => filterCards(getBoardCards(cards), { client: clientFilter, search }),
-    [cards, clientFilter, search],
+    () =>
+      filterCards(getBoardCards(cards), {
+        client: clientFilter,
+        assigneeFilter: myCardsOnly,
+        staffName,
+        clientAccountManagers,
+      }),
+    [cards, clientFilter, myCardsOnly, staffName, clientAccountManagers],
   );
+
+  const visibleGroups = useMemo(() => {
+    if (!focusGroup) return BOARD_COLUMN_GROUPS;
+    return BOARD_COLUMN_GROUPS.filter((group) => group.id === focusGroup || group.collapsible);
+  }, [focusGroup]);
 
   const cardsByColumn = useMemo(() => {
     const map = {};
@@ -149,10 +163,68 @@ export default function KanbanBoard({
         />
       )}
 
+      {embedded && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {staffName && (
+            <button
+              type="button"
+              onClick={() => setMyCardsOnly((value) => !value)}
+              className={myCardsOnly ? `${btnPrimaryClass} py-1.5 text-[10px]` : `${btnSecondaryClass} py-1.5 text-[10px]`}
+            >
+              My cards
+            </button>
+          )}
+          {BOARD_COLUMN_GROUPS.filter((group) => !group.collapsible).map((group) => (
+            <button
+              key={group.id}
+              type="button"
+              onClick={() => setFocusGroup((current) => (current === group.id ? null : group.id))}
+              className={
+                focusGroup === group.id
+                  ? `${btnPrimaryClass} py-1.5 text-[10px]`
+                  : `${btnSecondaryClass} py-1.5 text-[10px]`
+              }
+            >
+              {group.label}
+            </button>
+          ))}
+          {(myCardsOnly || focusGroup) && (
+            <button
+              type="button"
+              onClick={() => {
+                setMyCardsOnly(false);
+                setFocusGroup(null);
+              }}
+              className={`${btnSecondaryClass} py-1.5 text-[10px] text-white/45`}
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      )}
+
+      {embedded && filteredCards.length === 0 && (
+        <div className="mb-4 border border-dashed border-white/10 px-6 py-10 text-center">
+          <p className="text-sm text-white/45">No cards match the current filters.</p>
+          {(myCardsOnly || focusGroup) && (
+            <button
+              type="button"
+              onClick={() => {
+                setMyCardsOnly(false);
+                setFocusGroup(null);
+              }}
+              className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}
+            >
+              Show all cards
+            </button>
+          )}
+        </div>
+      )}
+
       <div className={`w-full overflow-x-auto ${embedded ? 'pb-2' : 'scroll-px-4 pb-6 sm:scroll-px-6'}`}>
         <div className={embedded ? 'flex w-max gap-4' : 'flex justify-center px-4 sm:px-6'}>
           <div className="flex w-max gap-4">
-            {BOARD_COLUMN_GROUPS.map((group) => {
+            {visibleGroups.map((group) => {
               const isArchive = group.collapsible;
               const groupCount = group.columnIds.reduce(
                 (sum, id) => sum + (cardsByColumn[id]?.length || 0),

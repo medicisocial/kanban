@@ -8,7 +8,6 @@ import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientP
 export default function VideoIdeas({
   ideas,
   clientFilter,
-  search,
   onAddIdea,
   onApprove,
   onDecline,
@@ -41,17 +40,8 @@ export default function VideoIdeas({
     if (statusFilter !== 'all') {
       list = list.filter((i) => i.status === statusFilter);
     }
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter((i) =>
-        [i.title, i.client, i.description, i.clientComment, i.referenceVideo]
-          .join(' ')
-          .toLowerCase()
-          .includes(q),
-      );
-    }
     return list;
-  }, [filteredByClient, statusFilter, search]);
+  }, [filteredByClient, statusFilter]);
 
   const allVisibleSelected =
     filteredIdeas.length > 0 && filteredIdeas.every((idea) => selectedIds.has(idea.id));
@@ -127,7 +117,6 @@ export default function VideoIdeas({
       ) : (
         <AdminIdeasTable
           ideas={filteredByClient}
-          searchQuery={search}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
           selectable={isBulkDeleteView}

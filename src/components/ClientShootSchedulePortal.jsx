@@ -10,18 +10,9 @@ export default function ClientShootSchedulePortal({
   plans,
   clientColor,
   embedded = false,
-  searchQuery = '',
 }) {
   const shootCards = getClientShootCards(stripInternalCardsForClientPortal(cards));
-  const query = searchQuery.trim().toLowerCase();
-
-  const filteredCards = query
-    ? shootCards.filter(
-        (card) =>
-          card.title?.toLowerCase().includes(query) ||
-          card.contentType?.toLowerCase().includes(query),
-      )
-    : shootCards;
+  const filteredCards = shootCards;
 
   const grouped = filteredCards.reduce((acc, card) => {
     const key = card.shootDate;

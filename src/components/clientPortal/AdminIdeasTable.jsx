@@ -47,7 +47,6 @@ function StatusBadge({ status }) {
 
 export default function AdminIdeasTable({
   ideas,
-  searchQuery = '',
   statusFilter,
   onStatusFilterChange,
   selectable = false,
@@ -70,21 +69,10 @@ export default function AdminIdeasTable({
   };
 
   const filtered = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
     let rows = [...ideas];
 
     if (statusFilter !== 'all') {
       rows = rows.filter((idea) => idea.status === statusFilter);
-    }
-
-    if (query) {
-      rows = rows.filter(
-        (idea) =>
-          [idea.title, idea.client, idea.description, idea.clientComment, idea.referenceVideo]
-            .join(' ')
-            .toLowerCase()
-            .includes(query),
-      );
     }
 
     const dir = sort.dir === 'asc' ? 1 : -1;
@@ -101,7 +89,7 @@ export default function AdminIdeasTable({
       const bv = (b[sort.key] || '').toString().toLowerCase();
       return av.localeCompare(bv) * dir;
     });
-  }, [ideas, statusFilter, searchQuery, sort, getClientAccountManager]);
+  }, [ideas, statusFilter, sort, getClientAccountManager]);
 
   return (
     <div className={`${surfacePanelClass} overflow-hidden`}>

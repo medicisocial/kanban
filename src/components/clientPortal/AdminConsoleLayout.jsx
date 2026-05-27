@@ -24,8 +24,8 @@ const NAV_SECTIONS = [
   {
     label: 'Production',
     items: [
-      { id: 'board', label: 'Pipeline', Icon: IconBoard },
       { id: 'ideas', label: 'Ideas', Icon: IconIdeas },
+      { id: 'board', label: 'Pipeline', Icon: IconBoard },
       { id: 'shoot', label: 'Production days', Icon: IconShoots },
       { id: 'todo', label: 'Team tasks', Icon: IconTasks },
     ],
@@ -47,10 +47,10 @@ const NAV_SECTIONS = [
 export default function AdminConsoleLayout({
   activeView,
   onViewChange,
-  search,
-  onSearchChange,
   notificationCount,
   notificationPanel,
+  notificationsOpen,
+  onNotificationsOpenChange,
   profileLabel,
   onSignOut,
   clientFilter,
@@ -107,10 +107,10 @@ export default function AdminConsoleLayout({
         navSections={NAV_SECTIONS}
         activeTab={activeView}
         onTabChange={onViewChange}
-        searchQuery={search}
-        onSearchChange={onSearchChange}
         notificationCount={notificationCount}
         notificationPanel={notificationPanel}
+        notificationsOpen={notificationsOpen}
+        onNotificationsOpenChange={onNotificationsOpenChange}
         profileLabel={profileLabel || 'Staff'}
         profileColor={teamColor}
         sidebarLogoUrl={teamLogo}

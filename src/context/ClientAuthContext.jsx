@@ -5,6 +5,7 @@ import {
   loadClientSession,
   loginClientPortal,
   saveClientSession,
+  submitClientPortalProfile,
   submitClientPortalResponse,
 } from '../utils/clientPortalAuth';
 
@@ -77,6 +78,15 @@ export function ClientAuthProvider({ children }) {
     [session, refreshPortalData],
   );
 
+  const savePortalProfile = useCallback(
+    async (profile) => {
+      if (!session) return;
+      await submitClientPortalProfile(session, profile);
+      await refreshPortalData(session);
+    },
+    [session, refreshPortalData],
+  );
+
   const value = useMemo(
     () => ({
       ready,
@@ -90,6 +100,7 @@ export function ClientAuthProvider({ children }) {
       logout,
       refreshPortalData,
       queueCloudResponse,
+      savePortalProfile,
     }),
     [
       ready,
@@ -102,6 +113,7 @@ export function ClientAuthProvider({ children }) {
       logout,
       refreshPortalData,
       queueCloudResponse,
+      savePortalProfile,
     ],
   );
 

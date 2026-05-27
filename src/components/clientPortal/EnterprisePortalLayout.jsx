@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { IconBell, IconClose, IconMenu, IconSearch } from './ClientPortalIcons';
+import { IconBell, IconClose, IconMenu } from './ClientPortalIcons';
 import { clientInitials } from './clientPortalUi';
-
-const searchInputClass =
-  'portal-search-input w-full bg-transparent pl-9 pr-3 py-2 text-sm text-white outline-none transition-[border-color] duration-300 placeholder:text-white/30';
 
 function SidebarBrand({
   resolvedSidebarLogo,
@@ -88,10 +85,10 @@ export default function EnterprisePortalLayout({
   navSections,
   activeTab,
   onTabChange,
-  searchQuery,
-  onSearchChange,
   notificationCount = 0,
   notificationPanel,
+  notificationsOpen: controlledNotificationsOpen,
+  onNotificationsOpenChange,
   profileLabel,
   profileColor = '#810100',
   profileImageUrl,
@@ -107,9 +104,13 @@ export default function EnterprisePortalLayout({
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [internalNotificationsOpen, setInternalNotificationsOpen] = useState(false);
   const [profileMenuStyle, setProfileMenuStyle] = useState(null);
+  const [notificationMenuStyle, setNotificationMenuStyle] = useState(null);
   const profileButtonRef = useRef(null);
+  const notificationButtonRef = useRef(null);
+  const notificationsOpen = controlledNotificationsOpen ?? internalNotificationsOpen;
+  const setNotificationsOpen = onNotificationsOpenChange ?? setInternalNotificationsOpen;
   const initials = clientInitials(profileLabel || 'MS');
   const resolvedSidebarLogo = sidebarLogoUrl || '/medici-social-logo.png';
 
@@ -137,6 +138,31 @@ export default function EnterprisePortalLayout({
       window.removeEventListener('scroll', updateMenuPosition, true);
     };
   }, [profileOpen]);
+
+  useEffect(() => {
+    if (!notificationsOpen) {
+      setNotificationMenuStyle(null);
+      return;
+    }
+
+    const updateMenuPosition = () => {
+      const button = notificationButtonRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      setNotificationMenuStyle({
+        top: rect.bottom + 8,
+        right: Math.max(16, window.innerWidth - rect.right),
+      });
+    };
+
+    updateMenuPosition();
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
+    };
+  }, [notificationsOpen]);
 
   const handleSignOut = () => {
     setProfileOpen(false);
@@ -166,6 +192,28 @@ export default function EnterprisePortalLayout({
           >
             Sign out
           </button>
+        </div>
+      </>,
+      document.body,
+    );
+
+  const notificationsMenu =
+    notificationsOpen &&
+    notificationPanel &&
+    notificationMenuStyle &&
+    createPortal(
+      <>
+        <button
+          type="button"
+          className="fixed inset-0 z-[200] cursor-default bg-transparent"
+          aria-label="Close notifications"
+          onClick={() => setNotificationsOpen(false)}
+        />
+        <div
+          className="fixed z-[210] w-[min(360px,calc(100vw-2rem))] border border-white/[0.08] bg-black/95 p-4 shadow-2xl backdrop-blur-xl"
+          style={{ top: notificationMenuStyle.top, right: notificationMenuStyle.right }}
+        >
+          {notificationPanel}
         </div>
       </>,
       document.body,
@@ -241,6 +289,7 @@ export default function EnterprisePortalLayout({
   return (
     <div className="relative flex h-[100dvh] overflow-hidden bg-black text-white">
       {profileMenu}
+      {notificationsMenu}
       <div className="portal-ambient pointer-events-none absolute inset-0" aria-hidden="true" />
 
       {navOpen && (
@@ -276,21 +325,12 @@ export default function EnterprisePortalLayout({
               {headerFilter && (
                 <div className="hidden min-w-0 shrink-0 md:block">{headerFilter}</div>
               )}
-              <div className="relative min-w-0 flex-1 md:max-w-sm lg:max-w-md">
-                <IconSearch className="pointer-events-none absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="Search"
-                  className={searchInputClass}
-                />
-              </div>
             </div>
 
             <div className="flex shrink-0 items-center gap-2 md:gap-3">
               <div className="relative">
                 <button
+                  ref={notificationButtonRef}
                   type="button"
                   onClick={() => setNotificationsOpen((open) => !open)}
                   className="portal-icon-btn relative flex h-9 w-9 items-center justify-center text-white/55"
@@ -304,20 +344,6 @@ export default function EnterprisePortalLayout({
                     </span>
                   )}
                 </button>
-
-                {notificationsOpen && notificationPanel && (
-                  <>
-                    <button
-                      type="button"
-                      className="fixed inset-0 z-40 cursor-default"
-                      aria-label="Close notifications"
-                      onClick={() => setNotificationsOpen(false)}
-                    />
-                    <div className="absolute right-0 top-full z-50 mt-2 w-[min(360px,calc(100vw-2rem))] border border-white/[0.08] bg-black/95 p-4 shadow-2xl backdrop-blur-xl">
-                      {notificationPanel}
-                    </div>
-                  </>
-                )}
               </div>
 
               <div className="relative">

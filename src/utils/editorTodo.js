@@ -223,26 +223,11 @@ export function splitEditorTasksByQueue(tasks) {
   return { editing, inReview };
 }
 
-export function filterEditorTasks(tasks, { search, assignee, client, includeCompleted = true }) {
+export function filterEditorTasks(tasks, { assignee, client, includeCompleted = true }) {
   return tasks.filter((task) => {
     if (task.isOneOffProject && task.completed && !includeCompleted) return false;
     if (assignee && assignee !== 'all' && task.assignedTo !== assignee) return false;
     if (client && client !== 'all' && task.client !== client) return false;
-    if (!search) return true;
-
-    const q = search.toLowerCase();
-    const haystack = [
-      task.title,
-      task.client,
-      task.contentType,
-      task.label,
-      task.notes,
-      task.clientComment,
-      task.assignedTo,
-    ]
-      .join(' ')
-      .toLowerCase();
-
-    return haystack.includes(q);
+    return true;
   });
 }

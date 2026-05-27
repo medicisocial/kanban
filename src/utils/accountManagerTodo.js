@@ -197,27 +197,11 @@ export function groupAccountManagerTasksByDate(tasks, todayKey = toDateKey(new D
   return groups;
 }
 
-export function filterAccountManagerTasks(tasks, { search, client, assignee }) {
+export function filterAccountManagerTasks(tasks, { client, assignee }) {
   return tasks.filter((task) => {
     if (client && client !== 'all' && task.client !== client) return false;
     if (assignee && assignee !== 'all' && task.accountManager !== assignee) return false;
-    if (!search) return true;
-
-    const q = search.toLowerCase();
-    const haystack = [
-      task.title,
-      task.client,
-      task.contentType,
-      task.notes,
-      task.assignedTo,
-      task.accountManager,
-      task.label,
-      task.clientComment,
-    ]
-      .join(' ')
-      .toLowerCase();
-
-    return haystack.includes(q);
+    return true;
   });
 }
 

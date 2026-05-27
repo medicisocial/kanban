@@ -115,7 +115,7 @@ function ClientCalendarDetail({ card, onClose }) {
   );
 }
 
-export default function ClientCalendarPortal({ client, cards, embedded = false, searchQuery = '' }) {
+export default function ClientCalendarPortal({ client, cards, embedded = false }) {
   const { getClientColor } = useClientsContext();
   const [localCards, setLocalCards] = useState([]);
   const [focusDate, setFocusDate] = useState(() => getDefaultCalendarDate());
@@ -132,14 +132,7 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
   }, [cards, client]);
 
   const clientColor = getClientColor(client);
-  const query = searchQuery.trim().toLowerCase();
-  const visibleCards = query
-    ? localCards.filter(
-        (card) =>
-          card.title?.toLowerCase().includes(query) ||
-          card.contentType?.toLowerCase().includes(query),
-      )
-    : localCards;
+  const visibleCards = localCards;
   const totalScheduled = visibleCards.length;
 
   const cardsByDate = useMemo(() => {

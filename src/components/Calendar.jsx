@@ -20,7 +20,6 @@ import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientP
 export default function Calendar({
   cards,
   clientFilter,
-  search,
   onCardClick,
   onAddCalendarPost,
   onRemoveFromCalendar,
@@ -36,8 +35,8 @@ export default function Calendar({
 
   const visibleCards = useMemo(() => {
     const planned = isStories ? getCalendarStories(cards) : getCalendarPosts(cards);
-    return filterCards(planned, { client: clientFilter, search });
-  }, [cards, clientFilter, search, isStories]);
+    return filterCards(planned, { client: clientFilter });
+  }, [cards, clientFilter, isStories]);
 
   const cardsByDate = useMemo(() => {
     if (isStories) {

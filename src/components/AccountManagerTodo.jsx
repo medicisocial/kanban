@@ -296,7 +296,6 @@ function TaskList({ tasks, renderItem }) {
 
 export default function AccountManagerTodo({
   cards,
-  search,
   clientFilter,
   onOpenCard,
   onMarkScheduled,
@@ -325,8 +324,8 @@ export default function AccountManagerTodo({
   );
 
   const filterOptions = useMemo(
-    () => ({ search, client: clientFilter, assignee: assigneeFilter }),
-    [search, clientFilter, assigneeFilter],
+    () => ({ client: clientFilter, assignee: assigneeFilter }),
+    [clientFilter, assigneeFilter],
   );
 
   const orderedInReviewTasks = useMemo(

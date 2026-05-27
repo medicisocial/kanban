@@ -32,8 +32,11 @@ export default function WorkspaceHomePage({
   adminTasks,
   clientFilter,
   syncTotal,
+  staffName = '',
+  clientAccountManagers = {},
   onNavigate,
   onOpenCard,
+  onOpenNotifications,
 }) {
   const summary = buildWorkspaceHomeSummary({
     cards,
@@ -41,18 +44,26 @@ export default function WorkspaceHomePage({
     adminTasks,
     clientFilter,
     syncTotal,
+    staffName,
+    clientAccountManagers,
+    myWorkOnly: true,
   });
+
+  const description = staffName
+    ? `Your queue at a glance — assigned to ${staffName}.`
+    : 'Today at a glance — production, reviews, and client updates.';
 
   return (
     <section>
-      <ClientPortalSectionHeader
-        title="My work"
-        description="Today at a glance — production, reviews, and client updates."
-      />
+      <ClientPortalSectionHeader title="My work" description={description} />
 
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-6">
         {summary.syncTotal > 0 && (
-          <StatCard label="Client sync" value={summary.syncTotal} onClick={() => onNavigate('home')} />
+          <StatCard
+            label="Client sync"
+            value={summary.syncTotal}
+            onClick={onOpenNotifications}
+          />
         )}
         <StatCard label="To create" value={summary.toCreateCount} onClick={() => onNavigate('board')} />
         <StatCard label="Editing" value={summary.editingCount} onClick={() => onNavigate('board')} />
@@ -70,7 +81,12 @@ export default function WorkspaceHomePage({
             </button>
           </div>
           {summary.shootsToday.length === 0 ? (
-            <p className="text-sm text-white/40">No shoots scheduled for today.</p>
+            <div className="text-center py-6">
+              <p className="text-sm text-white/40">No shoots scheduled for today.</p>
+              <button type="button" onClick={() => onNavigate('shoot')} className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}>
+                Open production days
+              </button>
+            </div>
           ) : (
             <ul className="space-y-2">
               {summary.shootsToday.map((card) => (
@@ -100,7 +116,12 @@ export default function WorkspaceHomePage({
             </button>
           </div>
           {summary.inReview.length === 0 ? (
-            <p className="text-sm text-white/40">Nothing in client review right now.</p>
+            <div className="text-center py-6">
+              <p className="text-sm text-white/40">Nothing in client review right now.</p>
+              <button type="button" onClick={() => onNavigate('board')} className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}>
+                Open pipeline
+              </button>
+            </div>
           ) : (
             <ul className="space-y-2">
               {summary.inReview.map((card) => (
@@ -127,7 +148,12 @@ export default function WorkspaceHomePage({
             </button>
           </div>
           {summary.scheduledThisWeek.length === 0 ? (
-            <p className="text-sm text-white/40">No posts scheduled this week.</p>
+            <div className="text-center py-6">
+              <p className="text-sm text-white/40">No posts scheduled this week.</p>
+              <button type="button" onClick={() => onNavigate('calendars')} className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}>
+                Open calendars
+              </button>
+            </div>
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
               {summary.scheduledThisWeek.map((card) => (

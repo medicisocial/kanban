@@ -48,15 +48,11 @@ export function groupAdminTasksByDate(tasks, todayKey = toDateKey(new Date())) {
   return groups;
 }
 
-export function filterAdminTasks(tasks, { search, client, assignee, includeCompleted = true }) {
+export function filterAdminTasks(tasks, { client, assignee, includeCompleted = true }) {
   return tasks.filter((task) => {
     if (task.completed && !includeCompleted) return false;
     if (assignee && assignee !== 'all' && task.assignedTo !== assignee) return false;
     if (client && client !== 'all' && task.client !== client) return false;
-    if (!search) return true;
-
-    const q = search.toLowerCase();
-    const haystack = [task.title, task.client, task.notes, task.assignedTo].join(' ').toLowerCase();
-    return haystack.includes(q);
+    return true;
   });
 }

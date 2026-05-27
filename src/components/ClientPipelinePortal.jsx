@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { getContentTypeStyle } from '../constants';
 import {
   CLIENT_PIPELINE_COLUMNS,
@@ -21,18 +20,9 @@ const COLUMN_TONES = {
   posted: 'posted',
 };
 
-export default function ClientPipelinePortal({ cards, clientColor, embedded = false, searchQuery = '' }) {
+export default function ClientPipelinePortal({ cards, clientColor, embedded = false }) {
   const pipelineCards = getClientPipelineCards(stripInternalCardsForClientPortal(cards));
-
-  const filteredCards = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return pipelineCards;
-    return pipelineCards.filter(
-      (card) =>
-        card.title?.toLowerCase().includes(query) ||
-        card.contentType?.toLowerCase().includes(query),
-    );
-  }, [pipelineCards, searchQuery]);
+  const filteredCards = pipelineCards;
 
   const content = (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">

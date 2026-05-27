@@ -18,7 +18,13 @@ function buildDraftContacts(client, getClientContacts) {
   ];
 }
 
-export default function ClientContactsEditor({ client, getClientContacts, onSaveClientContacts }) {
+export default function ClientContactsEditor({
+  client,
+  getClientContacts,
+  onSaveClientContacts,
+  showSaveButton = true,
+  onContactsChange,
+}) {
   const [contacts, setContacts] = useState(() => buildDraftContacts(client, getClientContacts));
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -29,6 +35,10 @@ export default function ClientContactsEditor({ client, getClientContacts, onSave
     setMessage('');
     setError('');
   }, [client, getClientContacts]);
+
+  useEffect(() => {
+    onContactsChange?.(contacts);
+  }, [contacts, onContactsChange]);
 
   const updateContact = (contactId, patch) => {
     setContacts((prev) =>
@@ -177,14 +187,16 @@ export default function ClientContactsEditor({ client, getClientContacts, onSave
       {error && <p className="text-sm text-rose-300">{error}</p>}
       {message && <p className="text-sm text-emerald-300">{message}</p>}
 
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={saving}
-        className={`${btnPrimaryClass} disabled:opacity-60`}
-      >
-        {saving ? 'Saving…' : 'Save contacts'}
-      </button>
+      {showSaveButton && (
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className={`${btnPrimaryClass} disabled:opacity-60`}
+        >
+          {saving ? 'Saving…' : 'Save contacts'}
+        </button>
+      )}
     </div>
   );
 }

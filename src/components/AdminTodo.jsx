@@ -11,7 +11,6 @@ import AddAdminTaskModal from './AddAdminTaskModal';
 export default function AdminTodo({
   embedded = false,
   adminTasks,
-  search,
   clientFilter,
   onAddAdminTask,
   onToggleAdminTaskComplete,
@@ -29,12 +28,11 @@ export default function AdminTodo({
   const filteredTasks = useMemo(
     () =>
       filterAdminTasks(allTasks, {
-        search,
         client: clientFilter,
         assignee: assigneeFilter,
         includeCompleted: showCompleted,
       }),
-    [allTasks, search, clientFilter, assigneeFilter, showCompleted],
+    [allTasks, clientFilter, assigneeFilter, showCompleted],
   );
 
   const groupedTasks = useMemo(

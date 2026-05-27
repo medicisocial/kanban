@@ -228,7 +228,6 @@ function EditorTaskColumn({ title, description, count, accentClass, tasks, empty
 export default function EditorTodo({
   embedded = false,
   cards,
-  search,
   clientFilter,
   onAddOneOffTask,
   onDeleteOneOffTask,
@@ -250,12 +249,11 @@ export default function EditorTodo({
   const filteredTasks = useMemo(
     () =>
       filterEditorTasks(allTasks, {
-        search,
         assignee: assigneeFilter,
         client: clientFilter,
         includeCompleted: showCompleted,
       }),
-    [allTasks, search, assigneeFilter, clientFilter, showCompleted],
+    [allTasks, assigneeFilter, clientFilter, showCompleted],
   );
 
   const orderedTasks = useMemo(

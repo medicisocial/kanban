@@ -6,6 +6,7 @@ import ClientContentReviewPortal from './ClientContentReviewPortal';
 import ClientCalendarPortal from './ClientCalendarPortal';
 import ClientPipelinePortal from './ClientPipelinePortal';
 import ClientShootSchedulePortal from './ClientShootSchedulePortal';
+import ClientProfilePortal from './ClientProfilePortal';
 import EventsCalendar from './EventsCalendar';
 import ClientPortalLayout from './clientPortal/ClientPortalLayout';
 import { filterEvents } from '../utils/eventsCalendar';
@@ -13,15 +14,15 @@ import { createEvent } from '../constants';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 
 export default function ClientHubPortal({ onSignOut }) {
-  const { brand, portalData, loadingData, dataError, logout, queueCloudResponse, refreshPortalData } =
+  const { brand, portalData, loadingData, dataError, logout, queueCloudResponse, refreshPortalData, savePortalProfile } =
     useClientAuth();
   const { getClientColor, getClientLogo } = useClientsContext();
   const [activeTab, setActiveTab] = useState('ideas');
-  const [searchQuery, setSearchQuery] = useState('');
 
   const clientColor = portalData?.clientColor || getClientColor(brand);
   const clientLogo = portalData?.clientLogo || getClientLogo(brand);
   const businessType = portalData?.businessType || '';
+  const profileContacts = portalData?.contacts || [];
   const cards = useMemo(
     () => stripInternalCardsForClientPortal(portalData?.cards || []),
     [portalData?.cards],
@@ -79,8 +80,6 @@ export default function ClientHubPortal({ onSignOut }) {
       onRefresh={() => refreshPortalData()}
       onSignOut={handleSignOut}
       notificationCount={notificationCount}
-      searchQuery={searchQuery}
-      onSearchChange={setSearchQuery}
     >
       {loadingData && !portalData && (
         <p className="py-12 text-center text-sm text-white/45">Loading your workspace…</p>
@@ -96,7 +95,6 @@ export default function ClientHubPortal({ onSignOut }) {
           ideas={ideas}
           useCloudSync
           embedded
-          searchQuery={searchQuery}
           onCloudQueueResponse={handleIdeaResponse}
         />
       )}
@@ -107,17 +105,16 @@ export default function ClientHubPortal({ onSignOut }) {
           cards={cards}
           useCloudSync
           embedded
-          searchQuery={searchQuery}
           onCloudQueueResponse={handleContentResponse}
         />
       )}
 
       {portalData && activeTab === 'pipeline' && (
-        <ClientPipelinePortal cards={cards} clientColor={clientColor} embedded searchQuery={searchQuery} />
+        <ClientPipelinePortal cards={cards} clientColor={clientColor} embedded />
       )}
 
       {portalData && activeTab === 'calendar' && (
-        <ClientCalendarPortal client={brand} cards={cards} embedded searchQuery={searchQuery} />
+        <ClientCalendarPortal client={brand} cards={cards} embedded />
       )}
 
       {portalData && activeTab === 'events' && (
@@ -126,7 +123,6 @@ export default function ClientHubPortal({ onSignOut }) {
           scopedBrand={brand}
           lockedClient={brand}
           businessType={businessType}
-          search={searchQuery}
           onAddEvent={handleAddEvent}
           onUpdateEvent={handleUpdateEvent}
           onDeleteEvent={handleDeleteEvent}
@@ -142,7 +138,17 @@ export default function ClientHubPortal({ onSignOut }) {
           plans={plans}
           clientColor={clientColor}
           embedded
-          searchQuery={searchQuery}
+        />
+      )}
+
+      {portalData && activeTab === 'profile' && (
+        <ClientProfilePortal
+          client={brand}
+          clientColor={clientColor}
+          clientLogo={clientLogo}
+          businessType={businessType}
+          contacts={profileContacts}
+          onSaveProfile={savePortalProfile}
         />
       )}
     </ClientPortalLayout>

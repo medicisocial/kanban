@@ -89,6 +89,10 @@ export async function submitClientPortalResponse(session, type, response) {
   }
 }
 
+export async function submitClientPortalProfile(session, profile) {
+  await submitClientPortalResponse(session, 'profile', profile);
+}
+
 export function defaultPortalUsername(clientName) {
   return clientName
     .toLowerCase()
