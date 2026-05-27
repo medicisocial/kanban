@@ -3,7 +3,11 @@ import {
   getClientSessionFromRequest,
   isClientSessionValid,
 } from './_lib/clientPortalAuth.mjs';
-import { normalizeClientContacts } from './_lib/clientProfile.mjs';
+import {
+  normalizeClientContacts,
+  normalizeClientSocialLogins,
+  mergeClientSocialLogins,
+} from './_lib/clientProfile.mjs';
 
 const STORAGE_KEY = 'medici-social-kanban';
 const VIDEO_IDEAS_STORAGE_KEY = 'medici-social-video-ideas';
@@ -67,6 +71,7 @@ export default async function handler(req, res) {
   const logos = clientStore.logos || {};
   const businessTypes = clientStore.businessTypes || {};
   const contacts = clientStore.contacts || {};
+  const socialLogins = clientStore.socialLogins || {};
 
   return res.status(200).json({
     brand,
@@ -75,6 +80,7 @@ export default async function handler(req, res) {
     clientLogo: logos[brand] || null,
     businessType: normalizeBusinessType(businessTypes[brand] || '') || null,
     contacts: normalizeClientContacts(contacts[brand]),
+    socialLogins: normalizeClientSocialLogins(socialLogins[brand]),
     cards: filterForBrand(data[STORAGE_KEY], brand).map(stripInternalCardFields),
     ideas: filterForBrand(data[VIDEO_IDEAS_STORAGE_KEY], brand),
     plans: filterPlansForBrand(data[SHOOT_PLANS_STORAGE_KEY], brand),

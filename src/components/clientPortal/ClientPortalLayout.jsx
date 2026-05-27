@@ -3,7 +3,6 @@ import {
   IconCalendar,
   IconEvents,
   IconIdeas,
-  IconSettings,
   IconShoots,
   IconTasks,
 } from './ClientPortalIcons';
@@ -16,7 +15,6 @@ const NAV_ITEMS = [
   { id: 'events', label: 'Events Calendar', Icon: IconEvents },
   { id: 'review', label: 'Tasks', Icon: IconTasks },
   { id: 'shoots', label: 'Shoot Schedule', Icon: IconShoots },
-  { id: 'profile', label: 'Profile', Icon: IconSettings },
 ];
 
 export default function ClientPortalLayout({
@@ -43,6 +41,7 @@ export default function ClientPortalLayout({
       profileLabel={client}
       profileColor={clientColor}
       profileImageUrl={clientLogo}
+      onProfileClick={() => onTabChange('profile')}
       onSignOut={onSignOut}
       sidebarFooter={
         <button

@@ -1,10 +1,34 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { normalizeClientContacts } from '../utils/clientProfile';
+import {
+  CLIENT_SOCIAL_PLATFORMS,
+  mergeClientSocialLogins,
+  normalizeClientContacts,
+  normalizeClientSocialLogins,
+} from '../utils/clientProfile';
 import { readClientProfileImage } from '../utils/clientImage';
 import ClientAvatar from './ClientAvatar';
 import ClientContactsEditor from './clientPortal/ClientContactsEditor';
+import ClientSocialLoginsEditor from './clientPortal/ClientSocialLoginsEditor';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+
+function buildSocialPayload(draftLogins, savedLogins) {
+  return Object.fromEntries(
+    CLIENT_SOCIAL_PLATFORMS.map(({ id }) => [
+      id,
+      {
+        username: draftLogins[id]?.username || '',
+        password: draftLogins[id]?.password || '',
+      },
+    ]),
+  );
+}
+
+function socialLoginsMatch(draftLogins, savedLogins) {
+  const mergedDraft = mergeClientSocialLogins(savedLogins, buildSocialPayload(draftLogins, savedLogins));
+  return JSON.stringify(normalizeClientSocialLogins(mergedDraft)) ===
+    JSON.stringify(normalizeClientSocialLogins(savedLogins));
+}
 
 export default function ClientProfilePortal({
   client,
@@ -12,11 +36,15 @@ export default function ClientProfilePortal({
   clientLogo,
   businessType,
   contacts = [],
+  socialLogins = {},
   onSaveProfile,
 }) {
   const [previewLogo, setPreviewLogo] = useState(clientLogo);
   const [pendingLogo, setPendingLogo] = useState(undefined);
   const [draftContacts, setDraftContacts] = useState(contacts);
+  const [draftSocialLogins, setDraftSocialLogins] = useState(() =>
+    normalizeClientSocialLogins(socialLogins),
+  );
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -26,11 +54,13 @@ export default function ClientProfilePortal({
     setPreviewLogo(clientLogo);
     setPendingLogo(undefined);
     setDraftContacts(contacts);
+    setDraftSocialLogins(normalizeClientSocialLogins(socialLogins));
     setMessage('');
     setError('');
-  }, [client, clientLogo, contacts]);
+  }, [client, clientLogo, contacts, socialLogins]);
 
   const getClientContacts = useCallback(() => contacts, [contacts]);
+  const getClientSocialLogins = useCallback(() => socialLogins, [socialLogins]);
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
@@ -55,7 +85,8 @@ export default function ClientProfilePortal({
   const hasChanges =
     pendingLogo !== undefined ||
     JSON.stringify(normalizeClientContacts(draftContacts)) !==
-      JSON.stringify(normalizeClientContacts(contacts));
+      JSON.stringify(normalizeClientContacts(contacts)) ||
+    !socialLoginsMatch(draftSocialLogins, socialLogins);
 
   const handleSave = async () => {
     setSaving(true);
@@ -65,6 +96,7 @@ export default function ClientProfilePortal({
     try {
       const payload = {
         contacts: normalizeClientContacts(draftContacts),
+        socialLogins: buildSocialPayload(draftSocialLogins, socialLogins),
       };
       if (pendingLogo !== undefined) {
         payload.logo = pendingLogo;
@@ -84,7 +116,7 @@ export default function ClientProfilePortal({
     <section>
       <ClientPortalSectionHeader
         title="Profile"
-        description="Keep your brand photo and contacts up to date. Business type and brand color are managed by Medici Social."
+        description="Update your brand photo, contacts, and social logins. Business type and brand color are managed by Medici Social."
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
@@ -148,14 +180,27 @@ export default function ClientProfilePortal({
           </div>
         </div>
 
-        <div className={`${surfacePanelClass} p-5`}>
-          <ClientContactsEditor
-            client={client}
-            getClientContacts={getClientContacts}
-            onSaveClientContacts={() => {}}
-            showSaveButton={false}
-            onContactsChange={setDraftContacts}
-          />
+        <div className="space-y-6">
+          <div className={`${surfacePanelClass} p-5`}>
+            <ClientContactsEditor
+              client={client}
+              getClientContacts={getClientContacts}
+              onSaveClientContacts={() => {}}
+              showSaveButton={false}
+              onContactsChange={setDraftContacts}
+            />
+          </div>
+
+          <div className={`${surfacePanelClass} p-5`}>
+            <ClientSocialLoginsEditor
+              client={client}
+              getClientSocialLogins={getClientSocialLogins}
+              onSaveClientSocialLogins={() => {}}
+              showSaveButton={false}
+              onSocialLoginsChange={setDraftSocialLogins}
+              clientMode
+            />
+          </div>
         </div>
       </div>
 

@@ -23,6 +23,7 @@ export default function ClientHubPortal({ onSignOut }) {
   const clientLogo = portalData?.clientLogo || getClientLogo(brand);
   const businessType = portalData?.businessType || '';
   const profileContacts = portalData?.contacts || [];
+  const profileSocialLogins = portalData?.socialLogins || {};
   const cards = useMemo(
     () => stripInternalCardsForClientPortal(portalData?.cards || []),
     [portalData?.cards],
@@ -148,6 +149,7 @@ export default function ClientHubPortal({ onSignOut }) {
           clientLogo={clientLogo}
           businessType={businessType}
           contacts={profileContacts}
+          socialLogins={profileSocialLogins}
           onSaveProfile={savePortalProfile}
         />
       )}

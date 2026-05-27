@@ -23,6 +23,9 @@ export default function ClientSocialLoginsEditor({
   client,
   getClientSocialLogins,
   onSaveClientSocialLogins,
+  showSaveButton = true,
+  onSocialLoginsChange,
+  clientMode = false,
 }) {
   const [logins, setLogins] = useState(() => buildDraftSocialLogins(client, getClientSocialLogins));
   const [message, setMessage] = useState('');
@@ -34,6 +37,10 @@ export default function ClientSocialLoginsEditor({
     setMessage('');
     setError('');
   }, [client, getClientSocialLogins]);
+
+  useEffect(() => {
+    onSocialLoginsChange?.(logins);
+  }, [logins, onSocialLoginsChange]);
 
   const updatePlatform = (platformId, patch) => {
     setLogins((prev) => ({
@@ -83,7 +90,9 @@ export default function ClientSocialLoginsEditor({
   return (
     <div className="space-y-4">
       <p className="text-sm text-white/45">
-        Store social account credentials for {client}. Passwords are saved locally for your team only.
+        {clientMode
+          ? `Add the social accounts your Medici Social team should use for ${client}.`
+          : `Store social account credentials for ${client}. Passwords are saved locally for your team only.`}
       </p>
 
       <div className="space-y-4">
@@ -117,14 +126,16 @@ export default function ClientSocialLoginsEditor({
       {error && <p className="text-sm text-rose-300">{error}</p>}
       {message && <p className="text-sm text-emerald-300">{message}</p>}
 
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={saving}
-        className={`${btnPrimaryClass} disabled:opacity-60`}
-      >
-        {saving ? 'Saving…' : 'Save social logins'}
-      </button>
+      {showSaveButton && (
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className={`${btnPrimaryClass} disabled:opacity-60`}
+        >
+          {saving ? 'Saving…' : 'Save social logins'}
+        </button>
+      )}
     </div>
   );
 }

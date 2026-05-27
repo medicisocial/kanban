@@ -3,7 +3,7 @@ import {
   getClientSessionFromRequest,
   isClientSessionValid,
 } from './_lib/clientPortalAuth.mjs';
-import { normalizeClientContacts } from './_lib/clientProfile.mjs';
+import { normalizeClientContacts, mergeClientSocialLogins } from './_lib/clientProfile.mjs';
 
 const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
 const CONTENT_REVIEW_RESPONSES_KEY = 'medici-social-content-review-responses';
@@ -129,6 +129,13 @@ export default async function handler(req, res) {
 
     if (Object.prototype.hasOwnProperty.call(response, 'contacts')) {
       nextStore.contacts[brand] = normalizeClientContacts(response.contacts);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(response, 'socialLogins')) {
+      nextStore.socialLogins[brand] = mergeClientSocialLogins(
+        nextStore.socialLogins[brand],
+        response.socialLogins,
+      );
     }
 
     workspace.data[CLIENTS_STORAGE_KEY] = nextStore;

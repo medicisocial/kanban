@@ -97,6 +97,7 @@ export default function EnterprisePortalLayout({
   sidebarLogoMessage,
   sidebarLogoMessageIsError = false,
   onSignOut,
+  onProfileClick,
   sidebarFooter,
   headerFilter,
   topBanner,
@@ -171,8 +172,8 @@ export default function EnterprisePortalLayout({
 
   const profileMenu =
     profileOpen &&
-    onSignOut &&
     profileMenuStyle &&
+    (onProfileClick || onSignOut) &&
     createPortal(
       <>
         <button
@@ -185,13 +186,27 @@ export default function EnterprisePortalLayout({
           className="fixed z-[210] w-44 border border-white/[0.08] bg-black/95 py-1 shadow-2xl backdrop-blur-xl"
           style={{ top: profileMenuStyle.top, right: profileMenuStyle.right }}
         >
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="block w-full px-4 py-2.5 text-left text-xs text-white/60 transition-colors duration-300 hover:bg-white/[0.04] hover:text-white"
-          >
-            Sign out
-          </button>
+          {onProfileClick && (
+            <button
+              type="button"
+              onClick={() => {
+                setProfileOpen(false);
+                onProfileClick();
+              }}
+              className="block w-full px-4 py-2.5 text-left text-xs text-white/60 transition-colors duration-300 hover:bg-white/[0.04] hover:text-white"
+            >
+              Profile
+            </button>
+          )}
+          {onSignOut && (
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="block w-full px-4 py-2.5 text-left text-xs text-white/60 transition-colors duration-300 hover:bg-white/[0.04] hover:text-white"
+            >
+              Sign out
+            </button>
+          )}
         </div>
       </>,
       document.body,

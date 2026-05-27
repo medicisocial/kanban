@@ -1,3 +1,5 @@
+export const CLIENT_SOCIAL_PLATFORMS = ['instagram', 'tiktok', 'facebook'];
+
 export function normalizeClientContact(contact, fallbackId) {
   if (!contact || typeof contact !== 'object') return null;
   const role = contact.role?.trim() || '';
@@ -17,4 +19,41 @@ export function normalizeClientContact(contact, fallbackId) {
 export function normalizeClientContacts(contacts) {
   if (!Array.isArray(contacts)) return [];
   return contacts.map((contact) => normalizeClientContact(contact)).filter(Boolean);
+}
+
+export function emptyClientSocialLogins() {
+  return {
+    instagram: { username: '', password: '' },
+    tiktok: { username: '', password: '' },
+    facebook: { username: '', password: '' },
+  };
+}
+
+export function normalizeClientSocialLogins(logins) {
+  const base = emptyClientSocialLogins();
+  if (!logins || typeof logins !== 'object') return base;
+  for (const platform of Object.keys(base)) {
+    const entry = logins[platform] || {};
+    base[platform] = {
+      username: entry.username?.trim() || '',
+      password: typeof entry.password === 'string' ? entry.password : '',
+    };
+  }
+  return base;
+}
+
+export function mergeClientSocialLogins(existing, incoming) {
+  const prev = normalizeClientSocialLogins(existing);
+  const next = normalizeClientSocialLogins(incoming);
+  for (const platform of Object.keys(next)) {
+    const draftPassword = incoming?.[platform]?.password;
+    if (draftPassword === undefined || draftPassword === null) {
+      next[platform].password = prev[platform].password;
+      continue;
+    }
+    if (draftPassword === '' && prev[platform].password) {
+      next[platform].password = prev[platform].password;
+    }
+  }
+  return next;
 }
