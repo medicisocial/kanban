@@ -111,6 +111,7 @@ export function WorkspaceSyncProvider({ children }) {
           return;
         }
         setRemoteUpdating(true);
+        window.setTimeout(() => setRemoteUpdating(false), 8000);
         window.location.reload();
       }
     } catch {

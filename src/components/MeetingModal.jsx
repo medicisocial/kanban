@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useClientsContext } from '../context/ClientsContext';
 import { toDateKey } from '../utils/calendar';
 import { formatTime } from '../utils';
 import { MEETING_RECURRENCE_OPTIONS } from '../constants';
-import { getMeetingContactLabel, isRecurringMeeting } from '../utils/meetingsCalendar';
+import { isRecurringMeeting } from '../utils/meetingsCalendar';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, selectClass } from './clientPortal/clientPortalUi';
 
 const CONTACT_TYPES = [
@@ -20,7 +21,11 @@ function getInitialContactType(meeting) {
 }
 
 function selectAllOnFocus(event) {
-  event.target.select();
+  try {
+    event.target.select?.();
+  } catch {
+    /* some inputs do not support select() */
+  }
 }
 
 function MeetingTimeInput({ value, onChange, placeholder = 'Select time' }) {
@@ -63,6 +68,7 @@ export default function MeetingModal({
   onSave,
   onDelete,
 }) {
+  const overlayRef = useRef(null);
   const { clients } = useClientsContext();
   const isEdit = Boolean(meeting?.id);
   const recurring = isRecurringMeeting(meeting);
@@ -166,31 +172,50 @@ export default function MeetingModal({
 
   const displayDate = occurrenceDate || meeting?.date;
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4">
+  return createPortal(
+    <div
+      ref={overlayRef}
+      className="fixed inset-0 z-[500] flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+      onClick={(event) => {
+        if (event.target === overlayRef.current) onClose();
+      }}
+    >
       <div
-        className="max-h-[min(92vh,760px)] w-full max-w-md overflow-y-auto border border-white/10 bg-[#111] shadow-2xl"
+        className="my-4 flex max-h-[min(760px,calc(100dvh-2rem))] w-full max-w-md flex-col overflow-hidden border border-white/10 bg-[#111] shadow-2xl"
         role="dialog"
+        aria-modal="true"
         aria-labelledby="meeting-modal-title"
+        onClick={(event) => event.stopPropagation()}
       >
-        <div className="border-b border-white/10 px-5 py-4">
-          <h2 id="meeting-modal-title" className="text-sm font-semibold text-white">
-            {isEdit ? (recurring ? 'Edit recurring meeting' : 'Edit meeting') : 'Schedule meeting'}
-          </h2>
-          {isEdit && displayDate && (
-            <p className="mt-0.5 text-xs text-white/45">
-              {occurrenceDate && recurring ? 'Selected occurrence · ' : ''}
-              {new Date(`${displayDate}T12:00:00`).toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-              })}
-              {meeting?.time ? ` · ${formatTime(meeting.time)}` : ''}
-            </p>
-          )}
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-white/10 px-5 py-4">
+          <div>
+            <h2 id="meeting-modal-title" className="text-sm font-semibold text-white">
+              {isEdit ? (recurring ? 'Edit recurring meeting' : 'Edit meeting') : 'Schedule meeting'}
+            </h2>
+            {isEdit && displayDate && (
+              <p className="mt-0.5 text-xs text-white/45">
+                {occurrenceDate && recurring ? 'Selected occurrence · ' : ''}
+                {new Date(`${displayDate}T12:00:00`).toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+                {meeting?.time ? ` · ${formatTime(meeting.time)}` : ''}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-white/10 hover:text-white"
+            aria-label="Close"
+          >
+            ×
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
           <div>
             <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-white/50">
               Title
@@ -361,8 +386,9 @@ export default function MeetingModal({
           </div>
 
           {error && <p className="text-xs text-red-400">{error}</p>}
+          </div>
 
-          <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-4">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-t border-white/10 px-5 py-4">
             {isEdit && onDelete ? (
               <button type="button" onClick={handleDelete} className={`${btnSecondaryClass} text-red-400`}>
                 Delete
@@ -381,6 +407,7 @@ export default function MeetingModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
