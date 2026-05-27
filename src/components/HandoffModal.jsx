@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { btnPrimaryClass, btnSecondaryClass, inputClass } from './clientPortal/clientPortalUi';
 
 export default function HandoffModal({ card, editorName, onConfirm, onCancel }) {
@@ -6,8 +7,8 @@ export default function HandoffModal({ card, editorName, onConfirm, onCancel }) 
 
   if (!card) return null;
 
-  return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md border border-white/10 bg-[#1a1a1a] p-5 shadow-2xl">
         <p className="text-xs font-medium uppercase tracking-wider text-[#fca5a5]">Hand off to editing</p>
         <h2 className="mt-1 text-lg font-semibold text-white">{card.title}</h2>
@@ -42,6 +43,7 @@ export default function HandoffModal({ card, editorName, onConfirm, onCancel }) 
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

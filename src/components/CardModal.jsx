@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CONTENT_TYPES,
   PLATFORM,
@@ -117,19 +118,19 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
       activeTab === id ? `${btnPrimaryClass} py-1.5` : 'text-white/45 hover:text-white'
     }`;
 
-  return (
+  return createPortal(
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[250] flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
     >
       <div
-        className="my-4 w-full max-w-lg rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl"
+        className="my-4 flex max-h-[min(720px,calc(100dvh-2rem))] w-full max-w-lg flex-col rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl"
         style={{ borderTopColor: typeStyle.border, borderTopWidth: '3px' }}
       >
-        <div className="flex items-start justify-between border-b border-white/5 px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between border-b border-white/5 px-5 py-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
               {card.status}
@@ -147,7 +148,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
           </button>
         </div>
 
-        <div className="border-b border-white/5 px-5 py-3">
+        <div className="shrink-0 border-b border-white/5 px-5 py-3">
           <div className="flex flex-wrap gap-1 border border-white/10 bg-white/[0.03] p-0.5 w-fit">
             {CARD_TABS.map((tab) => (
               <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={tabClass(tab.id)}>
@@ -157,7 +158,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
           </div>
         </div>
 
-        <div className="space-y-4 px-5 py-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
           {activeTab === 'details' && (
             <>
           <Field label="Task Title">
@@ -468,7 +469,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
           )}
         </div>
 
-        <div className="flex gap-2 border-t border-white/5 px-5 py-4">
+        <div className="flex shrink-0 gap-2 border-t border-white/5 px-5 py-4">
           {onDelete && (
             <button
               type="button"
@@ -487,7 +488,8 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
