@@ -28,13 +28,10 @@ export function PortalRoleSummary({ label, count, subtitle, onClick }) {
 
   const inner = (
     <>
-      <h3 className="overview-role-summary-title">{label}</h3>
-      <p className="overview-role-summary-count">
-        <span className="overview-role-summary-count-value">{count}</span>
-        <span className="overview-role-summary-count-label">
-          {count === 1 ? 'item' : 'items'}
-        </span>
-      </p>
+      <div className="overview-role-summary-head">
+        <h3 className="overview-role-summary-title">{label}</h3>
+        <span className="overview-role-summary-count">{count}</span>
+      </div>
       {subtitle && <p className="overview-role-summary-subtitle">{subtitle}</p>}
     </>
   );
