@@ -3,6 +3,7 @@ import { CONTENT_TYPES } from "../constants";
 import { useClientsContext } from "../context/ClientsContext";
 import { getDefaultAssigneeForRole } from "../utils/teamMembers";
 import { formatDate } from "../utils";
+import ClientNameInput from "./ClientNameInput";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30";
@@ -41,14 +42,19 @@ export default function AddShootDayModal({
       return;
     }
 
-    if (isItem) {
+      if (isItem) {
       const title = form.title.trim();
+      const client = form.client.trim();
       if (!title) {
         setError("Please enter a title.");
         return;
       }
+      if (!client) {
+        setError("Please enter a client or project name.");
+        return;
+      }
       onAddItem({
-        client: form.client,
+        client,
         title,
         contentType: form.contentType,
         shootDate: form.shootDate,
@@ -115,6 +121,14 @@ export default function AddShootDayModal({
               <span className="mb-1.5 block text-xs font-medium text-gray-400">Client</span>
               {lockClient ? (
                 <p className={inputClass}>{form.client}</p>
+              ) : form.contentType === 'One-off Project' ? (
+                <ClientNameInput
+                  value={form.client}
+                  onChange={(e) => setForm({ ...form, client: e.target.value })}
+                  clients={clients}
+                  inputClass={inputClass}
+                  listId="shoot-one-off-client-suggestions"
+                />
               ) : (
                 <select
                   value={form.client}

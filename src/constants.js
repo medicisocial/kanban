@@ -97,7 +97,23 @@ export function needsShootSchedule(contentType) {
 }
 
 export function isOneOffProjectCard(card) {
-  return Boolean(card?.isOneOffProject);
+  return Boolean(card?.isOneOffProject) || card?.contentType === 'One-off Project';
+}
+
+/** Keep one-off due dates and shoot schedule fields aligned. */
+export function syncOneOffScheduleFields(updates, card = {}) {
+  const merged = { ...card, ...updates };
+  if (!isOneOffProjectCard(merged)) return updates;
+
+  const next = { ...updates };
+  if (next.shootDate !== undefined) next.dueDate = next.shootDate;
+  if (next.shootTime !== undefined) next.dueTime = next.shootTime;
+  if (next.dueDate !== undefined && next.shootDate === undefined) next.shootDate = next.dueDate;
+  if (next.dueTime !== undefined && next.shootTime === undefined) next.shootTime = next.dueTime;
+  if (next.isOneOffProject === undefined && merged.contentType === 'One-off Project') {
+    next.isOneOffProject = true;
+  }
+  return next;
 }
 
 export const PLATFORM = 'Instagram';

@@ -1,4 +1,4 @@
-import { isScheduledPostType } from '../constants';
+import { isScheduledPostType, isOneOffProjectCard } from '../constants';
 
 export function getDefaultCalendarDate() {
   return new Date();
@@ -342,13 +342,24 @@ export function groupCardsByDate(cards) {
 
 export const STAFF_CALENDAR_COLUMN_IDS = ['editing', 'in-review', 'approved', 'scheduled'];
 
+const ONE_OFF_CALENDAR_COLUMNS = ['shoot', ...STAFF_CALENDAR_COLUMN_IDS];
+
 export function isStaffCalendarCard(card) {
+  if (isOneOffProjectCard(card)) {
+    return Boolean(card.dueDate || card.shootDate) && ONE_OFF_CALENDAR_COLUMNS.includes(card.columnId);
+  }
   if (card.isOneOffProject || card.contentType === 'One-off Project') return false;
   return STAFF_CALENDAR_COLUMN_IDS.includes(card.columnId);
 }
 
 export function getCalendarCards(cards) {
-  return cards.filter((c) => isStaffCalendarCard(c) && c.dueDate);
+  return cards
+    .filter((c) => isStaffCalendarCard(c) && (c.dueDate || (isOneOffProjectCard(c) && c.shootDate)))
+    .map((c) =>
+      isOneOffProjectCard(c) && !c.dueDate && c.shootDate
+        ? { ...c, dueDate: c.shootDate, dueTime: c.dueTime || c.shootTime || '' }
+        : c,
+    );
 }
 
 export function getCalendarPosts(cards) {

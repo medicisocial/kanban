@@ -83,7 +83,7 @@ export default function KanbanBoard({
         if (c.columnId !== col.id) return false;
         if (col.id === 'finished') return c.isOneOffProject;
         if (c.isOneOffProject) {
-          return ['editing', 'in-review', 'approved'].includes(col.id);
+          return ['shoot', 'editing', 'in-review', 'approved'].includes(col.id);
         }
         return true;
       });

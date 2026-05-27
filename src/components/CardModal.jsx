@@ -17,6 +17,7 @@ import StoryRecurrencePicker from './StoryRecurrencePicker';
 import ModelTagInput from './ModelTagInput';
 import TimeInput from './TimeInput';
 import DateInput from './DateInput';
+import ClientNameInput from './ClientNameInput';
 import { btnPrimaryClass } from './clientPortal/clientPortalUi';
 
 const CARD_TABS = [
@@ -142,6 +143,22 @@ export default function CardModal({
   };
 
   const handleChange = (field, value) => {
+    if (field === 'contentType' && value === 'One-off Project') {
+      onUpdate(card.id, {
+        contentType: value,
+        isOneOffProject: true,
+        shootDate: '',
+        shootTime: '',
+        shootEndTime: '',
+        shootModels: '',
+        shootNeeds: '',
+        dueTime: '',
+        storyRecurrenceDays: [],
+        storyEndDate: '',
+        storyOccurrenceNotes: {},
+      });
+      return;
+    }
     if (field === 'contentType' && value === 'Story') {
       onUpdate(card.id, {
         contentType: value,
@@ -156,6 +173,7 @@ export default function CardModal({
     if (field === 'contentType' && value !== 'Story') {
       onUpdate(card.id, {
         contentType: value,
+        isOneOffProject: false,
         storyRecurrenceDays: [],
         storyEndDate: '',
         storyOccurrenceNotes: {},
@@ -287,17 +305,27 @@ export default function CardModal({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Client">
-              <select
-                value={card.client}
-                onChange={(e) => handleChange('client', e.target.value)}
-                className={inputClass}
-              >
-                {clients.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+              {isOneOff ? (
+                <ClientNameInput
+                  value={card.client}
+                  onChange={(e) => handleChange('client', e.target.value)}
+                  clients={clients}
+                  inputClass={inputClass}
+                  listId={`one-off-client-${card.id}`}
+                />
+              ) : (
+                <select
+                  value={card.client}
+                  onChange={(e) => handleChange('client', e.target.value)}
+                  className={inputClass}
+                >
+                  {clients.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              )}
             </Field>
 
             <Field label="Content Type">
@@ -593,12 +621,52 @@ export default function CardModal({
           )}
 
           {activeTab === 'production' && isOneOff && (
-            <p className="text-sm text-white/45">Production fields are not used for one-off projects.</p>
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Shoot schedule
+              </p>
+              {card.shootDate || card.dueDate ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-white">
+                    {formatDate(card.shootDate || card.dueDate)}
+                    {(card.shootTime || card.dueTime)
+                      ? ` · ${formatTime(card.shootTime || card.dueTime)}`
+                      : ''}
+                    {card.shootEndTime ? ` – ${formatTime(card.shootEndTime)}` : ''}
+                  </p>
+                  {card.contentCreator && (
+                    <p className="text-xs text-gray-400">Creator: {card.contentCreator}</p>
+                  )}
+                  {card.notes && (
+                    <p className="text-xs text-gray-500">{card.notes}</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-white/45">No shoot date on the schedule yet.</p>
+              )}
+              <p className="mt-3 text-xs text-gray-500">
+                Scheduled on the Shoot Schedule page — due date and calendar stay in sync.
+              </p>
+            </div>
           )}
 
           {activeTab === 'schedule' && (
             <>
-          {!isOneOff && isScheduledPostType(card.contentType) ? (
+          {isOneOff ? (
+            <div className="space-y-3">
+              <Field label="Due date">
+                <DateInput
+                  value={card.dueDate}
+                  onChange={(e) => handleChange('dueDate', e.target.value)}
+                  placeholder="Select due date"
+                  inputClassName={inputClass}
+                />
+              </Field>
+              <p className="text-xs text-gray-500">
+                When this one-off project should be completed. Syncs with the shoot schedule date.
+              </p>
+            </div>
+          ) : isScheduledPostType(card.contentType) ? (
             <div className="space-y-4">
               <Field label="Plan date">
                 <div className="space-y-3">
@@ -634,7 +702,7 @@ export default function CardModal({
             </div>
           ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label={isOneOff ? 'Due date (optional)' : 'Plan date'}>
+            <Field label="Plan date">
               <DateInput
                 value={card.dueDate}
                 onChange={(e) => handleChange('dueDate', e.target.value)}
@@ -642,16 +710,14 @@ export default function CardModal({
                 inputClassName={inputClass}
               />
             </Field>
-            {!isOneOff && (
-              <Field label={card.columnId === 'scheduled' ? 'Scheduled Time' : 'Plan time'}>
-                <TimeInput
-                  value={card.dueTime || ''}
-                  onChange={(e) => handleChange('dueTime', e.target.value)}
-                  placeholder="Select time"
-                  inputClassName={inputClass}
-                />
-              </Field>
-            )}
+            <Field label={card.columnId === 'scheduled' ? 'Scheduled Time' : 'Plan time'}>
+              <TimeInput
+                value={card.dueTime || ''}
+                onChange={(e) => handleChange('dueTime', e.target.value)}
+                placeholder="Select time"
+                inputClassName={inputClass}
+              />
+            </Field>
           </div>
           )}
 

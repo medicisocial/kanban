@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
+import ClientNameInput from './ClientNameInput';
 import { btnPrimaryClass, btnSecondaryClass, inputClass } from './clientPortal/clientPortalUi';
 
 export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) {
@@ -15,13 +16,14 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
   const handleSubmit = (e) => {
     e.preventDefault();
     const trimmedTitle = title.trim();
-    if (!client || !trimmedTitle) {
+    const trimmedClient = client.trim();
+    if (!trimmedClient || !trimmedTitle) {
       setError('Client and project title are required.');
       return;
     }
 
     onAdd({
-      client,
+      client: trimmedClient,
       title: trimmedTitle,
       description: description.trim(),
       dueDate,
@@ -49,18 +51,13 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
         <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4">
           <label className="block">
             <span className="mb-1.5 block text-xs font-medium text-gray-400">Client</span>
-            <select
+            <ClientNameInput
               value={client}
               onChange={(e) => setClient(e.target.value)}
-              className={inputClass}
-              required
-            >
-              {clients.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
+              clients={clients}
+              inputClass={inputClass}
+              listId="add-one-off-client-suggestions"
+            />
           </label>
 
           <label className="block">

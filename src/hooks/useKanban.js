@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEY, COLUMNS, PLATFORM, createCard, EDITOR_TODO_STORAGE_KEY, isScheduledPostType } from '../constants';
+import { STORAGE_KEY, COLUMNS, PLATFORM, createCard, EDITOR_TODO_STORAGE_KEY, isScheduledPostType, isOneOffProjectCard, syncOneOffScheduleFields } from '../constants';
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
 import {
   toDateKey,
@@ -28,11 +28,20 @@ function migrateColumnId(columnId) {
 function normalizeCard(card) {
   const rawColumnId = card.columnId;
   const columnId = migrateColumnId(rawColumnId);
-  const isOneOffProject = Boolean(card.isOneOffProject);
+  const isOneOffProject =
+    Boolean(card.isOneOffProject) || card.contentType === 'One-off Project';
   const resolvedColumnId =
     isOneOffProject && columnId === 'not-approved' ? 'editing' : columnId;
   const postedAt =
     card.postedAt || (rawColumnId === 'posted' ? Date.now() : null);
+  const shootDate = card.shootDate || '';
+  const shootTime = card.shootTime || '';
+  let dueDate = card.dueDate || '';
+  let dueTime = card.dueTime || '';
+  if (isOneOffProject) {
+    if (shootDate && !dueDate) dueDate = shootDate;
+    if (shootTime && !dueTime) dueTime = shootTime;
+  }
   return {
     ...card,
     platform: PLATFORM,
@@ -41,9 +50,9 @@ function normalizeCard(card) {
     referenceMusic: card.referenceMusic || '',
     referenceVideo: card.referenceVideo || '',
     dropboxLink: card.dropboxLink || '',
-    dueTime: card.dueTime || '',
-    shootDate: card.shootDate || '',
-    shootTime: card.shootTime || '',
+    dueTime,
+    shootDate,
+    shootTime,
     shootEndTime: card.shootEndTime || '',
     shootDuration: card.shootDuration || 45,
     shootModels: card.shootModels || '',
@@ -58,7 +67,8 @@ function normalizeCard(card) {
     postedAt,
     clientComment: card.clientComment || '',
     sourceIdeaId: card.sourceIdeaId || null,
-    isOneOffProject: Boolean(card.isOneOffProject),
+    dueDate,
+    isOneOffProject,
   };
 }
 
@@ -120,7 +130,7 @@ function withColumnDate(columnId, dueDate, { isOneOffProject = false, contentTyp
   return dueDate || '';
 }
 
-const ONE_OFF_ALLOWED_COLUMNS = ['editing', 'in-review', 'approved', 'finished'];
+const ONE_OFF_ALLOWED_COLUMNS = ['shoot', 'editing', 'in-review', 'approved', 'finished'];
 
 function canMoveCardToColumn(card, targetColumnId) {
   if (card.isOneOffProject) {
@@ -217,17 +227,19 @@ export function useKanban() {
     setCards((prev) =>
       prev.map((card) => {
         if (card.id !== id) return card;
-        const nextColumnId = updates.columnId ?? card.columnId;
-        const isOneOff = updates.isOneOffProject ?? card.isOneOffProject;
+        const synced = syncOneOffScheduleFields(updates, card);
+        const nextColumnId = synced.columnId ?? card.columnId;
+        const isOneOff = synced.isOneOffProject ?? isOneOffProjectCard({ ...card, ...synced });
         const nextDueDate = withColumnDate(
           nextColumnId,
-          updates.dueDate !== undefined ? updates.dueDate : card.dueDate,
-          { isOneOffProject: isOneOff, contentType: updates.contentType ?? card.contentType },
+          synced.dueDate !== undefined ? synced.dueDate : card.dueDate,
+          { isOneOffProject: isOneOff, contentType: synced.contentType ?? card.contentType },
         );
         return {
           ...card,
-          ...updates,
+          ...synced,
           dueDate: nextDueDate,
+          isOneOffProject: isOneOff,
           platform: PLATFORM,
         };
       }),
@@ -319,12 +331,16 @@ export function useKanban() {
   const addShootItem = useCallback(
     ({ client, title, contentType, shootDate, shootTime = '', contentCreator }) => {
       const isStory = contentType === 'Story';
+      const isOneOff = contentType === 'One-off Project';
       return addCardWithDetails({
         client,
         title,
         contentType,
+        isOneOffProject: isOneOff,
         shootDate: isStory ? '' : shootDate,
         shootTime: isStory ? '' : shootTime,
+        dueDate: isOneOff ? shootDate : '',
+        dueTime: isOneOff ? shootTime : '',
         contentCreator: contentCreator || getDefaultAssigneeForRole('Content Creator'),
         assignedTo: getDefaultAssigneeForRole('Editor'),
         columnId: 'shoot',

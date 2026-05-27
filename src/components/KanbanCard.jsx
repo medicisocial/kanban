@@ -2,6 +2,7 @@ import { useDraggable } from '@dnd-kit/core';
 import {
   getContentTypeStyle,
   needsShootSchedule,
+  isOneOffProjectCard,
 } from '../constants';
 import { formatDate, formatScheduledDateTime, isOverdue } from '../utils';
 import CardTitleLink from './CardTitleLink';
@@ -13,7 +14,10 @@ export default function KanbanCard({ card, onClick, onDelete }) {
   });
 
   const typeStyle = getContentTypeStyle(card.contentType);
-  const overdue = isOverdue(card.dueDate) && card.columnId !== 'scheduled' && !card.isOneOffProject;
+  const isOneOff = isOneOffProjectCard(card);
+  const scheduleDate = card.dueDate || (isOneOff ? card.shootDate : '');
+  const scheduleTime = card.dueTime || (isOneOff ? card.shootTime : '');
+  const overdue = isOverdue(scheduleDate) && card.columnId !== 'scheduled' && !isOneOff;
 
   return (
     <div
@@ -68,14 +72,17 @@ export default function KanbanCard({ card, onClick, onDelete }) {
         >
           {card.contentType}
         </span>
-        {card.shootDate && needsShootSchedule(card.contentType) && (
+        {card.shootDate && needsShootSchedule(card.contentType) && !isOneOff && (
           <span className="text-gray-400">{formatDate(card.shootDate)}</span>
         )}
-        {card.dueDate && card.columnId !== 'shoot' && (
+        {scheduleDate && (card.columnId !== 'shoot' || isOneOff) && (
           <span className={`text-gray-400 ${overdue ? 'font-medium text-red-400' : ''}`}>
             {overdue ? '⚠ ' : ''}
-            {formatScheduledDateTime(card.dueDate, card.dueTime)}
+            {formatScheduledDateTime(scheduleDate, scheduleTime)}
           </span>
+        )}
+        {isOneOff && card.contentCreator && (
+          <span className="text-gray-500">{card.contentCreator}</span>
         )}
       </div>
 
