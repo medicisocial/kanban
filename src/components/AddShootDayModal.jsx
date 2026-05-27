@@ -127,7 +127,6 @@ export default function AddShootDayModal({
                   onChange={(e) => setForm({ ...form, client: e.target.value })}
                   clients={clients}
                   inputClass={inputClass}
-                  listId="shoot-one-off-client-suggestions"
                 />
               ) : (
                 <select

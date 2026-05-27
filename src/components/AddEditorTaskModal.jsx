@@ -56,7 +56,6 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
               onChange={(e) => setClient(e.target.value)}
               clients={clients}
               inputClass={inputClass}
-              listId="add-one-off-client-suggestions"
             />
           </label>
 

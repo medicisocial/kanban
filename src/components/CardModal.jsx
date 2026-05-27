@@ -311,7 +311,6 @@ export default function CardModal({
                   onChange={(e) => handleChange('client', e.target.value)}
                   clients={clients}
                   inputClass={inputClass}
-                  listId={`one-off-client-${card.id}`}
                 />
               ) : (
                 <select
@@ -621,49 +620,96 @@ export default function CardModal({
           )}
 
           {activeTab === 'production' && isOneOff && (
-            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Shoot schedule
-              </p>
-              {card.shootDate || card.dueDate ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-white">
-                    {formatDate(card.shootDate || card.dueDate)}
-                    {(card.shootTime || card.dueTime)
-                      ? ` · ${formatTime(card.shootTime || card.dueTime)}`
-                      : ''}
-                    {card.shootEndTime ? ` – ${formatTime(card.shootEndTime)}` : ''}
+            <>
+              <Field label="Shoot date">
+                <div className="space-y-3">
+                  <DateInput
+                    value={card.shootDate || card.dueDate || ''}
+                    onChange={(e) => handleChange('shootDate', e.target.value)}
+                    placeholder="Select shoot date"
+                    inputClassName={inputClass}
+                  />
+                  {onPlanShootDate && (
+                    <button
+                      type="button"
+                      onClick={() => onPlanShootDate(card)}
+                      className={`${btnPrimaryClass} w-full py-2.5 text-sm normal-case tracking-normal`}
+                    >
+                      {card.shootDate || card.dueDate ? 'Change on calendar' : 'Pick on calendar'}
+                    </button>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    Production shoot date — stays in sync with the due date on the Schedule tab.
                   </p>
-                  {card.contentCreator && (
-                    <p className="text-xs text-gray-400">Creator: {card.contentCreator}</p>
-                  )}
-                  {card.notes && (
-                    <p className="text-xs text-gray-500">{card.notes}</p>
-                  )}
                 </div>
-              ) : (
-                <p className="text-sm text-white/45">No shoot date on the schedule yet.</p>
+              </Field>
+
+              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Shoot time
+                </p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Field label="Start time">
+                    <TimeInput
+                      value={card.shootTime || card.dueTime || ''}
+                      onChange={(e) => handleChange('shootTime', e.target.value)}
+                      placeholder="Start time"
+                      inputClassName={inputClass}
+                    />
+                  </Field>
+                  <Field label="End time">
+                    <TimeInput
+                      value={card.shootEndTime || ''}
+                      onChange={(e) => handleChange('shootEndTime', e.target.value)}
+                      placeholder="End time"
+                      min={card.shootTime || card.dueTime || undefined}
+                      inputClassName={inputClass}
+                    />
+                  </Field>
+                </div>
+              </div>
+
+              {contentCreators.length > 0 && (
+                <Field label="Content creator">
+                  <select
+                    value={card.contentCreator || ''}
+                    onChange={(e) => handleChange('contentCreator', e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">Unassigned</option>
+                    {contentCreators.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
               )}
-              <p className="mt-3 text-xs text-gray-500">
-                Scheduled on the Shoot Schedule page — due date and calendar stay in sync.
-              </p>
-            </div>
+            </>
           )}
 
           {activeTab === 'schedule' && (
             <>
           {isOneOff ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <Field label="Due date">
                 <DateInput
-                  value={card.dueDate}
+                  value={card.dueDate || card.shootDate || ''}
                   onChange={(e) => handleChange('dueDate', e.target.value)}
                   placeholder="Select due date"
                   inputClassName={inputClass}
                 />
               </Field>
+              <Field label="Due time">
+                <TimeInput
+                  value={card.dueTime || card.shootTime || ''}
+                  onChange={(e) => handleChange('dueTime', e.target.value)}
+                  placeholder="Select time"
+                  inputClassName={inputClass}
+                />
+              </Field>
               <p className="text-xs text-gray-500">
-                When this one-off project should be completed. Syncs with the shoot schedule date.
+                When this one-off project should be completed. Syncs with the shoot date on the Production tab.
               </p>
             </div>
           ) : isScheduledPostType(card.contentType) ? (
