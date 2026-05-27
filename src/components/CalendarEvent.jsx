@@ -16,6 +16,13 @@ export default function CalendarEvent({
   const { getClientColor } = useClientsContext();
   const typeStyle = getContentTypeStyle(card.contentType);
   const clientColor = getClientColor(card.client);
+  const isShootSession = Boolean(card.isShootSession);
+  const sessionTimeLabel =
+    isShootSession && card.dueTime && card.shootEndTime
+      ? `${formatTime(card.dueTime)} – ${formatTime(card.shootEndTime)}`
+      : card.dueTime
+        ? formatTime(card.dueTime)
+        : '';
   const scheduleSummary = formatStoryScheduleSummary(card);
   const hasStorySchedule = hasStoryRecurrence(card) || hasStoryDailyRange(card);
   const isPosted = isCalendarEventPosted(card);
@@ -33,6 +40,50 @@ export default function CalendarEvent({
   const eventTitle = hideClient
     ? card.title
     : `${card.client}: ${card.title}${scheduleSummary ? ` (${scheduleSummary})` : ""}`;
+
+  const handleClick = (ev) => {
+    ev.stopPropagation();
+    onClick?.(card);
+  };
+
+  if (compact && isShootSession) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleClick}
+        onKeyDown={(ev) => {
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            onClick?.(card);
+          }
+        }}
+        className="group/event relative mb-1 w-full cursor-pointer rounded px-1.5 py-1 text-left transition hover:brightness-125"
+        style={{
+          backgroundColor: clientColor + '33',
+          borderLeft: `2px solid ${clientColor}`,
+        }}
+        title={`${card.client} shoot${sessionTimeLabel ? ` · ${sessionTimeLabel}` : ''}`}
+      >
+        <span
+          className="mb-0.5 block truncate text-[9px] font-semibold uppercase tracking-wide"
+          style={{ color: clientColor }}
+        >
+          {card.client}
+        </span>
+        {sessionTimeLabel && (
+          <span className="mb-0.5 block text-[9px] font-medium text-gray-300">
+            {sessionTimeLabel}
+          </span>
+        )}
+        <span className="mb-0.5 block text-[9px] font-semibold text-[#fca5a5]">Shoot</span>
+        <span className="block truncate text-[10px] font-medium text-[#f9f6f2]">
+          {card.title}
+          {card.shootSessionCount > 1 ? ` · ${card.shootSessionCount} items` : ''}
+        </span>
+      </div>
+    );
+  }
 
   const handleRemove = (ev) => {
     ev.stopPropagation();

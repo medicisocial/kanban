@@ -4,7 +4,7 @@ import { getContentTypeStyle, isOneOffProjectCard } from '../constants';
 import {
   addMonths,
   getDefaultCalendarDate,
-  groupCardsByDate,
+  groupCalendarCardsByDate,
   parseDateKey,
   toDateKey,
 } from '../utils/calendar';
@@ -30,11 +30,6 @@ function toCalendarDisplay(card) {
   };
 }
 
-function sortShootCards(a, b) {
-  const dateCmp = (a.shootDate || '').localeCompare(b.shootDate || '');
-  if (dateCmp !== 0) return dateCmp;
-  return (a.shootTime || '99:99').localeCompare(b.shootTime || '99:99');
-}
 
 export default function PlanShootDateModal({ card, cards, plans, getPlan, onClose, onSave, onOpenCard, onAddItemToDay, onAddCardsToShoot }) {
   const initialDate = card.shootDate || '';
@@ -82,36 +77,30 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
     return marks;
   }, [plans, card.client, showAllShoots]);
 
-  const cardsByDate = useMemo(() => {
-    const map = groupCardsByDate(
-      calendarShootCards.filter((entry) => entry.id !== card.id).map(toCalendarDisplay),
-    );
-
-    if (selectedDate) {
-      const previewCard = toCalendarDisplay({
-        ...card,
-        shootDate: selectedDate,
-        shootTime,
-      });
-      const dayCards = [...(map[selectedDate] || []), previewCard];
-      dayCards.sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'));
-      map[selectedDate] = dayCards;
-    }
-
-    return map;
-  }, [calendarShootCards, card, selectedDate, shootTime]);
-
-  const allVisibleShoots = useMemo(
-    () =>
-      calendarShootCards
-        .filter((entry) => entry.id !== card.id && entry.shootDate)
-        .sort(sortShootCards),
-    [calendarShootCards, card.id],
+  const cardsByDate = useMemo(
+    () => groupCalendarCardsByDate(calendarShootCards.map(toCalendarDisplay), getPlan),
+    [calendarShootCards, getPlan],
   );
+
+  const allVisibleSessions = useMemo(() => {
+    const list = [];
+    for (const [dateKey, dayCards] of Object.entries(cardsByDate)) {
+      for (const entry of dayCards) {
+        list.push({ ...entry, sortDate: dateKey });
+      }
+    }
+    return list.sort((a, b) => {
+      const dateCmp = (a.sortDate || '').localeCompare(b.sortDate || '');
+      if (dateCmp !== 0) return dateCmp;
+      return (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99');
+    });
+  }, [cardsByDate]);
 
   const selectedDayShoots = useMemo(() => {
     if (!selectedDate) return [];
-    return (cardsByDate[selectedDate] || []).filter((entry) => entry.id !== card.id);
+    return (cardsByDate[selectedDate] || []).filter(
+      (entry) => entry.isShootSession || entry.id !== card.id,
+    );
   }, [cardsByDate, selectedDate, card.id]);
 
   const selectedDayPlan = useMemo(
@@ -159,6 +148,17 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
     setSelectedDate(dateKey);
     setFocusDate(parseDateKey(dateKey));
     setError('');
+
+    if (clickedCard.isShootSession) {
+      if (clickedCard.dueTime) {
+        setShootTime(clickedCard.dueTime);
+        setShootEndTime(
+          clickedCard.shootEndTime ||
+            getDefaultShootEndTime(clickedCard.dueTime, card.contentType),
+        );
+      }
+      return;
+    }
 
     if (showAllShoots && clickedCard.client !== card.client) {
       return;
@@ -227,9 +227,9 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
             <h2 className="mt-1 text-lg font-semibold text-white">{card.title}</h2>
             <p className="mt-1 text-sm text-gray-400">
               {showAllShoots
-                ? `All shoots · ${allVisibleShoots.length} scheduled · click a day or shoot to select it`
-                : `${card.client} shoot calendar · ${allVisibleShoots.length} scheduled shoot${
-                    allVisibleShoots.length === 1 ? '' : 's'
+                ? `All shoots · ${allVisibleSessions.length} scheduled · click a day or shoot to select it`
+                : `${card.client} shoot calendar · ${allVisibleSessions.length} scheduled shoot${
+                    allVisibleSessions.length === 1 ? '' : 's'
                   } · click a day or shoot to select it`}
             </p>
           </div>
@@ -408,13 +408,19 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
                     <CalendarEvent
                       key={entry.id}
                       card={entry}
-                      onClick={(clickedCard) => onOpenCard?.(clickedCard)}
+                      onClick={(clickedCard) => {
+                        if (clickedCard.isShootSession) {
+                          handleCalendarEventClick(clickedCard);
+                          return;
+                        }
+                        onOpenCard?.(clickedCard);
+                      }}
                       compact
                       hideClient={!showAllShoots}
                     />
                   ))}
 
-                  {!selectedDate && allVisibleShoots.length === 0 && (
+                  {!selectedDate && allVisibleSessions.length === 0 && (
                     <p className="rounded-lg border border-dashed border-white/10 px-3 py-4 text-center text-xs text-gray-500">
                       {showAllShoots
                         ? 'No shoots scheduled yet.'
@@ -423,17 +429,11 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
                   )}
 
                   {!selectedDate &&
-                    allVisibleShoots.map((entry) => (
+                    allVisibleSessions.map((entry) => (
                       <CalendarEvent
                         key={entry.id}
-                        card={toCalendarDisplay(entry)}
-                        onClick={(clickedCard) =>
-                          handleCalendarEventClick({
-                            ...clickedCard,
-                            shootTime: entry.shootTime,
-                            shootEndTime: entry.shootEndTime,
-                          })
-                        }
+                        card={entry}
+                        onClick={(clickedCard) => handleCalendarEventClick(clickedCard)}
                         compact
                         hideClient={!showAllShoots}
                       />

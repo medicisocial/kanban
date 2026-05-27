@@ -3,7 +3,7 @@ import {
   getDefaultCalendarDate,
   addWeeks,
   addMonths,
-  groupCardsByDate,
+  groupCalendarCardsByDate,
   getCalendarPosts,
   getCalendarStories,
   buildStoryCalendarByDate,
@@ -20,7 +20,9 @@ import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass, glassSegmentClas
 export default function Calendar({
   cards,
   clientFilter,
+  getPlan,
   onCardClick,
+  onShootSessionClick,
   onAddCalendarPost,
   onRemoveFromCalendar,
   embedded = false,
@@ -42,8 +44,16 @@ export default function Calendar({
     if (isStories) {
       return buildStoryCalendarByDate(visibleCards, focusDate, viewMode);
     }
-    return groupCardsByDate(visibleCards);
-  }, [visibleCards, isStories, focusDate, viewMode]);
+    return groupCalendarCardsByDate(visibleCards, getPlan);
+  }, [visibleCards, isStories, focusDate, viewMode, getPlan]);
+
+  const handleCalendarClick = (entry) => {
+    if (entry?.isShootSession) {
+      onShootSessionClick?.(entry);
+      return;
+    }
+    onCardClick?.(entry);
+  };
 
   const goPrev = () => {
     setFocusDate((d) => (viewMode === 'week' ? addWeeks(d, -1) : addMonths(d, -1)));
@@ -155,7 +165,7 @@ export default function Calendar({
           <CalendarWeekView
             focusDate={focusDate}
             cardsByDate={cardsByDate}
-            onCardClick={onCardClick}
+            onCardClick={handleCalendarClick}
             onAddPost={openAddModal}
             onRemoveFromCalendar={onRemoveFromCalendar}
             overviewLabel={overviewLabel}
@@ -164,7 +174,7 @@ export default function Calendar({
           <CalendarMonthView
             focusDate={focusDate}
             cardsByDate={cardsByDate}
-            onCardClick={onCardClick}
+            onCardClick={handleCalendarClick}
             onDayClick={handleDayClick}
             onRemoveFromCalendar={onRemoveFromCalendar}
             overviewLabel={overviewLabel}

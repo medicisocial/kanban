@@ -86,6 +86,7 @@ export const CONTENT_TYPE_COLORS = {
   Carousel: { border: '#f472b6', bg: 'rgba(244, 114, 182, 0.14)', label: 'text-pink-300' },
   'Static Post': { border: '#810100', bg: 'rgba(129, 1, 0, 0.14)', label: 'text-[#fca5a5]' },
   'One-off Project': { border: '#a78bfa', bg: 'rgba(167, 139, 250, 0.14)', label: 'text-violet-300' },
+  Shoot: { border: '#810100', bg: 'rgba(129, 1, 0, 0.18)', label: 'text-[#fca5a5]' },
 };
 
 export function getContentTypeStyle(contentType) {

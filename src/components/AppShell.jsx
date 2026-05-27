@@ -801,11 +801,18 @@ export default function AppShell({ onSignOut }) {
           events={events}
           meetings={meetings}
           clientFilter={clientFilter}
+          getPlan={getPlan}
           initialTab={calendarsTab}
           openMeetingRequest={openMeetingRequest}
           onOpenMeetingRequestHandled={() => setOpenMeetingRequest(null)}
           onNavigate={handleNavigate}
           onCardClick={handleCardClick}
+          onShootSessionClick={(session) =>
+            handleNavigate('shoot', {
+              shootDate: session.dueDate,
+              shootClient: session.client,
+            })
+          }
           onAddCalendarPost={handleAddCalendarPost}
           onRemoveFromCalendar={handleRemoveFromCalendar}
           onAddEvent={addEvent}

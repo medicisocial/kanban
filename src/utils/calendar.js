@@ -1,4 +1,9 @@
 import { isScheduledPostType, isOneOffProjectCard } from '../constants';
+import {
+  getShootDayTitle,
+  resolveShootDayTime,
+  resolveShootDayEndTime,
+} from './shootDay';
 
 export function getDefaultCalendarDate() {
   return new Date();
@@ -338,6 +343,76 @@ export function groupCardsByDate(cards) {
     map[key].sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'));
   }
   return map;
+}
+
+/** Cards scheduled to shoot on this calendar day (by shoot date, not plan date). */
+export function isShootSessionCandidate(card, dateKey) {
+  if (!card || card.contentType === 'Story' || card.isShootSession) return false;
+  return (card.shootDate || '') === dateKey;
+}
+
+function buildShootSessionEntry(client, dateKey, groupCards, getPlan) {
+  const plan = getPlan?.(client, dateKey) || {};
+  const startTime = resolveShootDayTime(plan, groupCards);
+  const endTime = resolveShootDayEndTime(plan, groupCards);
+  return {
+    id: `shoot-session:${client}:${dateKey}`,
+    isShootSession: true,
+    client,
+    title: getShootDayTitle(plan, client),
+    dueDate: dateKey,
+    dueTime: startTime,
+    shootEndTime: endTime,
+    shootSessionCount: groupCards.length,
+    contentType: 'Shoot',
+    columnId: 'shoot',
+  };
+}
+
+/** Replace same-client shoot-day cards with one session block per client. */
+export function collapseShootSessionsForDay(dayCards, dateKey, getPlan, allShootCards = []) {
+  const groups = new Map();
+  const standalone = [];
+
+  for (const card of dayCards) {
+    if (card.isShootSession) {
+      standalone.push(card);
+      continue;
+    }
+    if (isShootSessionCandidate(card, dateKey)) {
+      if (!groups.has(card.client)) groups.set(card.client, []);
+      groups.get(card.client).push(card);
+    } else {
+      standalone.push(card);
+    }
+  }
+
+  const sessions = [];
+  for (const [client] of groups) {
+    const fullGroup = allShootCards.filter(
+      (entry) => entry.client === client && isShootSessionCandidate(entry, dateKey),
+    );
+    sessions.push(buildShootSessionEntry(client, dateKey, fullGroup, getPlan));
+  }
+
+  const merged = [...sessions, ...standalone];
+  merged.sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'));
+  return merged;
+}
+
+export function collapseShootSessionsInCardsByDate(cardsByDate, getPlan, allCards = []) {
+  const shootCards = allCards.filter((card) => card.shootDate);
+  const result = {};
+  for (const [dateKey, dayCards] of Object.entries(cardsByDate)) {
+    const allForDay = shootCards.filter((card) => isShootSessionCandidate(card, dateKey));
+    result[dateKey] = collapseShootSessionsForDay(dayCards, dateKey, getPlan, allForDay);
+  }
+  return result;
+}
+
+export function groupCalendarCardsByDate(cards, getPlan) {
+  const raw = groupCardsByDate(cards);
+  return collapseShootSessionsInCardsByDate(raw, getPlan, cards);
 }
 
 export const STAFF_CALENDAR_COLUMN_IDS = ['editing', 'in-review', 'approved', 'scheduled'];

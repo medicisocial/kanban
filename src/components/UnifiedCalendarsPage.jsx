@@ -10,11 +10,13 @@ export default function UnifiedCalendarsPage({
   events,
   meetings,
   clientFilter,
+  getPlan,
   initialTab = 'content',
   openMeetingRequest,
   onOpenMeetingRequestHandled,
   onNavigate,
   onCardClick,
+  onShootSessionClick,
   onAddCalendarPost,
   onRemoveFromCalendar,
   onAddEvent,
@@ -74,7 +76,9 @@ export default function UnifiedCalendarsPage({
         <Calendar
           cards={cards}
           clientFilter={clientFilter}
+          getPlan={getPlan}
           onCardClick={onCardClick}
+          onShootSessionClick={onShootSessionClick}
           onAddCalendarPost={onAddCalendarPost}
           onRemoveFromCalendar={onRemoveFromCalendar}
           embedded
