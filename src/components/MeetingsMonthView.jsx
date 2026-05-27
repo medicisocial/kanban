@@ -1,0 +1,136 @@
+import {
+  getMonthWeeks,
+  toDateKey,
+  isToday,
+  formatMonthYear,
+} from '../utils/calendar';
+import { formatTime } from '../utils';
+import { useClientsContext } from '../context/ClientsContext';
+import { getMeetingContactLabel, isRecurringMeeting } from '../utils/meetingsCalendar';
+
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+export default function MeetingsMonthView({
+  focusDate,
+  meetingsByDate,
+  onMeetingClick,
+  onDayClick,
+  showClientName = false,
+}) {
+  const { getClientColor } = useClientsContext();
+  const year = focusDate.getFullYear();
+  const month = focusDate.getMonth();
+  const weeks = getMonthWeeks(year, month);
+
+  const getMeetingStyle = (meeting) => {
+    if (meeting.prospectName) {
+      return {
+        borderColor: 'rgba(251, 191, 36, 0.35)',
+        backgroundColor: 'rgba(251, 191, 36, 0.12)',
+        color: 'rgba(253, 230, 138, 0.95)',
+      };
+    }
+    if (meeting.client) {
+      const color = getClientColor(meeting.client);
+      return {
+        borderColor: `${color}55`,
+        backgroundColor: `${color}18`,
+        color,
+      };
+    }
+    return {
+      borderColor: 'rgba(255,255,255,0.15)',
+      backgroundColor: 'rgba(255,255,255,0.06)',
+      color: 'rgba(255,255,255,0.85)',
+    };
+  };
+
+  const getMeetingTitle = (meeting) => {
+    const contact = getMeetingContactLabel(meeting);
+    const recurring = isRecurringMeeting(meeting) ? ' ↻' : '';
+    return `${contact} · ${meeting.title}${recurring}`;
+  };
+
+  return (
+    <div className="flex flex-col">
+      <p className="mb-3 text-xs text-white/45">{formatMonthYear(focusDate)}</p>
+
+      <div className="overflow-x-auto border border-white/10 bg-white/[0.02]">
+        <div className="grid grid-cols-7 border-b border-white/10">
+          {DAY_NAMES.map((name) => (
+            <div
+              key={name}
+              className="px-2 py-2 text-center text-[10px] font-medium uppercase tracking-wider text-white/40"
+            >
+              {name}
+            </div>
+          ))}
+        </div>
+
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7 border-b border-white/[0.06] last:border-b-0">
+            {week.map((day) => {
+              const key = toDateKey(day);
+              const dayMeetings = meetingsByDate[key] || [];
+              const inMonth = day.getMonth() === month;
+              const today = isToday(day);
+
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => onDayClick?.(day, key)}
+                  className={`min-h-[108px] border-r border-white/[0.06] p-1.5 text-left transition last:border-r-0 sm:min-h-[124px] sm:p-2 ${
+                    !inMonth ? 'bg-black/20 opacity-45' : 'hover:bg-white/[0.03]'
+                  } ${today ? 'bg-[#810100]/10 ring-1 ring-inset ring-[#810100]/25' : ''}`}
+                >
+                  <div className="mb-1 flex items-center justify-between">
+                    <span
+                      className={`flex h-6 w-6 items-center justify-center text-xs font-semibold ${
+                        today ? 'bg-[#810100] text-white' : inMonth ? 'text-white/85' : 'text-white/35'
+                      }`}
+                    >
+                      {day.getDate()}
+                    </span>
+                    {dayMeetings.length > 0 && (
+                      <span className="text-[10px] tabular-nums text-white/35">{dayMeetings.length}</span>
+                    )}
+                  </div>
+
+                  <div className="space-y-0.5">
+                    {dayMeetings.slice(0, 3).map((meeting) => (
+                      <button
+                        key={meeting.occurrenceKey || meeting.id}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onMeetingClick(meeting);
+                        }}
+                        className="block w-full truncate border px-1.5 py-0.5 text-left text-[10px] transition hover:brightness-110"
+                        style={getMeetingStyle(meeting)}
+                        title={getMeetingTitle(meeting)}
+                      >
+                        {isRecurringMeeting(meeting) && (
+                          <span className="mr-0.5 opacity-70">↻</span>
+                        )}
+                        {meeting.time ? `${formatTime(meeting.time)} ` : ''}
+                        {showClientName && `${getMeetingContactLabel(meeting)}: `}
+                        {meeting.title}
+                      </button>
+                    ))}
+                    {dayMeetings.length > 3 && (
+                      <p className="px-1 text-[10px] text-white/35">+{dayMeetings.length - 3} more</p>
+                    )}
+                    {dayMeetings.length === 0 && inMonth && (
+                      <p className="px-1 text-[10px] text-white/20">+</p>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

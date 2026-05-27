@@ -5,16 +5,28 @@ import {
   IconIdeas,
   IconShoots,
   IconTasks,
+  IconRefresh,
 } from './ClientPortalIcons';
 import EnterprisePortalLayout from './EnterprisePortalLayout';
 
-const NAV_ITEMS = [
-  { id: 'home', label: 'Your tasks', Icon: IconHome },
-  { id: 'ideas', label: 'Ideas', Icon: IconIdeas },
-  { id: 'pipeline', label: 'Board', Icon: IconBoard },
-  { id: 'calendar', label: 'Calendar', Icon: IconCalendar },
-  { id: 'review', label: 'Content review', Icon: IconTasks },
-  { id: 'shoots', label: 'Shoot Schedule', Icon: IconShoots },
+const NAV_SECTIONS = [
+  {
+    label: 'Overview',
+    items: [{ id: 'home', label: 'Your tasks', Icon: IconHome }],
+  },
+  {
+    label: 'Production',
+    items: [
+      { id: 'ideas', label: 'Ideas', Icon: IconIdeas },
+      { id: 'pipeline', label: 'Board', Icon: IconBoard },
+      { id: 'review', label: 'Content review', Icon: IconTasks },
+      { id: 'shoots', label: 'Shoot Schedule', Icon: IconShoots },
+    ],
+  },
+  {
+    label: 'Planning',
+    items: [{ id: 'calendar', label: 'Calendar', Icon: IconCalendar }],
+  },
 ];
 
 export default function ClientPortalLayout({
@@ -26,6 +38,7 @@ export default function ClientPortalLayout({
   onRefresh,
   onSignOut,
   notificationCount = 0,
+  navBadges = {},
   children,
 }) {
   return (
@@ -37,7 +50,9 @@ export default function ClientPortalLayout({
       profileLogo={clientLogo}
       profileLabel={client}
       profileColor={clientColor}
-      navItems={NAV_ITEMS}
+      subtitle="Client workspace"
+      navSections={NAV_SECTIONS}
+      navBadges={navBadges}
       activeTab={activeTab}
       onTabChange={onTabChange}
       notificationCount={notificationCount}
@@ -45,12 +60,9 @@ export default function ClientPortalLayout({
       onProfileClick={() => onTabChange('profile')}
       onSignOut={onSignOut}
       sidebarFooter={
-        <button
-          type="button"
-          onClick={onRefresh}
-          className="w-full rounded-sm border border-white/15 bg-transparent px-3 py-2.5 text-[10px] font-medium uppercase tracking-[0.2em] text-white/50 transition-all duration-300 hover:border-white/30 hover:bg-white/[0.04] hover:text-white/85"
-        >
-          Refresh data
+        <button type="button" onClick={onRefresh} className="portal-sidebar-footer-link">
+          <IconRefresh className="h-4 w-4 shrink-0 opacity-50" aria-hidden />
+          <span className="portal-sidebar-footer-label">Refresh data</span>
         </button>
       }
     >

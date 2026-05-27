@@ -23,6 +23,7 @@ import { createCard, COLUMNS } from "../constants";
 import { buildSendBackForEditingUpdates } from "../utils/editorTodo";
 import { useAdminTasks } from "../hooks/useAdminTasks";
 import { useEvents } from "../hooks/useEvents";
+import { useMeetings } from "../hooks/useMeetings";
 import CompanyTasks from "./CompanyTasks";
 import AdminConsoleLayout from "./clientPortal/AdminConsoleLayout";
 import KanbanBoard from "./KanbanBoard";
@@ -43,8 +44,9 @@ import CardModal from "./CardModal";
 import { useStaffAuth } from "../context/StaffAuthContext";
 import { useClientsContext } from "../context/ClientsContext";
 import { getDefaultWorkspaceView } from "../utils/getDefaultWorkspaceView";
-import { resolveStaffMemberName, staffHasAccountManagerQueueAccess, staffHasLeadershipWorkspaceAccess } from "../utils/staffMembers";
+import { resolveStaffMemberName, staffHasAccountManagerQueueAccess, staffGetsCompanyWideOverview } from "../utils/staffMembers";
 import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
+import { buildWorkspaceHomeSummary, buildNavBadgeCounts } from "../utils/workspaceHome";
 import { usesPersonalWorkspaceView } from "../utils/staffAuth";
 
 export default function AppShell({ onSignOut }) {
@@ -70,6 +72,7 @@ export default function AppShell({ onSignOut }) {
     deleteAdminTask,
   } = useAdminTasks();
   const { events, addEvent, updateEvent, deleteEvent } = useEvents();
+  const { meetings, addMeeting, updateMeeting, deleteMeeting } = useMeetings();
   const { authRequired, ready, logout, session } = useStaffAuth();
   const { teamMembers, clientAccountManagers } = useClientsContext();
 
@@ -79,6 +82,7 @@ export default function AppShell({ onSignOut }) {
   const [viewInitialized, setViewInitialized] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [tasksRole, setTasksRole] = useState('creator');
+  const [calendarsTab, setCalendarsTab] = useState('content');
   const [handoffCard, setHandoffCard] = useState(null);
   const [responseCount, setResponseCount] = useState(() => loadClientResponses().length);
   const [contentReviewResponseCount, setContentReviewResponseCount] = useState(
@@ -100,6 +104,9 @@ export default function AppShell({ onSignOut }) {
   const handleNavigate = useCallback((view, options) => {
     if (options?.tasksRole) {
       setTasksRole(options.tasksRole);
+    }
+    if (options?.calendarsTab) {
+      setCalendarsTab(options.calendarsTab);
     }
     setActiveView(view);
   }, []);
@@ -470,6 +477,54 @@ export default function AppShell({ onSignOut }) {
     }
   }, []);
 
+  const syncTotal = responseCount + contentReviewResponseCount + shootResponseCount;
+  const staffName = resolveStaffMemberName(session, teamMembers);
+  const myWorkOnly = usesPersonalWorkspaceView(session);
+  const companyWideView = staffGetsCompanyWideOverview(session, teamMembers);
+  const showAccountManagerQueue = !myWorkOnly
+    ? true
+    : staffHasAccountManagerQueueAccess(session, teamMembers) || companyWideView;
+  const workspaceAlerts = useMemo(
+    () =>
+      buildWorkspaceAlerts({
+        cards,
+        ideas,
+        clientFilter,
+        staffName,
+        clientAccountManagers,
+        myWorkOnly,
+      }),
+    [cards, ideas, clientFilter, staffName, clientAccountManagers, myWorkOnly],
+  );
+  const notificationCount = syncTotal + workspaceAlerts.length;
+
+  const navBadges = useMemo(() => {
+    const summary = buildWorkspaceHomeSummary({
+      cards,
+      ideas,
+      adminTasks,
+      clientFilter,
+      syncTotal,
+      staffName,
+      clientAccountManagers,
+      myWorkOnly,
+      companyWideView,
+      showAccountManagerQueue,
+    });
+    return buildNavBadgeCounts(summary, syncTotal);
+  }, [
+    cards,
+    ideas,
+    adminTasks,
+    clientFilter,
+    syncTotal,
+    staffName,
+    clientAccountManagers,
+    myWorkOnly,
+    companyWideView,
+    showAccountManagerQueue,
+  ]);
+
   const portalClient = getClientPortalClient();
   const contentReviewClient = getContentReviewPortalClient();
   const calendarPortalClient = getCalendarPortalClient();
@@ -536,27 +591,6 @@ export default function AppShell({ onSignOut }) {
     onSignOut?.();
   };
 
-  const syncTotal = responseCount + contentReviewResponseCount + shootResponseCount;
-  const staffName = resolveStaffMemberName(session, teamMembers);
-  const myWorkOnly = usesPersonalWorkspaceView(session);
-  const companyWideView = myWorkOnly && staffHasLeadershipWorkspaceAccess(session, teamMembers);
-  const showAccountManagerQueue = !myWorkOnly
-    ? true
-    : staffHasAccountManagerQueueAccess(session, teamMembers) || companyWideView;
-  const workspaceAlerts = useMemo(
-    () =>
-      buildWorkspaceAlerts({
-        cards,
-        ideas,
-        clientFilter,
-        staffName,
-        clientAccountManagers,
-        myWorkOnly,
-      }),
-    [cards, ideas, clientFilter, staffName, clientAccountManagers, myWorkOnly],
-  );
-  const notificationCount = syncTotal + workspaceAlerts.length;
-
   const handleNotificationNavigate = (view) => {
     setActiveView(view);
     setNotificationsOpen(false);
@@ -585,13 +619,15 @@ export default function AppShell({ onSignOut }) {
       onSignOut={onSignOut ? handleSignOut : undefined}
       clientFilter={clientFilter}
       onClientChange={setClientFilter}
-      homeNavLabel={myWorkOnly ? 'My work' : 'Overview'}
+      homeNavLabel={companyWideView && myWorkOnly ? 'Overview' : myWorkOnly ? 'My work' : 'Overview'}
+      navBadges={navBadges}
     >
       {activeView === "home" && (
         <WorkspaceHomePage
           cards={cards}
           ideas={ideas}
           adminTasks={adminTasks}
+          meetings={meetings}
           clientFilter={clientFilter}
           syncTotal={syncTotal}
           staffName={staffName}
@@ -601,6 +637,7 @@ export default function AppShell({ onSignOut }) {
           showAccountManagerQueue={showAccountManagerQueue}
           onNavigate={handleNavigate}
           onOpenCard={handleCardClick}
+          onOpenMeeting={() => handleNavigate('calendars', { calendarsTab: 'meetings' })}
           onOpenNotifications={() => setNotificationsOpen(true)}
         />
       )}
@@ -639,13 +676,18 @@ export default function AppShell({ onSignOut }) {
         <UnifiedCalendarsPage
           cards={cards}
           events={events}
+          meetings={meetings}
           clientFilter={clientFilter}
+          initialTab={calendarsTab}
           onCardClick={handleCardClick}
           onAddCalendarPost={handleAddCalendarPost}
           onRemoveFromCalendar={handleRemoveFromCalendar}
           onAddEvent={addEvent}
           onUpdateEvent={updateEvent}
           onDeleteEvent={deleteEvent}
+          onAddMeeting={addMeeting}
+          onUpdateMeeting={updateMeeting}
+          onDeleteMeeting={deleteMeeting}
         />
       )}
 

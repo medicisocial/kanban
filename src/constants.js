@@ -162,6 +162,7 @@ export const EDITOR_TODO_ORDER_KEY = 'medici-social-editor-todo-order';
 export const AM_TODO_ORDER_KEY = 'medici-social-am-todo-order';
 export const ADMIN_TASKS_STORAGE_KEY = 'medici-social-admin-tasks';
 export const EVENTS_STORAGE_KEY = 'medici-social-events';
+export const MEETINGS_STORAGE_KEY = 'medici-social-meetings';
 export const CLIENT_PORTAL_AUTH_STORAGE_KEY = 'medici-client-portal-auth';
 export const CLIENT_PORTAL_PASSWORD_VAULT_KEY = 'medici-client-portal-password-vault';
 
@@ -187,6 +188,32 @@ export function createEvent(overrides = {}) {
     ...overrides,
   };
 }
+
+export function createMeeting(overrides = {}) {
+  return {
+    id: crypto.randomUUID(),
+    title: '',
+    date: '',
+    time: '',
+    endTime: '',
+    client: '',
+    prospectName: '',
+    location: '',
+    notes: '',
+    recurrence: 'none',
+    recurrenceEndDate: '',
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    ...overrides,
+  };
+}
+
+export const MEETING_RECURRENCE_OPTIONS = [
+  { value: 'none', label: 'One-time' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'biweekly', label: 'Every 2 weeks' },
+  { value: 'monthly', label: 'Monthly' },
+];
 
 export function createCard(overrides = {}) {
   return {

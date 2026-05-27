@@ -62,6 +62,7 @@ export default function AdminConsoleLayout({
   clientFilter,
   onClientChange,
   homeNavLabel = 'Overview',
+  navBadges = {},
   children,
 }) {
   const admin = useWorkspaceAdmin({ clientFilter, onClientChange });
@@ -99,6 +100,7 @@ export default function AdminConsoleLayout({
         productTitle="Operations Console"
         subtitle="Internal workspace"
         navSections={navSections}
+        navBadges={navBadges}
         activeTab={activeView}
         onTabChange={onViewChange}
         notificationCount={notificationCount}

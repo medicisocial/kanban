@@ -52,6 +52,7 @@ export function buildWorkspaceHomeSummary({
   showAccountManagerQueue = true,
 }) {
   const personalScope = myWorkOnly && !companyWideView;
+  const companyMetrics = companyWideView || !myWorkOnly;
 
   const matchesClient = (item) =>
     clientFilter === 'all' || item.client === clientFilter;
@@ -66,8 +67,10 @@ export function buildWorkspaceHomeSummary({
   const myInReview = inReview.filter((c) =>
     matchesAccountManagerQueue(c, staffName, clientAccountManagers, personalScope),
   );
-  const toCreate = getToCreateQueueCards(scopedCards, { staffName, personalScope });
-  const editing = companyWideView
+  const toCreate = companyMetrics
+    ? getToCreateQueueCards(scopedCards)
+    : getToCreateQueueCards(scopedCards, { staffName, personalScope: true });
+  const editing = companyMetrics
     ? scopedCards.filter((c) => c.columnId === 'editing')
     : scopedCards.filter((c) => c.columnId === 'editing' && cardScope(c));
   const pendingIdeas = scopedIdeas.filter((i) => i.status === 'pending');
@@ -77,7 +80,7 @@ export function buildWorkspaceHomeSummary({
       isToday(c.shootDate) &&
       c.contentType !== 'Story',
   );
-  const shootsToday = companyWideView
+  const shootsToday = companyMetrics
     ? shootsTodayAll
     : scopedCards.filter(
         (c) =>
@@ -89,7 +92,7 @@ export function buildWorkspaceHomeSummary({
   const scheduledThisWeekAll = scopedCards.filter(
     (c) => c.columnId === 'scheduled' && c.dueDate && isThisWeek(c.dueDate),
   );
-  const scheduledThisWeek = companyWideView
+  const scheduledThisWeek = companyMetrics
     ? scheduledThisWeekAll
     : scopedCards.filter(
         (c) => c.columnId === 'scheduled' && c.dueDate && isThisWeek(c.dueDate) && cardScope(c),
@@ -110,19 +113,25 @@ export function buildWorkspaceHomeSummary({
 
   const includeAccountManagerQueue = !myWorkOnly || showAccountManagerQueue || companyWideView;
   const visibleInReview = includeAccountManagerQueue
-    ? personalScope && staffName
-      ? myInReview
-      : inReview
+    ? companyMetrics
+      ? inReview
+      : personalScope && staffName
+        ? myInReview
+        : inReview
     : [];
   const visibleNeedsScheduling = includeAccountManagerQueue
-    ? personalScope && staffName
-      ? needsScheduling
-      : needsSchedulingAll
+    ? companyMetrics
+      ? needsSchedulingAll
+      : personalScope && staffName
+        ? needsScheduling
+        : needsSchedulingAll
     : [];
   const visibleNeedPostDate = includeAccountManagerQueue
-    ? personalScope && staffName
-      ? needPostDate
-      : needPostDateAll
+    ? companyMetrics
+      ? needPostDateAll
+      : personalScope && staffName
+        ? needPostDate
+        : needPostDateAll
     : [];
 
   return {
@@ -148,6 +157,30 @@ export function buildWorkspaceHomeSummary({
   };
 }
 
+export function buildNavBadgeCounts(summary, syncTotal = 0) {
+  const home =
+    summary.inReviewCount +
+    summary.needPostDateCount +
+    summary.needsSchedulingCount +
+    summary.toCreateCount +
+    summary.editingCount +
+    summary.pendingIdeasCount +
+    summary.openAdminTasksCount +
+    syncTotal;
+  const todo =
+    summary.toCreateCount +
+    summary.editingCount +
+    summary.needPostDateCount +
+    summary.needsSchedulingCount +
+    summary.inReviewCount;
+
+  const badges = {};
+  if (home > 0) badges.home = home;
+  if (todo > 0) badges.todo = todo;
+  if (summary.pendingIdeasCount > 0) badges.ideas = summary.pendingIdeasCount;
+  return badges;
+}
+
 function getTimeOfDayGreeting(date = new Date()) {
   const hour = date.getHours();
   if (hour < 12) return 'Good morning';
@@ -164,13 +197,27 @@ export function buildMyWorkGreeting(firstName, summary) {
   const activeCount = pipelineCount + summary.pendingIdeasCount;
 
   if (summary.companyWideView) {
+    const todayParts = [];
+    if (summary.meetingsTodayCount > 0) {
+      todayParts.push(
+        `${summary.meetingsTodayCount} meeting${summary.meetingsTodayCount === 1 ? '' : 's'}`,
+      );
+    }
+    if (summary.shootsTodayCount > 0) {
+      todayParts.push(
+        `${summary.shootsTodayCount} shoot${summary.shootsTodayCount === 1 ? '' : 's'}`,
+      );
+    }
+
     return {
-      eyebrow: 'My work',
+      eyebrow: 'Overview',
       title,
       description:
-        activeCount > 0 || summary.shootsTodayCount > 0
-          ? 'Company-wide production at a glance — pipeline, reviews, and schedules.'
-          : "You're all caught up for now — nice work. Here's the full picture when something new comes in.",
+        todayParts.length > 0
+          ? `Company-wide view — ${todayParts.join(' and ')} today, plus pipeline and reviews across all clients.`
+          : activeCount > 0
+            ? 'Company-wide production at a glance — pipeline, reviews, and schedules.'
+            : "You're all caught up for now — nice work. Here's the full picture when something new comes in.",
     };
   }
 

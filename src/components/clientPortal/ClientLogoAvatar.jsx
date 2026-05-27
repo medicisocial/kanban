@@ -10,6 +10,7 @@ const SIZE_PX = {
   '2xl': 88,
   '3xl': 128,
   sidebar: 52,
+  compact: 40,
   header: 36,
 };
 
@@ -22,6 +23,7 @@ const TEXT_CLASS = {
   '2xl': 'text-base',
   '3xl': 'text-lg',
   sidebar: 'text-sm',
+  compact: 'text-[10px]',
   header: 'text-[11px]',
 };
 

@@ -1,51 +1,92 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { IconBell, IconClose, IconMenu, IconSettings } from './ClientPortalIcons';
+import { IconBell, IconChevronLeft, IconClose, IconMenu, IconSettings } from './ClientPortalIcons';
 import ClientLogoAvatar from './ClientLogoAvatar';
+import PortalSidebarNav from './PortalSidebarNav';
 import { clientInitials } from './clientPortalUi';
 import { normalizeClientLogo } from '../../utils/clientLogo';
+
+const SIDEBAR_COLLAPSED_KEY = 'portal-sidebar-collapsed';
 
 function SidebarBrand({
   brandLayout = false,
   brandName,
-  brandColor,
   brandLogo,
-  resolvedSidebarLogo,
   sidebarLogoUrl,
   onSidebarLogoClick,
-  productKicker,
   productTitle,
   subtitle,
-  subtitleColor,
   sidebarLogoMessage,
   sidebarLogoMessageIsError,
   onCloseNav,
   showClose,
+  collapsed = false,
 }) {
+  const staffLogo = normalizeClientLogo(sidebarLogoUrl);
+  const logoSize = collapsed ? 'compact' : 'sidebar';
+
+  const renderStaffLogo = () => {
+    if (onSidebarLogoClick) {
+      return (
+        <button
+          type="button"
+          onClick={onSidebarLogoClick}
+          title="Edit workspace logo"
+          className="group relative shrink-0 transition-opacity duration-350 hover:opacity-90"
+        >
+          <ClientLogoAvatar
+            logo={staffLogo}
+            name={productTitle || 'Medici Social'}
+            size={logoSize}
+            initialsVariant="neutral"
+            ringClassName="ring-1 ring-white/[0.06]"
+          />
+          {!collapsed && (
+            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/75 text-[9px] font-medium text-white opacity-0 transition-opacity duration-350 group-hover:opacity-100">
+              Edit
+            </span>
+          )}
+        </button>
+      );
+    }
+
+    return (
+      <ClientLogoAvatar
+        logo={staffLogo}
+        name={productTitle || 'Medici Social'}
+        size={logoSize}
+        initialsVariant="neutral"
+        ringClassName="ring-1 ring-white/[0.06]"
+      />
+    );
+  };
+
   if (brandLayout) {
     return (
-      <div className="border-b border-white/[0.06] px-5 py-5 lg:px-6">
-        <div className="flex items-center gap-3.5">
+      <div className={`portal-sidebar-brand px-3 py-4 ${collapsed ? 'lg:px-2' : 'lg:px-5'}`}>
+        <div className={`flex items-center ${collapsed ? 'justify-center lg:justify-center' : 'gap-3'}`}>
           <ClientLogoAvatar
             logo={brandLogo}
             name={brandName}
-            size="sidebar"
+            size={logoSize}
             initialsVariant="neutral"
-            ringClassName="ring-1 ring-white/[0.08]"
+            ringClassName="ring-1 ring-white/[0.06]"
           />
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[15px] font-semibold leading-tight tracking-tight text-white">
-              {brandName}
-            </h1>
-            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.22em] text-white/35">
-              Client workspace
-            </p>
-          </div>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-[15px] font-semibold leading-tight tracking-tight text-white">
+                {brandName}
+              </h1>
+              {subtitle && (
+                <p className="mt-0.5 hidden text-xs text-white/30 lg:block">{subtitle}</p>
+              )}
+            </div>
+          )}
           {showClose && (
             <button
               type="button"
               onClick={onCloseNav}
-              className="flex h-9 w-9 shrink-0 items-center justify-center text-white/45 transition-colors duration-300 hover:text-white lg:hidden"
+              className="flex h-9 w-9 shrink-0 items-center justify-center text-white/45 transition-colors duration-350 hover:text-white lg:hidden"
               aria-label="Close menu"
             >
               <IconClose />
@@ -56,76 +97,32 @@ function SidebarBrand({
     );
   }
 
-  const staffLogo = normalizeClientLogo(sidebarLogoUrl);
-
   return (
-    <div className="border-b border-white/[0.06] px-5 py-5 lg:px-6">
-      <div className="flex items-center gap-3.5">
-        {onSidebarLogoClick ? (
-          <button
-            type="button"
-            onClick={onSidebarLogoClick}
-            title="Edit workspace logo"
-            className="group relative shrink-0 transition-opacity duration-300 hover:opacity-90"
-          >
-            {staffLogo ? (
-              <ClientLogoAvatar
-                logo={staffLogo}
-                name={productTitle}
-                size="sidebar"
-                initialsVariant="neutral"
-                ringClassName="ring-1 ring-white/[0.08]"
-              />
-            ) : (
-              <ClientLogoAvatar
-                name="Medici Social"
-                size="sidebar"
-                initialsVariant="neutral"
-                ringClassName="ring-1 ring-white/[0.08]"
-              />
+    <div className={`portal-sidebar-brand px-3 py-4 ${collapsed ? 'lg:px-2' : 'lg:px-5'}`}>
+      <div className={`flex items-center ${collapsed ? 'justify-center lg:justify-center' : 'gap-3'}`}>
+        {renderStaffLogo()}
+        {!collapsed && (
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-[15px] font-semibold leading-tight tracking-tight text-white">
+              {productTitle}
+            </h1>
+            {subtitle && (
+              <p className="mt-0.5 hidden text-xs text-white/30 lg:block">{subtitle}</p>
             )}
-            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/75 text-[9px] font-medium uppercase tracking-[0.18em] text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-              Edit
-            </span>
-          </button>
-        ) : staffLogo ? (
-          <ClientLogoAvatar
-            logo={staffLogo}
-            name={productTitle}
-            size="sidebar"
-            initialsVariant="neutral"
-            ringClassName="ring-1 ring-white/[0.08]"
-          />
-        ) : (
-          <ClientLogoAvatar
-            name="Medici Social"
-            size="sidebar"
-            initialsVariant="neutral"
-            ringClassName="ring-1 ring-white/[0.08]"
-          />
+            {sidebarLogoMessage && (
+              <p
+                className={`mt-1.5 text-[10px] tracking-wide ${sidebarLogoMessageIsError ? 'text-rose-300/90' : 'text-emerald-300/90'}`}
+              >
+                {sidebarLogoMessage}
+              </p>
+            )}
+          </div>
         )}
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-[15px] font-semibold leading-tight tracking-tight text-white">
-            {productTitle}
-          </h1>
-          {subtitle && (
-            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.22em] text-white/35">
-              {subtitle}
-            </p>
-          )}
-          {sidebarLogoMessage && (
-            <p
-              className={`mt-1.5 text-[10px] tracking-wide ${sidebarLogoMessageIsError ? 'text-rose-300/90' : 'text-emerald-300/90'}`}
-            >
-              {sidebarLogoMessage}
-            </p>
-          )}
-        </div>
         {showClose && (
           <button
             type="button"
             onClick={onCloseNav}
-            className="flex h-9 w-9 shrink-0 items-center justify-center text-white/45 transition-colors duration-300 hover:text-white lg:hidden"
+            className="flex h-9 w-9 shrink-0 items-center justify-center text-white/45 transition-colors duration-350 hover:text-white lg:hidden"
             aria-label="Close menu"
           >
             <IconClose />
@@ -143,6 +140,7 @@ export default function EnterprisePortalLayout({
   subtitleColor,
   navItems,
   navSections,
+  navBadges = {},
   activeTab,
   onTabChange,
   notificationCount = 0,
@@ -170,6 +168,13 @@ export default function EnterprisePortalLayout({
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
   const [internalNotificationsOpen, setInternalNotificationsOpen] = useState(false);
   const [profileMenuStyle, setProfileMenuStyle] = useState(null);
   const [notificationMenuStyle, setNotificationMenuStyle] = useState(null);
@@ -178,9 +183,17 @@ export default function EnterprisePortalLayout({
   const notificationsOpen = controlledNotificationsOpen ?? internalNotificationsOpen;
   const setNotificationsOpen = onNotificationsOpenChange ?? setInternalNotificationsOpen;
   const initials = clientInitials(profileLabel || brandName || 'MS');
-  const resolvedSidebarLogo = sidebarLogoUrl || '/medici-social-logo.png';
   const resolvedProfileLogo = profileLogo ?? profileImageUrl;
   const normalizedProfileLogo = normalizeClientLogo(resolvedProfileLogo);
+  const sidebarCompact = sidebarCollapsed && !navOpen;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, sidebarCollapsed ? '1' : '0');
+    } catch {
+      /* ignore storage errors */
+    }
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     if (!profileOpen) {
@@ -356,64 +369,52 @@ export default function EnterprisePortalLayout({
     navSections ||
     (navItems ? [{ label: 'Workspace', items: navItems }] : []);
 
-  const renderNavButton = ({ id, label, Icon }) => {
-    const active = activeTab === id;
-    return (
-      <button
-        type="button"
-        onClick={() => handleNav(id)}
-        className={`portal-nav-item flex w-full items-center gap-3 border-l-2 py-2.5 pl-3 pr-2 text-left text-sm ${
-          active
-            ? 'border-white text-white'
-            : 'border-transparent text-white/50 hover:border-white/25 hover:text-white/85'
-        }`}
-      >
-        <Icon className={`h-4 w-4 shrink-0 transition-opacity duration-300 ${active ? 'opacity-100' : 'opacity-40'}`} />
-        <span className="font-medium tracking-tight">{label}</span>
-      </button>
-    );
-  };
-
   const sidebarContent = (
     <>
       <SidebarBrand
         brandLayout={brandLayout}
         brandName={brandName}
-        brandColor={brandColor}
         brandLogo={brandLogo}
-        resolvedSidebarLogo={resolvedSidebarLogo}
         sidebarLogoUrl={sidebarLogoUrl}
         onSidebarLogoClick={onSidebarLogoClick}
-        productKicker={productKicker}
         productTitle={productTitle}
         subtitle={subtitle}
-        subtitleColor={subtitleColor}
         sidebarLogoMessage={sidebarLogoMessage}
         sidebarLogoMessageIsError={sidebarLogoMessageIsError}
         onCloseNav={() => setNavOpen(false)}
         showClose={navOpen}
+        collapsed={sidebarCompact}
       />
 
-      <nav className="flex-1 overflow-y-auto px-4 py-6 lg:px-5">
-        {sections.map((section, index) => (
-          <div key={section.label || index} className={index > 0 ? 'mt-6' : ''}>
-            {section.label && (
-              <p className="mb-3 px-3 text-[10px] font-medium uppercase tracking-[0.28em] text-white/30">
-                {section.label}
-              </p>
-            )}
-            <ul className="space-y-1">
-              {section.items.map((item) => (
-                <li key={item.id}>{renderNavButton(item)}</li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </nav>
+      <PortalSidebarNav
+        sections={sections}
+        activeTab={activeTab}
+        navBadges={navBadges}
+        sidebarCompact={sidebarCompact}
+        navOpen={navOpen}
+        onNavigate={handleNav}
+      />
 
-      {sidebarFooter && (
-        <div className="shrink-0 border-t border-white/[0.06] px-4 py-4 lg:px-5">{sidebarFooter}</div>
-      )}
+      <div className={`shrink-0 space-y-1 border-t border-white/[0.04] py-3 ${sidebarCompact ? 'px-2' : 'px-3 lg:px-4'}`}>
+        {sidebarFooter && (
+          <div className={sidebarCompact ? '[&_.portal-sidebar-footer-label]:hidden' : ''}>
+            {sidebarFooter}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+          className="portal-sidebar-collapse-btn hidden lg:flex"
+          data-collapsed={sidebarCompact}
+          aria-label={sidebarCompact ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={sidebarCompact ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          <IconChevronLeft className="h-4 w-4" />
+          {!sidebarCompact && (
+            <span className="text-xs font-medium text-white/45">Collapse</span>
+          )}
+        </button>
+      </div>
     </>
   );
 
@@ -433,8 +434,10 @@ export default function EnterprisePortalLayout({
       )}
 
       <aside
-        className={`portal-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(288px,88vw)] flex-col border-r border-white/[0.06] bg-black/90 backdrop-blur-xl transition-transform duration-300 ease-out lg:relative lg:z-auto lg:w-[272px] lg:shrink-0 lg:translate-x-0 ${
-          navOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`portal-sidebar fixed inset-y-0 left-0 z-50 flex flex-col backdrop-blur-xl lg:relative lg:z-auto lg:shrink-0 lg:translate-x-0 ${
+          navOpen
+            ? 'w-[min(252px,88vw)] translate-x-0'
+            : `-translate-x-full ${sidebarCompact ? 'lg:w-[68px]' : 'lg:w-[252px]'}`
         }`}
       >
         {sidebarContent}

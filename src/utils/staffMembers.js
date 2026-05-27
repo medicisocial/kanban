@@ -1,4 +1,5 @@
 import { memberMatchesRole, loadTeamMembersFromStorage } from './teamMembers';
+import { usesPersonalWorkspaceView } from './staffAuth';
 
 export function resolveStaffMemberName(session, teamMembers) {
   if (!session?.username) return '';
@@ -36,6 +37,13 @@ export function staffHasLeadershipWorkspaceAccess(session, teamMembers) {
     staffMemberHasRole(session, teamMembers, 'Owner') ||
     staffMemberHasRole(session, teamMembers, 'Creative Director')
   );
+}
+
+/** Owner, Creative Director, and shared ops login see company-wide overview metrics. */
+export function staffGetsCompanyWideOverview(session, teamMembers) {
+  if (!session?.username) return false;
+  if (!usesPersonalWorkspaceView(session)) return true;
+  return staffHasLeadershipWorkspaceAccess(session, teamMembers);
 }
 
 export function staffHasAccountManagerQueueAccess(session, teamMembers) {

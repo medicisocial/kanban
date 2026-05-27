@@ -62,6 +62,27 @@ export default function ClientHubPortal({ onSignOut }) {
     return pendingIdeas + pendingReview + setup;
   }, [ideas, cards, brand, profileContacts, profileSocialLogins, clientLogo]);
 
+  const navBadges = useMemo(() => {
+    const tasks = buildClientPortalTasks({
+      brand,
+      ideas,
+      cards,
+      contacts: profileContacts,
+      socialLogins: profileSocialLogins,
+      clientLogo,
+    });
+    const pendingIdeas = ideas.filter((idea) => idea.client === brand && idea.status === 'pending').length;
+    const pendingReview = cards.filter(
+      (card) => card.client === brand && card.columnId === 'in-review',
+    ).length;
+    const badges = {};
+    const homeCount = tasks.actionItems.length + tasks.setupCount;
+    if (homeCount > 0) badges.home = homeCount;
+    if (pendingIdeas > 0) badges.ideas = pendingIdeas;
+    if (pendingReview > 0) badges.review = pendingReview;
+    return badges;
+  }, [ideas, cards, brand, profileContacts, profileSocialLogins, clientLogo]);
+
   const handleIdeaResponse = (response) => queueCloudResponse('idea', response);
   const handleContentResponse = (response) => queueCloudResponse('content', response);
 
@@ -100,6 +121,7 @@ export default function ClientHubPortal({ onSignOut }) {
       onRefresh={() => refreshPortalData()}
       onSignOut={handleSignOut}
       notificationCount={notificationCount}
+      navBadges={navBadges}
     >
       {loadingData && !portalData && (
         <p className="py-12 text-center text-sm text-white/45">Loading your workspace…</p>

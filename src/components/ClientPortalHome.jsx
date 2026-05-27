@@ -10,8 +10,12 @@ const panelActionBtnClass = taskActionBtnClass;
 function StatCard({ label, value, onClick }) {
   const inner = (
     <>
-      <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-white">{value}</p>
+      <p className="portal-stat-card-label text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">
+        {label}
+      </p>
+      <p className="portal-stat-card-value mt-2 text-3xl font-semibold tabular-nums tracking-tight text-white">
+        {value}
+      </p>
     </>
   );
 
@@ -20,14 +24,14 @@ function StatCard({ label, value, onClick }) {
       <button
         type="button"
         onClick={onClick}
-        className={`${surfacePanelClass} p-4 text-left transition-colors hover:border-white/15 hover:bg-white/[0.04]`}
+        className="portal-stat-card portal-stat-card-interactive p-4 text-left"
       >
         {inner}
       </button>
     );
   }
 
-  return <div className={`${surfacePanelClass} p-4`}>{inner}</div>;
+  return <div className="portal-stat-card p-4">{inner}</div>;
 }
 
 export default function ClientPortalHome({

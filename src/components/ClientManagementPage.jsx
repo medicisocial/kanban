@@ -17,6 +17,7 @@ import ClientAvatar from './ClientAvatar';
 import ClientLogoAvatar from './clientPortal/ClientLogoAvatar';
 import LogoCropEditor from './clientPortal/LogoCropEditor';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
+import PortalNavPicker, { PortalNavPickerItem } from './clientPortal/PortalNavPicker';
 import ClientPortalUsersEditor from './clientPortal/ClientPortalUsersEditor';
 import ClientContactsEditor from './clientPortal/ClientContactsEditor';
 import ClientSocialLoginsEditor from './clientPortal/ClientSocialLoginsEditor';
@@ -205,32 +206,25 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
       </ClientPortalSectionHeader>
 
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-        <aside className="lg:w-56 lg:shrink-0">
-          <p className="mb-3 px-1 text-[10px] font-medium uppercase tracking-[0.28em] text-white/30">
-            Select client
-          </p>
-          <ul className="space-y-1">
+        <aside className="lg:w-60 lg:shrink-0">
+          <PortalNavPicker label="Select client">
             {profileClients.map((client) => {
               const active = client === selectedClient;
               const clientColor = getClientColor(client);
               return (
-                <li key={client}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedClient(client)}
-                    className={`portal-nav-item flex w-full items-center gap-3 border-l-2 py-2.5 pl-3 pr-2 text-left text-sm ${
-                      active
-                        ? 'border-white text-white'
-                        : 'border-transparent text-white/50 hover:border-white/25 hover:text-white/85'
-                    }`}
-                  >
-                    <ClientAvatar client={client} size="sm" color={clientColor} logoUrl={getClientLogo(client)} />
-                    <span className="min-w-0 truncate font-medium tracking-tight">{client}</span>
-                  </button>
-                </li>
+                <PortalNavPickerItem
+                  key={client}
+                  active={active}
+                  onClick={() => setSelectedClient(client)}
+                >
+                  <ClientAvatar client={client} size="sm" color={clientColor} logoUrl={getClientLogo(client)} />
+                  <span className="portal-nav-label min-w-0 flex-1 truncate font-medium tracking-tight">
+                    {client}
+                  </span>
+                </PortalNavPickerItem>
               );
             })}
-          </ul>
+          </PortalNavPicker>
         </aside>
 
         <div className="min-w-0 flex-1">

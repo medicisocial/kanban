@@ -1,7 +1,8 @@
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import { buildWorkspaceHomeSummary, buildMyWorkGreeting } from '../utils/workspaceHome';
-import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
-import { formatDate } from '../utils';
+import { buildTodayTimeline, buildTodayHeadline } from '../utils/todayTimeline';
+import { btnSecondaryClass } from './clientPortal/clientPortalUi';
+import { formatTime } from '../utils';
 
 const panelActionBtnClass =
   'inline-flex shrink-0 items-center justify-center rounded-sm bg-white px-3 py-1.5 text-[10px] font-medium normal-case tracking-normal text-black transition-opacity duration-300 hover:opacity-75';
@@ -22,33 +23,132 @@ function PanelHeaderAction({ label, onClick, prominent = false }) {
   );
 }
 
-function StatCard({ label, value, onClick }) {
+function StatCard({ label, value, onClick, compact = false, fill = false }) {
   const inner = (
     <>
-      <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-white">{value}</p>
+      <p className="portal-stat-card-label text-[10px] font-medium uppercase tracking-[0.16em] text-white/50">
+        {label}
+      </p>
+      <p className="portal-stat-card-value mt-2 text-3xl font-semibold tabular-nums tracking-tight text-white">
+        {value}
+      </p>
     </>
   );
 
+  const className = compact
+    ? `portal-stat-card portal-stat-card-compact portal-stat-card-interactive text-left${fill ? ' overview-stat-card-fill' : ''}`
+    : 'portal-stat-card portal-stat-card-interactive p-4 text-left';
+
   if (onClick) {
     return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`${surfacePanelClass} p-4 text-left transition-colors hover:border-white/15 hover:bg-white/[0.04]`}
-      >
+      <button type="button" onClick={onClick} className={className}>
         {inner}
       </button>
     );
   }
 
-  return <div className={`${surfacePanelClass} p-4`}>{inner}</div>;
+  return (
+    <div className={`portal-stat-card ${compact ? `portal-stat-card-compact${fill ? ' overview-stat-card-fill' : ''}` : 'p-4'}`}>
+      {inner}
+    </div>
+  );
+}
+
+function RolePanel({ label, children, wide = false, grid = false }) {
+  return (
+    <div className={`overview-role-panel ${wide ? 'overview-role-panel-wide' : ''}`}>
+      <p className="overview-role-group-label">{label}</p>
+      <div className={grid ? 'overview-role-panel-items-grid' : 'overview-role-panel-items'}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function formatTimelineTime(time, endTime) {
+  if (!time) return 'Any time';
+  if (endTime) return `${formatTime(time)} – ${formatTime(endTime)}`;
+  return formatTime(time);
+}
+
+function TodayTimelineItem({ item, onOpenMeeting, onOpenCard }) {
+  const handleClick = () => {
+    if (item.kind === 'meeting') onOpenMeeting?.(item.meeting);
+    else onOpenCard?.(item.card);
+  };
+
+  return (
+    <button type="button" onClick={handleClick} className="overview-timeline-item">
+      <div className="overview-timeline-time">{formatTimelineTime(item.time, item.endTime)}</div>
+      <div className="overview-timeline-marker" aria-hidden>
+        <span className={`overview-timeline-dot overview-timeline-dot-${item.kind}`} />
+      </div>
+      <div className="overview-timeline-content">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-medium text-white">{item.title}</p>
+          <span className={`overview-timeline-kind overview-timeline-kind-${item.kind}`}>
+            {item.kind === 'meeting' ? 'Meeting' : 'Shoot'}
+          </span>
+        </div>
+        {item.subtitle && <p className="mt-0.5 text-xs text-white/45">{item.subtitle}</p>}
+      </div>
+    </button>
+  );
+}
+
+function OverviewTodayPanel({ timeline, onOpenMeeting, onOpenCard, onNavigate }) {
+  const todayLabel = new Date(`${timeline.today}T12:00:00`).toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  return (
+    <div className="overview-today-panel mb-8">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/38">Today</p>
+          <h3 className="mt-1 text-base font-semibold tracking-tight text-white">{todayLabel}</h3>
+          <p className="mt-1 text-sm text-white/55">
+            {buildTodayHeadline(timeline.meetingCount, timeline.shootCount)}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {timeline.meetingCount > 0 && (
+            <PanelHeaderAction
+              label={`Meetings (${timeline.meetingCount})`}
+              onClick={() => onNavigate('calendars', { calendarsTab: 'meetings' })}
+            />
+          )}
+          {timeline.shootCount > 0 && (
+            <PanelHeaderAction
+              label={`Shoots (${timeline.shootCount})`}
+              prominent={timeline.meetingCount === 0}
+              onClick={() => onNavigate('shoot')}
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="overview-timeline">
+        {timeline.items.map((item) => (
+          <TodayTimelineItem
+            key={item.id}
+            item={item}
+            onOpenMeeting={onOpenMeeting}
+            onOpenCard={onOpenCard}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function WorkspaceHomePage({
   cards,
   ideas,
   adminTasks,
+  meetings = [],
   clientFilter,
   syncTotal,
   staffName = '',
@@ -58,6 +158,7 @@ export default function WorkspaceHomePage({
   showAccountManagerQueue = true,
   onNavigate,
   onOpenCard,
+  onOpenMeeting,
   onOpenNotifications,
 }) {
   const summary = buildWorkspaceHomeSummary({
@@ -73,9 +174,20 @@ export default function WorkspaceHomePage({
     showAccountManagerQueue,
   });
 
+  const todayTimeline = buildTodayTimeline({
+    meetings,
+    shoots: summary.shootsToday,
+    clientFilter,
+  });
+
+  const summaryWithToday = {
+    ...summary,
+    meetingsTodayCount: todayTimeline.meetingCount,
+  };
+
   const firstName = staffName.trim().split(/\s+/)[0] || '';
 
-  const personalGreeting = myWorkOnly ? buildMyWorkGreeting(firstName, summary) : null;
+  const personalGreeting = myWorkOnly ? buildMyWorkGreeting(firstName, summaryWithToday) : null;
 
   const title = personalGreeting?.title ?? 'Overview';
 
@@ -85,7 +197,68 @@ export default function WorkspaceHomePage({
       ? 'Company-wide production at a glance — pipeline, reviews, and schedules.'
       : `Production at a glance for ${clientFilter}.`);
 
-  const showAmQueue = !myWorkOnly || summary.showAccountManagerQueue;
+  const showAmQueue = !myWorkOnly || summaryWithToday.showAccountManagerQueue;
+
+  const pipelineGroups = [
+    {
+      label: 'Client',
+      items: [
+        {
+          label: 'Pending ideas',
+          value: summary.pendingIdeasCount,
+          onClick: () => onNavigate('ideas'),
+        },
+      ],
+    },
+    {
+      label: 'Content creator',
+      items: [
+        {
+          label: 'To create',
+          value: summary.toCreateCount,
+          onClick: () => onNavigate('todo', { tasksRole: 'creator' }),
+        },
+      ],
+    },
+    {
+      label: 'Editor',
+      items: [
+        {
+          label: 'Editing',
+          value: summary.editingCount,
+          onClick: () => onNavigate('todo', { tasksRole: 'editor' }),
+        },
+      ],
+    },
+  ];
+
+  if (showAmQueue) {
+    pipelineGroups.push({
+      label: 'Account manager',
+      items: [
+        {
+          label: 'In review',
+          value: summary.inReviewCount,
+          onClick: () => onNavigate('todo', { tasksRole: 'account' }),
+        },
+        {
+          label: 'Scheduling',
+          value: summary.needsSchedulingCount,
+          onClick: () => onNavigate('todo', { tasksRole: 'account' }),
+        },
+        {
+          label: 'Post date',
+          value: summary.needPostDateCount,
+          onClick: () => onNavigate('todo', { tasksRole: 'account' }),
+        },
+      ],
+    });
+  }
+
+  const corePipelineGroups = pipelineGroups.filter((group) => group.label !== 'Account manager');
+  const accountManagerGroup = pipelineGroups.find((group) => group.label === 'Account manager');
+
+  const showTodayPanel = todayTimeline.items.length > 0;
 
   return (
     <section>
@@ -95,278 +268,63 @@ export default function WorkspaceHomePage({
         eyebrow={personalGreeting?.eyebrow}
       />
 
-      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-6">
-        {summary.syncTotal > 0 && (
-          <StatCard
-            label="Client sync"
-            value={summary.syncTotal}
-            onClick={onOpenNotifications}
-          />
-        )}
-        <StatCard
-          label="To create"
-          value={summary.toCreateCount}
-          onClick={() => onNavigate('todo', { tasksRole: 'creator' })}
-        />
-        <StatCard
-          label="Editing"
-          value={summary.editingCount}
-          onClick={() => onNavigate('todo', { tasksRole: 'editor' })}
-        />
-        {showAmQueue && (
-          <>
-            <StatCard
-              label="In review"
-              value={summary.inReviewCount}
-              onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-            />
-            <StatCard
-              label="Need scheduling"
-              value={summary.needsSchedulingCount}
-              onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-            />
-            <StatCard
-              label="Need post date"
-              value={summary.needPostDateCount}
-              onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-            />
-          </>
-        )}
-        <StatCard label="Pending ideas" value={summary.pendingIdeasCount} onClick={() => onNavigate('ideas')} />
-        <StatCard label="Shoots today" value={summary.shootsTodayCount} onClick={() => onNavigate('shoot')} />
-      </div>
+      {summary.syncTotal > 0 && (
+        <button
+          type="button"
+          onClick={onOpenNotifications}
+          className="overview-sync-banner mb-6 flex w-full items-center justify-between gap-3 text-left transition-colors hover:border-white/16 hover:bg-white/[0.04]"
+        >
+          <span className="text-sm text-white/75">
+            {summary.syncTotal} client portal response{summary.syncTotal === 1 ? '' : 's'} ready to apply
+          </span>
+          <span className="shrink-0 text-[10px] font-medium uppercase tracking-[0.16em] text-white/45">
+            Review
+          </span>
+        </button>
+      )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className={`${surfacePanelClass} p-5`}>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold text-white">Today&apos;s shoots</h3>
-            <PanelHeaderAction
-              label={
-                summary.shootsTodayCount > 0
-                  ? `View shoots (${summary.shootsTodayCount})`
-                  : 'Scheduled shoots'
-              }
-              prominent={summary.shootsTodayCount > 0}
-              onClick={() => onNavigate('shoot')}
-            />
-          </div>
-          {summary.shootsToday.length === 0 ? (
-            <div className="text-center py-6">
-              <p className="text-sm text-white/40">No shoots scheduled for today.</p>
-              <button type="button" onClick={() => onNavigate('shoot')} className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}>
-                Open scheduled shoots
-              </button>
-            </div>
-          ) : (
-            <ul className="space-y-2">
-              {summary.shootsToday.map((card) => (
-                <li key={card.id}>
-                  <button
-                    type="button"
-                    onClick={() => onOpenCard?.(card)}
-                    className="w-full border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-left transition hover:border-white/12"
-                  >
-                    <p className="text-sm font-medium text-white">{card.title}</p>
-                    <p className="mt-0.5 text-xs text-white/45">
-                      {card.client} · {card.contentType}
-                      {card.shootTime ? ` · ${card.shootTime}` : ''}
-                    </p>
-                  </button>
-                </li>
+      <div className="mb-8 space-y-4">
+        <div className="overview-pipeline-grid">
+          {corePipelineGroups.map((group) => (
+            <RolePanel key={group.label} label={group.label}>
+              {group.items.map((item) => (
+                <StatCard
+                  key={item.label}
+                  compact
+                  fill
+                  label={item.label}
+                  value={item.value}
+                  onClick={item.onClick}
+                />
               ))}
-            </ul>
-          )}
+            </RolePanel>
+          ))}
         </div>
 
-        {showAmQueue && (
-          <div className={`${surfacePanelClass} p-5`}>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-white">Awaiting client review</h3>
-              <PanelHeaderAction
-                label={
-                  summary.inReviewCount > 0
-                    ? `Review posts (${summary.inReviewCount})`
-                    : 'Account manager tasks'
-                }
-                prominent={summary.inReviewCount > 0}
-                onClick={() => onNavigate('todo', { tasksRole: 'account' })}
+        {accountManagerGroup && (
+          <RolePanel label={accountManagerGroup.label} wide grid>
+            {accountManagerGroup.items.map((item) => (
+              <StatCard
+                key={item.label}
+                compact
+                fill
+                label={item.label}
+                value={item.value}
+                onClick={item.onClick}
               />
-            </div>
-            {summary.inReview.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-sm text-white/40">Nothing in client review right now.</p>
-                <button
-                  type="button"
-                  onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-                  className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}
-                >
-                  Open account manager tasks
-                </button>
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {summary.inReview.map((card) => (
-                  <li key={card.id}>
-                    <button
-                      type="button"
-                      onClick={() => onOpenCard?.(card)}
-                      className="w-full border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-left transition hover:border-white/12"
-                    >
-                      <p className="text-sm font-medium text-white">{card.title}</p>
-                      <p className="mt-0.5 text-xs text-white/45">{card.client} · {card.contentType}</p>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+            ))}
+          </RolePanel>
         )}
-
-        {showAmQueue && (
-          <div className={`${surfacePanelClass} p-5`}>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-white">Need post date</h3>
-              <PanelHeaderAction
-                label={
-                  summary.needPostDateCount > 0
-                    ? `Set post dates (${summary.needPostDateCount})`
-                    : 'Account manager tasks'
-                }
-                prominent={summary.needPostDateCount > 0}
-                onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-              />
-            </div>
-            {summary.needPostDate.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-sm text-white/40">All pipeline cards have a target post date.</p>
-                <button
-                  type="button"
-                  onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-                  className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}
-                >
-                  Open account manager tasks
-                </button>
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {summary.needPostDate.map((card) => (
-                  <li key={card.id}>
-                    <button
-                      type="button"
-                      onClick={() => onOpenCard?.(card)}
-                      className="w-full border border-amber-500/20 bg-amber-500/[0.03] px-3 py-2.5 text-left transition hover:border-amber-500/30"
-                    >
-                      <p className="text-sm font-medium text-white">{card.title}</p>
-                      <p className="mt-0.5 text-xs text-white/45">
-                        {card.client} · {card.contentType} · Set target post date
-                      </p>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-
-        {showAmQueue && (
-          <div className={`${surfacePanelClass} p-5`}>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-white">Needs scheduling</h3>
-              <PanelHeaderAction
-                label={
-                  summary.needsSchedulingCount > 0
-                    ? `Schedule posts (${summary.needsSchedulingCount})`
-                    : 'Account manager tasks'
-                }
-                prominent={summary.needsSchedulingCount > 0}
-                onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-              />
-            </div>
-            {summary.needsScheduling.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-sm text-white/40">No approved posts waiting to be scheduled.</p>
-                <button
-                  type="button"
-                  onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-                  className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}
-                >
-                  Open account manager tasks
-                </button>
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {summary.needsScheduling.map((card) => (
-                  <li key={card.id}>
-                    <button
-                      type="button"
-                      onClick={() => onOpenCard?.(card)}
-                      className="w-full border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-left transition hover:border-white/12"
-                    >
-                      <p className="text-sm font-medium text-white">{card.title}</p>
-                      <p className="mt-0.5 text-xs text-white/45">
-                        {card.client} · {card.contentType}
-                        {card.dueDate ? ` · Plan ${formatDate(card.dueDate)}` : ''}
-                      </p>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-
-        <div className={`${surfacePanelClass} p-5 lg:col-span-2`}>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold text-white">Scheduled this week</h3>
-            <PanelHeaderAction
-              label={
-                summary.scheduledThisWeekCount > 0
-                  ? `View calendar (${summary.scheduledThisWeekCount})`
-                  : 'Calendars'
-              }
-              prominent={summary.scheduledThisWeekCount > 0}
-              onClick={() => onNavigate('calendars')}
-            />
-          </div>
-          {summary.scheduledThisWeek.length === 0 ? (
-            <div className="text-center py-6">
-              <p className="text-sm text-white/40">No posts scheduled this week.</p>
-              <button type="button" onClick={() => onNavigate('calendars')} className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}>
-                Open calendars
-              </button>
-            </div>
-          ) : (
-            <ul className="grid gap-2 sm:grid-cols-2">
-              {summary.scheduledThisWeek.map((card) => (
-                <li key={card.id}>
-                  <button
-                    type="button"
-                    onClick={() => onOpenCard?.(card)}
-                    className="w-full border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-left transition hover:border-white/12"
-                  >
-                    <p className="text-sm font-medium text-white">{card.title}</p>
-                    <p className="mt-0.5 text-xs text-white/45">
-                      {card.client} · {formatDate(card.dueDate)}
-                    </p>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
       </div>
 
-      <div className="mt-8 flex flex-wrap gap-2">
-        <button type="button" onClick={() => onNavigate('board')} className={btnPrimaryClass}>
-          Open pipeline
-        </button>
-        <button type="button" onClick={() => onNavigate('todo')} className={btnSecondaryClass}>
-          Team tasks
-        </button>
-        <button type="button" onClick={() => onNavigate('ideas')} className={btnSecondaryClass}>
-          Ideas
-        </button>
-      </div>
+      {showTodayPanel && (
+        <OverviewTodayPanel
+          timeline={todayTimeline}
+          onOpenMeeting={onOpenMeeting}
+          onOpenCard={onOpenCard}
+          onNavigate={onNavigate}
+        />
+      )}
     </section>
   );
 }
