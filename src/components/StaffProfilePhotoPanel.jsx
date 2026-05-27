@@ -44,7 +44,7 @@ export default function StaffProfilePhotoPanel() {
       </p>
       <div className="mt-4">
         <ProfilePhotoEditor
-          avatar={member.avatar}
+          avatar={pendingAvatar !== undefined ? pendingAvatar : member.avatar}
           name={resolveStaffMemberName(session, teamMembers)}
           color={teamColor}
           compact

@@ -11,7 +11,19 @@ import ProfilePhotoEditor from './clientPortal/ProfilePhotoEditor';
 import ClientContactsEditor from './clientPortal/ClientContactsEditor';
 import ClientSocialLoginsEditor from './clientPortal/ClientSocialLoginsEditor';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import { btnPrimaryClass, btnSecondaryClass, glassInsetClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import {
+  btnPrimaryClass,
+  glassInsetClass,
+  glassSegmentClass,
+  surfacePanelClass,
+} from './clientPortal/clientPortalUi';
+
+const SETTINGS_TABS = [
+  { id: 'account', label: 'Account' },
+  { id: 'brand', label: 'Brand' },
+  { id: 'contacts', label: 'Contacts' },
+  { id: 'social', label: 'Social' },
+];
 
 function buildSocialPayload(draftLogins, savedLogins) {
   return Object.fromEntries(
@@ -31,15 +43,12 @@ function socialLoginsMatch(draftLogins, savedLogins) {
     JSON.stringify(normalizeClientSocialLogins(savedLogins));
 }
 
-function SettingsSection({ title, description, action, children }) {
+function SettingsPanel({ title, description, children }) {
   return (
     <section className={`${surfacePanelClass} overflow-hidden`}>
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/[0.06] px-5 py-4 sm:px-6">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold tracking-tight text-white">{title}</h2>
-          {description && <p className="mt-1 text-sm leading-relaxed text-white/45">{description}</p>}
-        </div>
-        {action && <div className="shrink-0">{action}</div>}
+      <div className="border-b border-white/[0.06] px-5 py-4 sm:px-6">
+        <h2 className="text-sm font-semibold tracking-tight text-white">{title}</h2>
+        {description && <p className="mt-1 text-sm leading-relaxed text-white/45">{description}</p>}
       </div>
       <div className="px-5 py-5 sm:px-6">{children}</div>
     </section>
@@ -57,6 +66,7 @@ export default function ClientProfilePortal({
   userDisplayName,
   onSaveProfile,
 }) {
+  const [settingsTab, setSettingsTab] = useState('account');
   const [pendingLogo, setPendingLogo] = useState(undefined);
   const [pendingUserAvatar, setPendingUserAvatar] = useState(undefined);
   const [draftContacts, setDraftContacts] = useState(contacts);
@@ -78,6 +88,14 @@ export default function ClientProfilePortal({
 
   const getClientContacts = useCallback(() => contacts, [contacts]);
   const getClientSocialLogins = useCallback(() => socialLogins, [socialLogins]);
+
+  const tabHasChanges = (tabId) => {
+    if (tabId === 'account') return pendingUserAvatar !== undefined;
+    if (tabId === 'brand') return pendingLogo !== undefined;
+    if (tabId === 'contacts') return contactsDraftHasChanges(draftContacts, contacts);
+    if (tabId === 'social') return !socialLoginsMatch(draftSocialLogins, socialLogins);
+    return false;
+  };
 
   const hasChanges =
     pendingLogo !== undefined ||
@@ -116,99 +134,134 @@ export default function ClientProfilePortal({
   };
 
   const brandPhotoValue = pendingLogo !== undefined ? pendingLogo : clientLogo;
+  const userPhotoValue = pendingUserAvatar !== undefined ? pendingUserAvatar : userAvatar;
+
+  const tabClass = (tabId) =>
+    `relative px-4 py-2 text-[11px] font-medium uppercase tracking-[0.18em] transition-all duration-300 ${
+      settingsTab === tabId ? `${btnPrimaryClass} py-2` : 'text-white/45 hover:text-white/80'
+    }`;
 
   return (
     <section className="pb-28">
       <ClientPortalSectionHeader
         title="Settings"
-        description="Manage your account, brand, contacts, and social logins in one place."
+        description="Manage your account, brand, contacts, and social logins."
       />
 
-      <div className="portal-content-fade max-w-3xl space-y-6">
-        <SettingsSection
-          title="Your account"
-          description="This photo appears in the menu when you're signed in."
-        >
-          <ProfilePhotoEditor
-            avatar={userAvatar}
-            name={userDisplayName || client}
-            color={clientColor}
-            label=""
-            hint="Upload a photo — zoom and drag to fit the circle."
-            onPendingChange={setPendingUserAvatar}
-          />
-        </SettingsSection>
+      <div className="max-w-3xl">
+        <div className={`${glassSegmentClass} mb-6 flex w-fit max-w-full flex-wrap gap-1 p-1`}>
+          {SETTINGS_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setSettingsTab(tab.id)}
+              className={tabClass(tab.id)}
+            >
+              {tab.label}
+              {tabHasChanges(tab.id) && (
+                <span
+                  className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-amber-400"
+                  aria-hidden
+                />
+              )}
+            </button>
+          ))}
+        </div>
 
-        <SettingsSection
-          title="Brand identity"
-          description="Your logo and brand details. Business type and color are managed by Medici Social."
-        >
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,14rem)] lg:items-start">
-            <ProfilePhotoEditor
-              avatar={brandPhotoValue}
-              name={client}
-              color={clientColor}
-              label="Brand photo"
-              hint="Upload your logo or brand mark — zoom and drag to fit the circle."
-              onPendingChange={setPendingLogo}
-            />
+        <div key={settingsTab} className="portal-content-fade">
+          {settingsTab === 'account' && (
+            <SettingsPanel
+              title="Your account"
+              description="This photo appears in the menu when you're signed in."
+            >
+              <ProfilePhotoEditor
+                avatar={userPhotoValue}
+                name={userDisplayName || client}
+                color={clientColor}
+                label=""
+                hint="Upload a photo — zoom and drag to fit the circle."
+                onPendingChange={setPendingUserAvatar}
+              />
+            </SettingsPanel>
+          )}
 
-            <div className="space-y-4">
-              <div>
-                <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
-                  Business type
-                </span>
-                <p className={`${glassInsetClass} px-3 py-2.5 text-sm text-white/75`}>
-                  {businessType || 'Not set yet'}
-                </p>
-              </div>
+          {settingsTab === 'brand' && (
+            <SettingsPanel
+              title="Brand identity"
+              description="Your logo and brand details. Business type and color are managed by Medici Social."
+            >
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,14rem)] lg:items-start">
+                <ProfilePhotoEditor
+                  avatar={brandPhotoValue}
+                  name={client}
+                  color={clientColor}
+                  label="Brand photo"
+                  hint="Upload your logo or brand mark — zoom and drag to fit the circle."
+                  onPendingChange={setPendingLogo}
+                />
 
-              <div>
-                <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
-                  Brand color
-                </span>
-                <div className={`${glassInsetClass} flex items-center gap-3 px-3 py-2.5`}>
-                  <span
-                    className="h-8 w-8 shrink-0 rounded-sm border border-white/15"
-                    style={{ backgroundColor: clientColor }}
-                    aria-hidden
-                  />
-                  <p className="text-sm text-white/75">{clientColor}</p>
+                <div className="space-y-4">
+                  <div>
+                    <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                      Business type
+                    </span>
+                    <p className={`${glassInsetClass} px-3 py-2.5 text-sm text-white/75`}>
+                      {businessType || 'Not set yet'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                      Brand color
+                    </span>
+                    <div className={`${glassInsetClass} flex items-center gap-3 px-3 py-2.5`}>
+                      <span
+                        className="h-8 w-8 shrink-0 rounded-sm border border-white/15"
+                        style={{ backgroundColor: clientColor }}
+                        aria-hidden
+                      />
+                      <p className="text-sm text-white/75">{clientColor}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </SettingsSection>
+            </SettingsPanel>
+          )}
 
-        <SettingsSection
-          title="Contacts"
-          description="Owner, staff, and key people we should know about."
-        >
-          <ClientContactsEditor
-            client={client}
-            clientColor={clientColor}
-            getClientContacts={getClientContacts}
-            onSaveClientContacts={() => {}}
-            showSaveButton={false}
-            embedded
-            onContactsChange={setDraftContacts}
-          />
-        </SettingsSection>
+          {settingsTab === 'contacts' && (
+            <SettingsPanel
+              title="Contacts"
+              description="Owner, staff, and key people we should know about."
+            >
+              <ClientContactsEditor
+                client={client}
+                clientColor={clientColor}
+                getClientContacts={getClientContacts}
+                onSaveClientContacts={() => {}}
+                showSaveButton={false}
+                embedded
+                onContactsChange={setDraftContacts}
+              />
+            </SettingsPanel>
+          )}
 
-        <SettingsSection
-          title="Social accounts"
-          description={`Social logins your Medici Social team can use for ${client}.`}
-        >
-          <ClientSocialLoginsEditor
-            client={client}
-            getClientSocialLogins={getClientSocialLogins}
-            onSaveClientSocialLogins={() => {}}
-            showSaveButton={false}
-            embedded
-            clientMode
-            onSocialLoginsChange={setDraftSocialLogins}
-          />
-        </SettingsSection>
+          {settingsTab === 'social' && (
+            <SettingsPanel
+              title="Social accounts"
+              description={`Social logins your Medici Social team can use for ${client}.`}
+            >
+              <ClientSocialLoginsEditor
+                client={client}
+                getClientSocialLogins={getClientSocialLogins}
+                onSaveClientSocialLogins={() => {}}
+                showSaveButton={false}
+                embedded
+                clientMode
+                onSocialLoginsChange={setDraftSocialLogins}
+              />
+            </SettingsPanel>
+          )}
+        </div>
       </div>
 
       <div className="portal-settings-savebar">

@@ -22,10 +22,12 @@ export default function ProfilePhotoEditor({
   const fileInputRef = useRef(null);
   const [previewSrc, setPreviewSrc] = useState(null);
   const [logoCrop, setLogoCrop] = useState(DEFAULT_LOGO_CROP);
+  const [removed, setRemoved] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     const normalized = normalizeClientLogo(avatar);
+    setRemoved(false);
     setPreviewSrc(normalized?.src || null);
     setLogoCrop({
       zoom: normalized?.zoom ?? DEFAULT_LOGO_CROP.zoom,
@@ -45,6 +47,7 @@ export default function ProfilePhotoEditor({
   };
 
   const applyDraft = (src, crop) => {
+    setRemoved(false);
     setPreviewSrc(src);
     setLogoCrop(crop);
     emitPending(src, crop);
@@ -74,9 +77,13 @@ export default function ProfilePhotoEditor({
   const handleRemove = () => {
     setPreviewSrc(null);
     setLogoCrop(DEFAULT_LOGO_CROP);
+    setRemoved(true);
     emitPending(null, DEFAULT_LOGO_CROP);
   };
 
+  const displayAvatar = removed ? null : avatar;
+  const hasStoredPhoto = Boolean(normalizeClientLogo(displayAvatar)?.src);
+  const hasPhoto = Boolean(previewSrc || hasStoredPhoto);
   const previewSize = compact ? 140 : 220;
 
   return (
@@ -99,7 +106,7 @@ export default function ProfilePhotoEditor({
               />
             ) : (
               <ClientLogoAvatar
-                logo={avatar}
+                logo={displayAvatar}
                 name={name}
                 color={color}
                 size="2xl"
@@ -115,9 +122,9 @@ export default function ProfilePhotoEditor({
                   onClick={() => fileInputRef.current?.click()}
                   className={`${btnSecondaryClass} py-2 text-[10px]`}
                 >
-                  {previewSrc || avatar ? 'Change photo' : 'Upload photo'}
+                  {hasPhoto ? 'Change photo' : 'Upload photo'}
                 </button>
-                {(previewSrc || avatar) && (
+                {hasPhoto && (
                   <button
                     type="button"
                     onClick={handleRemove}
@@ -142,7 +149,7 @@ export default function ProfilePhotoEditor({
               <>
                 <div className="flex justify-center py-2">
                   <ClientLogoAvatar
-                    logo={avatar}
+                    logo={displayAvatar}
                     name={name}
                     color={color}
                     size="3xl"
@@ -160,9 +167,9 @@ export default function ProfilePhotoEditor({
                 onClick={() => fileInputRef.current?.click()}
                 className={`${btnSecondaryClass} py-2 text-[10px]`}
               >
-                {previewSrc || avatar ? 'Change photo' : 'Upload photo'}
+                {hasPhoto ? 'Change photo' : 'Upload photo'}
               </button>
-              {(previewSrc || avatar) && (
+              {hasPhoto && (
                 <button
                   type="button"
                   onClick={handleRemove}

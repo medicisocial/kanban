@@ -122,7 +122,7 @@ export default function TeamMemberDetailCard({
 
         <div className="max-h-[min(70vh,640px)] space-y-4 overflow-y-auto px-5 py-5">
           <ProfilePhotoEditor
-            avatar={member.avatar}
+            avatar={draft.pendingAvatar !== undefined ? draft.pendingAvatar : member.avatar}
             name={draft.name || member.name}
             color={memberColor}
             compact
