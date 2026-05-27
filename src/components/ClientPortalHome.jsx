@@ -1,4 +1,9 @@
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
+import {
+  PortalPipelineMetric,
+  PortalRolePanel,
+  PortalTaskSection,
+} from './clientPortal/PortalOverviewPanels';
 import { buildClientPortalTasks } from '../utils/clientPortalTasks';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
@@ -6,33 +11,6 @@ const taskActionBtnClass =
   'inline-flex shrink-0 items-center justify-center rounded-sm bg-white px-3 py-1.5 text-[10px] font-medium normal-case tracking-normal text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40';
 
 const panelActionBtnClass = taskActionBtnClass;
-
-function StatCard({ label, value, onClick }) {
-  const inner = (
-    <>
-      <p className="portal-stat-card-label text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">
-        {label}
-      </p>
-      <p className="portal-stat-card-value mt-2 text-3xl font-semibold tabular-nums tracking-tight text-white">
-        {value}
-      </p>
-    </>
-  );
-
-  if (onClick) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className="portal-stat-card portal-stat-card-interactive p-4 text-left"
-      >
-        {inner}
-      </button>
-    );
-  }
-
-  return <div className="portal-stat-card p-4">{inner}</div>;
-}
 
 export default function ClientPortalHome({
   brand,
@@ -60,27 +38,33 @@ export default function ClientPortalHome({
         description="Everything waiting on you — idea approvals, content reviews, and profile setup."
       />
 
-      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard
-          label="Open tasks"
-          value={summary.totalOpen}
-          onClick={summary.totalOpen > 0 ? () => onNavigate(summary.actionItems[0]?.tab || summary.setupTasks[0]?.tab || 'review') : undefined}
-        />
-        <StatCard
-          label="Ideas to review"
-          value={summary.pendingIdeasCount}
-          onClick={summary.pendingIdeasCount > 0 ? () => onNavigate('ideas') : undefined}
-        />
-        <StatCard
-          label="Content to approve"
-          value={summary.reviewCount}
-          onClick={summary.reviewCount > 0 ? () => onNavigate('review') : undefined}
-        />
-        <StatCard
-          label="Profile setup"
-          value={summary.setupCount}
-          onClick={summary.setupCount > 0 ? () => onNavigate('profile') : undefined}
-        />
+      <div className="mb-8">
+        <PortalRolePanel label="At a glance" quad>
+          <PortalPipelineMetric
+            label="Open tasks"
+            value={summary.totalOpen}
+            onClick={
+              summary.totalOpen > 0
+                ? () => onNavigate(summary.actionItems[0]?.tab || summary.setupTasks[0]?.tab || 'review')
+                : undefined
+            }
+          />
+          <PortalPipelineMetric
+            label="Ideas to review"
+            value={summary.pendingIdeasCount}
+            onClick={summary.pendingIdeasCount > 0 ? () => onNavigate('ideas') : undefined}
+          />
+          <PortalPipelineMetric
+            label="Content to approve"
+            value={summary.reviewCount}
+            onClick={summary.reviewCount > 0 ? () => onNavigate('review') : undefined}
+          />
+          <PortalPipelineMetric
+            label="Profile setup"
+            value={summary.setupCount}
+            onClick={summary.setupCount > 0 ? () => onNavigate('profile') : undefined}
+          />
+        </PortalRolePanel>
       </div>
 
       {summary.totalOpen === 0 ? (
@@ -101,9 +85,9 @@ export default function ClientPortalHome({
       ) : (
         <div className="space-y-6">
           {summary.actionItems.length > 0 && (
-            <div className={`${surfacePanelClass} overflow-hidden`}>
-              <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-                <h3 className="text-sm font-semibold text-white">Needs your review</h3>
+            <PortalTaskSection
+              title="Needs your review"
+              action={
                 <button
                   type="button"
                   onClick={() => onNavigate(summary.actionItems[0]?.tab || 'review')}
@@ -111,7 +95,8 @@ export default function ClientPortalHome({
                 >
                   Review ({summary.actionItems.length})
                 </button>
-              </div>
+              }
+            >
               <ul className="divide-y divide-white/[0.06]">
                 {summary.actionItems.map((item) => (
                   <li key={item.id}>
@@ -137,26 +122,23 @@ export default function ClientPortalHome({
                   </li>
                 ))}
               </ul>
-            </div>
+            </PortalTaskSection>
           )}
 
           {summary.setupTasks.length > 0 && (
-            <div className={`${surfacePanelClass} overflow-hidden`}>
-              <div className="border-b border-white/10 px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold text-white">Complete your profile</h3>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate('profile')}
-                    className={panelActionBtnClass}
-                  >
-                    Finish setup ({summary.setupCount})
-                  </button>
-                </div>
-                <p className="mt-1 text-xs text-white/45">
-                  These help your production team work smoothly with your brand.
-                </p>
-              </div>
+            <PortalTaskSection
+              title="Complete your profile"
+              subtitle="These help your production team work smoothly with your brand."
+              action={
+                <button
+                  type="button"
+                  onClick={() => onNavigate('profile')}
+                  className={panelActionBtnClass}
+                >
+                  Finish setup ({summary.setupCount})
+                </button>
+              }
+            >
               <ul className="divide-y divide-white/[0.06]">
                 {summary.setupTasks.map((task) => (
                   <li
@@ -181,7 +163,7 @@ export default function ClientPortalHome({
                   </li>
                 ))}
               </ul>
-            </div>
+            </PortalTaskSection>
           )}
         </div>
       )}

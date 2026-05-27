@@ -10,7 +10,6 @@ import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader'
 import {
   statusBadgeClass,
   statusDotClass,
-  surfacePanelClass,
   glassInsetClass,
 } from './clientPortal/clientPortalUi';
 
@@ -34,19 +33,18 @@ export default function ClientPipelinePortal({ cards, clientColor, embedded = fa
         const tone = COLUMN_TONES[column.id] || 'default';
 
         return (
-          <section key={column.id} className={`${surfacePanelClass} flex flex-col`}>
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-              <div className="flex items-center gap-2">
+          <section key={column.id} className="overview-role-panel glass-surface flex flex-col">
+            <div className="overview-role-panel-header-row">
+              <div className="flex min-w-0 items-center gap-2">
                 <span className={statusDotClass(tone)} />
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-white/80">
-                  {column.title}
-                </h3>
+                <h3 className="overview-role-title">{column.title}</h3>
               </div>
-              <span className="border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10px] tabular-nums text-white/50">
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-white/50">
                 {columnCards.length}
               </span>
             </div>
-            <div className="flex-1 space-y-0 p-2">
+            <div className="overview-role-panel-body overview-role-panel-body-list mx-4 mb-4 flex-1">
+              <div className="p-2">
               {columnCards.length === 0 ? (
                 <p className="px-2 py-8 text-center text-xs text-white/35">No records</p>
               ) : (
@@ -80,6 +78,7 @@ export default function ClientPipelinePortal({ cards, clientColor, embedded = fa
                   );
                 })
               )}
+              </div>
             </div>
           </section>
         );

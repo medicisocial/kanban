@@ -1,7 +1,5 @@
 import { useDroppable } from '@dnd-kit/core';
-import { COLUMN_BG } from '../constants';
 import KanbanCard from './KanbanCard';
-import { glassCardClass } from './clientPortal/clientPortalUi';
 
 export default function KanbanColumn({ column, cards, onAddCard, onCardClick, onDeleteCard, embedded = false }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -12,22 +10,18 @@ export default function KanbanColumn({ column, cards, onAddCard, onCardClick, on
   return (
     <div
       ref={setNodeRef}
-      className={`${glassCardClass} flex w-[min(85vw,300px)] shrink-0 flex-col sm:w-[300px] ${
-        COLUMN_BG[column.id] || ''
-      } ${isOver ? 'ring-1 ring-white/20 bg-white/[0.04]' : ''}`}
-      style={{ minHeight: embedded ? '520px' : 'calc(100vh - 180px)' }}
+      className={`kanban-column-lane ${isOver ? 'kanban-column-lane-over' : ''}`}
+      style={{ minHeight: embedded ? '480px' : 'calc(100vh - 220px)' }}
     >
-      <div className="flex items-center justify-between border-b border-white/10 px-3 py-3">
-        <div className="flex items-center gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-white/80">{column.title}</h2>
-          <span className="border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[10px] tabular-nums text-white/45">
-            {cards.length}
-          </span>
+      <div className="kanban-column-header">
+        <div className="flex min-w-0 items-center gap-2">
+          <h4 className="kanban-column-title">{column.title}</h4>
+          <span className="kanban-column-count">{cards.length}</span>
         </div>
         <button
           type="button"
           onClick={() => onAddCard(column.id)}
-          className={`flex h-7 w-7 items-center justify-center border border-white/10 text-white/50 transition hover:border-white/20 hover:bg-white/[0.05] hover:text-white ${
+          className={`kanban-column-add ${
             column.id === 'finished' ? 'invisible pointer-events-none' : ''
           }`}
           aria-label={`Add card to ${column.title}`}
@@ -39,21 +33,13 @@ export default function KanbanColumn({ column, cards, onAddCard, onCardClick, on
         </button>
       </div>
 
-      <div
-        className="flex flex-1 flex-col gap-2 overflow-y-auto px-2 pb-3"
-        style={{ minHeight: '160px' }}
-      >
+      <div className="kanban-column-cards">
         {cards.map((card) => (
-          <KanbanCard
-            key={card.id}
-            card={card}
-            onClick={onCardClick}
-            onDelete={onDeleteCard}
-          />
+          <KanbanCard key={card.id} card={card} onClick={onCardClick} onDelete={onDeleteCard} />
         ))}
 
         {cards.length === 0 && (
-          <div className="flex flex-1 items-center justify-center border border-dashed border-white/10 py-12 text-[10px] uppercase tracking-wider text-white/35">
+          <div className="kanban-column-empty">
             {column.id === 'finished' ? 'Approved one-off projects land here when done' : 'Drop cards here'}
           </div>
         )}

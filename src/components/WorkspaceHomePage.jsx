@@ -1,4 +1,8 @@
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
+import {
+  PortalPipelineMetric,
+  PortalRolePanel,
+} from './clientPortal/PortalOverviewPanels';
 import { buildWorkspaceHomeSummary, buildMyWorkGreeting } from '../utils/workspaceHome';
 import { buildTodayTimeline, buildTodayHeadline } from '../utils/todayTimeline';
 import { useClientsContext } from '../context/ClientsContext';
@@ -21,48 +25,6 @@ function PanelHeaderAction({ label, onClick, prominent = false }) {
     >
       {label}
     </button>
-  );
-}
-
-function StatCard({ label, value, onClick, compact = false, fill = false }) {
-  const inner = (
-    <>
-      <p className="portal-stat-card-label text-[10px] font-medium uppercase tracking-[0.16em] text-white/50">
-        {label}
-      </p>
-      <p className="portal-stat-card-value mt-2 text-3xl font-semibold tabular-nums tracking-tight text-white">
-        {value}
-      </p>
-    </>
-  );
-
-  const className = compact
-    ? `portal-stat-card portal-stat-card-compact portal-stat-card-interactive text-left${fill ? ' overview-stat-card-fill' : ''}`
-    : 'portal-stat-card portal-stat-card-interactive p-4 text-left';
-
-  if (onClick) {
-    return (
-      <button type="button" onClick={onClick} className={className}>
-        {inner}
-      </button>
-    );
-  }
-
-  return (
-    <div className={`portal-stat-card ${compact ? `portal-stat-card-compact${fill ? ' overview-stat-card-fill' : ''}` : 'p-4'}`}>
-      {inner}
-    </div>
-  );
-}
-
-function RolePanel({ label, children, wide = false, grid = false }) {
-  return (
-    <div className={`overview-role-panel glass-surface ${wide ? 'overview-role-panel-wide' : ''}`}>
-      <p className="overview-role-group-label">{label}</p>
-      <div className={grid ? 'overview-role-panel-items-grid' : 'overview-role-panel-items'}>
-        {children}
-      </div>
-    </div>
   );
 }
 
@@ -289,34 +251,30 @@ export default function WorkspaceHomePage({
       <div className="mb-8 space-y-4">
         <div className="overview-pipeline-grid">
           {corePipelineGroups.map((group) => (
-            <RolePanel key={group.label} label={group.label}>
+            <PortalRolePanel key={group.label} label={group.label}>
               {group.items.map((item) => (
-                <StatCard
+                <PortalPipelineMetric
                   key={item.label}
-                  compact
-                  fill
                   label={item.label}
                   value={item.value}
                   onClick={item.onClick}
                 />
               ))}
-            </RolePanel>
+            </PortalRolePanel>
           ))}
         </div>
 
         {accountManagerGroup && (
-          <RolePanel label={accountManagerGroup.label} wide grid>
+          <PortalRolePanel label={accountManagerGroup.label} wide grid>
             {accountManagerGroup.items.map((item) => (
-              <StatCard
+              <PortalPipelineMetric
                 key={item.label}
-                compact
-                fill
                 label={item.label}
                 value={item.value}
                 onClick={item.onClick}
               />
             ))}
-          </RolePanel>
+          </PortalRolePanel>
         )}
       </div>
 

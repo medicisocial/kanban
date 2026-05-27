@@ -16,7 +16,7 @@ import { filterCards, getBoardCards } from '../utils';
 import KanbanColumn from './KanbanColumn';
 import CardPreview from './CardPreview';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import { btnPrimaryClass, btnSecondaryClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 
 const COLUMN_IDS = new Set(COLUMNS.map((c) => c.id));
 const COLUMN_BY_ID = Object.fromEntries(COLUMNS.map((c) => [c.id, c]));
@@ -164,12 +164,12 @@ export default function KanbanBoard({
       )}
 
       {embedded && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className={`${glassSegmentClass} mb-4 flex w-fit flex-wrap gap-0.5 p-0.5`}>
           {staffName && (
             <button
               type="button"
               onClick={() => setMyCardsOnly((value) => !value)}
-              className={myCardsOnly ? `${btnPrimaryClass} py-1.5 text-[10px]` : `${btnSecondaryClass} py-1.5 text-[10px]`}
+              className={myCardsOnly ? `${btnPrimaryClass} py-1.5 text-[10px]` : `${btnSecondaryClass} py-1.5 text-[10px] border-0 bg-transparent`}
             >
               My cards
             </button>
@@ -182,7 +182,7 @@ export default function KanbanBoard({
               className={
                 focusGroup === group.id
                   ? `${btnPrimaryClass} py-1.5 text-[10px]`
-                  : `${btnSecondaryClass} py-1.5 text-[10px]`
+                  : `${btnSecondaryClass} py-1.5 text-[10px] border-0 bg-transparent`
               }
             >
               {group.label}
@@ -195,7 +195,7 @@ export default function KanbanBoard({
                 setMyCardsOnly(false);
                 setFocusGroup(null);
               }}
-              className={`${btnSecondaryClass} py-1.5 text-[10px] text-white/45`}
+              className={`${btnSecondaryClass} py-1.5 text-[10px] border-0 bg-transparent text-white/45`}
             >
               Clear filters
             </button>
@@ -204,7 +204,7 @@ export default function KanbanBoard({
       )}
 
       {embedded && filteredCards.length === 0 && (
-        <div className="mb-4 border border-dashed border-white/10 px-6 py-10 text-center">
+        <div className="overview-role-panel glass-surface mb-4 px-6 py-10 text-center">
           <p className="text-sm text-white/45">No cards match the current filters.</p>
           {(myCardsOnly || focusGroup) && (
             <button
@@ -233,56 +233,60 @@ export default function KanbanBoard({
 
               if (isArchive && !finishedExpanded) {
                 return (
-                  <div key={group.id} className="flex w-[140px] shrink-0 flex-col justify-start pt-2">
-                    <p className="mb-2 px-1 text-[10px] font-medium uppercase tracking-[0.24em] text-white/30">
-                      {group.label}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setFinishedExpanded(true)}
-                      className={`${btnSecondaryClass} flex flex-col items-start gap-1 px-3 py-4 text-left`}
-                    >
-                      <span className="text-2xl font-semibold tabular-nums text-white">{groupCount}</span>
-                      <span className="text-[10px] uppercase tracking-wider text-white/45">
-                        Expand archive
-                      </span>
-                    </button>
+                  <div key={group.id} className="overview-role-panel glass-surface flex w-[160px] shrink-0 flex-col">
+                    <div className="overview-role-panel-header">
+                      <h3 className="overview-role-title">{group.label}</h3>
+                    </div>
+                    <div className="overview-role-panel-body overview-role-panel-body-single mx-4 mb-4">
+                      <button
+                        type="button"
+                        onClick={() => setFinishedExpanded(true)}
+                        className="overview-pipeline-metric overview-pipeline-metric-interactive w-full text-left"
+                      >
+                        <p className="overview-pipeline-metric-label">Finished projects</p>
+                        <p className="overview-pipeline-metric-value">{groupCount}</p>
+                        <p className="mt-1 text-[11px] text-white/40">Tap to expand</p>
+                      </button>
+                    </div>
                   </div>
                 );
               }
 
               return (
-                <div key={group.id} className="flex shrink-0 flex-col gap-2">
-                  <div className="flex items-center justify-between gap-2 px-1">
-                    <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/30">
-                      {group.label}
-                    </p>
-                    {isArchive && (
-                      <button
-                        type="button"
-                        onClick={() => setFinishedExpanded(false)}
-                        className="text-[10px] uppercase tracking-wider text-white/35 hover:text-white/70"
-                      >
-                        Collapse
-                      </button>
-                    )}
+                <div key={group.id} className="overview-role-panel glass-surface flex shrink-0 flex-col">
+                  <div className="overview-role-panel-header-row">
+                    <h3 className="overview-role-title">{group.label}</h3>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className="text-sm font-semibold tabular-nums text-white/45">{groupCount}</span>
+                      {isArchive && (
+                        <button
+                          type="button"
+                          onClick={() => setFinishedExpanded(false)}
+                          className="text-[11px] text-white/40 transition hover:text-white/75"
+                        >
+                          Collapse
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-3">
-                    {group.columnIds.map((columnId) => {
-                      const column = COLUMN_BY_ID[columnId];
-                      if (!column) return null;
-                      return (
-                        <KanbanColumn
-                          key={column.id}
-                          column={column}
-                          cards={cardsByColumn[column.id]}
-                          onAddCard={onAddCard}
-                          onCardClick={onCardClick}
-                          onDeleteCard={onDeleteCard}
-                          embedded={embedded}
-                        />
-                      );
-                    })}
+                  <div className="overview-role-panel-body overview-role-panel-body-kanban mx-4 mb-4">
+                    <div className="kanban-group-columns">
+                      {group.columnIds.map((columnId) => {
+                        const column = COLUMN_BY_ID[columnId];
+                        if (!column) return null;
+                        return (
+                          <KanbanColumn
+                            key={column.id}
+                            column={column}
+                            cards={cardsByColumn[column.id]}
+                            onAddCard={onAddCard}
+                            onCardClick={onCardClick}
+                            onDeleteCard={onDeleteCard}
+                            embedded={embedded}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               );
