@@ -1,7 +1,7 @@
 import { encodeCanvas, loadImage } from './clientImage';
 
 export const DEFAULT_LOGO_CROP = { zoom: 1, x: 50, y: 50 };
-export const LOGO_OUTPUT_SIZE = 512;
+export const LOGO_OUTPUT_SIZE = 640;
 
 export function normalizeClientLogo(logo) {
   if (!logo) return null;
@@ -71,7 +71,7 @@ export async function bakeLogoCrop(logo, outputSize = LOGO_OUTPUT_SIZE) {
   ctx.drawImage(img, drawX, drawY, drawW, drawH);
 
   return serializeClientLogo({
-    src: encodeCanvas(canvas),
+    src: encodeCanvas(canvas, { preferPng: true }),
     zoom: 1,
     x: 50,
     y: 50,

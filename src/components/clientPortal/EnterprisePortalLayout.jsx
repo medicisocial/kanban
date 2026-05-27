@@ -59,45 +59,57 @@ function SidebarBrand({
   const staffLogo = normalizeClientLogo(sidebarLogoUrl);
 
   return (
-    <div className="border-b border-white/[0.06] px-6 py-7 lg:px-7 lg:py-8">
-      <div className="flex items-start gap-3.5">
+    <div className="border-b border-white/[0.06] px-5 py-5 lg:px-6">
+      <div className="flex items-center gap-3.5">
         {onSidebarLogoClick ? (
           <button
             type="button"
             onClick={onSidebarLogoClick}
-            title="Change logo"
-            className="group relative shrink-0 transition-opacity duration-300 hover:opacity-80"
+            title="Edit workspace logo"
+            className="group relative shrink-0 transition-opacity duration-300 hover:opacity-90"
           >
             {staffLogo ? (
-              <ClientLogoAvatar logo={staffLogo} name={productTitle} size="lg" />
+              <ClientLogoAvatar
+                logo={staffLogo}
+                name={productTitle}
+                size="sidebar"
+                initialsVariant="neutral"
+                ringClassName="ring-1 ring-white/[0.08]"
+              />
             ) : (
-              <img
-                src={resolvedSidebarLogo}
-                alt="Medici Social"
-                className="h-10 w-10 shrink-0 rounded-full object-contain"
+              <ClientLogoAvatar
+                name="Medici Social"
+                size="sidebar"
+                initialsVariant="neutral"
+                ringClassName="ring-1 ring-white/[0.08]"
               />
             )}
-            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/70 text-[9px] font-medium uppercase tracking-[0.2em] text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/75 text-[9px] font-medium uppercase tracking-[0.18em] text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
               Edit
             </span>
           </button>
         ) : staffLogo ? (
-          <ClientLogoAvatar logo={staffLogo} name={productTitle} size="lg" />
+          <ClientLogoAvatar
+            logo={staffLogo}
+            name={productTitle}
+            size="sidebar"
+            initialsVariant="neutral"
+            ringClassName="ring-1 ring-white/[0.08]"
+          />
         ) : (
-          <img
-            src={resolvedSidebarLogo}
-            alt="Medici Social"
-            className="h-10 w-10 shrink-0 rounded-full object-contain"
+          <ClientLogoAvatar
+            name="Medici Social"
+            size="sidebar"
+            initialsVariant="neutral"
+            ringClassName="ring-1 ring-white/[0.08]"
           />
         )}
-        <div className="min-w-0 flex-1 pt-0.5">
-          <p className="text-[10px] font-medium uppercase tracking-[0.32em] text-white/40">{productKicker}</p>
-          <h1 className="mt-1.5 text-base font-semibold tracking-tight text-white">{productTitle}</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-[15px] font-semibold leading-tight tracking-tight text-white">
+            {productTitle}
+          </h1>
           {subtitle && (
-            <p
-              className="mt-1 truncate text-xs text-white/45"
-              style={subtitleColor ? { color: subtitleColor } : undefined}
-            >
+            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.22em] text-white/35">
               {subtitle}
             </p>
           )}
@@ -113,7 +125,7 @@ function SidebarBrand({
           <button
             type="button"
             onClick={onCloseNav}
-            className="flex h-9 w-9 shrink-0 items-center justify-center text-white/50 transition-colors duration-300 hover:text-white lg:hidden"
+            className="flex h-9 w-9 shrink-0 items-center justify-center text-white/45 transition-colors duration-300 hover:text-white lg:hidden"
             aria-label="Close menu"
           >
             <IconClose />

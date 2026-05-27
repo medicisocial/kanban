@@ -1,5 +1,5 @@
-const MAX_DIMENSION = 512;
-const MAX_DATA_URL_LENGTH = 450000;
+const MAX_DIMENSION = 768;
+const MAX_DATA_URL_LENGTH = 650000;
 const INITIAL_QUALITY = 0.92;
 
 function loadImage(src) {
@@ -11,7 +11,14 @@ function loadImage(src) {
   });
 }
 
-function encodeCanvas(canvas) {
+function encodeCanvas(canvas, { preferPng = false } = {}) {
+  if (preferPng) {
+    const png = canvas.toDataURL('image/png');
+    if (png.length <= MAX_DATA_URL_LENGTH) {
+      return png;
+    }
+  }
+
   const tryWebp = canvas.toDataURL('image/webp', INITIAL_QUALITY);
   if (tryWebp.startsWith('data:image/webp') && tryWebp.length <= MAX_DATA_URL_LENGTH) {
     return tryWebp;
@@ -31,7 +38,7 @@ function encodeCanvas(canvas) {
   return dataUrl;
 }
 
-export function readClientProfileImage(file) {
+export function readClientProfileImage(file, { preservePng = false } = {}) {
   return new Promise((resolve, reject) => {
     if (!file?.type?.startsWith('image/')) {
       reject(new Error('Please upload an image file (PNG, JPG, or WebP).'));
@@ -61,7 +68,8 @@ export function readClientProfileImage(file) {
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, 0, 0, width, height);
-          resolve(encodeCanvas(canvas));
+          const usePng = preservePng && /^image\/png$/i.test(file.type);
+          resolve(encodeCanvas(canvas, { preferPng: usePng }));
         })
         .catch((error) => reject(error.message ? error : new Error('Could not process image.')));
     };
