@@ -143,11 +143,11 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
   );
 
   const clientFilterSelect = (
-    <div className="relative shrink-0">
+    <div className="relative w-full shrink-0 md:w-[148px]">
       <select
         value={clientFilter}
         onChange={(e) => onClientChange(e.target.value)}
-        className={`${selectClass} w-[148px] py-1.5 text-[11px]`}
+        className={`${selectClass} w-full py-1.5 text-[11px] md:w-[148px]`}
         aria-label="Filter by client"
       >
         <option value="all">All clients</option>

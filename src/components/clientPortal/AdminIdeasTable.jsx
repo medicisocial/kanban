@@ -6,6 +6,9 @@ import {
   btnGhostClass,
   btnSecondaryClass,
   formatPortalDate,
+  mobileActionRowClass,
+  mobileCardClass,
+  mobileMetaClass,
   selectClass,
   statusBadgeClass,
   statusDotClass,
@@ -138,7 +141,78 @@ export default function AdminIdeasTable({
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="md:hidden">
+        {filtered.length === 0 ? (
+          <p className="px-4 py-12 text-center text-sm text-white/40">No ideas match your filters.</p>
+        ) : (
+          filtered.map((idea) => {
+            const expanded = expandedId === idea.id;
+
+            return (
+              <div key={idea.id} className={mobileCardClass}>
+                {selectable && (
+                  <label className="mb-2 flex items-center gap-2 text-xs text-white/55">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(idea.id)}
+                      onChange={() => onToggleSelect(idea.id)}
+                      className="border-white/20 bg-[#111111]"
+                    />
+                    Select
+                  </label>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(expanded ? null : idea.id)}
+                  className="w-full text-left font-medium text-white"
+                >
+                  {idea.title || 'Untitled idea'}
+                </button>
+                {idea.description && !expanded && (
+                  <p className="mt-1 line-clamp-2 text-xs text-white/40">{idea.description}</p>
+                )}
+                <div className={mobileMetaClass}>
+                  <StatusBadge status={idea.status} />
+                  {idea.contentType && <span className="uppercase tracking-wider">{idea.contentType}</span>}
+                  <span className="text-white/70">{idea.client}</span>
+                  <span>{formatPortalDate(idea.createdAt)}</span>
+                </div>
+                <div className={mobileActionRowClass}>
+                  <button type="button" onClick={() => onEdit(idea)} className={`${btnGhostClass} min-h-10 flex-1 text-[11px]`}>
+                    Edit
+                  </button>
+                  {idea.boardCardId && (
+                    <button type="button" onClick={() => onGoToBoard(idea.boardCardId)} className={`${btnGhostClass} min-h-10 flex-1 text-[11px]`}>
+                      Board
+                    </button>
+                  )}
+                  <button type="button" onClick={() => onDelete(idea.id)} className={`${btnGhostClass} min-h-10 flex-1 text-[11px] text-rose-300/80`}>
+                    Delete
+                  </button>
+                </div>
+                {expanded && (
+                  <div className="mt-3 border border-white/10 bg-white/[0.02] p-3 text-sm text-white/70">
+                    {idea.description && <p>{idea.description}</p>}
+                    {idea.referenceVideo && (
+                      <p className="mt-2 text-xs text-white/45">
+                        Reference:{' '}
+                        <a href={idea.referenceVideo} target="_blank" rel="noreferrer" className="text-[#c88] underline-offset-2 hover:underline">
+                          {idea.referenceVideo}
+                        </a>
+                      </p>
+                    )}
+                    {idea.clientComment && (
+                      <p className="mt-2 text-xs text-white/50">Client note: {idea.clientComment}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[980px] border-collapse">
           <thead>
             <tr>

@@ -7,6 +7,9 @@ import {
   btnSecondaryClass,
   formatPortalDate,
   inputClass,
+  mobileActionRowClass,
+  mobileCardClass,
+  mobileMetaClass,
   selectClass,
   statusBadgeClass,
   statusDotClass,
@@ -135,7 +138,105 @@ export default function ClientIdeasTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="md:hidden">
+        {filtered.length === 0 ? (
+          <p className="px-4 py-12 text-center text-sm text-white/40">No ideas match your filters.</p>
+        ) : (
+          filtered.map((idea) => {
+            const isPending = idea.status === 'pending' && pendingIds.includes(idea.id);
+            const expanded = expandedId === idea.id;
+            const declining = declineId === idea.id;
+
+            return (
+              <div key={idea.id} className={mobileCardClass}>
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(expanded ? null : idea.id)}
+                  className="w-full text-left font-medium text-white"
+                >
+                  {idea.title || 'Untitled idea'}
+                </button>
+                {idea.description && !expanded && (
+                  <p className="mt-1 line-clamp-2 text-xs text-white/40">{idea.description}</p>
+                )}
+                <div className={mobileMetaClass}>
+                  <StatusBadge status={idea.status} />
+                  {idea.contentType && <span className="uppercase tracking-wider">{idea.contentType}</span>}
+                  <span>{formatPortalDate(idea.createdAt)}</span>
+                </div>
+                {isPending && (
+                  <div className={mobileActionRowClass}>
+                    <button
+                      type="button"
+                      onClick={() => onApprove?.(idea.id, '')}
+                      className={`${btnPrimaryClass} min-h-10 flex-1 px-3 py-2 text-[11px]`}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeclineId(idea.id);
+                        setExpandedId(idea.id);
+                      }}
+                      className={`${btnSecondaryClass} min-h-10 flex-1 px-3 py-2 text-[11px]`}
+                    >
+                      Decline
+                    </button>
+                  </div>
+                )}
+                {(expanded || declining) && (
+                  <div className="mt-3 space-y-3 border border-white/10 bg-white/[0.02] p-3">
+                    {idea.description && (
+                      <p className="text-sm leading-relaxed text-white/70">{idea.description}</p>
+                    )}
+                    {idea.referenceVideo && (
+                      <p className="text-xs text-white/45">
+                        Reference:{' '}
+                        <a href={idea.referenceVideo} target="_blank" rel="noreferrer" className="text-[#c88] underline-offset-2 hover:underline">
+                          {idea.referenceVideo}
+                        </a>
+                      </p>
+                    )}
+                    {declining && (
+                      <>
+                        <textarea
+                          value={comment}
+                          onChange={(e) => setComment(e.target.value)}
+                          rows={3}
+                          placeholder="What should we change?"
+                          className={`${inputClass} resize-y text-xs`}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeclineId(null);
+                              setComment('');
+                            }}
+                            className={`${btnSecondaryClass} min-h-10 flex-1 text-[11px]`}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => submitDecline(idea.id)}
+                            className={`${btnSecondaryClass} min-h-10 flex-1 text-[11px]`}
+                          >
+                            Submit decline
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[920px] border-collapse">
           <thead>
             <tr>

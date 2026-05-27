@@ -11,7 +11,7 @@ export default function KanbanColumn({ column, cards, onAddCard, onCardClick, on
   return (
     <div
       ref={setNodeRef}
-      className={`flex w-[280px] shrink-0 flex-col border border-white/10 sm:w-[300px] ${
+      className={`flex w-[min(85vw,300px)] shrink-0 flex-col border border-white/10 sm:w-[300px] ${
         COLUMN_BG[column.id] || 'bg-white/[0.03]'
       } ${isOver ? 'ring-1 ring-[#810100]/50 bg-[#a00000]/5' : ''}`}
       style={{ minHeight: embedded ? '520px' : 'calc(100vh - 180px)' }}

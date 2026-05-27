@@ -27,6 +27,12 @@ export const tableCellClass = 'px-4 py-3 text-sm text-white/85';
 export const tableRowClass =
   'border-b border-white/[0.06] transition-colors hover:bg-white/[0.03]';
 
+export const mobileCardClass = 'border-b border-white/[0.06] px-4 py-4 last:border-b-0';
+
+export const mobileMetaClass = 'mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/50';
+
+export const mobileActionRowClass = 'mt-3 flex flex-wrap gap-2';
+
 export function statusBadgeClass(tone) {
   const tones = {
     pending: 'border-amber-500/25 bg-amber-500/10 text-amber-200/90',

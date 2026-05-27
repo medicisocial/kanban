@@ -14,7 +14,7 @@ export default function ClientSyncBanner({
 
   if (embedded) {
     return (
-      <div className="shrink-0 border-b border-amber-500/20 bg-amber-500/[0.08] px-6 py-3">
+      <div className="shrink-0 border-b border-amber-500/20 bg-amber-500/[0.08] px-4 py-3 md:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs font-medium uppercase tracking-wider text-amber-200/90">
             {total} client update{total === 1 ? '' : 's'} pending sync

@@ -7,6 +7,9 @@ import {
   btnPrimaryClass,
   btnSecondaryClass,
   inputClass,
+  mobileActionRowClass,
+  mobileCardClass,
+  mobileMetaClass,
   statusBadgeClass,
   statusDotClass,
   surfacePanelClass,
@@ -95,7 +98,105 @@ export default function ClientTasksTable({
         </p>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="md:hidden">
+        {filtered.length === 0 ? (
+          <p className="px-4 py-12 text-center text-sm text-white/40">No tasks waiting for your review.</p>
+        ) : (
+          filtered.map((card) => {
+            const expanded = expandedId === card.id;
+            const denying = denyId === card.id;
+            const typeStyle = getContentTypeStyle(card.contentType);
+
+            return (
+              <div key={card.id} className={mobileCardClass}>
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(expanded ? null : card.id)}
+                  className="w-full text-left font-medium text-white"
+                >
+                  {card.title || 'Untitled'}
+                </button>
+                <div className={mobileMetaClass}>
+                  <span className="uppercase tracking-wider" style={{ color: typeStyle.border }}>
+                    {card.contentType}
+                  </span>
+                  <span className={statusBadgeClass('review')}>
+                    <span className={statusDotClass('review')} />
+                    In review
+                  </span>
+                  <span>{card.dueDate ? formatScheduledDateTime(card.dueDate, card.dueTime) : 'No due date'}</span>
+                </div>
+                <div className={mobileActionRowClass}>
+                  <button
+                    type="button"
+                    onClick={() => onApprove?.(card.id, '')}
+                    className={`${btnPrimaryClass} min-h-10 flex-1 px-3 py-2 text-[11px]`}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDenyId(card.id);
+                      setExpandedId(card.id);
+                    }}
+                    className={`${btnSecondaryClass} min-h-10 flex-1 px-3 py-2 text-[11px]`}
+                  >
+                    Revise
+                  </button>
+                </div>
+                {(expanded || denying) && (
+                  <div className="mt-3 space-y-3 border border-white/10 bg-white/[0.02] p-3">
+                    {card.description ? (
+                      <p className="text-sm text-white/65">{card.description}</p>
+                    ) : (
+                      <p className="text-sm text-white/40">No additional details.</p>
+                    )}
+                    {card.driveLink && (
+                      <a href={card.driveLink} target="_blank" rel="noreferrer" className="text-xs text-[#c88] underline-offset-2 hover:underline">
+                        View content
+                      </a>
+                    )}
+                    {denying && (
+                      <>
+                        <textarea
+                          value={comment}
+                          onChange={(e) => setComment(e.target.value)}
+                          rows={3}
+                          placeholder="Required — explain what to change"
+                          className={`${inputClass} resize-y text-xs`}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDenyId(null);
+                              setComment('');
+                            }}
+                            className={`${btnSecondaryClass} min-h-10 flex-1 text-[11px]`}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => submitDeny(card.id)}
+                            disabled={!comment.trim()}
+                            className={`${btnSecondaryClass} min-h-10 flex-1 text-[11px] disabled:opacity-40`}
+                          >
+                            Submit notes
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[880px] border-collapse">
           <thead>
             <tr>
