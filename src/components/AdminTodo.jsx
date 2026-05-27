@@ -7,7 +7,7 @@ import {
   groupAdminTasksByDate,
 } from '../utils/adminTodo';
 import AddAdminTaskModal from './AddAdminTaskModal';
-import { glassCardClass } from './clientPortal/clientPortalUi';
+import { glassInsetClass, btnPrimaryClass, selectClass } from './clientPortal/clientPortalUi';
 
 export default function AdminTodo({
   embedded = false,
@@ -45,35 +45,37 @@ export default function AdminTodo({
 
   return (
     <div className={embedded ? '' : 'mx-auto max-w-[900px] px-4 py-4 sm:px-6'}>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-white">Administrative tasks</h2>
-          <p className="mt-1 text-sm text-gray-400">
-            Internal ops, billing, client admin, and other non-content work.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-violet-200">
-              {openCount} open
-            </span>
+      <div className={`flex flex-wrap items-center justify-between gap-4 ${embedded ? 'mb-4' : 'mb-6'}`}>
+        {!embedded && (
+          <div>
+            <h2 className="text-xl font-semibold text-white">Administrative tasks</h2>
+            <p className="mt-1 text-sm text-white/45">
+              Internal ops, billing, client admin, and other non-content work.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-violet-200">
+                {openCount} open
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         <button
           type="button"
           onClick={() => setShowAddModal(true)}
-          className="rounded-lg bg-[#810100] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#a00000]"
+          className={`${btnPrimaryClass} ${embedded ? 'ml-auto py-1.5 text-[10px]' : ''}`}
         >
           + Add task
         </button>
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-gray-400">
+      <div className={`flex flex-wrap items-center gap-3 ${embedded ? 'mb-4' : 'mb-6'}`}>
+        <label className="flex items-center gap-2 text-sm text-white/45">
           <span>Assigned to</span>
           <select
             value={assigneeFilter}
             onChange={(e) => setAssigneeFilter(e.target.value)}
-            className="select-dark rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-1.5 text-sm text-[#f9f6f2] outline-none"
+            className={`${selectClass} py-1.5 text-xs`}
           >
             <option value="all">Everyone</option>
             {adminStaff.map((member) => (
@@ -84,35 +86,35 @@ export default function AdminTodo({
           </select>
         </label>
 
-        <label className="flex items-center gap-2 text-sm text-gray-400">
+        <label className="flex items-center gap-2 text-sm text-white/45">
           <input
             type="checkbox"
             checked={showCompleted}
             onChange={(e) => setShowCompleted(e.target.checked)}
-            className="h-4 w-4 rounded border-white/20 bg-[#1a1a1a] text-[#810100]"
+            className="h-4 w-4 rounded border-white/20 bg-white/[0.04] text-white"
           />
           Show completed
         </label>
       </div>
 
       {filteredTasks.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 px-6 py-16 text-center">
-          <p className="text-sm text-gray-400">No administrative tasks yet.</p>
-          <p className="mt-1 text-xs text-gray-500">
+        <div className="border border-dashed border-white/10 px-6 py-16 text-center">
+          <p className="text-sm text-white/45">No administrative tasks yet.</p>
+          <p className="mt-1 text-xs text-white/35">
             Add billing, reporting, or client admin items here.
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {groupedTasks.map((group) => (
             <section key={group.key}>
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/40">
                 {group.label}
-                <span className="ml-2 font-normal normal-case text-gray-500">
+                <span className="ml-2 font-normal normal-case text-white/30">
                   ({group.tasks.length})
                 </span>
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {group.tasks.map((task) => {
                   const clientColor =
                     task.client === 'General' ? '#a78bfa' : getClientColor(task.client);
@@ -120,7 +122,7 @@ export default function AdminTodo({
                   return (
                     <article
                       key={task.id}
-                      className={`${glassCardClass} p-4 transition ${
+                      className={`${glassInsetClass} p-4 transition ${
                         task.completed ? 'opacity-60' : ''
                       }`}
                     >

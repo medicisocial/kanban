@@ -91,6 +91,7 @@ export default function CompanyTasks({
 
       {activeRole === 'account' && (
         <AccountManagerTodo
+          embedded
           cards={cards}
           clientFilter={clientFilter}
           onOpenCard={onOpenCard}
@@ -119,10 +120,7 @@ export default function CompanyTasks({
   if (embedded) {
     return (
       <section>
-        <ClientPortalSectionHeader
-          title="Team tasks"
-          description="Content creator, editor, account manager, and administrative worklists across all clients."
-        />
+        <ClientPortalSectionHeader title="Team tasks" compact />
         {content}
       </section>
     );

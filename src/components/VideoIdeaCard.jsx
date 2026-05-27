@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getContentTypeStyle, IDEA_STATUSES } from "../constants";
 import { useClientsContext } from "../context/ClientsContext";
+import { glassInsetClass } from "./clientPortal/clientPortalUi";
 
 export default function VideoIdeaCard({
   idea,
@@ -58,13 +59,11 @@ export default function VideoIdeaCard({
       onKeyDown={handleCardKeyDown}
       role={selectable || isEditable ? "button" : undefined}
       tabIndex={selectable || isEditable ? 0 : undefined}
-      className={`flex flex-col overflow-hidden rounded-xl border bg-[#111111] ${
-        selected
-          ? "border-[#810100]/50 ring-1 ring-[#810100]/30"
-          : "border-white/8"
+      className={`${glassInsetClass} flex flex-col overflow-hidden ${
+        selected ? "ring-1 ring-white/20" : ""
       } ${
         selectable || isEditable
-          ? "cursor-pointer transition hover:border-white/15 hover:bg-[#1a1a1a]"
+          ? "cursor-pointer transition hover:border-white/15"
           : ""
       }`}
       style={{ borderTopColor: clientColor, borderTopWidth: "3px" }}

@@ -20,6 +20,8 @@ import ShootDayTimeline from "./ShootDayTimeline";
 import ShootDayPrintButton from "./ShootDayPrintButton";
 import ShootScriptModal from "./ShootScriptModal";
 import ModelScheduleSummary from "./ModelScheduleSummary";
+import SharePortalShell from "./clientPortal/SharePortalShell";
+import { btnPrimaryClass, surfacePanelClass } from "./clientPortal/clientPortalUi";
 
 function planToUpdates(plan) {
   return {
@@ -131,66 +133,49 @@ export default function ClientShootDayPortal({
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-black">
-        <header className="border-b border-white/5 px-4 py-6 sm:px-6">
-          <div className="mx-auto max-w-[800px]">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Medici Social</p>
-            <h1 className="text-lg font-semibold text-white">Shoot Schedule Submitted</h1>
-            <p className="text-sm" style={{ color: clientColor }}>{client}</p>
-            <p className="mt-1 text-xs text-gray-500">{formatShootDayLabel(focusDate)}</p>
-          </div>
-        </header>
-        <main className="mx-auto max-w-[800px] px-4 py-12 sm:px-6">
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-6 py-12 text-center">
-            <p className="text-2xl">✓</p>
-            <h2 className="mt-3 text-lg font-semibold text-white">Thanks!</h2>
-            {syncedLocally ? (
-              <p className="mt-2 text-sm text-gray-400">
-                Your shoot schedule is saved. It will appear on the Shoot Schedule calendar right away.
+      <SharePortalShell title="Shoot schedule submitted" client={client} clientColor={clientColor}>
+        <p className="-mt-2 mb-6 text-sm text-white/45">{formatShootDayLabel(focusDate)}</p>
+        <div className={`${surfacePanelClass} px-6 py-12 text-center`}>
+          <h2 className="text-lg font-semibold text-white">Thanks</h2>
+          {syncedLocally ? (
+            <p className="mt-2 text-sm text-white/45">
+              Your shoot schedule is saved. It will appear on the Shoot Schedule calendar right away.
+            </p>
+          ) : (
+            <>
+              <p className="mt-2 text-sm text-white/45">
+                Your schedule is ready. Send the link below to Medici Social so it updates on their Shoot Schedule calendar.
               </p>
-            ) : (
-              <>
-                <p className="mt-2 text-sm text-gray-400">
-                  Your schedule is ready. Send the link below to Medici Social so it updates on their Shoot Schedule calendar.
-                </p>
-                <p className="mt-2 text-xs text-emerald-300/80">
-                  {copied ? "Link copied to clipboard!" : "Copy the link if it wasn't copied automatically."}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => copyImportLink()}
-                  className="mt-6 rounded-lg bg-[#810100] px-4 py-2 text-sm font-medium text-white hover:bg-[#a00000]"
-                >
-                  {copied ? "Link copied!" : "Copy schedule link for Medici Social"}
-                </button>
-              </>
-            )}
-          </div>
-        </main>
-      </div>
+              <p className="mt-2 text-xs text-emerald-300/80">
+                {copied ? "Link copied to clipboard!" : "Copy the link if it wasn't copied automatically."}
+              </p>
+              <button
+                type="button"
+                onClick={() => copyImportLink()}
+                className={`${btnPrimaryClass} mt-6 py-2 text-[11px]`}
+              >
+                {copied ? "Link copied!" : "Copy schedule link for Medici Social"}
+              </button>
+            </>
+          )}
+        </div>
+      </SharePortalShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      <header className="border-b border-white/5 px-4 py-6 sm:px-6">
-        <div className="mx-auto max-w-[800px]">
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Medici Social</p>
-          <h1 className="text-lg font-semibold text-white">Plan Your Shoot Schedule</h1>
-          <p className="text-sm" style={{ color: clientColor }}>{client}</p>
-          <p className="mt-1 text-xs text-gray-500">{formatShootDayLabel(focusDate)}</p>
-        </div>
-      </header>
+    <SharePortalShell title="Plan your shoot schedule" client={client} clientColor={clientColor}>
+      <p className="-mt-2 mb-6 text-sm text-white/45">{formatShootDayLabel(focusDate)}</p>
 
-      <main className="mx-auto max-w-[800px] space-y-8 px-4 py-8 sm:px-6">
-        <section>
+      <div className="space-y-6">
+        <section className={`${surfacePanelClass} p-4 sm:p-5`}>
           <h2 className="mb-3 text-sm font-semibold text-white">Session details</h2>
           <ShootDaySessionFields plan={localPlan} onUpdatePlan={handleUpdatePlan} />
         </section>
 
-        <section>
+        <section className={`${surfacePanelClass} p-4 sm:p-5`}>
           <h2 className="mb-1 text-sm font-semibold text-white">Content schedule</h2>
-          <p className="mb-4 text-xs text-gray-500">
+          <p className="mb-4 text-xs text-white/40">
             Assign a shoot time for each piece of content. Click a card or use Write script to add the full script.
           </p>
           <div className="space-y-3">
@@ -206,7 +191,7 @@ export default function ClientShootDayPortal({
           </div>
         </section>
 
-        <section>
+        <section className={`${surfacePanelClass} p-4 sm:p-5`}>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-white">Generated timeline</h2>
             <ShootDayPrintButton
@@ -227,47 +212,41 @@ export default function ClientShootDayPortal({
         </section>
 
         {allNeeds.length > 0 && (
-          <section>
-            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Equipment & needs</h3>
-              <ul className="mt-2 space-y-1">
-                {allNeeds.map((item) => (
-                  <li key={item} className="text-sm text-[#f9f6f2]">{item}</li>
-                ))}
-              </ul>
-            </div>
+          <section className={`${surfacePanelClass} p-4 sm:p-5`}>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-white/40">Equipment & needs</h3>
+            <ul className="mt-2 space-y-1">
+              {allNeeds.map((item) => (
+                <li key={item} className="text-sm text-white/85">{item}</li>
+              ))}
+            </ul>
           </section>
         )}
 
-        <section>
+        <section className={`${surfacePanelClass} p-4 sm:p-5`}>
           <h2 className="mb-1 text-sm font-semibold text-white">Model call times</h2>
-          <p className="mb-4 text-xs text-gray-500">
+          <p className="mb-4 text-xs text-white/40">
             Add models to each content item — call times are generated from shoot start/end times.
           </p>
           {modelSchedules.length > 0 ? (
             <ModelScheduleSummary schedules={modelSchedules} title="Who needs to be there when" />
           ) : (
-            <div className="rounded-lg border border-dashed border-white/10 px-4 py-8 text-center">
-              <p className="text-sm text-gray-400">No models added yet.</p>
-            </div>
+            <p className="py-8 text-center text-sm text-white/35">No models added yet.</p>
           )}
         </section>
 
-        <section>
+        <section className={`${surfacePanelClass} p-4 sm:p-5`}>
           <h2 className="mb-3 text-sm font-semibold text-white">Session extras</h2>
           <ShootDaySessionExtras plan={localPlan} onUpdatePlan={handleUpdatePlan} />
         </section>
 
-        <div className="pb-8">
-          <button
-            type="button"
-            onClick={handleSubmit}
-            className="w-full rounded-lg bg-emerald-600 py-3 text-sm font-medium text-white hover:bg-emerald-500 sm:w-auto sm:px-8"
-          >
-            Submit shoot schedule
-          </button>
-        </div>
-      </main>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          className={`${btnPrimaryClass} w-full py-3 text-[11px] sm:w-auto sm:px-8`}
+        >
+          Submit shoot schedule
+        </button>
+      </div>
 
       {scriptCard && (
         <ShootScriptModal
@@ -276,6 +255,6 @@ export default function ClientShootDayPortal({
           onSave={handleUpdateCard}
         />
       )}
-    </div>
+    </SharePortalShell>
   );
 }

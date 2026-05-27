@@ -19,6 +19,7 @@ import CalendarMonthView from './CalendarMonthView';
 import CardTitleLink from './CardTitleLink';
 import { formatTime } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
+import SharePortalShell from './clientPortal/SharePortalShell';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 
 function ClientCalendarDetail({ card, onClose }) {
@@ -51,7 +52,7 @@ function ClientCalendarDetail({ card, onClose }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1a1a1a] p-5 shadow-2xl"
+        className={`${surfacePanelClass} w-full max-w-md p-5 shadow-2xl`}
         style={{ borderTopColor: typeStyle.border, borderTopWidth: '3px' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -105,7 +106,7 @@ function ClientCalendarDetail({ card, onClose }) {
             href={card.dropboxLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-[#810100] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#a00000]"
+            className={`${btnPrimaryClass} mt-4 flex w-full items-center justify-center gap-2 py-2.5 text-[11px]`}
           >
             View content ↗
           </a>
@@ -163,15 +164,18 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
     setViewMode('week');
   };
 
-  const navBtnClass = embedded
-    ? `${btnSecondaryClass} px-3 py-1.5 text-[11px] normal-case tracking-normal`
-    : 'rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 transition hover:bg-white/10 hover:text-white';
+  const navBtnClass = `${btnSecondaryClass} px-3 py-1.5 text-[11px] normal-case tracking-normal`;
+
+  const viewTabClass = (active) =>
+    `px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition ${
+      active ? `${btnPrimaryClass} py-1.5` : 'text-white/45 hover:text-white'
+    }`;
 
   const calendarBody = (
     <>
       {!embedded && (
-        <p className="mb-4 text-sm text-gray-400">
-          {totalScheduled} scheduled post{totalScheduled === 1 ? '' : 's'} — your content only, no other clients.
+        <p className="mb-4 text-sm text-white/45">
+          {totalScheduled} scheduled post{totalScheduled === 1 ? '' : 's'} — your content only.
         </p>
       )}
 
@@ -192,37 +196,21 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
           <button
             type="button"
             onClick={() => setViewMode('month')}
-            className={
-              embedded
-                ? `px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition ${
-                    viewMode === 'month' ? `${btnPrimaryClass} py-1.5` : 'text-white/45 hover:text-white'
-                  }`
-                : `rounded-md px-4 py-1.5 text-sm font-medium transition ${
-                    viewMode === 'month' ? 'bg-[#810100] text-white' : 'text-gray-400 hover:text-white'
-                  }`
-            }
+            className={viewTabClass(viewMode === 'month')}
           >
             Month
           </button>
           <button
             type="button"
             onClick={() => setViewMode('week')}
-            className={
-              embedded
-                ? `px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition ${
-                    viewMode === 'week' ? `${btnPrimaryClass} py-1.5` : 'text-white/45 hover:text-white'
-                  }`
-                : `rounded-md px-4 py-1.5 text-sm font-medium transition ${
-                    viewMode === 'week' ? 'bg-[#810100] text-white' : 'text-gray-400 hover:text-white'
-                  }`
-            }
+            className={viewTabClass(viewMode === 'week')}
           >
             Week
           </button>
         </div>
       </div>
 
-      <div className={embedded ? `${surfacePanelClass} p-4` : ''}>
+      <div className={`${surfacePanelClass} p-4`}>
         {viewMode === 'week' ? (
           <CalendarWeekView
             focusDate={focusDate}
@@ -269,27 +257,11 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      <header className="border-b border-white/5 bg-black/95 px-4 py-6 sm:px-6">
-        <div className="mx-auto flex max-w-[1800px] items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#810100] to-[#a00000] shadow-lg shadow-[#810100]/20">
-            <span className="text-sm font-bold text-white">M</span>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Medici Social</p>
-            <h1 className="text-lg font-semibold text-white">Content Calendar</h1>
-            <p className="text-sm" style={{ color: clientColor }}>{client}</p>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-[1800px] px-4 py-4 sm:px-6">
-        {calendarBody}
-      </main>
-
+    <SharePortalShell title="Content calendar" client={client} clientColor={clientColor}>
+      {calendarBody}
       {selectedCard && (
         <ClientCalendarDetail card={selectedCard} onClose={() => setSelectedCard(null)} />
       )}
-    </div>
+    </SharePortalShell>
   );
 }

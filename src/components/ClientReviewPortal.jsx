@@ -9,7 +9,8 @@ import {
 import VideoIdeaCard from './VideoIdeaCard';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import ClientIdeasTable from './clientPortal/ClientIdeasTable';
-import { surfacePanelClass } from './clientPortal/clientPortalUi';
+import SharePortalShell from './clientPortal/SharePortalShell';
+import { btnPrimaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 export default function ClientReviewPortal({
   client,
@@ -171,67 +172,48 @@ export default function ClientReviewPortal({
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      <header className="border-b border-white/5 bg-black/95 px-4 py-6 sm:px-6">
-        <div className="mx-auto flex max-w-[800px] items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#810100] to-[#a00000] shadow-lg shadow-[#810100]/20">
-            <span className="text-sm font-bold text-white">M</span>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Medici Social</p>
-            <h1 className="text-lg font-semibold text-white">Video Idea Review</h1>
-            <p className="text-sm" style={{ color: clientColor }}>{client}</p>
-          </div>
-        </div>
-      </header>
+    <SharePortalShell title="Video idea review" client={client} clientColor={clientColor}>
+      {!done ? (
+        <>
+          <p className="mb-6 text-sm text-white/45">
+            {pendingCount} idea{pendingCount === 1 ? '' : 's'} waiting for your feedback
+          </p>
 
-      <main className="mx-auto max-w-[800px] px-4 py-8 sm:px-6">
-        {!done ? (
-          <>
-            <p className="mb-2 text-sm text-gray-300">
-              Review the ideas below. Approve the ones you want us to produce.
-            </p>
-            <p className="mb-6 text-xs text-gray-500">
-              {pendingCount} idea{pendingCount === 1 ? '' : 's'} waiting for your feedback
-            </p>
-
-            <div className="space-y-4">
-              {localIdeas.map((idea) => (
-                <VideoIdeaCard
-                  key={idea.id}
-                  idea={idea}
-                  reviewMode
-                  onApprove={handleApprove}
-                  onDecline={handleDecline}
-                />
-              ))}
+          <div className="space-y-3">
+            {localIdeas.map((idea) => (
+              <VideoIdeaCard
+                key={idea.id}
+                idea={idea}
+                reviewMode
+                onApprove={handleApprove}
+                onDecline={handleDecline}
+              />
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className={`${surfacePanelClass} px-6 py-12 text-center`}>
+          <h2 className="text-lg font-semibold text-white">All caught up</h2>
+          <p className="mt-2 text-sm text-white/45">
+            Thank you for reviewing your video ideas.
+          </p>
+          {sessionResponses.length > 0 && !useCloudSync && !canSyncLocally && (
+            <div className="mt-6 text-left">
+              <p className="text-sm text-white/55">Send your approvals to Medici Social</p>
+              <p className="mt-1 text-xs text-white/35">
+                Copy this link and send it to your account manager so approved ideas can be added to the board.
+              </p>
+              <button
+                type="button"
+                onClick={copyImportLink}
+                className={`${btnPrimaryClass} mt-3 py-2 text-[11px]`}
+              >
+                {copied ? 'Link copied!' : 'Copy approval link'}
+              </button>
             </div>
-          </>
-        ) : (
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-6 py-12 text-center">
-            <p className="text-2xl">🎉</p>
-            <h2 className="mt-3 text-lg font-semibold text-white">All caught up!</h2>
-            <p className="mt-2 text-sm text-gray-400">
-              Thank you for reviewing your video ideas.
-            </p>
-            {sessionResponses.length > 0 && !useCloudSync && !canSyncLocally && (
-              <div className="mt-6 rounded-lg border border-white/10 bg-white/5 p-4 text-left">
-                <p className="text-sm text-gray-300">Send your approvals to Medici Social</p>
-                <p className="mt-1 text-xs text-gray-500">
-                  Copy this link and send it to your account manager so approved ideas can be added to the board.
-                </p>
-                <button
-                  type="button"
-                  onClick={copyImportLink}
-                  className="mt-3 rounded-lg bg-[#810100] px-4 py-2 text-sm font-medium text-white hover:bg-[#a00000]"
-                >
-                  {copied ? 'Link copied!' : 'Copy approval link'}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </main>
-    </div>
+          )}
+        </div>
+      )}
+    </SharePortalShell>
   );
 }

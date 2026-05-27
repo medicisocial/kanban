@@ -15,7 +15,8 @@ import {
 import { getEditorTaskStatusOptions } from '../utils/editorTodo';
 import NeedsEditsModal from './NeedsEditsModal';
 import PlanPostDateModal from './PlanPostDateModal';
-import { glassCardClass } from './clientPortal/clientPortalUi';
+import { glassInsetClass, selectClass } from './clientPortal/clientPortalUi';
+import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
 
 const taskActionBtnClass =
   'inline-flex items-center justify-center rounded-sm bg-white px-3 py-1.5 text-[10px] font-medium normal-case tracking-normal text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40';
@@ -36,7 +37,7 @@ function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate }) {
   const openCard = () => onOpenCard(task.card);
 
   return (
-    <article className={`${glassCardClass} border-amber-500/30 p-4`}>
+    <article className={`${glassInsetClass} border-amber-500/30 p-4`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -104,7 +105,7 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onAppr
   const openCard = () => onOpenCard(task.card);
 
   return (
-    <article className={`${glassCardClass} p-4`}>
+    <article className={`${glassInsetClass} p-4`}>
       <div className="flex flex-wrap items-start gap-3">
         <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] text-gray-400">
           →
@@ -195,7 +196,7 @@ function ApprovedScheduleTaskCard({ task, getClientColor, onOpenCard, onMarkSche
   const openCard = () => onOpenCard(task.card);
 
   return (
-    <article className={`${glassCardClass} p-4`}>
+    <article className={`${glassInsetClass} p-4`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -262,7 +263,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted }) {
   const openCard = () => onOpenCard(task.card);
 
   return (
-    <article className={`${glassCardClass} p-4`}>
+    <article className={`${glassInsetClass} p-4`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -338,7 +339,7 @@ function TaskList({ tasks, renderItem }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 p-2">
       {tasks.map((task) => renderItem(task))}
     </div>
   );
@@ -347,6 +348,7 @@ function TaskList({ tasks, renderItem }) {
 export default function AccountManagerTodo({
   cards,
   clientFilter,
+  embedded = false,
   onOpenCard,
   onUpdateCard,
   onMarkScheduled,
@@ -423,20 +425,22 @@ export default function AccountManagerTodo({
 
   return (
     <div>
-      <div className="mb-6 text-center">
-        <h2 className="text-xl font-semibold text-white">Account manager tasks</h2>
-        <p className="mt-1 text-sm text-gray-400">
-          Set post dates on pipeline cards, review client content, post stories, and schedule approved work.
-        </p>
-      </div>
+      {!embedded && (
+        <div className="mb-6 text-center">
+          <h2 className="text-xl font-semibold text-white">Account manager tasks</h2>
+          <p className="mt-1 text-sm text-white/45">
+            Set post dates on pipeline cards, review client content, post stories, and schedule approved work.
+          </p>
+        </div>
+      )}
 
-      <div className="mb-8 flex justify-center">
-        <label className="flex items-center gap-2 text-sm text-gray-400">
+      <div className={`flex justify-center ${embedded ? 'mb-4' : 'mb-8'}`}>
+        <label className="flex items-center gap-2 text-sm text-white/45">
           <span>Account manager</span>
           <select
             value={assigneeFilter}
             onChange={(e) => setAssigneeFilter(e.target.value)}
-            className="select-dark rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-1.5 text-sm text-[#f9f6f2] outline-none"
+            className={`${selectClass} py-1.5 text-xs`}
           >
             <option value="all">All</option>
             {accountManagers.map((member) => (
@@ -448,27 +452,18 @@ export default function AccountManagerTodo({
         </label>
       </div>
 
-      <div className="mx-auto grid max-w-[2200px] grid-cols-1 gap-6 xl:grid-cols-2 2xl:grid-cols-4 xl:items-start">
-        <section className="min-w-0 rounded-2xl border border-violet-500/20 bg-[#0d0d0d] p-5 sm:p-6">
-          <div className="mb-6 text-center">
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <h3 className="text-lg font-semibold text-white">Set post date</h3>
-              <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-xs text-violet-200">
-                {orderedSetPostDateTasks.length} waiting
-              </span>
-            </div>
-            <p className="mt-2 text-sm text-gray-400">
-              Pipeline cards missing a target publish date — pick a date on the content calendar.
-            </p>
-          </div>
-
+      <div className="mx-auto grid max-w-[2200px] grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-4 xl:items-start">
+        <PortalTaskSection
+          title="Set post date"
+          subtitle="Pipeline cards missing a target publish date."
+          action={
+            <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-xs text-violet-200">
+              {orderedSetPostDateTasks.length}
+            </span>
+          }
+        >
           {orderedSetPostDateTasks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/10 px-6 py-10 text-center">
-              <p className="text-sm text-gray-400">Every pipeline card has a post date.</p>
-              <p className="mt-1 text-xs text-gray-500">
-                New cards appear here until an account manager sets when they should go live.
-              </p>
-            </div>
+            <p className="px-4 py-8 text-center text-xs text-white/35">Every pipeline card has a post date.</p>
           ) : (
             <TaskList
               tasks={orderedSetPostDateTasks}
@@ -483,28 +478,19 @@ export default function AccountManagerTodo({
               )}
             />
           )}
-        </section>
+        </PortalTaskSection>
 
-        <section className="min-w-0 rounded-2xl border border-[#810100]/20 bg-[#0d0d0d] p-5 sm:p-6">
-          <div className="mb-6 text-center">
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <h3 className="text-lg font-semibold text-white">In review</h3>
-              <span className="rounded-full border border-[#810100]/30 bg-[#a00000]/10 px-2.5 py-1 text-xs text-[#fecaca]">
-                {orderedInReviewTasks.length} in review
-              </span>
-            </div>
-            <p className="mt-2 text-sm text-gray-400">
-              Approve content or send it back to the editor with revision notes.
-            </p>
-          </div>
-
+        <PortalTaskSection
+          title="In review"
+          subtitle="Approve content or send it back with revision notes."
+          action={
+            <span className="rounded-full border border-[#810100]/30 bg-[#a00000]/10 px-2.5 py-0.5 text-xs text-[#fecaca]">
+              {orderedInReviewTasks.length}
+            </span>
+          }
+        >
           {orderedInReviewTasks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/10 px-6 py-10 text-center">
-              <p className="text-sm text-gray-400">Nothing in review right now.</p>
-              <p className="mt-1 text-xs text-gray-500">
-                Cards moved to In Review on the board appear here.
-              </p>
-            </div>
+            <p className="px-4 py-8 text-center text-xs text-white/35">Nothing in review right now.</p>
           ) : (
             <TaskList
               tasks={orderedInReviewTasks}
@@ -521,26 +507,19 @@ export default function AccountManagerTodo({
               )}
             />
           )}
-        </section>
+        </PortalTaskSection>
 
-        <section className="min-w-0 rounded-2xl border border-blue-500/20 bg-[#0d0d0d] p-5 sm:p-6">
-          <div className="mb-6 text-center">
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <h3 className="text-lg font-semibold text-white">Stories · post today</h3>
-              <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-xs text-blue-200">
-                {orderedStoryTasks.length} to post
-              </span>
-            </div>
-            <p className="mt-2 text-sm text-gray-400">{todayLabel}</p>
-          </div>
-
+        <PortalTaskSection
+          title="Stories · post today"
+          subtitle={todayLabel}
+          action={
+            <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-0.5 text-xs text-blue-200">
+              {orderedStoryTasks.length}
+            </span>
+          }
+        >
           {orderedStoryTasks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/10 px-6 py-10 text-center">
-              <p className="text-sm text-gray-400">No stories to post today.</p>
-              <p className="mt-1 text-xs text-gray-500">
-                Daily campaigns and weekly stories appear here on their scheduled days.
-              </p>
-            </div>
+            <p className="px-4 py-8 text-center text-xs text-white/35">No stories to post today.</p>
           ) : (
             <TaskList
               tasks={orderedStoryTasks}
@@ -555,28 +534,19 @@ export default function AccountManagerTodo({
               )}
             />
           )}
-        </section>
+        </PortalTaskSection>
 
-        <section className="min-w-0 rounded-2xl border border-amber-500/20 bg-[#0d0d0d] p-5 sm:p-6">
-          <div className="mb-6 text-center">
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <h3 className="text-lg font-semibold text-white">Posts & other content · overall to-do</h3>
-              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-200">
-                {visiblePostsTasks.length} tasks
-              </span>
-            </div>
-            <p className="mt-2 text-sm text-gray-400">
-              Approved posts ready to mark scheduled — they leave this list and move to the Scheduled column on the board.
-            </p>
-          </div>
-
+        <PortalTaskSection
+          title="Posts & content"
+          subtitle="Approved posts ready to mark scheduled."
+          action={
+            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs text-amber-200">
+              {visiblePostsTasks.length}
+            </span>
+          }
+        >
           {visiblePostsTasks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/10 px-6 py-10 text-center">
-              <p className="text-sm text-gray-400">Nothing on the to-do list right now.</p>
-              <p className="mt-1 text-xs text-gray-500">
-                Approved reels, carousels, and static posts will show up here.
-              </p>
-            </div>
+            <p className="px-4 py-8 text-center text-xs text-white/35">Nothing on the to-do list right now.</p>
           ) : (
             <TaskList
               tasks={visiblePostsTasks}
@@ -591,7 +561,7 @@ export default function AccountManagerTodo({
               )}
             />
           )}
-        </section>
+        </PortalTaskSection>
       </div>
 
       {needsEditsCard && (

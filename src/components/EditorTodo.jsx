@@ -11,7 +11,8 @@ import {
 } from '../utils/editorTodo';
 import AddEditorTaskModal from './AddEditorTaskModal';
 import NeedsEditsModal from './NeedsEditsModal';
-import { btnPrimaryClass, glassCardClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, glassInsetClass, selectClass } from './clientPortal/clientPortalUi';
+import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
 
 const taskActionBtnClass =
   'inline-flex items-center justify-center rounded-sm bg-white px-3 py-1.5 text-[10px] font-medium normal-case tracking-normal text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40';
@@ -49,7 +50,7 @@ function EditorTodoItem({
 
   return (
     <article
-      className={`${glassCardClass} p-4 transition ${
+      className={`${glassInsetClass} p-4 transition ${
         task.completed ? 'opacity-60' : ''
       }`}
     >
@@ -191,14 +192,12 @@ function EditorTodoItem({
 function EditorTaskList({ tasks, emptyMessage, itemProps }) {
   if (tasks.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-white/10 px-4 py-10 text-center">
-        <p className="text-sm text-gray-400">{emptyMessage}</p>
-      </div>
+      <p className="px-4 py-8 text-center text-xs text-white/35">{emptyMessage}</p>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 p-2">
       {tasks.map((task) => (
         <EditorTodoItem key={task.id} task={task} {...itemProps} />
       ))}
@@ -208,19 +207,17 @@ function EditorTaskList({ tasks, emptyMessage, itemProps }) {
 
 function EditorTaskColumn({ title, description, count, accentClass, tasks, emptyMessage, itemProps }) {
   return (
-    <section className={`min-w-0 ${surfacePanelClass} p-4 sm:p-5`}>
-      <div className="mb-4 border-b border-white/8 pb-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-base font-semibold text-white">{title}</h3>
-          <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${accentClass}`}>
-            {count}
-          </span>
-        </div>
-        <p className="mt-1 text-xs text-gray-500">{description}</p>
-      </div>
-
+    <PortalTaskSection
+      title={title}
+      subtitle={description}
+      action={
+        <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${accentClass}`}>
+          {count}
+        </span>
+      }
+    >
       <EditorTaskList tasks={tasks} emptyMessage={emptyMessage} itemProps={itemProps} />
-    </section>
+    </PortalTaskSection>
   );
 }
 
@@ -287,43 +284,45 @@ export default function EditorTodo({
 
   return (
     <div className={embedded ? '' : 'mx-auto max-w-[1400px] px-4 py-4 sm:px-6'}>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-white">Editor tasks</h2>
-          <p className="mt-1 text-sm text-gray-400">
-            Editing and review queues from the board — sorted by post date and time, earliest first.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-200">
-              {editCount} need editing
-            </span>
-            <span className="rounded-full border border-[#810100]/30 bg-[#a00000]/10 px-2.5 py-1 text-[#fecaca]">
-              {approveCount} in review
-            </span>
-            {oneOffCount > 0 && (
-              <span className="rounded-full border border-white/20 bg-white/5 px-2.5 py-1 text-[#f9f6f2]">
-                {oneOffCount} one-off
+      <div className={`flex flex-wrap items-center justify-between gap-4 ${embedded ? 'mb-4' : 'mb-6'}`}>
+        {!embedded && (
+          <div>
+            <h2 className="text-xl font-semibold text-white">Editor tasks</h2>
+            <p className="mt-1 text-sm text-white/45">
+              Editing and review queues from the board — sorted by post date and time, earliest first.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-200">
+                {editCount} need editing
               </span>
-            )}
+              <span className="rounded-full border border-[#810100]/30 bg-[#a00000]/10 px-2.5 py-1 text-[#fecaca]">
+                {approveCount} in review
+              </span>
+              {oneOffCount > 0 && (
+                <span className="rounded-full border border-white/20 bg-white/5 px-2.5 py-1 text-[#f9f6f2]">
+                  {oneOffCount} one-off
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <button
           type="button"
           onClick={() => setShowAddModal(true)}
-          className={btnPrimaryClass}
+          className={`${btnPrimaryClass} ${embedded ? 'ml-auto py-1.5 text-[10px]' : ''}`}
         >
           + Add one-off project
         </button>
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-gray-400">
+      <div className={`flex flex-wrap items-center gap-3 ${embedded ? 'mb-4' : 'mb-6'}`}>
+        <label className="flex items-center gap-2 text-sm text-white/45">
           <span>Editor</span>
           <select
             value={assigneeFilter}
             onChange={(e) => setAssigneeFilter(e.target.value)}
-            className="select-dark rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-1.5 text-sm text-[#f9f6f2] outline-none"
+            className={`${selectClass} py-1.5 text-xs`}
           >
             <option value="all">All editors</option>
             {editors.map((member) => (
@@ -334,21 +333,21 @@ export default function EditorTodo({
           </select>
         </label>
 
-        <label className="flex items-center gap-2 text-sm text-gray-400">
+        <label className="flex items-center gap-2 text-sm text-white/45">
           <input
             type="checkbox"
             checked={showCompleted}
             onChange={(e) => setShowCompleted(e.target.checked)}
-            className="h-4 w-4 rounded border-white/20 bg-[#1a1a1a] text-[#810100]"
+            className="h-4 w-4 rounded border-white/20 bg-white/[0.04] text-white"
           />
           Show completed one-offs
         </label>
       </div>
 
       {orderedTasks.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/10 px-6 py-16 text-center">
-          <p className="text-sm text-gray-400">Nothing on the list right now.</p>
-          <p className="mt-1 text-xs text-gray-500">
+        <div className="border border-dashed border-white/10 px-6 py-16 text-center">
+          <p className="text-sm text-white/45">Nothing on the list right now.</p>
+          <p className="mt-1 text-xs text-white/35">
             Move cards to Editing, Not Approved, or In Review on the board — or add a one-off project.
           </p>
         </div>
