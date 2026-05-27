@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ADMIN_TASKS_STORAGE_KEY, COMPANY_STAFF } from '../constants';
+import { ADMIN_TASKS_STORAGE_KEY } from '../constants';
+import { getDefaultAssigneeForRole } from '../utils/teamMembers';
 
 function createAdminTask(overrides = {}) {
   return {
@@ -8,7 +9,7 @@ function createAdminTask(overrides = {}) {
     description: '',
     client: '',
     dueDate: '',
-    assignedTo: COMPANY_STAFF[0],
+    assignedTo: getDefaultAssigneeForRole('Account Manager'),
     completed: false,
     completedAt: null,
     createdAt: Date.now(),

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { COMPANY_STAFF } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import { toDateKey } from '../utils/calendar';
 import {
@@ -18,7 +17,8 @@ export default function AdminTodo({
   onToggleAdminTaskComplete,
   onDeleteAdminTask,
 }) {
-  const { getClientColor } = useClientsContext();
+  const { getClientColor, getAllTeamMemberNames } = useClientsContext();
+  const adminStaff = getAllTeamMemberNames();
   const todayKey = toDateKey(new Date());
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [showCompleted, setShowCompleted] = useState(true);
@@ -77,7 +77,7 @@ export default function AdminTodo({
             className="select-dark rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-1.5 text-sm text-[#f9f6f2] outline-none"
           >
             <option value="all">Everyone</option>
-            {COMPANY_STAFF.map((member) => (
+            {adminStaff.map((member) => (
               <option key={member} value={member}>
                 {member}
               </option>

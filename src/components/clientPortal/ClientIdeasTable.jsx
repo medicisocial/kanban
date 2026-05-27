@@ -23,7 +23,6 @@ const SORT_KEYS = {
   title: 'title',
   status: 'status',
   contentType: 'contentType',
-  accountManager: 'accountManager',
   createdAt: 'createdAt',
 };
 
@@ -58,7 +57,6 @@ export default function ClientIdeasTable({
   ideas,
   client,
   clientColor,
-  accountManager,
   clientLogo,
   searchQuery = '',
   onApprove,
@@ -101,12 +99,9 @@ export default function ClientIdeasTable({
       }
       const av = (a[sort.key] || '').toString().toLowerCase();
       const bv = (b[sort.key] || '').toString().toLowerCase();
-      if (sort.key === 'accountManager') {
-        return (accountManager || '').localeCompare(accountManager || '') * dir;
-      }
       return av.localeCompare(bv) * dir;
     });
-  }, [ideas, client, statusFilter, searchQuery, sort, accountManager]);
+  }, [ideas, client, statusFilter, searchQuery, sort]);
 
   const submitDecline = (ideaId) => {
     onDecline?.(ideaId, comment.trim());
@@ -244,15 +239,14 @@ export default function ClientIdeasTable({
               <th className="w-[12%]"><SortHeader label="Status" sortKey={SORT_KEYS.status} sort={sort} onSort={handleSort} /></th>
               <th className="w-[10%]"><SortHeader label="Type" sortKey={SORT_KEYS.contentType} sort={sort} onSort={handleSort} /></th>
               <th className="w-[12%]"><span className={tableHeaderClass}>Client</span></th>
-              <th className="w-[12%]"><SortHeader label="Assigned AM" sortKey={SORT_KEYS.accountManager} sort={sort} onSort={handleSort} /></th>
-              <th className="w-[10%]"><SortHeader label="Created" sortKey={SORT_KEYS.createdAt} sort={sort} onSort={handleSort} /></th>
-              <th className="w-[10%]"><span className={tableHeaderClass}>Actions</span></th>
+              <th className="w-[14%]"><SortHeader label="Created" sortKey={SORT_KEYS.createdAt} sort={sort} onSort={handleSort} /></th>
+              <th className="w-[12%]"><span className={tableHeaderClass}>Actions</span></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-16 text-center text-sm text-white/40">
+                <td colSpan={6} className="px-4 py-16 text-center text-sm text-white/40">
                   No ideas match your filters.
                 </td>
               </tr>
@@ -288,9 +282,6 @@ export default function ClientIdeasTable({
                           <ClientAvatar client={client} size="md" color={clientColor} logoUrl={clientLogo} />
                           <span className="truncate text-xs text-white/70">{client}</span>
                         </div>
-                      </td>
-                      <td className={`${tableCellClass} text-xs text-white/65`}>
-                        {accountManager || '—'}
                       </td>
                       <td className={`${tableCellClass} text-xs tabular-nums text-white/55`}>
                         {formatPortalDate(idea.createdAt)}
@@ -329,7 +320,7 @@ export default function ClientIdeasTable({
                     </tr>
                     {(expanded || declining) && (
                       <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                        <td colSpan={7} className="px-4 py-4">
+                        <td colSpan={6} className="px-4 py-4">
                           <div className="grid gap-4 md:grid-cols-[1fr_auto]">
                             <div>
                               {idea.description && (

@@ -8,6 +8,11 @@ import {
 } from '../constants';
 import { DEFAULT_CLIENT_BUSINESS_TYPES, normalizeBusinessType } from '../utils/eventFormSchemas';
 import { normalizeClientName, pickNextClientColor, mergeDefaultClients } from '../utils/clients';
+import {
+  mergeClientSocialLogins,
+  normalizeClientContacts,
+  normalizeClientSocialLogins,
+} from '../utils/clientProfile';
 
 function normalizeBusinessTypesMap(types = {}) {
   const normalized = {};
@@ -35,6 +40,8 @@ function loadClients() {
             ...DEFAULT_CLIENT_BUSINESS_TYPES,
             ...(parsed.businessTypes || {}),
           }),
+          contacts: parsed.contacts || {},
+          socialLogins: parsed.socialLogins || {},
         };
       }
     }
@@ -47,6 +54,8 @@ function loadClients() {
     logos: {},
     accountManagers: { ...DEFAULT_CLIENT_ACCOUNT_MANAGERS },
     businessTypes: { ...DEFAULT_CLIENT_BUSINESS_TYPES },
+    contacts: {},
+    socialLogins: {},
   };
 }
 
@@ -76,6 +85,8 @@ export function useClients() {
         logos: logo ? { ...prev.logos, [trimmed]: logo } : { ...prev.logos },
         accountManagers: { ...prev.accountManagers },
         businessTypes: nextBusinessTypes,
+        contacts: { ...prev.contacts },
+        socialLogins: { ...prev.socialLogins },
       };
     });
 
@@ -147,6 +158,38 @@ export function useClients() {
     }));
   }, []);
 
+  const getClientContacts = useCallback(
+    (client) => normalizeClientContacts(state.contacts[client]),
+    [state.contacts],
+  );
+
+  const setClientContacts = useCallback((client, contacts) => {
+    if (!client) return;
+    setState((prev) => ({
+      ...prev,
+      contacts: {
+        ...prev.contacts,
+        [client]: normalizeClientContacts(contacts),
+      },
+    }));
+  }, []);
+
+  const getClientSocialLogins = useCallback(
+    (client) => normalizeClientSocialLogins(state.socialLogins[client]),
+    [state.socialLogins],
+  );
+
+  const setClientSocialLogins = useCallback((client, logins) => {
+    if (!client) return;
+    setState((prev) => ({
+      ...prev,
+      socialLogins: {
+        ...prev.socialLogins,
+        [client]: mergeClientSocialLogins(prev.socialLogins[client], logins),
+      },
+    }));
+  }, []);
+
   return {
     clients: state.names,
     clientColors: state.colors,
@@ -163,5 +206,9 @@ export function useClients() {
     setClientColor,
     setClientLogo,
     setClientBusinessType,
+    getClientContacts,
+    setClientContacts,
+    getClientSocialLogins,
+    setClientSocialLogins,
   };
 }

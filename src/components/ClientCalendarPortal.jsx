@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { PLATFORM_ICON, getContentTypeStyle } from '../constants';
+import { getContentTypeStyle } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
+import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import {
   getDefaultCalendarDate,
   addWeeks,
@@ -93,12 +94,6 @@ function ClientCalendarDetail({ card, onClose }) {
             <dt className="text-gray-500">Type</dt>
             <dd className={`font-medium ${typeStyle.label}`}>{card.contentType}</dd>
           </div>
-          {card.assignedTo && (
-            <div className="flex justify-between gap-4">
-              <dt className="text-gray-500">Team</dt>
-              <dd className="text-[#f9f6f2]">{PLATFORM_ICON} {card.assignedTo}</dd>
-            </div>
-          )}
         </dl>
 
         {card.notes && (
@@ -129,7 +124,9 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
 
   useEffect(() => {
     const snapshot = parseCalendarShareHash();
-    const scheduled = cards.filter((c) => c.columnId === 'scheduled');
+    const scheduled = stripInternalCardsForClientPortal(
+      cards.filter((c) => c.columnId === 'scheduled'),
+    );
     const merged = mergePortalCalendarCards(scheduled, client, snapshot);
     setLocalCards(merged.filter((c) => c.client === client));
   }, [cards, client]);

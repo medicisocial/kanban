@@ -1,8 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   CONTENT_TYPES,
-  TEAM_MEMBERS,
-  ACCOUNT_MANAGERS,
   PLATFORM,
   PLATFORM_ICON,
   getContentTypeStyle,
@@ -14,10 +12,26 @@ import { hasStoryRecurrence, hasStoryDailyRange, getStoryScheduleMode, parseRecu
 import { getDefaultShootEndTime, parseTimeToMinutes } from '../utils/shootDay';
 import StoryRecurrencePicker from './StoryRecurrencePicker';
 import ModelTagInput from './ModelTagInput';
+import { btnPrimaryClass } from './clientPortal/clientPortalUi';
+
+const CARD_TABS = [
+  { id: 'details', label: 'Details' },
+  { id: 'production', label: 'Production' },
+  { id: 'schedule', label: 'Schedule' },
+  { id: 'references', label: 'References' },
+];
 
 export default function CardModal({ card, onClose, onUpdate, onDelete }) {
   const overlayRef = useRef(null);
-  const { clients, getClientAccountManager } = useClientsContext();
+  const [activeTab, setActiveTab] = useState('details');
+  const { clients, getClientAccountManager, getMemberNamesForRole } = useClientsContext();
+  const editors = getMemberNamesForRole('Editor');
+  const contentCreators = getMemberNamesForRole('Content Creator');
+  const accountManagers = getMemberNamesForRole('Account Manager');
+
+  useEffect(() => {
+    setActiveTab('details');
+  }, [card?.id]);
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -98,6 +112,10 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
     : '';
 
   const showShootPlanning = needsShootSchedule(card.contentType) && card.shootDate;
+  const tabClass = (id) =>
+    `px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider transition ${
+      activeTab === id ? `${btnPrimaryClass} py-1.5` : 'text-white/45 hover:text-white'
+    }`;
 
   return (
     <div
@@ -129,7 +147,19 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
           </button>
         </div>
 
+        <div className="border-b border-white/5 px-5 py-3">
+          <div className="flex flex-wrap gap-1 border border-white/10 bg-white/[0.03] p-0.5 w-fit">
+            {CARD_TABS.map((tab) => (
+              <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={tabClass(tab.id)}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-4 px-5 py-4">
+          {activeTab === 'details' && (
+            <>
           <Field label="Task Title">
             <input
               type="text"
@@ -200,60 +230,106 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label={isOneOff ? 'Due date (optional)' : 'Plan date'}>
-              <input
-                type="date"
-                value={card.dueDate}
-                onChange={(e) => handleChange('dueDate', e.target.value)}
-                className={inputClass}
-              />
-              <p className="mt-1 text-[10px] text-gray-500">
-                {isOneOff
-                  ? 'Internal deadline only — not a posting date'
-                  : card.columnId === 'scheduled'
-                    ? 'When the post goes live'
-                    : 'Target date on the content calendar'}
-              </p>
-            </Field>
-
-            {!isOneOff && (
-              <Field label={card.columnId === 'scheduled' ? 'Scheduled Time' : 'Plan time'}>
-                <input
-                  type="time"
-                  value={card.dueTime || ''}
-                  onChange={(e) => handleChange('dueTime', e.target.value)}
+          {!isOneOff && contentCreators.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Content creator">
+                <select
+                  value={card.contentCreator || ''}
+                  onChange={(e) => handleChange('contentCreator', e.target.value)}
                   className={inputClass}
-                />
-                <p className="mt-1 text-[10px] text-gray-500">Publish time (optional)</p>
+                >
+                  <option value="">Unassigned</option>
+                  {contentCreators.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
               </Field>
-            )}
-          </div>
-
-          {!isOneOff && card.contentType === 'Story' && ['scheduled', 'editing', 'in-review', 'approved'].includes(card.columnId) && (
-            <StoryRecurrencePicker
-              mode={storyRecurrenceMode}
-              onModeChange={(mode) => {
-                if (mode === 'once') {
-                  onUpdate(card.id, { storyRecurrenceDays: [], storyEndDate: '' });
-                } else if (mode === 'daily') {
-                  onUpdate(card.id, { storyRecurrenceDays: [] });
-                } else if (mode === 'weekly') {
-                  onUpdate(card.id, {
-                    storyEndDate: '',
-                    storyRecurrenceDays: recurrenceDays.length ? recurrenceDays : [1],
-                  });
-                }
-              }}
-              days={recurrenceDays}
-              onDaysChange={(days) => onUpdate(card.id, { storyRecurrenceDays: days, storyEndDate: '' })}
-              startDate={card.dueDate}
-              onStartDateChange={(dueDate) => handleChange('dueDate', dueDate)}
-              endDate={card.storyEndDate || ''}
-              onEndDateChange={(storyEndDate) => handleChange('storyEndDate', storyEndDate)}
-            />
+              <Field label="Editor">
+                <select
+                  value={card.assignedTo}
+                  onChange={(e) => handleChange('assignedTo', e.target.value)}
+                  className={inputClass}
+                >
+                  {editors.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
           )}
 
+          {(isOneOff || contentCreators.length === 0) && (
+            <Field label="Editor">
+              <select
+                value={card.assignedTo}
+                onChange={(e) => handleChange('assignedTo', e.target.value)}
+                className={inputClass}
+              >
+                {editors.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+
+          <Field label="Account manager">
+            <select
+              value={card.accountManager || getClientAccountManager(card.client) || ''}
+              onChange={(e) => handleChange('accountManager', e.target.value)}
+              className={inputClass}
+            >
+              <option value="">Use client default</option>
+              {accountManagers.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label={card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card)) ? `Notes (${occurrenceLabel})` : 'Notes'}>
+            <textarea
+              value={card.notes}
+              onChange={(e) => handleChange('notes', e.target.value)}
+              rows={4}
+              placeholder="Add notes..."
+              className={`${inputClass} resize-y`}
+            />
+          </Field>
+
+          {card.clientComment && (
+            <div
+              className={`rounded-lg border px-3 py-2.5 ${
+                card.columnId === 'not-approved'
+                  ? 'border-red-500/30 bg-red-500/10'
+                  : 'border-[#810100]/20 bg-[#a00000]/5'
+              }`}
+            >
+              <p className={`text-[10px] font-medium uppercase tracking-wider ${card.columnId === 'not-approved' ? 'text-red-300' : 'text-[#fca5a5]'}`}>
+                {card.columnId === 'not-approved' ? 'Client revision notes' : 'Client feedback'}
+              </p>
+              <p className="mt-1 text-sm text-gray-300">&ldquo;{card.clientComment}&rdquo;</p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
+            <span className={`text-xs font-medium ${typeStyle.label}`}>{card.contentType}</span>
+            <span className="text-xs text-gray-500">·</span>
+            <span className="text-xs text-gray-400">{PLATFORM_ICON} {PLATFORM}</span>
+            <span className="text-xs text-gray-500">·</span>
+            <span className="text-xs text-gray-400">{card.client}</span>
+          </div>
+            </>
+          )}
+
+          {activeTab === 'production' && !isOneOff && (
+            <>
           {!isOneOff && needsShootSchedule(card.contentType) && (
             <Field label="Shoot Date">
               <input
@@ -262,7 +338,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
                 onChange={(e) => handleChange('shootDate', e.target.value)}
                 className={inputClass}
               />
-              <p className="mt-1 text-[10px] text-gray-500">When to film — appears on the Shoot Schedule page</p>
+              <p className="mt-1 text-[10px] text-gray-500">When to film — appears on Production days</p>
             </Field>
           )}
 
@@ -309,39 +385,67 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Editor">
-              <select
-                value={card.assignedTo}
-                onChange={(e) => handleChange('assignedTo', e.target.value)}
-                className={inputClass}
-              >
-                {TEAM_MEMBERS.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </Field>
+          {!showShootPlanning && needsShootSchedule(card.contentType) && !card.shootDate && (
+            <p className="text-sm text-white/45">Set a shoot date on this tab to plan times and talent.</p>
+          )}
+            </>
+          )}
 
-            <Field label="Account manager">
-              <select
-                value={card.accountManager || getClientAccountManager(card.client) || ''}
-                onChange={(e) => handleChange('accountManager', e.target.value)}
+          {activeTab === 'production' && isOneOff && (
+            <p className="text-sm text-white/45">Production fields are not used for one-off projects.</p>
+          )}
+
+          {activeTab === 'schedule' && (
+            <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label={isOneOff ? 'Due date (optional)' : 'Plan date'}>
+              <input
+                type="date"
+                value={card.dueDate}
+                onChange={(e) => handleChange('dueDate', e.target.value)}
                 className={inputClass}
-              >
-                <option value="">Use client default</option>
-                {ACCOUNT_MANAGERS.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
+              />
             </Field>
+            {!isOneOff && (
+              <Field label={card.columnId === 'scheduled' ? 'Scheduled Time' : 'Plan time'}>
+                <input
+                  type="time"
+                  value={card.dueTime || ''}
+                  onChange={(e) => handleChange('dueTime', e.target.value)}
+                  className={inputClass}
+                />
+              </Field>
+            )}
           </div>
 
+          {!isOneOff && card.contentType === 'Story' && ['scheduled', 'editing', 'in-review', 'approved'].includes(card.columnId) && (
+            <StoryRecurrencePicker
+              mode={storyRecurrenceMode}
+              onModeChange={(mode) => {
+                if (mode === 'once') {
+                  onUpdate(card.id, { storyRecurrenceDays: [], storyEndDate: '' });
+                } else if (mode === 'daily') {
+                  onUpdate(card.id, { storyRecurrenceDays: [] });
+                } else if (mode === 'weekly') {
+                  onUpdate(card.id, {
+                    storyEndDate: '',
+                    storyRecurrenceDays: recurrenceDays.length ? recurrenceDays : [1],
+                  });
+                }
+              }}
+              days={recurrenceDays}
+              onDaysChange={(days) => onUpdate(card.id, { storyRecurrenceDays: days, storyEndDate: '' })}
+              startDate={card.dueDate}
+              onStartDateChange={(dueDate) => handleChange('dueDate', dueDate)}
+              endDate={card.storyEndDate || ''}
+              onEndDateChange={(storyEndDate) => handleChange('storyEndDate', storyEndDate)}
+            />
+          )}
+            </>
+          )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {activeTab === 'references' && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Reference Music">
               <input
                 type="url"
@@ -350,18 +454,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
                 placeholder="Paste Spotify, Apple Music, or other link..."
                 className={inputClass}
               />
-              {card.referenceMusic ? (
-                <a
-                  href={card.referenceMusic}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1.5 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
-                >
-                  Open music link →
-                </a>
-              ) : null}
             </Field>
-
             <Field label="Reference Video">
               <input
                 type="text"
@@ -370,66 +463,9 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
                 placeholder="Paste Instagram, TikTok, or YouTube link..."
                 className={inputClass}
               />
-              {card.referenceVideo ? (
-                <a
-                  href={card.referenceVideo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1.5 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
-                >
-                  Open video link →
-                </a>
-              ) : null}
             </Field>
-          </div>
-
-          <Field label={card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card)) ? `Notes (${occurrenceLabel})` : 'Notes'}>
-            <textarea
-              value={card.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              rows={4}
-              placeholder="Add notes..."
-              className={`${inputClass} resize-y`}
-            />
-            {card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card)) ? (
-              <p className="mt-1 text-[10px] text-gray-500">
-                Only for this date — other occurrences keep their own notes.
-              </p>
-            ) : hasStoryRecurrence(card) || hasStoryDailyRange(card) ? (
-              <p className="mt-1 text-[10px] text-gray-500">
-                Default notes for this story. Open a date on the calendar to edit that day only.
-              </p>
-            ) : null}
-          </Field>
-
-          {card.clientComment && (
-            <div
-              className={`rounded-lg border px-3 py-2.5 ${
-                card.columnId === 'not-approved'
-                  ? 'border-red-500/30 bg-red-500/10'
-                  : 'border-[#810100]/20 bg-[#a00000]/5'
-              }`}
-            >
-              <p
-                className={`text-[10px] font-medium uppercase tracking-wider ${
-                  card.columnId === 'not-approved' ? 'text-red-300' : 'text-[#fca5a5]'
-                }`}
-              >
-                {card.columnId === 'not-approved' ? 'Client revision notes' : 'Client feedback'}
-              </p>
-              <p className="mt-1 text-sm text-gray-300">&ldquo;{card.clientComment}&rdquo;</p>
             </div>
           )}
-
-          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
-            <span className={`text-xs font-medium ${typeStyle.label}`}>
-              {card.contentType}
-            </span>
-            <span className="text-xs text-gray-500">·</span>
-            <span className="text-xs text-gray-400">{PLATFORM_ICON} {PLATFORM}</span>
-            <span className="text-xs text-gray-500">·</span>
-            <span className="text-xs text-gray-400">{card.client}</span>
-          </div>
         </div>
 
         <div className="flex gap-2 border-t border-white/5 px-5 py-4">

@@ -4,6 +4,7 @@ import {
   CLIENT_PIPELINE_COLUMNS,
   getClientPipelineCards,
   getClientPipelineDisplayColumn,
+  stripInternalCardsForClientPortal,
 } from '../utils/clientPortalAuth';
 import { formatScheduledDateTime } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
@@ -21,7 +22,7 @@ const COLUMN_TONES = {
 };
 
 export default function ClientPipelinePortal({ cards, clientColor, embedded = false, searchQuery = '' }) {
-  const pipelineCards = getClientPipelineCards(cards);
+  const pipelineCards = getClientPipelineCards(stripInternalCardsForClientPortal(cards));
 
   const filteredCards = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();

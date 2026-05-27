@@ -1,6 +1,5 @@
 import { useDraggable } from '@dnd-kit/core';
 import {
-  PLATFORM_ICON,
   getContentTypeStyle,
   needsShootSchedule,
 } from '../constants';
@@ -67,13 +66,12 @@ export default function KanbanCard({ card, onClick, onDelete }) {
           className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium ${typeStyle.label}`}
           style={{ backgroundColor: typeStyle.border + '22' }}
         >
-          <span>{PLATFORM_ICON}</span>
           {card.contentType}
         </span>
         {card.shootDate && needsShootSchedule(card.contentType) && (
-          <span className="text-gray-400">🎥 Shoot {formatDate(card.shootDate)}</span>
+          <span className="text-gray-400">{formatDate(card.shootDate)}</span>
         )}
-        {card.dueDate && (
+        {card.dueDate && card.columnId !== 'shoot' && (
           <span className={`text-gray-400 ${overdue ? 'font-medium text-red-400' : ''}`}>
             {overdue ? '⚠ ' : ''}
             {formatScheduledDateTime(card.dueDate, card.dueTime)}
@@ -81,37 +79,10 @@ export default function KanbanCard({ card, onClick, onDelete }) {
         )}
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {card.dropboxLink && (
-          <span className="rounded-md bg-[#a00000]/15 px-1.5 py-0.5 text-[10px] text-[#fca5a5]" title="Dropbox content linked">
-            📦 Dropbox
-          </span>
-        )}
-        {card.referenceMusic && (
-          <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] text-gray-400" title="Reference music added">
-            🎵 Music ref
-          </span>
-        )}
-        {card.referenceVideo && (
-          <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] text-gray-400" title="Reference video added">
-            🎬 Video ref
-          </span>
-        )}
-      </div>
-
       {card.columnId === 'not-approved' && card.clientComment && (
-        <p className="mt-2 line-clamp-2 text-xs text-red-300/90" title={card.clientComment}>
-          ↩ {card.clientComment}
+        <p className="mt-2 line-clamp-1 text-xs text-red-300/90" title={card.clientComment}>
+          ↩ Revision requested
         </p>
-      )}
-
-      {card.assignedTo && (
-        <div className="mt-2 flex items-center gap-1.5">
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[10px] font-medium text-gray-300">
-            {card.assignedTo.charAt(0)}
-          </div>
-          <span className="text-xs text-gray-500">{card.assignedTo}</span>
-        </div>
       )}
     </div>
   );

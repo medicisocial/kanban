@@ -50,7 +50,7 @@ export default function ClientPortalLayout({
         <button
           type="button"
           onClick={onRefresh}
-          className="w-full border border-white/10 bg-white/[0.02] px-3 py-2 text-xs font-medium uppercase tracking-wider text-white/60 transition-colors hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
+          className="w-full rounded-sm border border-white/15 bg-transparent px-3 py-2.5 text-[10px] font-medium uppercase tracking-[0.2em] text-white/50 transition-all duration-300 hover:border-white/30 hover:bg-white/[0.04] hover:text-white/85"
         >
           Refresh data
         </button>

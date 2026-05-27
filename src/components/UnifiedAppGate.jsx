@@ -61,6 +61,33 @@ export default function UnifiedAppGate() {
     };
   }, []);
 
+  useEffect(() => {
+    if (mode !== 'staff' && mode !== 'client') return;
+
+    let cancelled = false;
+
+    (async () => {
+      if (mode === 'staff') {
+        const staff = loadStaffSession();
+        const staffValid = staff && (await isStaffSessionValid(staff));
+        if (!staffValid) {
+          if (staff) clearStaffSession();
+          if (!cancelled) setMode('login');
+        }
+        return;
+      }
+
+      const client = loadClientSession();
+      if (!client?.brand) {
+        if (!cancelled) setMode('login');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode]);
+
   const handleSignOut = useCallback(() => {
     clearStaffSession();
     clearClientSession();

@@ -34,6 +34,12 @@ function filterPlansForBrand(plans, brand) {
   return filtered;
 }
 
+function stripInternalCardFields(card) {
+  if (!card || typeof card !== 'object') return card;
+  const { assignedTo, contentCreator, accountManager, ...clientSafe } = card;
+  return clientSafe;
+}
+
 function normalizeBusinessType(businessType) {
   if (businessType === 'Cocktail Lounge' || businessType === 'Sports Bar') {
     return 'Hospitality';
@@ -67,7 +73,7 @@ export default async function handler(req, res) {
     clientColor: colors[brand] || null,
     clientLogo: logos[brand] || null,
     businessType: normalizeBusinessType(businessTypes[brand] || '') || null,
-    cards: filterForBrand(data[STORAGE_KEY], brand),
+    cards: filterForBrand(data[STORAGE_KEY], brand).map(stripInternalCardFields),
     ideas: filterForBrand(data[VIDEO_IDEAS_STORAGE_KEY], brand),
     plans: filterPlansForBrand(data[SHOOT_PLANS_STORAGE_KEY], brand),
     events: filterForBrand(data[EVENTS_STORAGE_KEY], brand),

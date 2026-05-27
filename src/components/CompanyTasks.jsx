@@ -103,8 +103,8 @@ export default function CompanyTasks({
     return (
       <section>
         <ClientPortalSectionHeader
-          title="Tasks"
-          description="Worklists for editors, account managers, and administrative work across all clients."
+          title="Team tasks"
+          description="Editor, account manager, and administrative worklists across all clients."
         />
         {content}
       </section>

@@ -1,4 +1,5 @@
 import { getContentTypeStyle } from "../constants";
+import { useClientsContext } from "../context/ClientsContext";
 import {
   getDefaultShootEndTime,
   parseTimeToMinutes,
@@ -17,6 +18,8 @@ export default function ShootDayPlanningRow({
   shootWindow = null,
   onOpenScript,
 }) {
+  const { getMemberNamesForRole } = useClientsContext();
+  const contentCreators = getMemberNamesForRole("Content Creator");
   const typeStyle = getContentTypeStyle(card.contentType);
 
   const handleChange = (field, value) => {
@@ -150,6 +153,25 @@ export default function ShootDayPlanningRow({
           <p className="mt-1 text-[10px] text-gray-600">
             Add each person separately — their call times appear in the summary below.
           </p>
+        </label>
+
+        <label className="block sm:col-span-2 lg:col-span-2">
+          <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
+            Content creator
+          </span>
+          <select
+            value={card.contentCreator || ""}
+            onChange={(e) => handleChange("contentCreator", e.target.value)}
+            disabled={readOnly || contentCreators.length === 0}
+            className={inputClass}
+          >
+            <option value="">Unassigned</option>
+            {contentCreators.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label className="block sm:col-span-2 lg:col-span-2">

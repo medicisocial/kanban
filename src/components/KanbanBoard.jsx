@@ -11,13 +11,15 @@ import {
   pointerWithin,
   rectIntersection,
 } from '@dnd-kit/core';
-import { COLUMNS } from '../constants';
+import { COLUMNS, BOARD_COLUMN_GROUPS } from '../constants';
 import { filterCards, getBoardCards } from '../utils';
 import KanbanColumn from './KanbanColumn';
 import CardPreview from './CardPreview';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
+import { btnSecondaryClass } from './clientPortal/clientPortalUi';
 
 const COLUMN_IDS = new Set(COLUMNS.map((c) => c.id));
+const COLUMN_BY_ID = Object.fromEntries(COLUMNS.map((c) => [c.id, c]));
 
 function resolveColumnId(over, cards) {
   if (!over) return null;
@@ -61,6 +63,7 @@ export default function KanbanBoard({
   embedded = false,
 }) {
   const [activeCard, setActiveCard] = useState(null);
+  const [finishedExpanded, setFinishedExpanded] = useState(false);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
@@ -87,6 +90,8 @@ export default function KanbanBoard({
     });
     return map;
   }, [filteredCards]);
+
+  const finishedCount = cardsByColumn.finished?.length || 0;
 
   const handleDragStart = useCallback((event) => {
     const card = cards.find((c) => c.id === event.active.id);
@@ -139,28 +144,86 @@ export default function KanbanBoard({
     >
       {embedded && (
         <ClientPortalSectionHeader
-          title="Board"
-          description="Drag cards across columns to track production from editing through scheduled and posted."
+          title="Pipeline"
+          description="Drag cards through create → edit → review → publish. Finished one-off projects stay in archive."
         />
       )}
 
       <div className={`w-full overflow-x-auto ${embedded ? 'pb-2' : 'scroll-px-4 pb-6 sm:scroll-px-6'}`}>
-        <div className={embedded ? 'flex w-max gap-3' : 'flex justify-center px-4 sm:px-6'}>
-          <div className="flex w-max gap-3">
-            {COLUMNS.map((column) => (
-              <KanbanColumn
-                key={column.id}
-                column={column}
-                cards={cardsByColumn[column.id]}
-                onAddCard={onAddCard}
-                onCardClick={onCardClick}
-                onDeleteCard={onDeleteCard}
-                embedded={embedded}
-              />
-            ))}
+        <div className={embedded ? 'flex w-max gap-4' : 'flex justify-center px-4 sm:px-6'}>
+          <div className="flex w-max gap-4">
+            {BOARD_COLUMN_GROUPS.map((group) => {
+              const isArchive = group.collapsible;
+              const groupCount = group.columnIds.reduce(
+                (sum, id) => sum + (cardsByColumn[id]?.length || 0),
+                0,
+              );
+
+              if (isArchive && !finishedExpanded) {
+                return (
+                  <div key={group.id} className="flex w-[140px] shrink-0 flex-col justify-start pt-2">
+                    <p className="mb-2 px-1 text-[10px] font-medium uppercase tracking-[0.24em] text-white/30">
+                      {group.label}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setFinishedExpanded(true)}
+                      className={`${btnSecondaryClass} flex flex-col items-start gap-1 px-3 py-4 text-left`}
+                    >
+                      <span className="text-2xl font-semibold tabular-nums text-white">{groupCount}</span>
+                      <span className="text-[10px] uppercase tracking-wider text-white/45">
+                        Expand archive
+                      </span>
+                    </button>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={group.id} className="flex shrink-0 flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2 px-1">
+                    <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/30">
+                      {group.label}
+                    </p>
+                    {isArchive && (
+                      <button
+                        type="button"
+                        onClick={() => setFinishedExpanded(false)}
+                        className="text-[10px] uppercase tracking-wider text-white/35 hover:text-white/70"
+                      >
+                        Collapse
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex gap-3">
+                    {group.columnIds.map((columnId) => {
+                      const column = COLUMN_BY_ID[columnId];
+                      if (!column) return null;
+                      return (
+                        <KanbanColumn
+                          key={column.id}
+                          column={column}
+                          cards={cardsByColumn[column.id]}
+                          onAddCard={onAddCard}
+                          onCardClick={onCardClick}
+                          onDeleteCard={onDeleteCard}
+                          embedded={embedded}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
+
+      {finishedCount > 0 && !finishedExpanded && embedded && (
+        <p className="mt-2 text-xs text-white/35">
+          {finishedCount} finished one-off project{finishedCount === 1 ? '' : 's'} in archive.
+        </p>
+      )}
 
       <DragOverlay
         style={{ cursor: 'grabbing' }}

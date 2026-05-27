@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { TEAM_MEMBERS, getContentTypeStyle } from '../constants';
+import { getContentTypeStyle } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import TaskPostSchedule from './TaskPostSchedule';
 import {
@@ -11,6 +11,7 @@ import {
 } from '../utils/editorTodo';
 import AddEditorTaskModal from './AddEditorTaskModal';
 import NeedsEditsModal from './NeedsEditsModal';
+import { btnPrimaryClass } from './clientPortal/clientPortalUi';
 
 const kindStyles = {
   edit: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
@@ -237,7 +238,8 @@ export default function EditorTodo({
   onSendBackForEditing,
   onMoveTask,
 }) {
-  const { getClientColor } = useClientsContext();
+  const { getClientColor, getMemberNamesForRole } = useClientsContext();
+  const editors = getMemberNamesForRole('Editor');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [showCompleted, setShowCompleted] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -312,7 +314,7 @@ export default function EditorTodo({
         <button
           type="button"
           onClick={() => setShowAddModal(true)}
-          className="rounded-lg bg-[#810100] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#a00000]"
+          className={btnPrimaryClass}
         >
           + Add one-off project
         </button>
@@ -327,7 +329,7 @@ export default function EditorTodo({
             className="select-dark rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-1.5 text-sm text-[#f9f6f2] outline-none"
           >
             <option value="all">All editors</option>
-            {TEAM_MEMBERS.map((member) => (
+            {editors.map((member) => (
               <option key={member} value={member}>
                 {member}
               </option>

@@ -39,7 +39,6 @@ export default function ClientTasksTable({
   cards,
   client,
   clientColor,
-  accountManager,
   clientLogo,
   searchQuery = '',
   onApprove,
@@ -204,15 +203,14 @@ export default function ClientTasksTable({
               <th className="w-[12%]"><SortHeader label="Type" sortKey="contentType" sort={sort} onSort={handleSort} /></th>
               <th className="w-[12%]"><span className={tableHeaderClass}>Status</span></th>
               <th className="w-[14%]"><span className={tableHeaderClass}>Client</span></th>
-              <th className="w-[12%]"><span className={tableHeaderClass}>Assigned AM</span></th>
-              <th className="w-[14%]"><SortHeader label="Due" sortKey="dueDate" sort={sort} onSort={handleSort} /></th>
-              <th className="w-[10%]"><span className={tableHeaderClass}>Actions</span></th>
+              <th className="w-[16%]"><SortHeader label="Due" sortKey="dueDate" sort={sort} onSort={handleSort} /></th>
+              <th className="w-[12%]"><span className={tableHeaderClass}>Actions</span></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-16 text-center text-sm text-white/40">
+                <td colSpan={6} className="px-4 py-16 text-center text-sm text-white/40">
                   No tasks waiting for your review.
                 </td>
               </tr>
@@ -254,9 +252,6 @@ export default function ClientTasksTable({
                           <span className="truncate text-xs text-white/70">{client}</span>
                         </div>
                       </td>
-                      <td className={`${tableCellClass} text-xs text-white/65`}>
-                        {card.accountManager || accountManager || '—'}
-                      </td>
                       <td className={`${tableCellClass} text-xs tabular-nums text-white/55`}>
                         {card.dueDate ? formatScheduledDateTime(card.dueDate, card.dueTime) : '—'}
                       </td>
@@ -284,7 +279,7 @@ export default function ClientTasksTable({
                     </tr>
                     {(expanded || denying) && (
                       <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                        <td colSpan={7} className="px-4 py-4">
+                        <td colSpan={6} className="px-4 py-4">
                           <div className="grid gap-4 md:grid-cols-[1fr_auto]">
                             <div className="text-sm text-white/65">
                               {card.description ? (

@@ -2,10 +2,13 @@ import { useRef, useState } from 'react';
 import {
   IconBoard,
   IconCalendar,
-  IconEvents,
+  IconClients,
+  IconHome,
   IconIdeas,
+  IconSettings,
   IconShoots,
   IconTasks,
+  IconTeam,
 } from './ClientPortalIcons';
 import EnterprisePortalLayout from './EnterprisePortalLayout';
 import { useWorkspaceAdmin } from '../FilterBar';
@@ -13,13 +16,32 @@ import { useClientsContext } from '../../context/ClientsContext';
 import { INTERNAL_TEAM_CLIENT } from '../../constants';
 import { readClientProfileImage } from '../../utils/clientImage';
 
-const NAV_ITEMS = [
-  { id: 'ideas', label: 'Ideas', Icon: IconIdeas },
-  { id: 'board', label: 'Board', Icon: IconBoard },
-  { id: 'calendar', label: 'Content Calendar', Icon: IconCalendar },
-  { id: 'events', label: 'Events Calendar', Icon: IconEvents },
-  { id: 'todo', label: 'Tasks', Icon: IconTasks },
-  { id: 'shoot', label: 'Shoot Schedule', Icon: IconShoots },
+const NAV_SECTIONS = [
+  {
+    label: 'Overview',
+    items: [{ id: 'home', label: 'My work', Icon: IconHome }],
+  },
+  {
+    label: 'Production',
+    items: [
+      { id: 'board', label: 'Pipeline', Icon: IconBoard },
+      { id: 'ideas', label: 'Ideas', Icon: IconIdeas },
+      { id: 'shoot', label: 'Production days', Icon: IconShoots },
+      { id: 'todo', label: 'Team tasks', Icon: IconTasks },
+    ],
+  },
+  {
+    label: 'Planning',
+    items: [{ id: 'calendars', label: 'Calendars', Icon: IconCalendar }],
+  },
+  {
+    label: 'Admin',
+    items: [
+      { id: 'clients', label: 'Clients', Icon: IconClients },
+      { id: 'team', label: 'Team', Icon: IconTeam },
+      { id: 'settings', label: 'Settings', Icon: IconSettings },
+    ],
+  },
 ];
 
 export default function AdminConsoleLayout({
@@ -28,11 +50,11 @@ export default function AdminConsoleLayout({
   search,
   onSearchChange,
   notificationCount,
+  notificationPanel,
   profileLabel,
   onSignOut,
   clientFilter,
   onClientChange,
-  topBanner,
   children,
 }) {
   const admin = useWorkspaceAdmin({ clientFilter, onClientChange });
@@ -82,13 +104,13 @@ export default function AdminConsoleLayout({
       <EnterprisePortalLayout
         productTitle="Operations Console"
         subtitle="Internal workspace"
-        navItems={NAV_ITEMS}
+        navSections={NAV_SECTIONS}
         activeTab={activeView}
         onTabChange={onViewChange}
         searchQuery={search}
         onSearchChange={onSearchChange}
         notificationCount={notificationCount}
-        onNotificationClick={() => onViewChange('board')}
+        notificationPanel={notificationPanel}
         profileLabel={profileLabel || 'Staff'}
         profileColor={teamColor}
         sidebarLogoUrl={teamLogo}
@@ -96,11 +118,8 @@ export default function AdminConsoleLayout({
         sidebarLogoMessage={logoMessage}
         sidebarLogoMessageIsError={logoMessageIsError}
         onSignOut={onSignOut}
-        topBanner={topBanner}
         headerFilter={admin.clientFilterSelect}
-        sidebarFooter={admin.settingsMenu}
       >
-        {admin.modals}
         {children}
       </EnterprisePortalLayout>
     </>

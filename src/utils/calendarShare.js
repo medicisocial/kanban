@@ -17,7 +17,6 @@ function compactCalendarCard(card) {
     card.storyRecurrenceDays || [],
     card.storyOccurrenceNotes || {},
     card.dropboxLink || '',
-    card.assignedTo || '',
     card.platform || 'Instagram',
     card.notes || '',
   ];
@@ -33,10 +32,19 @@ function expandCalendarCard(client, tuple) {
     storyRecurrenceDays,
     storyOccurrenceNotes,
     dropboxLink,
-    assignedTo,
-    platform,
-    notes,
+    ...rest
   ] = tuple;
+
+  // Legacy share links included assignedTo before platform (11 fields).
+  let platform = 'Instagram';
+  let notes = '';
+  if (tuple.length >= 11) {
+    platform = rest[1] || 'Instagram';
+    notes = rest[2] || '';
+  } else {
+    platform = rest[0] || 'Instagram';
+    notes = rest[1] || '';
+  }
 
   return {
     id,
@@ -48,7 +56,6 @@ function expandCalendarCard(client, tuple) {
     storyRecurrenceDays,
     storyOccurrenceNotes,
     dropboxLink,
-    assignedTo,
     platform,
     notes,
   };
@@ -85,7 +92,6 @@ export function snapshotCalendarCard(card) {
     storyRecurrenceDays: card.storyRecurrenceDays || [],
     storyOccurrenceNotes: card.storyOccurrenceNotes || {},
     dropboxLink: card.dropboxLink || '',
-    assignedTo: card.assignedTo || '',
     platform: card.platform || 'Instagram',
     notes: card.notes || '',
   };

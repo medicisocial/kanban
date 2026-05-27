@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CONTENT_TYPES } from "../constants";
 import { useClientsContext } from "../context/ClientsContext";
+import { getDefaultAssigneeForRole } from "../utils/teamMembers";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30";
@@ -14,13 +15,17 @@ export default function AddShootDayModal({
   onAddItem,
 }) {
   const isItem = mode === "item";
-  const { clients, defaultClient: firstClient } = useClientsContext();
+  const { clients, defaultClient: firstClient, getMemberNamesForRole } = useClientsContext();
+  const contentCreators = getMemberNamesForRole("Content Creator");
+  const defaultCreator =
+    contentCreators[0] || getDefaultAssigneeForRole("Content Creator") || "";
   const [form, setForm] = useState({
     client: defaultClient && defaultClient !== "all" ? defaultClient : firstClient,
     title: "",
     contentType: "Reel",
     shootDate: defaultDate || "",
     shootTime: "",
+    contentCreator: defaultCreator,
   });
   const [error, setError] = useState("");
 
@@ -45,6 +50,7 @@ export default function AddShootDayModal({
         contentType: form.contentType,
         shootDate: form.shootDate,
         shootTime: form.shootTime,
+        contentCreator: form.contentCreator,
       });
     } else {
       onAddDay({ client: form.client, shootDate: form.shootDate });
@@ -150,6 +156,23 @@ export default function AddShootDayModal({
               </label>
             )}
           </div>
+
+          {isItem && contentCreators.length > 0 && (
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-gray-400">Content creator</span>
+              <select
+                value={form.contentCreator}
+                onChange={(e) => setForm({ ...form, contentCreator: e.target.value })}
+                className={inputClass}
+              >
+                {contentCreators.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           {!isItem && (
             <p className="text-xs text-gray-500">

@@ -44,7 +44,8 @@ export default function ShootDayItem({ card, onClick }) {
       )}
 
       <div className="flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
-        <span>{PLATFORM_ICON} {card.assignedTo}</span>
+        {card.contentCreator && <span>🎥 {card.contentCreator}</span>}
+        {card.assignedTo && <span>{PLATFORM_ICON} {card.assignedTo}</span>}
         {card.referenceMusic && <span>🎵 Music ref</span>}
         {card.referenceVideo && <span>🎬 Video ref</span>}
         {card.dropboxLink && <span>📦 Dropbox</span>}

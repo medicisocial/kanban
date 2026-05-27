@@ -1,0 +1,111 @@
+import { useState, useEffect, useCallback } from 'react';
+import { DEFAULT_TEAM_MEMBERS, TEAM_ROLES, TEAM_STORAGE_KEY } from '../constants';
+import {
+  getAllMemberNames,
+  getMemberNamesByRole,
+  memberMatchesRole,
+  mergeTeamMemberUpdates,
+  normalizeTeamMember,
+} from '../utils/teamMembers';
+
+function loadTeamMembers() {
+  try {
+    const raw = localStorage.getItem(TEAM_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((member) => normalizeTeamMember(member)).filter(Boolean);
+      }
+    }
+  } catch {
+    /* fall through */
+  }
+  return DEFAULT_TEAM_MEMBERS.map((member) => normalizeTeamMember(member)).filter(Boolean);
+}
+
+export function useTeamMembers() {
+  const [teamMembers, setTeamMembers] = useState(loadTeamMembers);
+
+  useEffect(() => {
+    localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(teamMembers));
+  }, [teamMembers]);
+
+  const getMembersByRole = useCallback(
+    (role) => teamMembers.filter((member) => memberMatchesRole(member, role)),
+    [teamMembers],
+  );
+
+  const getMemberNamesForRole = useCallback(
+    (role) => getMemberNamesByRole(teamMembers, role),
+    [teamMembers],
+  );
+
+  const getAllTeamMemberNames = useCallback(
+    () => getAllMemberNames(teamMembers),
+    [teamMembers],
+  );
+
+  const addTeamMember = useCallback((name, roles = []) => {
+    const trimmed = name.trim();
+    if (!trimmed) return { ok: false, error: 'Enter a team member name.' };
+
+    const normalizedRoles = roles.filter((role) => TEAM_ROLES.includes(role));
+    if (normalizedRoles.length === 0) {
+      return { ok: false, error: 'Select at least one role.' };
+    }
+
+    let addedId = null;
+    setTeamMembers((prev) => {
+      if (prev.some((member) => member.name.toLowerCase() === trimmed.toLowerCase())) {
+        return prev;
+      }
+      addedId = crypto.randomUUID();
+      return [
+        ...prev,
+        normalizeTeamMember({ id: addedId, name: trimmed, roles: normalizedRoles }),
+      ];
+    });
+
+    if (!addedId) {
+      return { ok: false, error: 'A team member with that name already exists.' };
+    }
+    return { ok: true, id: addedId };
+  }, []);
+
+  const updateTeamMember = useCallback((id, updates) => {
+    setTeamMembers((prev) =>
+      prev.map((member) => {
+        if (member.id !== id) return member;
+        return mergeTeamMemberUpdates(member, updates);
+      }),
+    );
+  }, []);
+
+  const removeTeamMember = useCallback((id) => {
+    setTeamMembers((prev) => prev.filter((member) => member.id !== id));
+  }, []);
+
+  const toggleTeamMemberRole = useCallback((id, role) => {
+    if (!TEAM_ROLES.includes(role)) return;
+    setTeamMembers((prev) =>
+      prev.map((member) => {
+        if (member.id !== id) return member;
+        const hasRole = member.roles.includes(role);
+        const roles = hasRole ? member.roles.filter((r) => r !== role) : [...member.roles, role];
+        return { ...member, roles };
+      }),
+    );
+  }, []);
+
+  return {
+    teamMembers,
+    teamRoles: TEAM_ROLES,
+    getMembersByRole,
+    getMemberNamesForRole,
+    getAllTeamMemberNames,
+    addTeamMember,
+    updateTeamMember,
+    removeTeamMember,
+    toggleTeamMemberRole,
+  };
+}

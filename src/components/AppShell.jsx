@@ -26,18 +26,22 @@ import { useEvents } from "../hooks/useEvents";
 import CompanyTasks from "./CompanyTasks";
 import AdminConsoleLayout from "./clientPortal/AdminConsoleLayout";
 import KanbanBoard from "./KanbanBoard";
-import Calendar from "./Calendar";
-import EventsCalendar from "./EventsCalendar";
+import UnifiedCalendarsPage from "./UnifiedCalendarsPage";
 import ShootDay from "./ShootDay";
 import VideoIdeas from "./VideoIdeas";
+import WorkspaceHomePage from "./WorkspaceHomePage";
+import WorkspaceSettingsPage from "./WorkspaceSettingsPage";
 import ClientReviewPortal from "./ClientReviewPortal";
 import ClientContentReviewPortal from "./ClientContentReviewPortal";
 import ClientCalendarPortal from "./ClientCalendarPortal";
 import ClientShootDayPortal from "./ClientShootDayPortal";
-import ContentReviewSharePanel from "./ContentReviewSharePanel";
-import ClientSyncBanner from "./ClientSyncBanner";
+import ClientSyncNotificationPanel from "./ClientSyncNotificationPanel";
+import ClientManagementPage from "./ClientManagementPage";
+import TeamManagementPage from "./TeamManagementPage";
 import CardModal from "./CardModal";
 import { useStaffAuth } from "../context/StaffAuthContext";
+import { useClientsContext } from "../context/ClientsContext";
+import { getDefaultWorkspaceView } from "../utils/getDefaultWorkspaceView";
 
 export default function AppShell({ onSignOut }) {
   const importData = parseImportParam();
@@ -63,11 +67,13 @@ export default function AppShell({ onSignOut }) {
   } = useAdminTasks();
   const { events, addEvent, updateEvent, deleteEvent } = useEvents();
   const { authRequired, ready, logout, session } = useStaffAuth();
+  const { teamMembers } = useClientsContext();
 
   const [selectedCard, setSelectedCard] = useState(null);
   const [search, setSearch] = useState("");
   const [clientFilter, setClientFilter] = useState("all");
-  const [activeView, setActiveView] = useState("ideas");
+  const [activeView, setActiveView] = useState("home");
+  const [viewInitialized, setViewInitialized] = useState(false);
   const [responseCount, setResponseCount] = useState(() => loadClientResponses().length);
   const [contentReviewResponseCount, setContentReviewResponseCount] = useState(
     () => loadContentReviewResponses().length,
@@ -86,6 +92,14 @@ export default function AppShell({ onSignOut }) {
   };
 
   useEffect(() => {
+    if (!ready || viewInitialized) return;
+    if (session) {
+      setActiveView(getDefaultWorkspaceView(session, teamMembers));
+    }
+    setViewInitialized(true);
+  }, [ready, session, teamMembers, viewInitialized]);
+
+  useEffect(() => {
     if (!selectedCard) return;
     const fresh = cards.find((c) => c.id === selectedCard.id);
     if (!fresh) return;
@@ -98,10 +112,16 @@ export default function AppShell({ onSignOut }) {
     });
   }, [cards, selectedCard?.id]);
 
+  useEffect(() => {
+    if (authRequired && ready && !session && onSignOut) {
+      onSignOut();
+    }
+  }, [authRequired, ready, session, onSignOut]);
+
   const handleAddCalendarPost = (data) => {
     const id = addCalendarPost(data);
     setSelectedCard(createCard({ ...data, id, columnId: "editing", status: "Editing" }));
-    setActiveView("calendar");
+    setActiveView("calendars");
   };
 
   const handleMarkScheduled = (cardId) => {
@@ -176,7 +196,7 @@ export default function AppShell({ onSignOut }) {
         ...data,
         id,
         columnId: "shoot",
-        status: "To Shoot",
+        status: "To Create",
         shootDuration: 45,
       }),
     );
@@ -486,13 +506,8 @@ export default function AppShell({ onSignOut }) {
       search={search}
       onSearchChange={setSearch}
       notificationCount={syncTotal}
-      profileLabel={session?.username || 'Staff'}
-      onSignOut={authRequired ? handleSignOut : undefined}
-      clientFilter={clientFilter}
-      onClientChange={setClientFilter}
-      topBanner={
-        <ClientSyncBanner
-          embedded
+      notificationPanel={
+        <ClientSyncNotificationPanel
           ideaCount={responseCount}
           contentReviewCount={contentReviewResponseCount}
           shootCount={shootResponseCount}
@@ -501,7 +516,23 @@ export default function AppShell({ onSignOut }) {
           onApplyShoot={handleApplyShootResponses}
         />
       }
+      profileLabel={session?.username || 'Staff'}
+      onSignOut={onSignOut ? handleSignOut : undefined}
+      clientFilter={clientFilter}
+      onClientChange={setClientFilter}
     >
+      {activeView === "home" && (
+        <WorkspaceHomePage
+          cards={cards}
+          ideas={ideas}
+          adminTasks={adminTasks}
+          clientFilter={clientFilter}
+          syncTotal={syncTotal}
+          onNavigate={setActiveView}
+          onOpenCard={handleCardClick}
+        />
+      )}
+
       {activeView === "ideas" && (
         <VideoIdeas
           ideas={ideas}
@@ -519,7 +550,6 @@ export default function AppShell({ onSignOut }) {
 
       {activeView === "board" && (
         <section>
-          <ContentReviewSharePanel cards={cards} clientFilter={clientFilter} />
           <KanbanBoard
             cards={cards}
             onAddCard={addCard}
@@ -533,27 +563,18 @@ export default function AppShell({ onSignOut }) {
         </section>
       )}
 
-      {activeView === "calendar" && (
-        <Calendar
+      {activeView === "calendars" && (
+        <UnifiedCalendarsPage
           cards={cards}
+          events={events}
           clientFilter={clientFilter}
           search={search}
           onCardClick={handleCardClick}
           onAddCalendarPost={handleAddCalendarPost}
           onRemoveFromCalendar={handleRemoveFromCalendar}
-          embedded
-        />
-      )}
-
-      {activeView === "events" && (
-        <EventsCalendar
-          events={events}
-          clientFilter={clientFilter}
-          search={search}
           onAddEvent={addEvent}
           onUpdateEvent={updateEvent}
           onDeleteEvent={deleteEvent}
-          embedded
         />
       )}
 
@@ -597,6 +618,20 @@ export default function AppShell({ onSignOut }) {
         />
       )}
 
+      {activeView === "clients" && (
+        <ClientManagementPage cards={cards} />
+      )}
+
+      {activeView === "team" && (
+        <TeamManagementPage />
+      )}
+
+      {activeView === "settings" && (
+        <WorkspaceSettingsPage
+          clientFilter={clientFilter}
+          onClientChange={setClientFilter}
+        />
+      )}
 
       {selectedCard && (
         <CardModal

@@ -133,11 +133,15 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
           dropboxLink={card.dropboxLink}
           className="line-clamp-2 block text-xs font-medium leading-snug text-white"
         />
-        <p className="mt-1 truncate text-[10px] text-gray-500">
-          {card.dueTime ? `${formatTime(card.dueTime)} · ` : ""}
-          {scheduleSummary ? `${scheduleSummary} · ` : ""}
-          {PLATFORM_ICON} {card.assignedTo}
-        </p>
+        {(card.dueTime || scheduleSummary || (!hideClient && card.assignedTo)) && (
+          <p className="mt-1 truncate text-[10px] text-gray-500">
+            {card.dueTime ? `${formatTime(card.dueTime)}` : ""}
+            {card.dueTime && scheduleSummary ? " · " : ""}
+            {scheduleSummary ? `${scheduleSummary}` : ""}
+            {(card.dueTime || scheduleSummary) && !hideClient && card.assignedTo ? " · " : ""}
+            {!hideClient && card.assignedTo ? `${PLATFORM_ICON} ${card.assignedTo}` : ""}
+          </p>
+        )}
       </button>
       {onRemove && (
         <button

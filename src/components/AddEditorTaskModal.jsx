@@ -1,17 +1,15 @@
 import { useState } from 'react';
-import { TEAM_MEMBERS } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
-
-const inputClass =
-  'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30';
+import { btnPrimaryClass, btnSecondaryClass, inputClass } from './clientPortal/clientPortalUi';
 
 export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) {
-  const { clients } = useClientsContext();
+  const { clients, getMemberNamesForRole } = useClientsContext();
+  const editors = getMemberNamesForRole('Editor');
   const [client, setClient] = useState(clients[0] || '');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [assignedTo, setAssignedTo] = useState(defaultAssignee || TEAM_MEMBERS[0]);
+  const [assignedTo, setAssignedTo] = useState(defaultAssignee || editors[0] || '');
   const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
@@ -106,7 +104,7 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
                 onChange={(e) => setAssignedTo(e.target.value)}
                 className={inputClass}
               >
-                {TEAM_MEMBERS.map((member) => (
+                {editors.map((member) => (
                   <option key={member} value={member}>
                     {member}
                   </option>
@@ -122,17 +120,10 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
           )}
 
           <div className="flex gap-2 border-t border-white/5 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-white/10 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5"
-            >
+            <button type="button" onClick={onClose} className={btnSecondaryClass}>
               Cancel
             </button>
-            <button
-              type="submit"
-              className="flex-1 rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white hover:bg-[#a00000]"
-            >
+            <button type="submit" className={`${btnPrimaryClass} flex-1`}>
               Add project
             </button>
           </div>

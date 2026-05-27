@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEY, COLUMNS, PLATFORM, TEAM_MEMBERS, createCard, EDITOR_TODO_STORAGE_KEY } from '../constants';
+import { STORAGE_KEY, COLUMNS, PLATFORM, createCard, EDITOR_TODO_STORAGE_KEY } from '../constants';
+import { getDefaultAssigneeForRole } from '../utils/teamMembers';
 import {
   toDateKey,
   parseRecurrenceDays,
@@ -48,6 +49,7 @@ function normalizeCard(card) {
     shootModels: card.shootModels || '',
     shootNeeds: card.shootNeeds || '',
     shootScript: card.shootScript || '',
+    contentCreator: card.contentCreator || '',
     storyRecurrenceDays: parseRecurrenceDays(card.storyRecurrenceDays),
     storyEndDate: card.storyEndDate || '',
     storyOccurrenceNotes: parseStoryOccurrenceNotes(card.storyOccurrenceNotes),
@@ -79,7 +81,7 @@ function migrateLegacyOneOffTasks(cards) {
           title: task.title || 'One-off project',
           notes: task.description || '',
           dueDate: task.dueDate || '',
-          assignedTo: task.assignedTo || TEAM_MEMBERS[0],
+          assignedTo: task.assignedTo || getDefaultAssigneeForRole('Editor'),
           contentType: 'One-off Project',
           isOneOffProject: true,
           columnId: task.completed ? 'finished' : 'editing',
@@ -154,7 +156,9 @@ export function useKanban() {
         shootModels: '',
         shootNeeds: '',
         shootScript: '',
-        assignedTo: TEAM_MEMBERS[0],
+        contentCreator:
+          columnId === 'shoot' ? getDefaultAssigneeForRole('Content Creator') : '',
+        assignedTo: getDefaultAssigneeForRole('Editor'),
         notes: '',
         referenceMusic: '',
         referenceVideo: '',
@@ -192,14 +196,15 @@ export function useKanban() {
       shootModels: '',
       shootNeeds: '',
       shootScript: '',
-      assignedTo: TEAM_MEMBERS[0],
+      contentCreator: getDefaultAssigneeForRole('Content Creator'),
+      assignedTo: getDefaultAssigneeForRole('Editor'),
       notes,
       referenceMusic: '',
       referenceVideo: idea.referenceVideo || '',
       dropboxLink: '',
       clientComment: '',
       sourceIdeaId: idea.id,
-      status: 'To Shoot',
+      status: getStatusForColumn('shoot'),
       columnId: 'shoot',
       createdAt: Date.now(),
     };
@@ -305,18 +310,23 @@ export function useKanban() {
     });
   }, [addCardWithDetails]);
 
-  const addShootItem = useCallback(({ client, title, contentType, shootDate, shootTime = '' }) => {
-    const isStory = contentType === 'Story';
-    return addCardWithDetails({
-      client,
-      title,
-      contentType,
-      shootDate: isStory ? '' : shootDate,
-      shootTime: isStory ? '' : shootTime,
-      columnId: 'shoot',
-      status: 'To Shoot',
-    });
-  }, [addCardWithDetails]);
+  const addShootItem = useCallback(
+    ({ client, title, contentType, shootDate, shootTime = '', contentCreator }) => {
+      const isStory = contentType === 'Story';
+      return addCardWithDetails({
+        client,
+        title,
+        contentType,
+        shootDate: isStory ? '' : shootDate,
+        shootTime: isStory ? '' : shootTime,
+        contentCreator: contentCreator || getDefaultAssigneeForRole('Content Creator'),
+        assignedTo: getDefaultAssigneeForRole('Editor'),
+        columnId: 'shoot',
+        status: getStatusForColumn('shoot'),
+      });
+    },
+    [addCardWithDetails],
+  );
 
   const addOneOffProject = useCallback(
     ({ client, title, description = '', dueDate = '', assignedTo }) => {
@@ -325,7 +335,7 @@ export function useKanban() {
         title,
         notes: description,
         dueDate,
-        assignedTo: assignedTo || TEAM_MEMBERS[0],
+        assignedTo: assignedTo || getDefaultAssigneeForRole('Editor'),
         contentType: 'One-off Project',
         isOneOffProject: true,
         columnId: 'editing',

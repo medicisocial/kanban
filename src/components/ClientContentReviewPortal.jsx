@@ -6,6 +6,7 @@ import {
   buildContentImportUrl,
   queueContentReviewResponse,
 } from '../utils/contentReviewShare';
+import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import ContentReviewCard from './ContentReviewCard';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import ClientTasksTable from './clientPortal/ClientTasksTable';
@@ -21,7 +22,7 @@ export default function ClientContentReviewPortal({
   embedded = false,
   searchQuery = '',
 }) {
-  const { getClientColor, getClientAccountManager, getClientLogo } = useClientsContext();
+  const { getClientColor, getClientLogo } = useClientsContext();
   const [localCards, setLocalCards] = useState([]);
   const [done, setDone] = useState(false);
   const [sessionResponses, setSessionResponses] = useState([]);
@@ -30,7 +31,7 @@ export default function ClientContentReviewPortal({
 
   useEffect(() => {
     if (useCloudSync) {
-      const pending = cards.filter(
+      const pending = stripInternalCardsForClientPortal(cards).filter(
         (card) =>
           card.client === client &&
           card.columnId === 'in-review' &&
@@ -42,7 +43,11 @@ export default function ClientContentReviewPortal({
     }
 
     const snapshot = parseContentShareHash();
-    const merged = mergePortalCards(cards, client, snapshot).filter(
+    const merged = mergePortalCards(
+      stripInternalCardsForClientPortal(cards),
+      client,
+      snapshot,
+    ).filter(
       (card) => !respondedIds.includes(card.id),
     );
     setLocalCards(merged);
@@ -50,7 +55,6 @@ export default function ClientContentReviewPortal({
   }, [cards, client, respondedIds, useCloudSync]);
 
   const clientColor = getClientColor(client);
-  const accountManager = getClientAccountManager(client);
   const clientLogo = getClientLogo(client);
   const canSyncLocally = !useCloudSync && cards.some(
     (c) => c.client === client && c.columnId === 'in-review',
@@ -158,7 +162,6 @@ export default function ClientContentReviewPortal({
             cards={localCards}
             client={client}
             clientColor={clientColor}
-            accountManager={accountManager}
             clientLogo={clientLogo}
             searchQuery={searchQuery}
             onApprove={handleApprove}

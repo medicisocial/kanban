@@ -101,12 +101,122 @@ select option:hover {
 }
 
 .login-fade-in {
-  opacity: 0;
   animation: login-fade-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .login-fade-in-delay {
   animation-delay: 0.1s;
+}
+
+/* Portal shell — shared admin + client console */
+.portal-ambient {
+  background: linear-gradient(165deg, #0c0c0c 0%, #000 45%, #080808 100%);
+}
+
+.portal-ambient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 90% 70% at 12% 28%, rgba(129, 1, 0, 0.14), transparent 55%);
+}
+
+.portal-ambient::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 90% at 88% 72%, rgba(255, 255, 255, 0.035), transparent 50%);
+}
+
+.portal-search-input {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.portal-search-input:focus {
+  border-bottom-color: rgba(255, 255, 255, 0.35);
+}
+
+.portal-nav-item {
+  transition: color 0.25s ease, border-color 0.25s ease;
+}
+
+.portal-icon-btn {
+  transition: color 0.25s ease, opacity 0.25s ease;
+}
+
+.portal-icon-btn:hover {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.portal-profile-btn {
+  transition: opacity 0.25s ease;
+}
+
+.portal-profile-btn:hover {
+  opacity: 0.85;
+}
+
+.portal-backdrop {
+  animation: portal-backdrop-in 0.3s ease forwards;
+}
+
+@keyframes portal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes portal-content-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.portal-content-fade {
+  animation: portal-content-fade 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.portal-section-header {
+  animation: portal-content-fade 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.portal-sidebar {
+  animation: portal-sidebar-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes portal-sidebar-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-fade-in,
+  .login-fade-in-delay,
+  .portal-content-fade,
+  .portal-section-header,
+  .portal-sidebar,
+  .portal-backdrop {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .portal-nav-item,
+  .portal-icon-btn,
+  .portal-profile-btn {
+    transition: none;
+  }
 }
 
 /* Shared Medici brand utilities */

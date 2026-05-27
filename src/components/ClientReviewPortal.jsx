@@ -21,7 +21,7 @@ export default function ClientReviewPortal({
   embedded = false,
   searchQuery = '',
 }) {
-  const { getClientColor, getClientAccountManager, getClientLogo } = useClientsContext();
+  const { getClientColor, getClientLogo } = useClientsContext();
   const [localIdeas, setLocalIdeas] = useState([]);
   const [done, setDone] = useState(false);
   const [sessionResponses, setSessionResponses] = useState([]);
@@ -47,7 +47,6 @@ export default function ClientReviewPortal({
   }, [ideas, client, respondedIds, useCloudSync]);
 
   const clientColor = getClientColor(client);
-  const accountManager = getClientAccountManager(client);
   const clientLogo = getClientLogo(client);
   const canSyncLocally = !useCloudSync && ideas.some((i) => i.client === client);
 
@@ -162,7 +161,6 @@ export default function ClientReviewPortal({
             ideas={ideas}
             client={client}
             clientColor={clientColor}
-            accountManager={accountManager}
             clientLogo={clientLogo}
             searchQuery={searchQuery}
             onApprove={handleApprove}

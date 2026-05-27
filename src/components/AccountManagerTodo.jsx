@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ACCOUNT_MANAGERS, getContentTypeStyle } from '../constants';
+import { getContentTypeStyle } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import TaskPostSchedule from './TaskPostSchedule';
 import { formatStoryScheduleSummary, toDateKey } from '../utils/calendar';
@@ -305,7 +305,8 @@ export default function AccountManagerTodo({
   onMoveTask,
   onSendBackForEditing,
 }) {
-  const { getClientColor, clientAccountManagers } = useClientsContext();
+  const { getClientColor, clientAccountManagers, getMemberNamesForRole } = useClientsContext();
+  const accountManagers = getMemberNamesForRole('Account Manager');
   const todayKey = toDateKey(new Date());
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [needsEditsCard, setNeedsEditsCard] = useState(null);
@@ -377,7 +378,7 @@ export default function AccountManagerTodo({
             className="select-dark rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-1.5 text-sm text-[#f9f6f2] outline-none"
           >
             <option value="all">All</option>
-            {ACCOUNT_MANAGERS.map((member) => (
+            {accountManagers.map((member) => (
               <option key={member} value={member}>
                 {member}
               </option>

@@ -10,6 +10,7 @@ import EventsCalendar from './EventsCalendar';
 import ClientPortalLayout from './clientPortal/ClientPortalLayout';
 import { filterEvents } from '../utils/eventsCalendar';
 import { createEvent } from '../constants';
+import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 
 export default function ClientHubPortal({ onSignOut }) {
   const { brand, portalData, loadingData, dataError, logout, queueCloudResponse, refreshPortalData } =
@@ -21,7 +22,10 @@ export default function ClientHubPortal({ onSignOut }) {
   const clientColor = portalData?.clientColor || getClientColor(brand);
   const clientLogo = portalData?.clientLogo || getClientLogo(brand);
   const businessType = portalData?.businessType || '';
-  const cards = portalData?.cards || [];
+  const cards = useMemo(
+    () => stripInternalCardsForClientPortal(portalData?.cards || []),
+    [portalData?.cards],
+  );
   const ideas = portalData?.ideas || [];
   const plans = portalData?.plans || {};
   const events = useMemo(

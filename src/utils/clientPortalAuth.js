@@ -5,6 +5,18 @@ export function isClientHubPortal() {
   return params.get('portal') === '1' || params.get('portal') === 'true';
 }
 
+/** Remove Medici-internal assignment fields before client portal display or export. */
+export function stripInternalCardFields(card) {
+  if (!card || typeof card !== 'object') return card;
+  const { assignedTo, contentCreator, accountManager, ...clientSafe } = card;
+  return clientSafe;
+}
+
+export function stripInternalCardsForClientPortal(cards) {
+  if (!Array.isArray(cards)) return [];
+  return cards.map(stripInternalCardFields);
+}
+
 function authHeaders(session) {
   return {
     Authorization: `Bearer ${btoa(JSON.stringify(session))}`,

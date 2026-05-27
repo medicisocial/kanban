@@ -1,11 +1,20 @@
 export const COLUMNS = [
-  { id: 'shoot', title: 'To Shoot' },
+  { id: 'shoot', title: 'To Create' },
   { id: 'editing', title: 'Editing' },
   { id: 'in-review', title: 'In Review' },
   { id: 'not-approved', title: 'Not Approved' },
   { id: 'approved', title: 'Approved' },
   { id: 'scheduled', title: 'Scheduled' },
   { id: 'finished', title: 'Finished' },
+];
+
+/** Visual groupings for the pipeline board (column ids unchanged). */
+export const BOARD_COLUMN_GROUPS = [
+  { id: 'create', label: 'Create', columnIds: ['shoot'] },
+  { id: 'edit', label: 'Edit', columnIds: ['editing'] },
+  { id: 'review', label: 'Review', columnIds: ['in-review', 'not-approved'] },
+  { id: 'publish', label: 'Publish', columnIds: ['approved', 'scheduled'] },
+  { id: 'archive', label: 'Archive', columnIds: ['finished'], collapsible: true },
 ];
 
 export const DEFAULT_CLIENTS = [
@@ -90,11 +99,40 @@ export const PLATFORM_ICON = '📸';
 export const DEFAULT_EDITOR = 'Jordan Nguyen';
 export const DEFAULT_ACCOUNT_MANAGER = 'Valerie Landeros';
 
+/** @deprecated Use team members from context / storage */
 export const TEAM_MEMBERS = [DEFAULT_EDITOR];
 
+/** @deprecated Use team members from context / storage */
 export const ACCOUNT_MANAGERS = [DEFAULT_ACCOUNT_MANAGER];
 
+/** @deprecated Use team members from context / storage */
 export const COMPANY_STAFF = [DEFAULT_EDITOR, DEFAULT_ACCOUNT_MANAGER];
+
+export const TEAM_OPERATIONAL_ROLES = ['Account Manager', 'Editor', 'Content Creator'];
+export const TEAM_LEADERSHIP_ROLES = ['Owner', 'Creative Director'];
+export const TEAM_ROLES = [...TEAM_LEADERSHIP_ROLES, ...TEAM_OPERATIONAL_ROLES];
+
+/** Leadership roles implicitly include all operational roles for assignments. */
+export const TEAM_ROLE_COVERAGE = {
+  Owner: TEAM_OPERATIONAL_ROLES,
+  'Creative Director': TEAM_OPERATIONAL_ROLES,
+};
+
+export const TEAM_ROLE_DESCRIPTIONS = {
+  Owner: 'Leadership — covers all operational roles in assignment dropdowns.',
+  'Creative Director': 'Leadership — covers all operational roles in assignment dropdowns.',
+  'Account Manager': 'Client assignments and account manager task queues.',
+  Editor: 'Post-production — receives raw assets after the content creator hands off.',
+  'Content Creator':
+    'Creates content — reels, carousels, photos, and videos — on To Create cards and shoot days.',
+};
+
+export const DEFAULT_TEAM_MEMBERS = [
+  { id: 'team-jordan-nguyen', name: DEFAULT_EDITOR, roles: ['Editor'] },
+  { id: 'team-valerie-landeros', name: DEFAULT_ACCOUNT_MANAGER, roles: ['Account Manager'] },
+];
+
+export const TEAM_STORAGE_KEY = 'medici-social-team';
 
 export const COLUMN_BG = {
   shoot: 'bg-[#111111]',
@@ -125,6 +163,7 @@ export const AM_TODO_ORDER_KEY = 'medici-social-am-todo-order';
 export const ADMIN_TASKS_STORAGE_KEY = 'medici-social-admin-tasks';
 export const EVENTS_STORAGE_KEY = 'medici-social-events';
 export const CLIENT_PORTAL_AUTH_STORAGE_KEY = 'medici-client-portal-auth';
+export const CLIENT_PORTAL_PASSWORD_VAULT_KEY = 'medici-client-portal-password-vault';
 
 export const IDEA_STATUSES = {
   pending: 'Pending Review',
@@ -159,6 +198,7 @@ export function createCard(overrides = {}) {
     dueDate: '',
     dueTime: '',
     assignedTo: DEFAULT_EDITOR,
+    contentCreator: '',
     accountManager: '',
     notes: '',
     referenceMusic: '',
@@ -178,7 +218,7 @@ export function createCard(overrides = {}) {
     postedAt: null,
     clientComment: '',
     isOneOffProject: false,
-    status: 'To Shoot',
+    status: 'To Create',
     columnId: 'shoot',
     createdAt: Date.now(),
     ...overrides,
@@ -195,7 +235,7 @@ export function getSampleData() {
       assignedTo: DEFAULT_EDITOR,
       priority: 'High',
       notes: 'Focus on the new pastel palette. Hook: "Your spring glow starts here."',
-      status: 'To Shoot',
+      status: 'To Create',
       columnId: 'shoot',
     }),
     createCard({
@@ -206,7 +246,7 @@ export function getSampleData() {
       assignedTo: DEFAULT_EDITOR,
       priority: 'Urgent',
       notes: 'Include player stats from last week. CTA: shop new jerseys.',
-      status: 'To Shoot',
+      status: 'To Create',
       columnId: 'shoot',
     }),
     createCard({
@@ -217,7 +257,7 @@ export function getSampleData() {
       assignedTo: DEFAULT_EDITOR,
       priority: 'Medium',
       notes: '3-part story: offer reveal, treatment showcase, booking link.',
-      status: 'To Shoot',
+      status: 'To Create',
       columnId: 'shoot',
     }),
     createCard({

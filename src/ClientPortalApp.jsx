@@ -21,7 +21,11 @@ function ClientPortalShell({ onSignOut }) {
   }
 
   if (!isAuthenticated) {
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black">
+        <p className="text-sm text-gray-500">Signing out…</p>
+      </div>
+    );
   }
 
   return <ClientHubPortal onSignOut={onSignOut} />;

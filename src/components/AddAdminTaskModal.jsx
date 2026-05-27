@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { COMPANY_STAFF } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import { toDateKey } from '../utils/calendar';
 
@@ -7,12 +6,13 @@ const inputClass =
   'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30';
 
 export default function AddAdminTaskModal({ onClose, onAdd, defaultAssignee }) {
-  const { clients } = useClientsContext();
+  const { clients, getAllTeamMemberNames } = useClientsContext();
+  const adminStaff = getAllTeamMemberNames();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [client, setClient] = useState('');
   const [dueDate, setDueDate] = useState(toDateKey(new Date()));
-  const [assignedTo, setAssignedTo] = useState(defaultAssignee || COMPANY_STAFF[0]);
+  const [assignedTo, setAssignedTo] = useState(defaultAssignee || adminStaff[0] || '');
   const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
@@ -113,7 +113,7 @@ export default function AddAdminTaskModal({ onClose, onAdd, defaultAssignee }) {
               onChange={(e) => setAssignedTo(e.target.value)}
               className={inputClass}
             >
-              {COMPANY_STAFF.map((member) => (
+              {adminStaff.map((member) => (
                 <option key={member} value={member}>
                   {member}
                 </option>

@@ -1,5 +1,5 @@
 import { getContentTypeStyle } from '../constants';
-import { getClientShootCards } from '../utils/clientPortalAuth';
+import { getClientShootCards, stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import { formatTime } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import { surfacePanelClass } from './clientPortal/clientPortalUi';
@@ -12,7 +12,7 @@ export default function ClientShootSchedulePortal({
   embedded = false,
   searchQuery = '',
 }) {
-  const shootCards = getClientShootCards(cards);
+  const shootCards = getClientShootCards(stripInternalCardsForClientPortal(cards));
   const query = searchQuery.trim().toLowerCase();
 
   const filteredCards = query

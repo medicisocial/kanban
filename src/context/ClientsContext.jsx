@@ -1,13 +1,15 @@
 import { createContext, useContext } from 'react';
 import { useClients } from '../hooks/useClients';
 import { useClientPortalCredentials } from '../hooks/useClientPortalCredentials';
+import { useTeamMembers } from '../hooks/useTeamMembers';
 
 const ClientsContext = createContext(null);
 
 export function ClientsProvider({ children }) {
   const clientsState = useClients();
   const portalCredentials = useClientPortalCredentials();
-  const value = { ...clientsState, ...portalCredentials };
+  const teamState = useTeamMembers();
+  const value = { ...clientsState, ...portalCredentials, ...teamState };
   return <ClientsContext.Provider value={value}>{children}</ClientsContext.Provider>;
 }
 

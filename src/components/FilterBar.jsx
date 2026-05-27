@@ -2,43 +2,18 @@ import { useRef, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { syncClientPortalCredentialsToCloud } from '../utils/clientPortalAdmin';
-import { getClientPortalBrands } from '../utils/clients';
 import { INTERNAL_TEAM_CLIENT } from '../constants';
 import { exportBackupFile, importBackupFile } from '../utils/dataBackup';
-import AddClientModal from './AddClientModal';
-import ClientAssignmentsModal from './ClientAssignmentsModal';
 import ClientPortalCredentialsModal from './ClientPortalCredentialsModal';
-import ClientProfileModal from './ClientProfileModal';
 import { btnSecondaryClass, selectClass } from './clientPortal/clientPortalUi';
 
 export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
-  const {
-    clients,
-    addClient,
-    clientAccountManagers,
-    setClientAccountManager,
-    getClientUsers,
-    setClientPortalUsers,
-  } = useClientsContext();
+  const { clients, getClientUsers, setClientPortalUsers } = useClientsContext();
   const { session } = useStaffAuth();
-  const [showAddClient, setShowAddClient] = useState(false);
-  const [showAssignments, setShowAssignments] = useState(false);
-  const [showPortalLogins, setShowPortalLogins] = useState(false);
   const [showTeamUsers, setShowTeamUsers] = useState(false);
-  const [showClientProfiles, setShowClientProfiles] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [backupMessage, setBackupMessage] = useState('');
   const importInputRef = useRef(null);
-
-  const clientPortalBrands = getClientPortalBrands(clients, INTERNAL_TEAM_CLIENT);
-
-  const handleAddClient = (name, color, logo) => {
-    const result = addClient(name, color, logo);
-    if (result.ok) {
-      onClientChange(result.name);
-    }
-    return result;
-  };
 
   const handleExport = () => {
     exportBackupFile();
@@ -70,54 +45,19 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
     setSettingsOpen(false);
   };
 
-  const openModal = (setter) => {
+  const openTeamUsers = () => {
     setSettingsOpen(false);
-    setter(true);
+    setShowTeamUsers(true);
   };
 
   const menuItemClass =
-    'block w-full px-3 py-2 text-left text-xs text-white/70 transition-colors hover:bg-white/[0.05] hover:text-white';
+    'block w-full px-3 py-2.5 text-left text-xs text-white/60 transition-colors duration-300 hover:bg-white/[0.04] hover:text-white';
 
   const groupLabelClass =
-    'px-3 pt-2 pb-1 text-[9px] font-medium uppercase tracking-[0.2em] text-white/30';
+    'px-3 pt-2.5 pb-1 text-[9px] font-medium uppercase tracking-[0.24em] text-white/30';
 
   const modals = (
     <>
-      {showAddClient && (
-        <AddClientModal
-          existingClients={clients}
-          onClose={() => setShowAddClient(false)}
-          onAdd={handleAddClient}
-        />
-      )}
-
-      {showAssignments && (
-        <ClientAssignmentsModal
-          clients={clients}
-          clientAccountManagers={clientAccountManagers}
-          onClose={() => setShowAssignments(false)}
-          onSetClientAccountManager={setClientAccountManager}
-        />
-      )}
-
-      {showClientProfiles && (
-        <ClientProfileModal onClose={() => setShowClientProfiles(false)} />
-      )}
-
-      {showPortalLogins && (
-        <ClientPortalCredentialsModal
-          clients={clientPortalBrands}
-          getClientUsers={getClientUsers}
-          onSaveClientUsers={setClientPortalUsers}
-          onSyncToCloud={(credentials) => syncClientPortalCredentialsToCloud(session, credentials)}
-          onClose={() => setShowPortalLogins(false)}
-          variant="clients"
-          title="Client portal users"
-          description="Add logins for client brands. Each user signs in at the main site URL."
-          saveLabel="Save client users"
-        />
-      )}
-
       {showTeamUsers && clients.includes(INTERNAL_TEAM_CLIENT) && (
         <ClientPortalCredentialsModal
           clients={[INTERNAL_TEAM_CLIENT]}
@@ -188,23 +128,9 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
             aria-label="Close settings menu"
             onClick={() => setSettingsOpen(false)}
           />
-          <div className="absolute bottom-full left-0 z-50 mb-1 w-full border border-white/10 bg-[#111111] py-1 shadow-xl">
-            <p className={groupLabelClass}>Clients</p>
-            <button type="button" onClick={() => openModal(setShowAddClient)} className={menuItemClass}>
-              Add client
-            </button>
-            <button type="button" onClick={() => openModal(setShowClientProfiles)} className={menuItemClass}>
-              Client profiles
-            </button>
-            <button type="button" onClick={() => openModal(setShowPortalLogins)} className={menuItemClass}>
-              Client users
-            </button>
-
+          <div className="absolute bottom-full left-0 z-50 mb-1 w-full border border-white/[0.08] bg-black/95 py-1 backdrop-blur-xl">
             <p className={groupLabelClass}>Team</p>
-            <button type="button" onClick={() => openModal(setShowAssignments)} className={menuItemClass}>
-              AM assignments
-            </button>
-            <button type="button" onClick={() => openModal(setShowTeamUsers)} className={menuItemClass}>
+            <button type="button" onClick={openTeamUsers} className={menuItemClass}>
               Medici Social Team
             </button>
 
@@ -233,11 +159,6 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
     clientFilterSelect,
     settingsMenu,
     modals,
-    openModal,
-    setShowAddClient,
-    setShowAssignments,
-    setShowClientProfiles,
-    setShowPortalLogins,
     setShowTeamUsers,
     handleExport,
     importInputRef,
@@ -246,7 +167,7 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
 }
 
 const actionBtnClass =
-  'rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-gray-300 transition hover:bg-white/10 hover:text-white';
+  'rounded-sm border border-white/15 bg-white/[0.04] px-3 py-1.5 text-sm font-medium text-white/70 transition-all duration-300 hover:border-white/25 hover:bg-white/[0.07] hover:text-white';
 
 export default function FilterBar({ clientFilter, onClientChange }) {
   const admin = useWorkspaceAdmin({ clientFilter, onClientChange });
@@ -256,18 +177,6 @@ export default function FilterBar({ clientFilter, onClientChange }) {
       <div className="mx-auto flex max-w-[1800px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
         <span className="text-xs font-medium uppercase tracking-wider text-gray-500">Filter</span>
         {admin.clientFilterSelect}
-        <button type="button" onClick={() => admin.setShowAddClient(true)} className={actionBtnClass}>
-          + Add client
-        </button>
-        <button type="button" onClick={() => admin.setShowAssignments(true)} className={actionBtnClass}>
-          AM assignments
-        </button>
-        <button type="button" onClick={() => admin.setShowClientProfiles(true)} className={actionBtnClass}>
-          Client profiles
-        </button>
-        <button type="button" onClick={() => admin.setShowPortalLogins(true)} className={actionBtnClass}>
-          Client users
-        </button>
         <button type="button" onClick={() => admin.setShowTeamUsers(true)} className={actionBtnClass}>
           Medici Social Team
         </button>
