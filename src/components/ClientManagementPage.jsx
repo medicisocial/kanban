@@ -367,6 +367,7 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
             <div key={`contacts-${selectedClient}`} className="portal-content-fade max-w-3xl">
               <ClientContactsEditor
                 client={selectedClient}
+                clientColor={getClientColor(selectedClient)}
                 getClientContacts={getClientContacts}
                 onSaveClientContacts={setClientContacts}
               />

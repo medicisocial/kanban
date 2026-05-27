@@ -26,6 +26,7 @@ export default function ClientSocialLoginsEditor({
   showSaveButton = true,
   onSocialLoginsChange,
   clientMode = false,
+  embedded = false,
 }) {
   const [logins, setLogins] = useState(() => buildDraftSocialLogins(client, getClientSocialLogins));
   const [message, setMessage] = useState('');
@@ -89,11 +90,13 @@ export default function ClientSocialLoginsEditor({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-white/45">
-        {clientMode
-          ? `Add the social accounts your Medici Social team should use for ${client}.`
-          : `Store social account credentials for ${client}. Passwords are saved locally for your team only.`}
-      </p>
+      {!embedded && (
+        <p className="text-sm text-white/45">
+          {clientMode
+            ? `Add the social accounts your Medici Social team should use for ${client}.`
+            : `Store social account credentials for ${client}. Passwords are saved locally for your team only.`}
+        </p>
+      )}
 
       <div className="space-y-4">
         {CLIENT_SOCIAL_PLATFORMS.map(({ id, label }) => (

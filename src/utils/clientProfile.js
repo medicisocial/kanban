@@ -1,8 +1,51 @@
+import { bakeLogoCrop, normalizeClientLogo, serializeClientLogo } from './clientLogo';
+
 export const CLIENT_SOCIAL_PLATFORMS = [
   { id: 'instagram', label: 'Instagram' },
   { id: 'tiktok', label: 'TikTok' },
   { id: 'facebook', label: 'Facebook' },
 ];
+
+function normalizeContactAvatar(avatar) {
+  const normalized = normalizeClientLogo(avatar);
+  return normalized ? serializeClientLogo(normalized) : null;
+}
+
+export async function resolveContactAvatarDraft(draftAvatar, existingAvatar) {
+  if (draftAvatar === undefined) {
+    return existingAvatar ?? null;
+  }
+  if (draftAvatar === null) {
+    return null;
+  }
+  if (!draftAvatar?.src) {
+    return existingAvatar ?? null;
+  }
+  const normalized = normalizeClientLogo(draftAvatar);
+  if (!normalized) return existingAvatar ?? null;
+  const baked = await bakeLogoCrop(normalized);
+  return baked || normalizeContactAvatar(normalized);
+}
+
+export async function prepareClientContactsForSave(contacts) {
+  const prepared = await Promise.all(
+    (Array.isArray(contacts) ? contacts : []).map(async (contact) => {
+      const { pendingAvatar, ...rest } = contact || {};
+      const avatar = await resolveContactAvatarDraft(pendingAvatar, rest.avatar);
+      return { ...rest, avatar };
+    }),
+  );
+  return normalizeClientContacts(prepared);
+}
+
+export function contactsDraftHasChanges(draft, saved) {
+  if (!Array.isArray(draft)) return false;
+  if (draft.some((contact) => contact?.pendingAvatar !== undefined)) return true;
+  return (
+    JSON.stringify(normalizeClientContacts(draft)) !==
+    JSON.stringify(normalizeClientContacts(saved))
+  );
+}
 
 export function createClientContactId() {
   return crypto.randomUUID();
@@ -14,13 +57,15 @@ export function normalizeClientContact(contact, fallbackId) {
   const name = contact.name?.trim() || '';
   const phone = contact.phone?.trim() || '';
   const email = contact.email?.trim() || '';
-  if (!role && !name && !phone && !email) return null;
+  const avatar = normalizeContactAvatar(contact.avatar);
+  if (!role && !name && !phone && !email && !avatar) return null;
   return {
     id: contact.id || fallbackId || createClientContactId(),
     role,
     name,
     phone,
     email,
+    avatar,
   };
 }
 

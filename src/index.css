@@ -1125,6 +1125,36 @@ select option:hover {
   animation: portal-content-fade 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+.portal-settings-savebar {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  margin: 2rem -1.25rem -1.25rem;
+  padding: 1rem 1.25rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(to top, rgba(5, 5, 5, 0.98) 65%, rgba(5, 5, 5, 0.88));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+@media (min-width: 768px) {
+  .portal-settings-savebar {
+    margin-left: -2rem;
+    margin-right: -2rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .portal-settings-savebar {
+    margin-left: -2.5rem;
+    margin-right: -2.5rem;
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}
+
 .portal-section-header {
   animation: portal-content-fade 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
