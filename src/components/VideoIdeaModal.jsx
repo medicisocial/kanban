@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CONTENT_TYPES, IDEA_STATUSES } from "../constants";
 import { useClientsContext } from "../context/ClientsContext";
 import { normalizeLink } from "../utils/links";
+import { btnPrimaryClass } from "./clientPortal/clientPortalUi";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30";
 
 export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultClient }) {
+  const overlayRef = useRef(null);
   const isEdit = Boolean(idea);
   const { clients, defaultClient: firstClient } = useClientsContext();
 
@@ -54,17 +57,20 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
     onClose();
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-      onClick={onClose}
+      ref={overlayRef}
+      className="fixed inset-0 z-[270] flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center"
+      onClick={(e) => {
+        if (e.target === overlayRef.current) onClose();
+      }}
     >
       <form
         onSubmit={handleSubmit}
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl"
+        className="my-4 flex max-h-[min(720px,calc(100dvh-2rem))] w-full max-w-lg flex-col rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/5 px-5 py-4">
           <div>
             {isEdit && idea?.status && idea.status !== "pending" && (
               <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -78,12 +84,17 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
               {isEdit ? "Edit Video Idea" : "Add Video Idea"}
             </h2>
           </div>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-white">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-white/10 hover:text-white"
+            aria-label="Close"
+          >
             ✕
           </button>
         </div>
 
-        <div className="space-y-4 px-5 py-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
           <label className="block">
             <span className="mb-1.5 block text-xs font-medium text-gray-400">Idea Title</span>
             <input
@@ -167,15 +178,16 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
           {error && <p className="text-sm text-red-400">{error}</p>}
         </div>
 
-        <div className="border-t border-white/5 px-5 py-4">
+        <div className="shrink-0 border-t border-white/5 px-5 py-4">
           <button
             type="submit"
-            className="w-full rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white transition hover:bg-[#a00000]"
+            className={`${btnPrimaryClass} w-full`}
           >
             {isEdit ? "Save Changes" : "Share with Client"}
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }
