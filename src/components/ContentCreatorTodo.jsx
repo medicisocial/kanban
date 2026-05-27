@@ -6,7 +6,7 @@ import { formatDate, formatTime } from '../utils';
 import { buildContentCreatorTasks } from '../utils/contentCreatorTodo';
 import { resolveStaffMemberName } from '../utils/staffMembers';
 import { usesPersonalWorkspaceView } from '../utils/staffAuth';
-import { btnPrimaryClass, btnSecondaryClass, glassInsetClass } from './clientPortal/clientPortalUi';
+import { btnSecondaryClass } from './clientPortal/clientPortalUi';
 
 export default function ContentCreatorTodo({
   cards,
@@ -31,7 +31,7 @@ export default function ContentCreatorTodo({
 
   if (tasks.length === 0) {
     return (
-      <div className="border border-dashed border-white/10 px-6 py-16 text-center">
+      <div className="tesla-task-empty px-6 py-16 text-center">
         <p className="text-sm text-white/45">No cards in To Create right now.</p>
         <button type="button" onClick={() => onNavigate?.('board')} className={`${btnSecondaryClass} mt-4`}>
           Open pipeline
@@ -47,32 +47,40 @@ export default function ContentCreatorTodo({
           Showing To Create items assigned to {staffName}.
         </p>
       )}
-      {tasks.map((task) => {
+      {tasks.map((task, index) => {
         const typeStyle = getContentTypeStyle(task.contentType);
         const clientColor = getClientColor(task.client);
         return (
           <article
             key={task.id}
-            className={`${glassInsetClass} p-4`}
+            className="tesla-task-card"
+            style={{
+              '--task-accent-color': clientColor,
+              animationDelay: `${0.08 + index * 0.05}s`,
+            }}
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="tesla-task-card-body flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => onOpenCard?.(task.card)}
-                className="min-w-0 flex-1 text-left"
+                className="min-w-0 flex-1 text-left transition-opacity duration-300 hover:opacity-90"
               >
-                <div className="mb-2 flex flex-wrap items-center gap-2">
+                <div className="tesla-task-card-meta mb-2">
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeStyle.label}`}
                     style={{ backgroundColor: `${typeStyle.border}22` }}
                   >
                     {task.contentType}
                   </span>
-                  <span className="text-[10px] font-semibold uppercase" style={{ color: clientColor }}>
+                  <span className="tesla-task-card-client" style={{ color: clientColor }}>
+                    <span
+                      className="client-filter-dot client-filter-dot-active"
+                      style={{ '--client-filter-color': clientColor }}
+                    />
                     {task.client}
                   </span>
                 </div>
-                <h3 className="text-sm font-semibold text-white">{task.title}</h3>
+                <h3 className="text-sm font-semibold tracking-tight text-white">{task.title}</h3>
                 <p className="mt-1 text-xs text-white/45">
                   {task.shootDate
                     ? `Shoot ${formatDate(task.shootDate)}${task.shootTime ? ` · ${formatTime(task.shootTime)}` : ''}`
@@ -83,7 +91,7 @@ export default function ContentCreatorTodo({
               <button
                 type="button"
                 onClick={() => onHandoff?.(task.card)}
-                className={`${btnPrimaryClass} shrink-0 px-3 py-2 text-[10px]`}
+                className="tesla-task-card-action shrink-0"
               >
                 Hand off
               </button>

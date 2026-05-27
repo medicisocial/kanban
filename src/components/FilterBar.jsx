@@ -5,7 +5,8 @@ import { syncClientPortalCredentialsToCloud } from '../utils/clientPortalAdmin';
 import { INTERNAL_TEAM_CLIENT } from '../constants';
 import { exportBackupFile, importBackupFile } from '../utils/dataBackup';
 import ClientPortalCredentialsModal from './ClientPortalCredentialsModal';
-import { btnSecondaryClass, selectClass } from './clientPortal/clientPortalUi';
+import ClientFilterSelect from './clientPortal/ClientFilterSelect';
+import { btnSecondaryClass } from './clientPortal/clientPortalUi';
 
 export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
   const { clients, getClientUsers, setClientPortalUsers } = useClientsContext();
@@ -83,24 +84,7 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
   );
 
   const clientFilterSelect = (
-    <div className="relative w-full shrink-0 md:w-[148px]">
-      <select
-        value={clientFilter}
-        onChange={(e) => onClientChange(e.target.value)}
-        className={`${selectClass} w-full py-1.5 text-[11px] md:w-[148px]`}
-        aria-label="Filter by client"
-      >
-        <option value="all">All clients</option>
-        {clients.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
-      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-white/35">
-        ▾
-      </span>
-    </div>
+    <ClientFilterSelect value={clientFilter} onChange={onClientChange} />
   );
 
   const settingsMenu = (

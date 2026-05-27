@@ -769,6 +769,328 @@ select option:hover {
   }
 }
 
+.client-filter-trigger {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.625rem;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(
+    180deg,
+    rgba(24, 24, 24, 0.98) 0%,
+    rgba(12, 12, 12, 0.96) 100%
+  );
+  padding: 0.4375rem 0.75rem 0.4375rem 0.625rem;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(12px);
+  transition:
+    border-color 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.client-filter-trigger::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    120% 140% at 0% 50%,
+    color-mix(in srgb, var(--client-filter-color, rgba(255, 255, 255, 0.4)) 16%, transparent),
+    transparent 68%
+  );
+  opacity: 0;
+  transition: opacity 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.client-filter-trigger:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
+.client-filter-trigger:hover::before {
+  opacity: 1;
+}
+
+.client-filter-trigger[data-open] {
+  border-color: color-mix(in srgb, var(--client-filter-color, #fff) 34%, rgba(255, 255, 255, 0.16));
+  background: linear-gradient(
+    180deg,
+    rgba(28, 28, 28, 0.99) 0%,
+    rgba(14, 14, 14, 0.98) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 0 1px color-mix(in srgb, var(--client-filter-color, #fff) 12%, transparent),
+    0 12px 32px rgba(0, 0, 0, 0.32);
+}
+
+.client-filter-trigger[data-open]::before {
+  opacity: 1;
+}
+
+.client-filter-label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.client-filter-dot {
+  position: relative;
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--client-filter-color, rgba(255, 255, 255, 0.42));
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  transition:
+    transform 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.client-filter-dot::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: var(--client-filter-color, rgba(255, 255, 255, 0.42));
+  opacity: 0.28;
+  filter: blur(4px);
+  transition: opacity 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.client-filter-dot-active {
+  transform: scale(1.08);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0 12px color-mix(in srgb, var(--client-filter-color, #fff) 42%, transparent);
+}
+
+.client-filter-dot-active::after {
+  opacity: 0.5;
+}
+
+.client-filter-chevron {
+  flex-shrink: 0;
+  width: 0.75rem;
+  height: 0.75rem;
+  color: rgba(255, 255, 255, 0.34);
+  transition:
+    transform 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.32s ease;
+}
+
+.client-filter-trigger:hover .client-filter-chevron,
+.client-filter-trigger[data-open] .client-filter-chevron {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.client-filter-chevron-open {
+  transform: rotate(180deg);
+}
+
+.client-filter-panel {
+  transform-origin: top left;
+}
+
+.client-filter-panel.portal-dropdown-panel {
+  background: rgba(12, 12, 12, 0.98);
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+
+.client-filter-panel .portal-dropdown-header,
+.client-filter-panel .portal-dropdown-item {
+  opacity: 1;
+  animation: none;
+  transform: none;
+}
+
+.client-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.client-filter-item-active {
+  color: rgba(255, 255, 255, 0.96);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--client-filter-color, #fff) 14%, transparent) 0%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  box-shadow: inset 2px 0 0 var(--client-filter-color, rgba(255, 255, 255, 0.5));
+}
+
+.client-filter-check {
+  flex-shrink: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--client-filter-color, #fff) 18%, rgba(255, 255, 255, 0.08));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--client-filter-color, #fff) 34%, transparent),
+    0 0 10px color-mix(in srgb, var(--client-filter-color, #fff) 24%, transparent);
+}
+
+.client-filter-check::after {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: center / 0.5rem no-repeat
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 6.2 5 8.7 9.5 3.8' stroke='white' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  opacity: 0.92;
+}
+
+.tesla-task-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.048) 0%,
+    rgba(255, 255, 255, 0.014) 100%
+  );
+  padding: 1rem 1rem 1rem 1.125rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.16);
+  transition:
+    border-color 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: portal-dropdown-item-in 0.52s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+.tesla-task-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    120% 120% at 0% 20%,
+    color-mix(in srgb, var(--task-accent-color, rgba(255, 255, 255, 0.4)) 18%, transparent),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tesla-task-card::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.875rem;
+  bottom: 0.875rem;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--task-accent-color, rgba(255, 255, 255, 0.34));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--task-accent-color, #fff) 36%, transparent);
+  opacity: 0.82;
+}
+
+.tesla-task-card:hover {
+  border-color: color-mix(in srgb, var(--task-accent-color, #fff) 28%, rgba(255, 255, 255, 0.14));
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px color-mix(in srgb, var(--task-accent-color, #fff) 10%, transparent),
+    0 14px 36px rgba(0, 0, 0, 0.24);
+}
+
+.tesla-task-card:hover::before {
+  opacity: 1;
+}
+
+.tesla-task-card-body {
+  position: relative;
+  z-index: 1;
+}
+
+.tesla-task-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tesla-task-card-client {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tesla-task-card-action {
+  position: relative;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.9) 100%);
+  padding: 0.5rem 0.875rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #000;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 8px 20px rgba(0, 0, 0, 0.18);
+  transition:
+    transform 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.32s ease;
+}
+
+.tesla-task-card-action:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 10px 24px rgba(0, 0, 0, 0.24);
+}
+
+.tesla-task-card-action:active {
+  transform: scale(0.985);
+}
+
+.tesla-task-empty {
+  border-radius: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.028) 0%,
+    rgba(255, 255, 255, 0.008) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
 .portal-profile-btn {
   transition: opacity 0.25s ease;
 }
@@ -1720,7 +2042,11 @@ select option:hover {
   .portal-dropdown-backdrop,
   .portal-dropdown-panel,
   .portal-dropdown-header,
-  .portal-dropdown-item {
+  .portal-dropdown-item,
+  .client-filter-trigger,
+  .client-filter-chevron,
+  .client-filter-dot,
+  .tesla-task-card {
     animation: none;
     opacity: 1;
     transform: none;
