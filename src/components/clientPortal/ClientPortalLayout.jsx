@@ -1,6 +1,7 @@
 import {
   IconBoard,
   IconCalendar,
+  IconEvents,
   IconIdeas,
   IconShoots,
   IconTasks,
@@ -10,7 +11,8 @@ import EnterprisePortalLayout from './EnterprisePortalLayout';
 const NAV_ITEMS = [
   { id: 'ideas', label: 'Ideas', Icon: IconIdeas },
   { id: 'pipeline', label: 'Board', Icon: IconBoard },
-  { id: 'calendar', label: 'Calendar', Icon: IconCalendar },
+  { id: 'calendar', label: 'Content Calendar', Icon: IconCalendar },
+  { id: 'events', label: 'Events Calendar', Icon: IconEvents },
   { id: 'review', label: 'Tasks', Icon: IconTasks },
   { id: 'shoots', label: 'Shoot Schedule', Icon: IconShoots },
 ];

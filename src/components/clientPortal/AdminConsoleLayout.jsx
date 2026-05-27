@@ -1,6 +1,7 @@
 import {
   IconBoard,
   IconCalendar,
+  IconEvents,
   IconIdeas,
   IconShoots,
   IconTasks,
@@ -11,7 +12,8 @@ import { useWorkspaceAdmin } from '../FilterBar';
 const NAV_ITEMS = [
   { id: 'ideas', label: 'Ideas', Icon: IconIdeas },
   { id: 'board', label: 'Board', Icon: IconBoard },
-  { id: 'calendar', label: 'Calendar', Icon: IconCalendar },
+  { id: 'calendar', label: 'Content Calendar', Icon: IconCalendar },
+  { id: 'events', label: 'Events Calendar', Icon: IconEvents },
   { id: 'todo', label: 'Tasks', Icon: IconTasks },
   { id: 'shoot', label: 'Shoot Schedule', Icon: IconShoots },
 ];

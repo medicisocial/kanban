@@ -22,10 +22,12 @@ import { withStoryOccurrence, parseStoryOccurrenceNotes } from "../utils/calenda
 import { createCard, COLUMNS } from "../constants";
 import { buildSendBackForEditingUpdates } from "../utils/editorTodo";
 import { useAdminTasks } from "../hooks/useAdminTasks";
+import { useEvents } from "../hooks/useEvents";
 import CompanyTasks from "./CompanyTasks";
 import AdminConsoleLayout from "./clientPortal/AdminConsoleLayout";
 import KanbanBoard from "./KanbanBoard";
 import Calendar from "./Calendar";
+import EventsCalendar from "./EventsCalendar";
 import ShootDay from "./ShootDay";
 import VideoIdeas from "./VideoIdeas";
 import ClientReviewPortal from "./ClientReviewPortal";
@@ -59,6 +61,7 @@ export default function AppShell({ onSignOut }) {
     toggleAdminTaskComplete,
     deleteAdminTask,
   } = useAdminTasks();
+  const { events, addEvent, updateEvent, deleteEvent } = useEvents();
   const { authRequired, ready, logout, session } = useStaffAuth();
 
   const [selectedCard, setSelectedCard] = useState(null);
@@ -538,6 +541,18 @@ export default function AppShell({ onSignOut }) {
           onCardClick={handleCardClick}
           onAddCalendarPost={handleAddCalendarPost}
           onRemoveFromCalendar={handleRemoveFromCalendar}
+          embedded
+        />
+      )}
+
+      {activeView === "events" && (
+        <EventsCalendar
+          events={events}
+          clientFilter={clientFilter}
+          search={search}
+          onAddEvent={addEvent}
+          onUpdateEvent={updateEvent}
+          onDeleteEvent={deleteEvent}
           embedded
         />
       )}

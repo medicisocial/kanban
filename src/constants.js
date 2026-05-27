@@ -118,6 +118,7 @@ export const EDITOR_TODO_STORAGE_KEY = 'medici-social-editor-todo';
 export const EDITOR_TODO_ORDER_KEY = 'medici-social-editor-todo-order';
 export const AM_TODO_ORDER_KEY = 'medici-social-am-todo-order';
 export const ADMIN_TASKS_STORAGE_KEY = 'medici-social-admin-tasks';
+export const EVENTS_STORAGE_KEY = 'medici-social-events';
 export const CLIENT_PORTAL_AUTH_STORAGE_KEY = 'medici-client-portal-auth';
 
 export const IDEA_STATUSES = {
@@ -125,6 +126,23 @@ export const IDEA_STATUSES = {
   approved: 'Approved',
   declined: 'Declined',
 };
+
+export function createEvent(overrides = {}) {
+  return {
+    id: crypto.randomUUID(),
+    client: DEFAULT_CLIENTS[0],
+    title: '',
+    date: '',
+    time: '',
+    estimatedCovers: '',
+    status: 'submitted',
+    businessType: '',
+    fields: {},
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    ...overrides,
+  };
+}
 
 export function createCard(overrides = {}) {
   return {

@@ -7,6 +7,7 @@ import {
 const STORAGE_KEY = 'medici-social-kanban';
 const VIDEO_IDEAS_STORAGE_KEY = 'medici-social-video-ideas';
 const SHOOT_PLANS_STORAGE_KEY = 'medici-social-shoot-plans';
+const EVENTS_STORAGE_KEY = 'medici-social-events';
 const CLIENTS_STORAGE_KEY = 'medici-social-clients';
 const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
 const CONTENT_REVIEW_RESPONSES_KEY = 'medici-social-content-review-responses';
@@ -33,6 +34,13 @@ function filterPlansForBrand(plans, brand) {
   return filtered;
 }
 
+function normalizeBusinessType(businessType) {
+  if (businessType === 'Cocktail Lounge' || businessType === 'Sports Bar') {
+    return 'Hospitality';
+  }
+  return businessType || '';
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -51,14 +59,17 @@ export default async function handler(req, res) {
   const clientStore = data[CLIENTS_STORAGE_KEY] || {};
   const colors = clientStore.colors || {};
   const logos = clientStore.logos || {};
+  const businessTypes = clientStore.businessTypes || {};
 
   return res.status(200).json({
     brand,
     exportedAt: workspace?.exportedAt || null,
     clientColor: colors[brand] || null,
     clientLogo: logos[brand] || null,
+    businessType: normalizeBusinessType(businessTypes[brand] || '') || null,
     cards: filterForBrand(data[STORAGE_KEY], brand),
     ideas: filterForBrand(data[VIDEO_IDEAS_STORAGE_KEY], brand),
     plans: filterPlansForBrand(data[SHOOT_PLANS_STORAGE_KEY], brand),
+    events: filterForBrand(data[EVENTS_STORAGE_KEY], brand),
   });
 }

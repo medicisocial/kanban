@@ -257,7 +257,7 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
     return (
       <section>
         <ClientPortalSectionHeader
-          title="Calendar"
+          title="Content Calendar"
           description={`${totalScheduled} scheduled post${totalScheduled === 1 ? '' : 's'} across your publishing calendar.`}
         />
         {calendarBody}

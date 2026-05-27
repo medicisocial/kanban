@@ -208,7 +208,7 @@ export default function Calendar({
     return (
       <section>
         <ClientPortalSectionHeader
-          title="Calendar"
+          title="Content Calendar"
           description={
             isStories
               ? 'Schedule and manage recurring stories across all clients.'

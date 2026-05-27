@@ -6,7 +6,10 @@ import ClientContentReviewPortal from './ClientContentReviewPortal';
 import ClientCalendarPortal from './ClientCalendarPortal';
 import ClientPipelinePortal from './ClientPipelinePortal';
 import ClientShootSchedulePortal from './ClientShootSchedulePortal';
+import EventsCalendar from './EventsCalendar';
 import ClientPortalLayout from './clientPortal/ClientPortalLayout';
+import { filterEvents } from '../utils/eventsCalendar';
+import { createEvent } from '../constants';
 
 export default function ClientHubPortal({ onSignOut }) {
   const { brand, portalData, loadingData, dataError, logout, queueCloudResponse, refreshPortalData } =
@@ -17,9 +20,14 @@ export default function ClientHubPortal({ onSignOut }) {
 
   const clientColor = portalData?.clientColor || getClientColor(brand);
   const clientLogo = portalData?.clientLogo || getClientLogo(brand);
+  const businessType = portalData?.businessType || '';
   const cards = portalData?.cards || [];
   const ideas = portalData?.ideas || [];
   const plans = portalData?.plans || {};
+  const events = useMemo(
+    () => filterEvents(portalData?.events || [], { client: brand }),
+    [portalData?.events, brand],
+  );
 
   const notificationCount = useMemo(() => {
     const pendingIdeas = ideas.filter((idea) => idea.client === brand && idea.status === 'pending').length;
@@ -31,6 +39,26 @@ export default function ClientHubPortal({ onSignOut }) {
 
   const handleIdeaResponse = (response) => queueCloudResponse('idea', response);
   const handleContentResponse = (response) => queueCloudResponse('content', response);
+
+  const handleAddEvent = async (data) => {
+    await queueCloudResponse('event', {
+      action: 'create',
+      event: createEvent({ ...data, client: brand }),
+    });
+  };
+
+  const handleUpdateEvent = async (id, updates) => {
+    const existing = events.find((event) => event.id === id);
+    if (!existing) return;
+    await queueCloudResponse('event', {
+      action: 'update',
+      event: { ...existing, ...updates, id, client: brand },
+    });
+  };
+
+  const handleDeleteEvent = async (id) => {
+    await queueCloudResponse('event', { action: 'delete', eventId: id });
+  };
 
   const handleSignOut = () => {
     logout();
@@ -86,6 +114,21 @@ export default function ClientHubPortal({ onSignOut }) {
 
       {portalData && activeTab === 'calendar' && (
         <ClientCalendarPortal client={brand} cards={cards} embedded searchQuery={searchQuery} />
+      )}
+
+      {portalData && activeTab === 'events' && (
+        <EventsCalendar
+          events={events}
+          scopedBrand={brand}
+          lockedClient={brand}
+          businessType={businessType}
+          search={searchQuery}
+          onAddEvent={handleAddEvent}
+          onUpdateEvent={handleUpdateEvent}
+          onDeleteEvent={handleDeleteEvent}
+          clientMode
+          embedded
+        />
       )}
 
       {portalData && activeTab === 'shoots' && (

@@ -1,14 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { CLIENT_COLOR_PALETTE } from '../constants';
+import { BUSINESS_TYPES } from '../utils/eventFormSchemas';
 import { readClientProfileImage } from '../utils/clientImage';
 import ClientAvatar from './ClientAvatar';
 import { btnPrimaryClass, btnSecondaryClass, selectClass } from './clientPortal/clientPortalUi';
 
 export default function ClientProfileModal({ onClose }) {
-  const { clients, getClientColor, getClientLogo, setClientColor, setClientLogo } = useClientsContext();
+  const {
+    clients,
+    getClientColor,
+    getClientLogo,
+    getClientBusinessType,
+    setClientColor,
+    setClientLogo,
+    setClientBusinessType,
+  } = useClientsContext();
   const [selectedClient, setSelectedClient] = useState(clients[0] || '');
   const [color, setColor] = useState('');
+  const [businessType, setBusinessType] = useState('');
   const [previewLogo, setPreviewLogo] = useState(null);
   const [pendingLogo, setPendingLogo] = useState(undefined);
   const [error, setError] = useState('');
@@ -36,10 +46,11 @@ export default function ClientProfileModal({ onClose }) {
   useEffect(() => {
     if (!selectedClient) return;
     setColor(getClientColor(selectedClient));
+    setBusinessType(getClientBusinessType(selectedClient));
     setPreviewLogo(getClientLogo(selectedClient));
     setPendingLogo(undefined);
     setError('');
-  }, [selectedClient, getClientColor, getClientLogo]);
+  }, [selectedClient, getClientColor, getClientLogo, getClientBusinessType]);
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
@@ -68,6 +79,7 @@ export default function ClientProfileModal({ onClose }) {
 
     try {
       setClientColor(selectedClient, color);
+      setClientBusinessType(selectedClient, businessType);
       if (pendingLogo !== undefined) {
         setClientLogo(selectedClient, pendingLogo);
       }
@@ -80,7 +92,9 @@ export default function ClientProfileModal({ onClose }) {
   };
 
   const hasChanges =
-    pendingLogo !== undefined || (selectedClient && color !== getClientColor(selectedClient));
+    pendingLogo !== undefined ||
+    (selectedClient && color !== getClientColor(selectedClient)) ||
+    (selectedClient && businessType !== getClientBusinessType(selectedClient));
 
   return (
     <div
@@ -94,7 +108,7 @@ export default function ClientProfileModal({ onClose }) {
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
           <div>
             <h2 className="text-lg font-semibold text-white">Client profiles</h2>
-            <p className="mt-0.5 text-xs text-white/45">Upload a profile photo and brand color.</p>
+            <p className="mt-0.5 text-xs text-white/45">Photo, brand color, and business type.</p>
           </div>
           <button type="button" onClick={onClose} className="text-white/45 hover:text-white">
             ✕
@@ -122,6 +136,32 @@ export default function ClientProfileModal({ onClose }) {
                 ▾
               </span>
             </div>
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-white/45">
+              Business type
+            </span>
+            <div className="relative">
+              <select
+                value={businessType}
+                onChange={(e) => setBusinessType(e.target.value)}
+                className={`${selectClass} w-full`}
+              >
+                <option value="">Not set</option>
+                {BUSINESS_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-white/35">
+                ▾
+              </span>
+            </div>
+            <p className="mt-1.5 text-[10px] text-white/35">
+              Controls which event form this client sees on the Events Calendar.
+            </p>
           </label>
 
           <div className="flex items-center gap-4 border border-white/10 bg-white/[0.03] p-4">

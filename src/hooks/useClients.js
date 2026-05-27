@@ -6,7 +6,16 @@ import {
   CLIENTS_STORAGE_KEY,
   CLIENT_COLOR_PALETTE,
 } from '../constants';
+import { DEFAULT_CLIENT_BUSINESS_TYPES, normalizeBusinessType } from '../utils/eventFormSchemas';
 import { normalizeClientName, pickNextClientColor } from '../utils/clients';
+
+function normalizeBusinessTypesMap(types = {}) {
+  const normalized = {};
+  for (const [client, type] of Object.entries(types)) {
+    normalized[client] = normalizeBusinessType(type);
+  }
+  return normalized;
+}
 
 function loadClients() {
   try {
@@ -22,6 +31,10 @@ function loadClients() {
             ...DEFAULT_CLIENT_ACCOUNT_MANAGERS,
             ...(parsed.accountManagers || {}),
           },
+          businessTypes: normalizeBusinessTypesMap({
+            ...DEFAULT_CLIENT_BUSINESS_TYPES,
+            ...(parsed.businessTypes || {}),
+          }),
         };
       }
     }
@@ -33,6 +46,7 @@ function loadClients() {
     colors: { ...DEFAULT_CLIENT_COLORS },
     logos: {},
     accountManagers: { ...DEFAULT_CLIENT_ACCOUNT_MANAGERS },
+    businessTypes: { ...DEFAULT_CLIENT_BUSINESS_TYPES },
   };
 }
 
@@ -43,7 +57,7 @@ export function useClients() {
     localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const addClient = useCallback((name, color, logo = null) => {
+  const addClient = useCallback((name, color, logo = null, businessType = '') => {
     const trimmed = normalizeClientName(name);
     if (!trimmed) return { ok: false, error: 'Please enter a client name.' };
 
@@ -54,11 +68,14 @@ export function useClients() {
       }
       const nextColor = color || pickNextClientColor(prev.colors, CLIENT_COLOR_PALETTE);
       added = true;
+      const nextBusinessTypes = { ...prev.businessTypes };
+      if (businessType) nextBusinessTypes[trimmed] = businessType;
       return {
         names: [...prev.names, trimmed],
         colors: { ...prev.colors, [trimmed]: nextColor },
         logos: logo ? { ...prev.logos, [trimmed]: logo } : { ...prev.logos },
         accountManagers: { ...prev.accountManagers },
+        businessTypes: nextBusinessTypes,
       };
     });
 
@@ -81,6 +98,11 @@ export function useClients() {
   const getClientAccountManager = useCallback(
     (client) => state.accountManagers[client] || '',
     [state.accountManagers],
+  );
+
+  const getClientBusinessType = useCallback(
+    (client) => normalizeBusinessType(state.businessTypes[client] || ''),
+    [state.businessTypes],
   );
 
   const setClientAccountManager = useCallback((client, accountManager) => {
@@ -114,18 +136,32 @@ export function useClients() {
     });
   }, []);
 
+  const setClientBusinessType = useCallback((client, businessType) => {
+    if (!client) return;
+    setState((prev) => ({
+      ...prev,
+      businessTypes: {
+        ...prev.businessTypes,
+        [client]: normalizeBusinessType(businessType),
+      },
+    }));
+  }, []);
+
   return {
     clients: state.names,
     clientColors: state.colors,
     clientLogos: state.logos,
     clientAccountManagers: state.accountManagers,
+    clientBusinessTypes: state.businessTypes,
     defaultClient: state.names[0] || DEFAULT_CLIENTS[0],
     addClient,
     getClientColor,
     getClientLogo,
     getClientAccountManager,
+    getClientBusinessType,
     setClientAccountManager,
     setClientColor,
     setClientLogo,
+    setClientBusinessType,
   };
 }
