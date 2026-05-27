@@ -22,6 +22,13 @@ function matchesStaff(card, staffName, clientAccountManagers, myWorkOnly) {
   return cardIsAssignedToStaff(card, staffName, clientAccountManagers);
 }
 
+function cardNeedsScheduling(card) {
+  if (card.contentType === 'Story') return false;
+  if (card.isOneOffProject) return false;
+  if (card.postedAt) return false;
+  return card.columnId === 'approved';
+}
+
 export function buildWorkspaceHomeSummary({
   cards,
   ideas,
@@ -55,6 +62,8 @@ export function buildWorkspaceHomeSummary({
   const scheduledThisWeek = scopedCards.filter(
     (c) => c.columnId === 'scheduled' && c.dueDate && isThisWeek(c.dueDate) && cardScope(c),
   );
+  const needsSchedulingAll = scopedCards.filter(cardNeedsScheduling);
+  const needsScheduling = needsSchedulingAll.filter((c) => cardScope(c));
   const openAdminTasks = (adminTasks || []).filter((t) => !t.completed);
 
   const myInReview = inReview.filter(cardScope);
@@ -69,9 +78,15 @@ export function buildWorkspaceHomeSummary({
     pendingIdeasCount: pendingIdeas.length,
     shootsTodayCount: shootsToday.length,
     scheduledThisWeekCount: scheduledThisWeek.length,
+    needsSchedulingCount:
+      myWorkOnly && staffName ? needsScheduling.length : needsSchedulingAll.length,
     openAdminTasksCount: openAdminTasks.length,
     shootsToday,
     inReview: (myWorkOnly && staffName ? myInReview : inReview).slice(0, 5),
+    needsScheduling: (myWorkOnly && staffName ? needsScheduling : needsSchedulingAll).slice(
+      0,
+      5,
+    ),
     scheduledThisWeek: scheduledThisWeek.slice(0, 5),
   };
 }
@@ -88,7 +103,7 @@ export function buildMyWorkGreeting(firstName, summary) {
   const title = firstName ? `${timeGreeting}, ${firstName}.` : `${timeGreeting}.`;
 
   const pipelineCount =
-    summary.toCreateCount + summary.editingCount + summary.inReviewCount;
+    summary.toCreateCount + summary.editingCount + summary.inReviewCount + summary.needsSchedulingCount;
   const activeCount = pipelineCount + summary.pendingIdeasCount;
 
   if (activeCount === 0 && summary.shootsTodayCount === 0) {
