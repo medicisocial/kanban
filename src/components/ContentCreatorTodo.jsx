@@ -55,7 +55,7 @@ export default function ContentCreatorTodo({
             key={task.id}
             className="rounded-xl border border-white/8 bg-[#111111] p-4"
           >
-            <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => onOpenCard?.(task.card)}

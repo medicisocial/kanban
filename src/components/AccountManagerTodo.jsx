@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { getContentTypeStyle } from '../constants';
+import { getContentTypeStyle, COLUMNS } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import TaskPostSchedule from './TaskPostSchedule';
 import { formatStoryScheduleSummary, toDateKey } from '../utils/calendar';
@@ -8,19 +8,92 @@ import {
   buildInReviewTasks,
   buildPostsTodoTasks,
   buildStoryTasksToday,
+  buildSetPostDateTasks,
   filterAccountManagerTasks,
   formatAccountManagerDateLabel,
 } from '../utils/accountManagerTodo';
 import { getEditorTaskStatusOptions } from '../utils/editorTodo';
 import NeedsEditsModal from './NeedsEditsModal';
+import PlanPostDateModal from './PlanPostDateModal';
+
+const taskActionBtnClass =
+  'inline-flex items-center justify-center rounded-sm bg-white px-3 py-1.5 text-[10px] font-medium normal-case tracking-normal text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40';
 
 const kindStyles = {
+  'set-post-date': 'border-violet-500/30 bg-violet-500/10 text-violet-200',
   schedule: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200',
   publish: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
   'post-story': 'border-blue-500/30 bg-blue-500/10 text-blue-200',
 };
 
 const inReviewKindStyle = 'border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]';
+
+function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate }) {
+  const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
+  const clientColor = getClientColor(task.client);
+  const pipelineStage = COLUMNS.find((col) => col.id === task.columnId)?.title;
+  const openCard = () => onOpenCard(task.card);
+
+  return (
+    <article className="rounded-xl border border-amber-500/30 bg-[#111111] p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${kindStyles['set-post-date']}`}
+            >
+              {task.label}
+            </span>
+            {pipelineStage && (
+              <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-medium text-gray-400">
+                {pipelineStage}
+              </span>
+            )}
+            {task.contentType && typeStyle && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeStyle.label}`}
+                style={{ backgroundColor: `${typeStyle.border}22` }}
+              >
+                {task.contentType}
+              </span>
+            )}
+          </div>
+
+          <button type="button" onClick={openCard} className="text-left hover:text-[#fca5a5]">
+            <h3 className="text-sm font-semibold text-white">{task.title}</h3>
+          </button>
+
+          {task.client && (
+            <p className="mt-1 text-xs font-medium" style={{ color: clientColor }}>
+              {task.client}
+            </p>
+          )}
+
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => onPlanDate?.(task.card)}
+              className={taskActionBtnClass}
+            >
+              Set post date
+            </button>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
+            {task.contentCreator && <span>Creator: {task.contentCreator}</span>}
+            {task.accountManager && <span>AM: {task.accountManager}</span>}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <button type="button" onClick={openCard} className={taskActionBtnClass}>
+            Edit
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onApproveReview, onRequestEdits }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
@@ -82,7 +155,7 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onAppr
           </div>
         </button>
 
-        <div className="flex shrink-0 flex-col gap-2">
+        <div className="flex shrink-0 flex-col gap-1.5">
           <label className="block">
             <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-gray-500">
               Board status
@@ -100,25 +173,13 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onAppr
               ))}
             </select>
           </label>
-          <button
-            type="button"
-            onClick={openCard}
-            className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-white/5 hover:text-white"
-          >
+          <button type="button" onClick={openCard} className={taskActionBtnClass}>
             Edit
           </button>
-          <button
-            type="button"
-            onClick={() => onApproveReview?.(task.cardId)}
-            className="rounded-lg bg-[#810100] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#a00000]"
-          >
+          <button type="button" onClick={() => onApproveReview?.(task.cardId)} className={taskActionBtnClass}>
             Approve
           </button>
-          <button
-            type="button"
-            onClick={() => onRequestEdits(task.card)}
-            className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 transition hover:bg-amber-500/20"
-          >
+          <button type="button" onClick={() => onRequestEdits(task.card)} className={taskActionBtnClass}>
             Needs edits
           </button>
         </div>
@@ -178,19 +239,11 @@ function ApprovedScheduleTaskCard({ task, getClientColor, onOpenCard, onMarkSche
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2">
-          <button
-            type="button"
-            onClick={openCard}
-            className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-white/5 hover:text-white"
-          >
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <button type="button" onClick={openCard} className={taskActionBtnClass}>
             Edit
           </button>
-          <button
-            type="button"
-            onClick={() => onMarkScheduled(task.cardId)}
-            className="rounded-lg bg-[#810100] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#a00000]"
-          >
+          <button type="button" onClick={() => onMarkScheduled(task.cardId)} className={taskActionBtnClass}>
             Scheduled
           </button>
         </div>
@@ -259,19 +312,15 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted }) {
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2">
-          <button
-            type="button"
-            onClick={openCard}
-            className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-white/5 hover:text-white"
-          >
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <button type="button" onClick={openCard} className={taskActionBtnClass}>
             Edit
           </button>
           {canMarkPosted && (
             <button
               type="button"
               onClick={() => onMarkPosted(task.cardId, task.taskDate || task.card.occurrenceDate)}
-              className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
+              className={taskActionBtnClass}
             >
               Mark posted
             </button>
@@ -298,6 +347,7 @@ export default function AccountManagerTodo({
   cards,
   clientFilter,
   onOpenCard,
+  onUpdateCard,
   onMarkScheduled,
   onMarkPosted,
   onApproveReview,
@@ -309,10 +359,15 @@ export default function AccountManagerTodo({
   const todayKey = toDateKey(new Date());
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [needsEditsCard, setNeedsEditsCard] = useState(null);
+  const [planDateCard, setPlanDateCard] = useState(null);
 
   const storyTasksToday = useMemo(
     () => buildStoryTasksToday(cards, todayKey, clientAccountManagers),
     [cards, todayKey, clientAccountManagers],
+  );
+  const setPostDateTasks = useMemo(
+    () => buildSetPostDateTasks(cards, clientAccountManagers),
+    [cards, clientAccountManagers],
   );
   const inReviewTasks = useMemo(
     () => buildInReviewTasks(cards, clientAccountManagers),
@@ -326,6 +381,11 @@ export default function AccountManagerTodo({
   const filterOptions = useMemo(
     () => ({ client: clientFilter, assignee: assigneeFilter }),
     [clientFilter, assigneeFilter],
+  );
+
+  const orderedSetPostDateTasks = useMemo(
+    () => applyAccountManagerTaskOrder(filterAccountManagerTasks(setPostDateTasks, filterOptions)),
+    [setPostDateTasks, filterOptions],
   );
 
   const orderedInReviewTasks = useMemo(
@@ -359,12 +419,13 @@ export default function AccountManagerTodo({
     setNeedsEditsCard(null);
   };
 
+
   return (
     <div>
       <div className="mb-6 text-center">
         <h2 className="text-xl font-semibold text-white">Account manager tasks</h2>
         <p className="mt-1 text-sm text-gray-400">
-          In-review content, stories to post today, and your overall scheduling to-do — sorted by post date and time, earliest first.
+          Set post dates on pipeline cards, review client content, post stories, and schedule approved work.
         </p>
       </div>
 
@@ -386,7 +447,43 @@ export default function AccountManagerTodo({
         </label>
       </div>
 
-      <div className="mx-auto grid max-w-[1680px] grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start">
+      <div className="mx-auto grid max-w-[2200px] grid-cols-1 gap-6 xl:grid-cols-2 2xl:grid-cols-4 xl:items-start">
+        <section className="min-w-0 rounded-2xl border border-violet-500/20 bg-[#0d0d0d] p-5 sm:p-6">
+          <div className="mb-6 text-center">
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <h3 className="text-lg font-semibold text-white">Set post date</h3>
+              <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-xs text-violet-200">
+                {orderedSetPostDateTasks.length} waiting
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-gray-400">
+              Pipeline cards missing a target publish date — pick a date on the content calendar.
+            </p>
+          </div>
+
+          {orderedSetPostDateTasks.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-white/10 px-6 py-10 text-center">
+              <p className="text-sm text-gray-400">Every pipeline card has a post date.</p>
+              <p className="mt-1 text-xs text-gray-500">
+                New cards appear here until an account manager sets when they should go live.
+              </p>
+            </div>
+          ) : (
+            <TaskList
+              tasks={orderedSetPostDateTasks}
+              renderItem={(task) => (
+                <SetPostDateTaskCard
+                  key={task.id}
+                  task={task}
+                  getClientColor={getClientColor}
+                  onOpenCard={onOpenCard}
+                  onPlanDate={setPlanDateCard}
+                />
+              )}
+            />
+          )}
+        </section>
+
         <section className="min-w-0 rounded-2xl border border-[#810100]/20 bg-[#0d0d0d] p-5 sm:p-6">
           <div className="mb-6 text-center">
             <div className="flex flex-wrap items-center justify-center gap-2">
@@ -501,6 +598,16 @@ export default function AccountManagerTodo({
           card={needsEditsCard}
           onClose={() => setNeedsEditsCard(null)}
           onSubmit={handleNeedsEditsSubmit}
+        />
+      )}
+
+      {planDateCard && (
+        <PlanPostDateModal
+          card={planDateCard}
+          cards={cards}
+          onClose={() => setPlanDateCard(null)}
+          onSave={(cardId, updates) => onUpdateCard?.(cardId, updates)}
+          onOpenCard={onOpenCard}
         />
       )}
     </div>

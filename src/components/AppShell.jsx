@@ -662,6 +662,7 @@ export default function AppShell({ onSignOut }) {
           onToggleAdminTaskComplete={toggleAdminTaskComplete}
           onDeleteAdminTask={deleteAdminTask}
           onOpenCard={handleCardClick}
+          onUpdateCard={updateCard}
           onMarkScheduled={handleMarkScheduled}
           onMarkPosted={handleMarkPosted}
           onSubmitForReview={handleSubmitForReview}

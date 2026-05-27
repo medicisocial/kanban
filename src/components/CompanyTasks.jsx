@@ -18,6 +18,7 @@ export default function CompanyTasks({
   onToggleAdminTaskComplete,
   onDeleteAdminTask,
   onOpenCard,
+  onUpdateCard,
   onMarkScheduled,
   onMarkPosted,
   onSubmitForReview,
@@ -95,6 +96,7 @@ export default function CompanyTasks({
           cards={cards}
           clientFilter={clientFilter}
           onOpenCard={onOpenCard}
+          onUpdateCard={onUpdateCard}
           onMarkScheduled={onMarkScheduled}
           onMarkPosted={onMarkPosted}
           onApproveReview={onApproveReview}

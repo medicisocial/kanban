@@ -4,7 +4,15 @@ import { formatTime } from "../utils";
 import { formatStoryScheduleSummary, hasStoryDailyRange, hasStoryRecurrence, isCalendarEventPosted } from "../utils/calendar";
 import CardTitleLink from "./CardTitleLink";
 
-export default function CalendarEvent({ card, onClick, onRemove, compact = false, hideClient = false }) {
+export default function CalendarEvent({
+  card,
+  onClick,
+  onRemove,
+  compact = false,
+  hideClient = false,
+  fullTitle = false,
+  highlighted = false,
+}) {
   const { getClientColor } = useClientsContext();
   const typeStyle = getContentTypeStyle(card.contentType);
   const clientColor = getClientColor(card.client);
@@ -38,15 +46,17 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
         tabIndex={0}
         onClick={(ev) => {
           ev.stopPropagation();
-          onClick(card);
+          onClick?.(card);
         }}
         onKeyDown={(ev) => {
           if (ev.key === "Enter" || ev.key === " ") {
             ev.preventDefault();
-            onClick(card);
+            onClick?.(card);
           }
         }}
-        className="group/event relative mb-1 w-full cursor-pointer rounded px-1.5 py-1 text-left transition hover:brightness-125"
+        className={`group/event relative mb-1 w-full cursor-pointer rounded px-1.5 py-1 text-left transition hover:brightness-125 ${
+          highlighted ? 'ring-1 ring-white/30' : ''
+        }`}
         style={{
           backgroundColor: typeStyle.border + (isPosted ? "22" : "33"),
           borderLeft: `2px solid ${typeStyle.border}`,
@@ -89,7 +99,9 @@ export default function CalendarEvent({ card, onClick, onRemove, compact = false
         <CardTitleLink
           title={card.title}
           dropboxLink={card.dropboxLink}
-          className="block truncate text-[10px] font-medium text-[#f9f6f2]"
+          className={`block font-medium text-[#f9f6f2] ${
+            fullTitle ? 'whitespace-normal text-[11px] leading-snug' : 'truncate text-[10px]'
+          }`}
         />
       </div>
     );

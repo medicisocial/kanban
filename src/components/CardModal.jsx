@@ -121,7 +121,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
   return createPortal(
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-[250] flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[270] flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}

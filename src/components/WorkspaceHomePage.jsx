@@ -106,6 +106,11 @@ export default function WorkspaceHomePage({
               value={summary.needsSchedulingCount}
               onClick={() => onNavigate('todo', { tasksRole: 'account' })}
             />
+            <StatCard
+              label="Need post date"
+              value={summary.needPostDateCount}
+              onClick={() => onNavigate('todo', { tasksRole: 'account' })}
+            />
           </>
         )}
         <StatCard label="Pending ideas" value={summary.pendingIdeasCount} onClick={() => onNavigate('ideas')} />
@@ -182,6 +187,50 @@ export default function WorkspaceHomePage({
                     >
                       <p className="text-sm font-medium text-white">{card.title}</p>
                       <p className="mt-0.5 text-xs text-white/45">{card.client} · {card.contentType}</p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {showAmQueue && (
+          <div className={`${surfacePanelClass} p-5`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-white">Need post date</h3>
+              <button
+                type="button"
+                onClick={() => onNavigate('todo', { tasksRole: 'account' })}
+                className={`${btnSecondaryClass} py-1.5 text-[10px]`}
+              >
+                Account manager tasks
+              </button>
+            </div>
+            {summary.needPostDate.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-white/40">All pipeline cards have a target post date.</p>
+                <button
+                  type="button"
+                  onClick={() => onNavigate('todo', { tasksRole: 'account' })}
+                  className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}
+                >
+                  Open account manager tasks
+                </button>
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {summary.needPostDate.map((card) => (
+                  <li key={card.id}>
+                    <button
+                      type="button"
+                      onClick={() => onOpenCard?.(card)}
+                      className="w-full border border-amber-500/20 bg-amber-500/[0.03] px-3 py-2.5 text-left transition hover:border-amber-500/30"
+                    >
+                      <p className="text-sm font-medium text-white">{card.title}</p>
+                      <p className="mt-0.5 text-xs text-white/45">
+                        {card.client} · {card.contentType} · Set target post date
+                      </p>
                     </button>
                   </li>
                 ))}

@@ -4,6 +4,7 @@ import {
   cardIsAssignedToAccountManager,
 } from './staffMembers';
 import { getToCreateQueueCards } from './contentCreatorTodo';
+import { getCardsNeedingPostDate } from './accountManagerTodo';
 
 function isToday(dateKey) {
   return dateKey === toDateKey(new Date());
@@ -97,6 +98,14 @@ export function buildWorkspaceHomeSummary({
   const needsScheduling = needsSchedulingAll.filter((c) =>
     matchesAccountManagerQueue(c, staffName, clientAccountManagers, personalScope),
   );
+  const needPostDateAll = getCardsNeedingPostDate(scopedCards, {
+    clientAccountManagers,
+  });
+  const needPostDate = getCardsNeedingPostDate(scopedCards, {
+    staffName,
+    personalScope,
+    clientAccountManagers,
+  });
   const openAdminTasks = (adminTasks || []).filter((t) => !t.completed);
 
   const includeAccountManagerQueue = !myWorkOnly || showAccountManagerQueue || companyWideView;
@@ -109,6 +118,11 @@ export function buildWorkspaceHomeSummary({
     ? personalScope && staffName
       ? needsScheduling
       : needsSchedulingAll
+    : [];
+  const visibleNeedPostDate = includeAccountManagerQueue
+    ? personalScope && staffName
+      ? needPostDate
+      : needPostDateAll
     : [];
 
   return {
@@ -124,10 +138,12 @@ export function buildWorkspaceHomeSummary({
     shootsTodayCount: shootsToday.length,
     scheduledThisWeekCount: scheduledThisWeek.length,
     needsSchedulingCount: visibleNeedsScheduling.length,
+    needPostDateCount: visibleNeedPostDate.length,
     openAdminTasksCount: openAdminTasks.length,
     shootsToday,
     inReview: visibleInReview.slice(0, 5),
     needsScheduling: visibleNeedsScheduling.slice(0, 5),
+    needPostDate: visibleNeedPostDate.slice(0, 5),
     scheduledThisWeek: scheduledThisWeek.slice(0, 5),
   };
 }

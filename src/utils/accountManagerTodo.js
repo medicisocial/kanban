@@ -4,9 +4,68 @@ import {
   withStoryOccurrence,
 } from './calendar';
 import { formatEditorDateLabel } from './editorTodo';
+import { isPastScheduledBoardPost } from '../utils';
+import { cardIsAssignedToAccountManager } from './staffMembers';
+
+const COLUMN_SORT_ORDER = {
+  shoot: 0,
+  editing: 1,
+  'in-review': 2,
+  'not-approved': 3,
+  approved: 4,
+  scheduled: 5,
+  finished: 6,
+};
+
+export function cardNeedsPostDate(card) {
+  if (card.isOneOffProject || card.contentType === 'One-off Project') return false;
+  if (card.dueDate) return false;
+  if (card.postedAt) return false;
+  if (card.contentType === 'Story') return false;
+  return true;
+}
+
+export function getCardsNeedingPostDate(
+  cards,
+  { staffName = '', personalScope = false, clientAccountManagers = {} } = {},
+) {
+  return cards.filter((card) => {
+    if (!cardNeedsPostDate(card)) return false;
+    if (isPastScheduledBoardPost(card)) return false;
+    if (personalScope && staffName) {
+      return cardIsAssignedToAccountManager(card, staffName, clientAccountManagers);
+    }
+    return true;
+  });
+}
+
+/** @deprecated Use getCardsNeedingPostDate */
+export const getToCreateCardsNeedingPostDate = getCardsNeedingPostDate;
 
 export function resolveAccountManager(card, clientAccountManagers = {}) {
   return card.accountManager || clientAccountManagers[card.client] || '';
+}
+
+function buildSetPostDateTask(card, clientAccountManagers) {
+  return {
+    id: `set-post-date-${card.id}`,
+    source: 'board',
+    cardId: card.id,
+    kind: 'set-post-date',
+    label: 'Set post date',
+    title: card.title,
+    client: card.client,
+    contentType: card.contentType,
+    columnId: card.columnId,
+    taskDate: '',
+    dueDate: '',
+    dueTime: card.dueTime || '',
+    assignedTo: card.assignedTo || '',
+    contentCreator: card.contentCreator || '',
+    accountManager: resolveAccountManager(card, clientAccountManagers),
+    notes: card.notes || '',
+    card,
+  };
 }
 
 function buildScheduleTask(card, clientAccountManagers) {
@@ -104,6 +163,28 @@ export function buildStoryTasksToday(cards, todayKey = toDateKey(new Date()), cl
   return tasks.sort(compareAccountManagerTasks);
 }
 
+/** Pipeline cards missing a target post date — account managers plan publish dates here. */
+export function buildSetPostDateTasks(cards, clientAccountManagers = {}) {
+  const tasks = getCardsNeedingPostDate(cards).map((card) =>
+    buildSetPostDateTask(card, clientAccountManagers),
+  );
+
+  return tasks.sort(compareSetPostDateTasks);
+}
+
+/** @deprecated Use buildSetPostDateTasks */
+export const buildToCreateTasks = buildSetPostDateTasks;
+
+export function compareSetPostDateTasks(a, b) {
+  const colA = COLUMN_SORT_ORDER[a.columnId] ?? 99;
+  const colB = COLUMN_SORT_ORDER[b.columnId] ?? 99;
+  if (colA !== colB) return colA - colB;
+  return (a.title || '').localeCompare(b.title || '');
+}
+
+/** @deprecated Use compareSetPostDateTasks */
+export const compareToCreateTasks = compareSetPostDateTasks;
+
 /** Approved posts waiting to be marked scheduled on the board. */
 export function buildPostsTodoTasks(cards, clientAccountManagers = {}) {
   const tasks = [];
@@ -128,6 +209,9 @@ export function compareAccountManagerTasks(a, b) {
 }
 
 function getAccountManagerPostSortKey(task) {
+  if (task.kind === 'set-post-date') {
+    return '0000-00-00T00:00';
+  }
   const postDate = task.dueDate || task.taskDate || '';
   if (!postDate) return '9999-99-99T99:99';
   const time = task.dueTime || '99:99';
@@ -175,11 +259,16 @@ export function groupAccountManagerTasksByDate(tasks, todayKey = toDateKey(new D
     let groupKey = task.dueDate || 'no-date';
     let groupLabel = task.dueDate
       ? formatEditorDateLabel(task.dueDate, todayKey)
-      : task.kind === 'schedule'
+      : task.kind === 'set-post-date'
+        ? 'Needs post date'
+        : task.kind === 'schedule'
         ? 'Needs scheduling'
         : 'No date set';
 
-    if (task.kind === 'schedule') {
+    if (task.kind === 'set-post-date') {
+      groupKey = 'needs-post-date';
+      groupLabel = 'Needs post date';
+    } else if (task.kind === 'schedule') {
       groupKey = 'needs-scheduling';
       groupLabel = 'Needs scheduling';
     } else if (task.dueDate && task.dueDate < todayKey) {

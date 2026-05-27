@@ -13,9 +13,12 @@ export default function CalendarMonthView({
   cardsByDate,
   onCardClick,
   onDayClick,
+  onSelectDate,
+  selectedDateKey = '',
   onRemoveFromCalendar,
   overviewLabel = "overview",
   hideClient = false,
+  expanded = false,
 }) {
   const year = focusDate.getFullYear();
   const month = focusDate.getMonth();
@@ -45,14 +48,28 @@ export default function CalendarMonthView({
               const inMonth = day.getMonth() === month;
               const today = isToday(day);
 
+              const selected = selectedDateKey === key;
+              const visibleCards = expanded ? dayCards : dayCards.slice(0, 3);
+              const hiddenCount = expanded ? 0 : Math.max(0, dayCards.length - 3);
+
               return (
                 <button
                   key={key}
                   type="button"
-                  onClick={() => onDayClick(day)}
-                  className={`min-h-[120px] border-r border-white/5 p-1.5 text-left transition last:border-r-0 hover:bg-white/5 sm:min-h-[140px] sm:p-2 ${
+                  onClick={() => {
+                    if (onSelectDate) {
+                      onSelectDate(day);
+                    } else {
+                      onDayClick?.(day);
+                    }
+                  }}
+                  className={`border-r border-white/5 p-1.5 text-left transition last:border-r-0 hover:bg-white/5 sm:p-2 ${
+                    expanded ? 'min-h-[180px] align-top sm:min-h-[220px]' : 'min-h-[120px] sm:min-h-[140px]'
+                  } ${
                     !inMonth ? "bg-black/20 opacity-50" : ""
-                  } ${today ? "bg-[#a00000]/10 ring-1 ring-inset ring-[#810100]/30" : ""}`}
+                  } ${today ? "bg-[#a00000]/10 ring-1 ring-inset ring-[#810100]/30" : ""} ${
+                    selected ? "bg-violet-500/15 ring-2 ring-inset ring-violet-400/60" : ""
+                  }`}
                 >
                   <div className="mb-1 flex items-center justify-between">
                     <span
@@ -72,20 +89,22 @@ export default function CalendarMonthView({
                   </div>
 
                   <div className="space-y-0.5">
-                    {dayCards.slice(0, 3).map((card) => (
+                    {visibleCards.map((card) => (
                       <CalendarEvent
                         key={`${card.id}-${key}`}
                         card={card}
                         onClick={(c) => {
-                          onCardClick(c);
+                          onCardClick?.(c);
                         }}
                         onRemove={onRemoveFromCalendar}
                         compact
                         hideClient={hideClient}
+                        fullTitle={expanded}
+                        highlighted={false}
                       />
                     ))}
-                    {dayCards.length > 3 && (
-                      <p className="px-1 text-[10px] text-gray-500">+{dayCards.length - 3} more</p>
+                    {hiddenCount > 0 && (
+                      <p className="px-1 text-[10px] text-gray-500">+{hiddenCount} more</p>
                     )}
                   </div>
                 </button>
