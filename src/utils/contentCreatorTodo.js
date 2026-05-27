@@ -1,10 +1,16 @@
 import { filterCards, getBoardCards } from '../utils';
-import { cardIsAssignedToStaff } from './staffMembers';
 
-export function buildContentCreatorTasks(cards, { client, staffName, clientAccountManagers }) {
+export function cardIsAssignedToContentCreator(card, staffName) {
+  if (!staffName) return true;
+  const creator = card.contentCreator?.trim().toLowerCase() || '';
+  if (!creator) return true;
+  return creator === staffName.trim().toLowerCase();
+}
+
+export function buildContentCreatorTasks(cards, { client, staffName = '' } = {}) {
   const boardCards = getBoardCards(cards).filter((card) => card.columnId === 'shoot');
   const filtered = filterCards(boardCards, { client }).filter((card) =>
-    cardIsAssignedToStaff(card, staffName, clientAccountManagers),
+    cardIsAssignedToContentCreator(card, staffName),
   );
 
   return filtered

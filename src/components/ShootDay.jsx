@@ -202,7 +202,7 @@ export default function ShootDay({
     return (
       <section>
         <ClientPortalSectionHeader
-          title="Production days"
+          title="Scheduled shoots"
           description="Plan on-set days, assign clients, and manage content scheduled for each session."
         />
         {shootBody}

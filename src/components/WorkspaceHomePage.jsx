@@ -78,13 +78,25 @@ export default function WorkspaceHomePage({
             onClick={onOpenNotifications}
           />
         )}
-        <StatCard label="To create" value={summary.toCreateCount} onClick={() => onNavigate('board')} />
-        <StatCard label="Editing" value={summary.editingCount} onClick={() => onNavigate('board')} />
-        <StatCard label="In review" value={summary.inReviewCount} onClick={() => onNavigate('board')} />
+        <StatCard
+          label="To create"
+          value={summary.toCreateCount}
+          onClick={() => onNavigate('todo', { tasksRole: 'creator' })}
+        />
+        <StatCard
+          label="Editing"
+          value={summary.editingCount}
+          onClick={() => onNavigate('todo', { tasksRole: 'editor' })}
+        />
+        <StatCard
+          label="In review"
+          value={summary.inReviewCount}
+          onClick={() => onNavigate('todo', { tasksRole: 'account' })}
+        />
         <StatCard
           label="Need scheduling"
           value={summary.needsSchedulingCount}
-          onClick={() => onNavigate('todo')}
+          onClick={() => onNavigate('todo', { tasksRole: 'account' })}
         />
         <StatCard label="Pending ideas" value={summary.pendingIdeasCount} onClick={() => onNavigate('ideas')} />
         <StatCard label="Shoots today" value={summary.shootsTodayCount} onClick={() => onNavigate('shoot')} />
@@ -93,16 +105,16 @@ export default function WorkspaceHomePage({
       <div className="grid gap-6 lg:grid-cols-2">
         <div className={`${surfacePanelClass} p-5`}>
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold text-white">Today&apos;s production</h3>
+            <h3 className="text-sm font-semibold text-white">Today&apos;s shoots</h3>
             <button type="button" onClick={() => onNavigate('shoot')} className={`${btnSecondaryClass} py-1.5 text-[10px]`}>
-              Production days
+              Scheduled shoots
             </button>
           </div>
           {summary.shootsToday.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-sm text-white/40">No shoots scheduled for today.</p>
               <button type="button" onClick={() => onNavigate('shoot')} className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}>
-                Open production days
+                Open scheduled shoots
               </button>
             </div>
           ) : (
@@ -129,15 +141,23 @@ export default function WorkspaceHomePage({
         <div className={`${surfacePanelClass} p-5`}>
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-white">Awaiting client review</h3>
-            <button type="button" onClick={() => onNavigate('board')} className={`${btnSecondaryClass} py-1.5 text-[10px]`}>
-              Pipeline
+            <button
+              type="button"
+              onClick={() => onNavigate('todo', { tasksRole: 'account' })}
+              className={`${btnSecondaryClass} py-1.5 text-[10px]`}
+            >
+              Account manager tasks
             </button>
           </div>
           {summary.inReview.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-sm text-white/40">Nothing in client review right now.</p>
-              <button type="button" onClick={() => onNavigate('board')} className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}>
-                Open pipeline
+              <button
+                type="button"
+                onClick={() => onNavigate('todo', { tasksRole: 'account' })}
+                className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}
+              >
+                Open account manager tasks
               </button>
             </div>
           ) : (
@@ -161,15 +181,23 @@ export default function WorkspaceHomePage({
         <div className={`${surfacePanelClass} p-5`}>
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-white">Needs scheduling</h3>
-            <button type="button" onClick={() => onNavigate('todo')} className={`${btnSecondaryClass} py-1.5 text-[10px]`}>
-              Team tasks
+            <button
+              type="button"
+              onClick={() => onNavigate('todo', { tasksRole: 'account' })}
+              className={`${btnSecondaryClass} py-1.5 text-[10px]`}
+            >
+              Account manager tasks
             </button>
           </div>
           {summary.needsScheduling.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-sm text-white/40">No approved posts waiting to be scheduled.</p>
-              <button type="button" onClick={() => onNavigate('todo')} className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}>
-                Open team tasks
+              <button
+                type="button"
+                onClick={() => onNavigate('todo', { tasksRole: 'account' })}
+                className={`${btnSecondaryClass} mt-3 py-1.5 text-[10px]`}
+              >
+                Open account manager tasks
               </button>
             </div>
           ) : (

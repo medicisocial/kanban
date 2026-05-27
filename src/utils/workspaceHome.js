@@ -1,5 +1,6 @@
 import { toDateKey } from './calendar';
 import { cardIsAssignedToStaff } from './staffMembers';
+import { cardIsAssignedToContentCreator } from './contentCreatorTodo';
 
 function isToday(dateKey) {
   return dateKey === toDateKey(new Date());
@@ -49,7 +50,13 @@ export function buildWorkspaceHomeSummary({
     matchesStaff(card, staffName, clientAccountManagers, myWorkOnly);
 
   const inReview = scopedCards.filter((c) => c.columnId === 'in-review');
-  const toCreate = scopedCards.filter((c) => c.columnId === 'shoot' && cardScope(c));
+  const toCreate = scopedCards.filter((c) => {
+    if (c.columnId !== 'shoot') return false;
+    if (myWorkOnly && staffName) {
+      return cardIsAssignedToContentCreator(c, staffName);
+    }
+    return true;
+  });
   const editing = scopedCards.filter((c) => c.columnId === 'editing' && cardScope(c));
   const pendingIdeas = scopedIdeas.filter((i) => i.status === 'pending');
   const shootsToday = scopedCards.filter(
@@ -118,8 +125,8 @@ export function buildMyWorkGreeting(firstName, summary) {
   if (summary.shootsTodayCount > 0 && activeCount === 0) {
     const shootLabel =
       summary.shootsTodayCount === 1
-        ? 'a production day today'
-        : `${summary.shootsTodayCount} production days today`;
+        ? 'a scheduled shoot today'
+        : `${summary.shootsTodayCount} scheduled shoots today`;
     return {
       eyebrow: 'My work',
       title,
@@ -131,7 +138,7 @@ export function buildMyWorkGreeting(firstName, summary) {
     return {
       eyebrow: 'My work',
       title,
-      description: `Busy day ahead — ${activeCount} item${activeCount === 1 ? '' : 's'} in your queue and production on the calendar. You've got this.`,
+      description: `Busy day ahead — ${activeCount} item${activeCount === 1 ? '' : 's'} in your queue and shoots on the calendar. You've got this.`,
     };
   }
 

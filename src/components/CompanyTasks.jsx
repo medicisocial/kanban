@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import EditorTodo from './EditorTodo';
 import AccountManagerTodo from './AccountManagerTodo';
 import AdminTodo from './AdminTodo';
@@ -11,6 +11,7 @@ export default function CompanyTasks({
   adminTasks,
   clientFilter,
   embedded = false,
+  initialRole = 'creator',
   onAddOneOffTask,
   onDeleteOneOffTask,
   onAddAdminTask,
@@ -26,7 +27,11 @@ export default function CompanyTasks({
   onHandoff,
   onNavigate,
 }) {
-  const [activeRole, setActiveRole] = useState('creator');
+  const [activeRole, setActiveRole] = useState(initialRole);
+
+  useEffect(() => {
+    setActiveRole(initialRole);
+  }, [initialRole]);
 
   const tabClass = (role) =>
     embedded

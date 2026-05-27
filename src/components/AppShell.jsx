@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useKanban } from "../hooks/useKanban";
 import { useVideoIdeas, applyClientResponses } from "../hooks/useVideoIdeas";
 import { useShootPlans } from "../hooks/useShootPlans";
@@ -78,6 +78,7 @@ export default function AppShell({ onSignOut }) {
   const [activeView, setActiveView] = useState("home");
   const [viewInitialized, setViewInitialized] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [tasksRole, setTasksRole] = useState('creator');
   const [handoffCard, setHandoffCard] = useState(null);
   const [responseCount, setResponseCount] = useState(() => loadClientResponses().length);
   const [contentReviewResponseCount, setContentReviewResponseCount] = useState(
@@ -95,6 +96,13 @@ export default function AppShell({ onSignOut }) {
     }
     setSelectedCard(stored);
   };
+
+  const handleNavigate = useCallback((view, options) => {
+    if (options?.tasksRole) {
+      setTasksRole(options.tasksRole);
+    }
+    setActiveView(view);
+  }, []);
 
   useEffect(() => {
     if (!ready || viewInitialized) return;
@@ -585,7 +593,7 @@ export default function AppShell({ onSignOut }) {
           staffName={staffName}
           clientAccountManagers={clientAccountManagers}
           myWorkOnly={myWorkOnly}
-          onNavigate={setActiveView}
+          onNavigate={handleNavigate}
           onOpenCard={handleCardClick}
           onOpenNotifications={() => setNotificationsOpen(true)}
         />
@@ -641,6 +649,7 @@ export default function AppShell({ onSignOut }) {
           adminTasks={adminTasks}
           clientFilter={clientFilter}
           embedded
+          initialRole={tasksRole}
           onAddOneOffTask={addOneOffProject}
           onDeleteOneOffTask={handleDeleteOneOffProject}
           onAddAdminTask={addAdminTask}
@@ -654,7 +663,7 @@ export default function AppShell({ onSignOut }) {
           onSendBackForEditing={handleSendBackForEditing}
           onMoveTask={handleMoveEditorTask}
           onHandoff={handleHandoffRequest}
-          onNavigate={setActiveView}
+          onNavigate={handleNavigate}
         />
       )}
 

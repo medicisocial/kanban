@@ -5,6 +5,7 @@ import { getContentTypeStyle } from '../constants';
 import { formatDate, formatTime } from '../utils';
 import { buildContentCreatorTasks } from '../utils/contentCreatorTodo';
 import { resolveStaffMemberName } from '../utils/staffMembers';
+import { usesPersonalWorkspaceView } from '../utils/staffAuth';
 import { btnPrimaryClass, btnSecondaryClass } from './clientPortal/clientPortalUi';
 
 export default function ContentCreatorTodo({
@@ -14,24 +15,24 @@ export default function ContentCreatorTodo({
   onHandoff,
   onNavigate,
 }) {
-  const { clientAccountManagers, getClientColor, teamMembers } = useClientsContext();
+  const { getClientColor, teamMembers } = useClientsContext();
   const { session } = useStaffAuth();
   const staffName = resolveStaffMemberName(session, teamMembers);
+  const myWorkOnly = usesPersonalWorkspaceView(session);
 
   const tasks = useMemo(
     () =>
       buildContentCreatorTasks(cards, {
         client: clientFilter,
-        staffName,
-        clientAccountManagers,
+        staffName: myWorkOnly ? staffName : '',
       }),
-    [cards, clientFilter, staffName, clientAccountManagers],
+    [cards, clientFilter, myWorkOnly, staffName],
   );
 
   if (tasks.length === 0) {
     return (
       <div className="border border-dashed border-white/10 px-6 py-16 text-center">
-        <p className="text-sm text-white/45">No content assigned to you in To Create.</p>
+        <p className="text-sm text-white/45">No cards in To Create right now.</p>
         <button type="button" onClick={() => onNavigate?.('board')} className={`${btnSecondaryClass} mt-4`}>
           Open pipeline
         </button>
@@ -41,9 +42,9 @@ export default function ContentCreatorTodo({
 
   return (
     <div className="space-y-3">
-      {staffName && (
+      {myWorkOnly && staffName && (
         <p className="text-xs text-white/45">
-          Showing create-queue items for {staffName}.
+          Showing To Create items assigned to {staffName}.
         </p>
       )}
       {tasks.map((task) => {

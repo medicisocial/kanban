@@ -100,7 +100,7 @@ export default function ClientShootSchedulePortal({
       <section>
         <ClientPortalSectionHeader
           title="Shoot Schedule"
-          description="Upcoming production days, locations, and content planned for each session."
+          description="Upcoming scheduled shoots, locations, and content planned for each session."
         />
         {content}
       </section>

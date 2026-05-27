@@ -22,7 +22,7 @@ const NAV_SECTIONS_BASE = [
     items: [
       { id: 'ideas', label: 'Ideas', Icon: IconIdeas },
       { id: 'board', label: 'Pipeline', Icon: IconBoard },
-      { id: 'shoot', label: 'Production days', Icon: IconShoots },
+      { id: 'shoot', label: 'Scheduled shoots', Icon: IconShoots },
       { id: 'todo', label: 'Team tasks', Icon: IconTasks },
     ],
   },

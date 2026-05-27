@@ -338,7 +338,7 @@ export default function CardModal({ card, onClose, onUpdate, onDelete }) {
                 onChange={(e) => handleChange('shootDate', e.target.value)}
                 className={inputClass}
               />
-              <p className="mt-1 text-[10px] text-gray-500">When to film — appears on Production days</p>
+              <p className="mt-1 text-[10px] text-gray-500">When to film — appears on Scheduled shoots</p>
             </Field>
           )}
 
