@@ -1,6 +1,7 @@
 export default function ClientPortalSectionHeader({
   title,
   description,
+  eyebrow,
   action,
   actionLabel,
   onAction,
@@ -9,6 +10,11 @@ export default function ClientPortalSectionHeader({
   return (
     <div className="portal-section-header mb-8 flex flex-col gap-4 border-b border-white/[0.06] pb-8 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-6">
       <div className="min-w-0 flex-1">
+        {eyebrow && (
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.28em] text-white/35">
+            {eyebrow}
+          </p>
+        )}
         <h2 className="text-xl font-semibold tracking-tight text-white md:text-2xl">{title}</h2>
         {description && (
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/45 md:text-[15px]">{description}</p>

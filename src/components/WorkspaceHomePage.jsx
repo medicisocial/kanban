@@ -1,5 +1,5 @@
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import { buildWorkspaceHomeSummary } from '../utils/workspaceHome';
+import { buildWorkspaceHomeSummary, buildMyWorkGreeting } from '../utils/workspaceHome';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 import { formatDate } from '../utils';
 
@@ -50,19 +50,25 @@ export default function WorkspaceHomePage({
     myWorkOnly,
   });
 
-  const title = myWorkOnly ? 'My work' : 'Overview';
+  const firstName = staffName.trim().split(/\s+/)[0] || '';
 
-  const description = myWorkOnly
-    ? staffName
-      ? `Your queue at a glance — assigned to ${staffName}.`
-      : 'Your assigned production, reviews, and schedules.'
-    : clientFilter === 'all'
+  const personalGreeting = myWorkOnly ? buildMyWorkGreeting(firstName, summary) : null;
+
+  const title = personalGreeting?.title ?? 'Overview';
+
+  const description =
+    personalGreeting?.description ??
+    (clientFilter === 'all'
       ? 'Company-wide production at a glance — pipeline, reviews, and schedules.'
-      : `Production at a glance for ${clientFilter}.`;
+      : `Production at a glance for ${clientFilter}.`);
 
   return (
     <section>
-      <ClientPortalSectionHeader title={title} description={description} />
+      <ClientPortalSectionHeader
+        title={title}
+        description={description}
+        eyebrow={personalGreeting?.eyebrow}
+      />
 
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-6">
         {summary.syncTotal > 0 && (

@@ -13,6 +13,12 @@ export function resolveStaffMemberName(session, teamMembers) {
   return member?.name || session.username.trim();
 }
 
+export function getStaffFirstName(name) {
+  const trimmed = (name || '').trim();
+  if (!trimmed) return '';
+  return trimmed.split(/\s+/)[0];
+}
+
 export function resolveCardAccountManager(card, clientAccountManagers) {
   return card.accountManager || clientAccountManagers[card.client] || '';
 }

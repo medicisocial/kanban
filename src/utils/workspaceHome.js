@@ -75,3 +75,70 @@ export function buildWorkspaceHomeSummary({
     scheduledThisWeek: scheduledThisWeek.slice(0, 5),
   };
 }
+
+function getTimeOfDayGreeting(date = new Date()) {
+  const hour = date.getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+export function buildMyWorkGreeting(firstName, summary) {
+  const timeGreeting = getTimeOfDayGreeting();
+  const title = firstName ? `${timeGreeting}, ${firstName}.` : `${timeGreeting}.`;
+
+  const pipelineCount =
+    summary.toCreateCount + summary.editingCount + summary.inReviewCount;
+  const activeCount = pipelineCount + summary.pendingIdeasCount;
+
+  if (activeCount === 0 && summary.shootsTodayCount === 0) {
+    return {
+      eyebrow: 'My work',
+      title,
+      description:
+        "You're all caught up for now — nice work. Take a breath, or peek at the pipeline when you're ready for what's next.",
+    };
+  }
+
+  if (summary.shootsTodayCount > 0 && activeCount === 0) {
+    const shootLabel =
+      summary.shootsTodayCount === 1
+        ? 'a production day today'
+        : `${summary.shootsTodayCount} production days today`;
+    return {
+      eyebrow: 'My work',
+      title,
+      description: `You've got ${shootLabel}. Hope it goes smoothly — here's what's on the schedule.`,
+    };
+  }
+
+  if (summary.shootsTodayCount > 0) {
+    return {
+      eyebrow: 'My work',
+      title,
+      description: `Busy day ahead — ${activeCount} item${activeCount === 1 ? '' : 's'} in your queue and production on the calendar. You've got this.`,
+    };
+  }
+
+  if (activeCount === 1) {
+    return {
+      eyebrow: 'My work',
+      title,
+      description: "Just one thing needs you right now. Here's a quick look at where to focus.",
+    };
+  }
+
+  if (summary.scheduledThisWeekCount > 0) {
+    return {
+      eyebrow: 'My work',
+      title,
+      description: `${activeCount} items waiting on you, with ${summary.scheduledThisWeekCount} scheduled this week. Here's your queue at a glance.`,
+    };
+  }
+
+  return {
+    eyebrow: 'My work',
+    title,
+    description: `${activeCount} items in your queue right now. Here's what needs your attention today.`,
+  };
+}
