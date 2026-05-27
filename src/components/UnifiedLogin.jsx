@@ -7,13 +7,22 @@ import {
 } from '../utils/staffAuth';
 import { loginClientPortal } from '../utils/clientPortalAuth';
 
-const FEATURES = ['Ideas', 'Content review', 'Calendar', 'Shoot schedule'];
+const labelClass =
+  'mb-2 block text-[10px] font-medium uppercase tracking-[0.28em] text-white/45';
 
 const inputClass =
-  'select-dark w-full rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3 text-sm text-white outline-none transition-all duration-200 placeholder:text-zinc-500 focus:border-zinc-600 focus:ring-1 focus:ring-red-600/30';
+  'w-full rounded-sm border border-white/10 bg-white/[0.04] px-4 py-3 text-base text-white outline-none transition-[border-color,background-color] duration-300 placeholder:text-white/25 focus:border-white/30 focus:bg-white/[0.06]';
 
-const kickerClass =
-  'text-xs font-medium uppercase tracking-[0.35em] text-red-500';
+function AmbientBackground() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0c0c0c] via-black to-[#080808]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_15%_35%,rgba(129,1,0,0.18),transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_90%_at_85%_75%,rgba(255,255,255,0.04),transparent_50%)]" />
+      <div className="absolute -left-[20%] top-[10%] h-[50vh] w-[50vh] rounded-full bg-[#810100]/[0.06] blur-[100px]" />
+    </div>
+  );
+}
 
 export default function UnifiedLogin({ onAuthenticated }) {
   const [username, setUsername] = useState('');
@@ -37,7 +46,7 @@ export default function UnifiedLogin({ onAuthenticated }) {
         }
       }
 
-      let clientError = 'Invalid username or password.';
+      let clientError = 'Invalid email or password.';
       try {
         await loginClientPortal(username, password);
         onAuthenticated('client');
@@ -53,114 +62,72 @@ export default function UnifiedLogin({ onAuthenticated }) {
   };
 
   return (
-    <main className="flex min-h-screen flex-col bg-black text-white">
-      <header className="shrink-0 border-b border-white/[0.06]">
-        <div className="mx-auto flex h-[72px] max-w-screen-xl items-center px-5 md:px-8">
-          <img
-            src="/medici-social-logo-nav.png"
-            alt="Medici Social"
-            className="-ml-3 h-9 w-auto object-contain md:h-10"
-          />
-        </div>
+    <main className="relative flex min-h-[100dvh] flex-col bg-black text-white">
+      <AmbientBackground />
+
+      <header className="login-fade-in relative z-10 shrink-0 px-6 py-5 md:px-10 md:py-6">
+        <img
+          src="/medici-social-logo-nav.png"
+          alt="Medici Social"
+          className="h-5 w-auto object-contain opacity-90 md:h-6"
+        />
       </header>
 
-      <div className="flex flex-1 items-center">
-        <div className="mx-auto w-full max-w-screen-xl px-5 py-12 md:px-8 md:py-16 lg:py-20">
-          <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-[1fr_auto] lg:gap-16 xl:gap-24">
-            <section className="lg:max-w-xl">
-              <p className={kickerClass}>Client portal</p>
+      <div className="login-fade-in login-fade-in-delay relative z-10 flex flex-1 flex-col items-center px-6 pb-16 pt-4 md:pt-8">
+        <div className="w-full max-w-[480px]">
+          <p className="text-[10px] font-medium uppercase tracking-[0.32em] text-white/40">
+            Client portal
+          </p>
 
-              <h1 className="mt-5 font-serif text-4xl font-normal leading-[1.12] tracking-tight text-white md:text-5xl lg:text-[3.25rem] lg:leading-[1.1]">
-                Every brand has a story worth telling well.
-              </h1>
+          <h1 className="mt-3 text-[1.75rem] font-semibold leading-tight tracking-tight text-white md:text-[2rem]">
+            Sign in
+          </h1>
 
-              <p className="mt-6 max-w-md text-base leading-relaxed text-white/70 md:text-lg">
-                Your private hub for ideas, content review, pipeline status, calendar, and shoot
-                schedules — all in one editorial-standard workspace.
+          <p className="mt-2 text-sm text-white/50">
+            Enter your credentials to access your brand workspace.
+          </p>
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            <label className="block">
+              <span className={labelClass}>Email</span>
+              <input
+                type="text"
+                inputMode="email"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                className={inputClass}
+                autoFocus
+                required
+              />
+            </label>
+
+            <label className="block">
+              <span className={labelClass}>Password</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                className={inputClass}
+                required
+              />
+            </label>
+
+            {error && (
+              <p className="text-sm text-red-400/90" role="alert">
+                {error}
               </p>
+            )}
 
-              <nav
-                className="mt-10 flex flex-wrap gap-2 border-t border-white/[0.06] pt-8"
-                aria-label="Portal sections"
-              >
-                {FEATURES.map((label) => (
-                  <span
-                    key={label}
-                    className="border border-white/15 px-3 py-1.5 text-[11px] uppercase tracking-[0.18em] text-white/70 transition-colors duration-200 hover:border-red-700/50 hover:text-red-400"
-                  >
-                    {label}
-                  </span>
-                ))}
-              </nav>
-            </section>
-
-            <section className="lg:pt-1">
-              <div className="w-full max-w-md border border-white/10 bg-zinc-950/40 p-8 md:p-10 lg:ml-auto">
-                <p className={kickerClass}>Sign in</p>
-
-                <p className="mt-5 text-base leading-relaxed text-white/70">
-                  Enter your brand credentials to access your portal.
-                </p>
-
-                <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-                <label className="block">
-                  <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-zinc-300">
-                    Username
-                  </span>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    autoComplete="username"
-                    className={inputClass}
-                    autoFocus
-                    required
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-xs font-medium uppercase tracking-wider text-zinc-300">
-                    Password
-                  </span>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
-                    className={inputClass}
-                    required
-                  />
-                </label>
-
-                {error && (
-                  <p className="rounded-lg border border-red-900/40 bg-red-950/30 px-4 py-3 text-sm text-red-200">
-                    {error}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="inline-flex w-full items-center justify-center rounded-full bg-red-700 px-5 py-3 text-sm font-medium text-white transition-all duration-300 hover:scale-[1.02] hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
-                >
-                  {submitting ? 'Signing in…' : 'Sign in'}
-                </button>
-              </form>
-
-              <p className="mt-8 text-xs leading-relaxed text-zinc-400">
-                Need access?{' '}
-                <a
-                  href="https://www.medicisocial.com/contact"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-white/70 transition-colors duration-200 hover:text-red-500 hover-underline"
-                >
-                  Contact your account manager
-                </a>
-              </p>
-              </div>
-            </section>
-          </div>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex w-full items-center justify-center rounded-sm bg-white px-5 py-3.5 text-[11px] font-medium uppercase tracking-[0.22em] text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {submitting ? 'Signing in…' : 'Sign in'}
+            </button>
+          </form>
         </div>
       </div>
     </main>
