@@ -46,7 +46,7 @@ export default function UnifiedLogin({ onAuthenticated }) {
         }
       }
 
-      let clientError = 'Invalid email or password.';
+      let clientError = 'Invalid username or password.';
       try {
         await loginClientPortal(username, password);
         onAuthenticated('client');
@@ -89,10 +89,9 @@ export default function UnifiedLogin({ onAuthenticated }) {
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <label className="block">
-              <span className={labelClass}>Email</span>
+              <span className={labelClass}>Username</span>
               <input
                 type="text"
-                inputMode="email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
