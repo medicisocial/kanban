@@ -4,6 +4,7 @@ import {
   isToday,
   formatMonthYear,
 } from '../utils/calendar';
+import { formatTime } from '../utils';
 import { useClientsContext } from '../context/ClientsContext';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -86,7 +87,7 @@ export default function EventsMonthView({
                         {event.status === 'draft' && (
                           <span className="mr-0.5 opacity-70">◦</span>
                         )}
-                        {event.time ? `${event.time.slice(0, 5)} ` : ''}
+                        {event.time ? `${formatTime(event.time)} ` : ''}
                         {showClientName && event.client ? `${event.client}: ` : ''}
                         {event.title}
                       </button>

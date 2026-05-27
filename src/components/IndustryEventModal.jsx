@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { toDateKey } from '../utils/calendar';
+import { formatTime } from '../utils';
 import {
   getSchemaForBusinessType,
   getDefaultFieldValues,
@@ -177,7 +178,7 @@ export default function IndustryEventModal({
                 {time && (
                   <div>
                     <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">Time</p>
-                    <p className="mt-1 text-white/80">{time}</p>
+                    <p className="mt-1 text-white/80">{formatTime(time)}</p>
                   </div>
                 )}
                 {estimatedCovers && (

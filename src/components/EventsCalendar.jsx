@@ -6,6 +6,7 @@ import {
 } from '../utils/calendar';
 import { filterEvents, groupEventsByDate, getUpcomingEvents } from '../utils/eventsCalendar';
 import { getDisplayEventType } from '../utils/eventFormSchemas';
+import { formatTime } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import EventsMonthView from './EventsMonthView';
 import IndustryEventModal from './IndustryEventModal';
@@ -137,7 +138,7 @@ export default function EventsCalendar({
                         day: 'numeric',
                       })}
                     </p>
-                    {event.time && <p>{event.time.slice(0, 5)}</p>}
+                    {event.time && <p>{formatTime(event.time)}</p>}
                   </div>
                 </button>
               </li>
