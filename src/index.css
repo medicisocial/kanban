@@ -19,6 +19,10 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-y: scroll;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);
@@ -91,14 +95,15 @@ select option:hover {
 
 @keyframes login-fade-in {
   from {
-    transform: translateY(10px);
+    opacity: 0;
   }
   to {
-    transform: translateY(0);
+    opacity: 1;
   }
 }
 
 .login-fade-in {
+  opacity: 0;
   animation: login-fade-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 

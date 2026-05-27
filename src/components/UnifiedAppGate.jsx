@@ -99,19 +99,8 @@ export default function UnifiedAppGate() {
     setMode('login');
   }, []);
 
-  if (mode === 'loading') {
-    return (
-      <div
-        className="flex min-h-screen items-center justify-center bg-black"
-        style={{ color: 'rgba(255,255,255,0.75)' }}
-      >
-        <p className="text-sm">Loading…</p>
-      </div>
-    );
-  }
-
-  if (mode === 'login') {
-    return <UnifiedLogin onAuthenticated={setMode} />;
+  if (mode === 'loading' || mode === 'login') {
+    return <UnifiedLogin onAuthenticated={setMode} checking={mode === 'loading'} />;
   }
 
   if (mode === 'client') {

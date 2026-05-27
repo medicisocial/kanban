@@ -25,7 +25,7 @@ function AmbientBackground() {
   );
 }
 
-export default function UnifiedLogin({ onAuthenticated }) {
+export default function UnifiedLogin({ onAuthenticated, checking = false }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -79,6 +79,8 @@ export default function UnifiedLogin({ onAuthenticated }) {
         <img
           src="/medici-social-logo-nav.png"
           alt="Medici Social"
+          width={140}
+          height={28}
           className="h-5 w-auto object-contain opacity-90 md:h-6"
         />
       </header>
@@ -106,7 +108,8 @@ export default function UnifiedLogin({ onAuthenticated }) {
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
                 className={inputClass}
-                autoFocus
+                autoFocus={!checking}
+                disabled={checking}
                 required
               />
             </label>
@@ -119,6 +122,7 @@ export default function UnifiedLogin({ onAuthenticated }) {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 className={inputClass}
+                disabled={checking}
                 required
               />
             </label>
@@ -131,7 +135,7 @@ export default function UnifiedLogin({ onAuthenticated }) {
 
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || checking}
               className="inline-flex w-full items-center justify-center rounded-sm bg-white px-5 py-3.5 text-[11px] font-medium uppercase tracking-[0.22em] text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {submitting ? 'Signing in…' : 'Sign in'}
