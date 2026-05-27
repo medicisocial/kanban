@@ -7,17 +7,19 @@ import ClientCalendarPortal from './ClientCalendarPortal';
 import ClientPipelinePortal from './ClientPipelinePortal';
 import ClientShootSchedulePortal from './ClientShootSchedulePortal';
 import ClientProfilePortal from './ClientProfilePortal';
+import ClientPortalHome from './ClientPortalHome';
 import EventsCalendar from './EventsCalendar';
 import ClientPortalLayout from './clientPortal/ClientPortalLayout';
 import { filterEvents } from '../utils/eventsCalendar';
 import { createEvent } from '../constants';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
+import { buildClientPortalTasks } from '../utils/clientPortalTasks';
 
 export default function ClientHubPortal({ onSignOut }) {
   const { brand, portalData, loadingData, dataError, logout, queueCloudResponse, refreshPortalData, savePortalProfile } =
     useClientAuth();
   const { getClientColor, getClientLogo } = useClientsContext();
-  const [activeTab, setActiveTab] = useState('ideas');
+  const [activeTab, setActiveTab] = useState('home');
 
   const clientColor = portalData?.clientColor || getClientColor(brand);
   const clientLogo = portalData?.clientLogo || getClientLogo(brand);
@@ -40,8 +42,16 @@ export default function ClientHubPortal({ onSignOut }) {
     const pendingReview = cards.filter(
       (card) => card.client === brand && card.columnId === 'in-review',
     ).length;
-    return pendingIdeas + pendingReview;
-  }, [ideas, cards, brand]);
+    const setup = buildClientPortalTasks({
+      brand,
+      ideas,
+      cards,
+      contacts: profileContacts,
+      socialLogins: profileSocialLogins,
+      clientLogo,
+    }).setupCount;
+    return pendingIdeas + pendingReview + setup;
+  }, [ideas, cards, brand, profileContacts, profileSocialLogins, clientLogo]);
 
   const handleIdeaResponse = (response) => queueCloudResponse('idea', response);
   const handleContentResponse = (response) => queueCloudResponse('content', response);
@@ -88,6 +98,19 @@ export default function ClientHubPortal({ onSignOut }) {
 
       {dataError && (
         <p className="border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-200/90">{dataError}</p>
+      )}
+
+      {portalData && activeTab === 'home' && (
+        <ClientPortalHome
+          brand={brand}
+          ideas={ideas}
+          cards={cards}
+          contacts={profileContacts}
+          socialLogins={profileSocialLogins}
+          clientLogo={clientLogo}
+          clientColor={clientColor}
+          onNavigate={setActiveTab}
+        />
       )}
 
       {portalData && activeTab === 'ideas' && (

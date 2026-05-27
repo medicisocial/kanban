@@ -2,6 +2,7 @@ import {
   IconBoard,
   IconCalendar,
   IconEvents,
+  IconHome,
   IconIdeas,
   IconShoots,
   IconTasks,
@@ -9,11 +10,12 @@ import {
 import EnterprisePortalLayout from './EnterprisePortalLayout';
 
 const NAV_ITEMS = [
+  { id: 'home', label: 'Your tasks', Icon: IconHome },
   { id: 'ideas', label: 'Ideas', Icon: IconIdeas },
   { id: 'pipeline', label: 'Board', Icon: IconBoard },
   { id: 'calendar', label: 'Content Calendar', Icon: IconCalendar },
   { id: 'events', label: 'Events Calendar', Icon: IconEvents },
-  { id: 'review', label: 'Tasks', Icon: IconTasks },
+  { id: 'review', label: 'Content review', Icon: IconTasks },
   { id: 'shoots', label: 'Shoot Schedule', Icon: IconShoots },
 ];
 
@@ -37,7 +39,7 @@ export default function ClientPortalLayout({
       activeTab={activeTab}
       onTabChange={onTabChange}
       notificationCount={notificationCount}
-      onNotificationClick={() => onTabChange('ideas')}
+      onNotificationClick={() => onTabChange('home')}
       profileLabel={client}
       profileColor={clientColor}
       profileImageUrl={clientLogo}

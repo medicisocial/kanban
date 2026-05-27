@@ -145,7 +145,7 @@ export default function ClientContentReviewPortal({
     return (
       <section>
         <ClientPortalSectionHeader
-          title="Tasks"
+          title="Content review"
           description="Content awaiting your approval before scheduling. Approve when ready, or submit revision notes for your production team."
         />
 
