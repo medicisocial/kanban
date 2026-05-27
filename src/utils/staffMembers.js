@@ -1,8 +1,7 @@
 import { memberMatchesRole, loadTeamMembersFromStorage } from './teamMembers';
-import { usesPersonalWorkspaceView } from './staffAuth';
 
 export function resolveStaffMemberName(session, teamMembers) {
-  if (!session?.username) return '';
+  if (!session?.username || !Array.isArray(teamMembers)) return session?.username?.trim() || '';
 
   const key = session.username.trim().toLowerCase();
   const member = teamMembers.find(
@@ -39,13 +38,6 @@ export function staffHasLeadershipWorkspaceAccess(session, teamMembers) {
   );
 }
 
-/** Owner, Creative Director, and shared ops login see company-wide overview metrics. */
-export function staffGetsCompanyWideOverview(session, teamMembers) {
-  if (!session?.username) return false;
-  if (!usesPersonalWorkspaceView(session)) return true;
-  return staffHasLeadershipWorkspaceAccess(session, teamMembers);
-}
-
 export function staffHasAccountManagerQueueAccess(session, teamMembers) {
   if (!session?.username) return false;
   return (
@@ -68,7 +60,7 @@ export function cardIsAssignedToStaff(card, staffName, clientAccountManagers = {
 }
 
 export function staffMemberHasRole(session, teamMembers, role) {
-  if (!session?.username) return false;
+  if (!session?.username || !Array.isArray(teamMembers)) return false;
   const key = session.username.trim().toLowerCase();
   const member = teamMembers.find(
     (entry) =>

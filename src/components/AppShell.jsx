@@ -44,7 +44,7 @@ import CardModal from "./CardModal";
 import { useStaffAuth } from "../context/StaffAuthContext";
 import { useClientsContext } from "../context/ClientsContext";
 import { getDefaultWorkspaceView } from "../utils/getDefaultWorkspaceView";
-import { resolveStaffMemberName, staffHasAccountManagerQueueAccess, staffGetsCompanyWideOverview } from "../utils/staffMembers";
+import { resolveStaffMemberName, staffHasAccountManagerQueueAccess, staffHasLeadershipWorkspaceAccess } from "../utils/staffMembers";
 import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
 import { buildWorkspaceHomeSummary, buildNavBadgeCounts } from "../utils/workspaceHome";
 import { usesPersonalWorkspaceView } from "../utils/staffAuth";
@@ -480,7 +480,7 @@ export default function AppShell({ onSignOut }) {
   const syncTotal = responseCount + contentReviewResponseCount + shootResponseCount;
   const staffName = resolveStaffMemberName(session, teamMembers);
   const myWorkOnly = usesPersonalWorkspaceView(session);
-  const companyWideView = staffGetsCompanyWideOverview(session, teamMembers);
+  const companyWideView = !myWorkOnly || staffHasLeadershipWorkspaceAccess(session, teamMembers);
   const showAccountManagerQueue = !myWorkOnly
     ? true
     : staffHasAccountManagerQueueAccess(session, teamMembers) || companyWideView;
@@ -524,6 +524,14 @@ export default function AppShell({ onSignOut }) {
     companyWideView,
     showAccountManagerQueue,
   ]);
+
+  if (authRequired && !ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black">
+        <p className="text-sm text-gray-500">Loading…</p>
+      </div>
+    );
+  }
 
   const portalClient = getClientPortalClient();
   const contentReviewClient = getContentReviewPortalClient();
@@ -575,14 +583,6 @@ export default function AppShell({ onSignOut }) {
           handlePortalDecline(id, comment, snap);
         }}
       />
-    );
-  }
-
-  if (authRequired && !ready) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
-        <p className="text-sm text-gray-500">Loading…</p>
-      </div>
     );
   }
 
