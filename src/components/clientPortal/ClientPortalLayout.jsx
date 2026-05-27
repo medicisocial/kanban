@@ -32,17 +32,18 @@ export default function ClientPortalLayout({
 }) {
   return (
     <EnterprisePortalLayout
-      productTitle="Client Pipeline"
-      subtitle={client}
-      subtitleColor={clientColor}
+      brandLayout
+      brandName={client}
+      brandColor={clientColor}
+      brandLogo={clientLogo}
+      profileLogo={clientLogo}
+      profileLabel={client}
+      profileColor={clientColor}
       navItems={NAV_ITEMS}
       activeTab={activeTab}
       onTabChange={onTabChange}
       notificationCount={notificationCount}
       onNotificationClick={() => onTabChange('home')}
-      profileLabel={client}
-      profileColor={clientColor}
-      profileImageUrl={clientLogo}
       onProfileClick={() => onTabChange('profile')}
       onSignOut={onSignOut}
       sidebarFooter={

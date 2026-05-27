@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { CLIENT_COLOR_PALETTE } from '../constants';
 import { readClientProfileImage } from '../utils/clientImage';
-import ClientAvatar from './ClientAvatar';
+import { DEFAULT_LOGO_CROP, serializeClientLogo } from '../utils/clientLogo';
+import ClientLogoAvatar from './clientPortal/ClientLogoAvatar';
+import LogoCropEditor from './clientPortal/LogoCropEditor';
 import { btnPrimaryClass, inputClass } from './clientPortal/clientPortalUi';
 
 export default function AddClientModal({ onClose, onAdd, existingClients }) {
   const [name, setName] = useState('');
   const [color, setColor] = useState(CLIENT_COLOR_PALETTE[0]);
   const [logoPreview, setLogoPreview] = useState(null);
+  const [logoCrop, setLogoCrop] = useState(DEFAULT_LOGO_CROP);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
 
@@ -30,6 +33,7 @@ export default function AddClientModal({ onClose, onAdd, existingClients }) {
     setError('');
     try {
       setLogoPreview(await readClientProfileImage(file));
+      setLogoCrop(DEFAULT_LOGO_CROP);
     } catch (err) {
       setError(err.message || 'Could not upload image.');
     }
@@ -38,7 +42,11 @@ export default function AddClientModal({ onClose, onAdd, existingClients }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
-    const result = onAdd(name, color, logoPreview);
+    const result = onAdd(
+      name,
+      color,
+      logoPreview ? serializeClientLogo({ src: logoPreview, ...logoCrop }) : null,
+    );
     if (!result.ok) {
       setError(result.error);
       return;
@@ -82,30 +90,43 @@ export default function AddClientModal({ onClose, onAdd, existingClients }) {
             <span className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/45">
               Profile photo
             </span>
-            <div className="flex items-center gap-4 border border-white/10 bg-white/[0.03] p-4">
-              {logoPreview ? (
-                <img src={logoPreview} alt="" className="h-14 w-14 shrink-0 object-cover" />
-              ) : (
-                <div
-                  className="flex h-14 w-14 shrink-0 items-center justify-center text-xs font-semibold text-white/40"
-                  style={{ backgroundColor: `${color}22`, color }}
-                >
-                  ?
-                </div>
+            <div className="space-y-4 border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex justify-center">
+                {logoPreview ? (
+                  <ClientLogoAvatar
+                    logo={{ src: logoPreview, ...logoCrop }}
+                    name={name || 'Brand'}
+                    color={color}
+                    size="2xl"
+                  />
+                ) : (
+                  <ClientLogoAvatar name={name || 'Brand'} color={color} size="2xl" />
+                )}
+              </div>
+              {logoPreview && (
+                <LogoCropEditor
+                  src={logoPreview}
+                  crop={logoCrop}
+                  onCropChange={setLogoCrop}
+                  previewSize={140}
+                />
               )}
-              <div className="space-y-2">
+              <div className="flex flex-wrap justify-center gap-2">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className={`${btnPrimaryClass} px-3 py-2 text-[10px]`}
                 >
-                  Upload photo
+                  {logoPreview ? 'Change photo' : 'Upload photo'}
                 </button>
                 {logoPreview && (
                   <button
                     type="button"
-                    onClick={() => setLogoPreview(null)}
-                    className="block text-[10px] text-white/45 hover:text-white"
+                    onClick={() => {
+                      setLogoPreview(null);
+                      setLogoCrop(DEFAULT_LOGO_CROP);
+                    }}
+                    className="text-[10px] text-white/45 hover:text-white"
                   >
                     Remove
                   </button>

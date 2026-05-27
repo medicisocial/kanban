@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { IconBell, IconClose, IconMenu } from './ClientPortalIcons';
+import { IconBell, IconClose, IconMenu, IconSettings } from './ClientPortalIcons';
+import ClientLogoAvatar from './ClientLogoAvatar';
 import { clientInitials } from './clientPortalUi';
+import { normalizeClientLogo } from '../../utils/clientLogo';
 
 function SidebarBrand({
+  brandLayout = false,
+  brandName,
+  brandColor,
+  brandLogo,
   resolvedSidebarLogo,
   sidebarLogoUrl,
   onSidebarLogoClick,
@@ -16,6 +22,44 @@ function SidebarBrand({
   onCloseNav,
   showClose,
 }) {
+  if (brandLayout) {
+    return (
+      <div className="border-b border-white/[0.06] px-6 py-8 lg:px-7">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-col items-center text-center">
+              <ClientLogoAvatar
+                logo={brandLogo}
+                name={brandName}
+                color={brandColor}
+                size="2xl"
+                ringClassName="ring-2 ring-white/10"
+              />
+              <h1
+                className="mt-4 text-lg font-semibold tracking-tight text-white"
+                style={brandColor ? { color: brandColor } : undefined}
+              >
+                {brandName}
+              </h1>
+            </div>
+          </div>
+          {showClose && (
+            <button
+              type="button"
+              onClick={onCloseNav}
+              className="flex h-9 w-9 shrink-0 items-center justify-center text-white/50 transition-colors duration-300 hover:text-white lg:hidden"
+              aria-label="Close menu"
+            >
+              <IconClose />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const staffLogo = normalizeClientLogo(sidebarLogoUrl);
+
   return (
     <div className="border-b border-white/[0.06] px-6 py-7 lg:px-7 lg:py-8">
       <div className="flex items-start gap-3.5">
@@ -24,22 +68,28 @@ function SidebarBrand({
             type="button"
             onClick={onSidebarLogoClick}
             title="Change logo"
-            className="group relative h-10 w-10 shrink-0 overflow-hidden transition-opacity duration-300 hover:opacity-80"
+            className="group relative shrink-0 transition-opacity duration-300 hover:opacity-80"
           >
-            <img
-              src={resolvedSidebarLogo}
-              alt="Medici Social"
-              className={`h-full w-full ${sidebarLogoUrl ? 'object-cover' : 'object-contain'}`}
-            />
-            <span className="absolute inset-0 flex items-center justify-center bg-black/70 text-[9px] font-medium uppercase tracking-[0.2em] text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+            {staffLogo ? (
+              <ClientLogoAvatar logo={staffLogo} name={productTitle} size="lg" />
+            ) : (
+              <img
+                src={resolvedSidebarLogo}
+                alt="Medici Social"
+                className="h-10 w-10 shrink-0 rounded-full object-contain"
+              />
+            )}
+            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/70 text-[9px] font-medium uppercase tracking-[0.2em] text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
               Edit
             </span>
           </button>
+        ) : staffLogo ? (
+          <ClientLogoAvatar logo={staffLogo} name={productTitle} size="lg" />
         ) : (
           <img
             src={resolvedSidebarLogo}
             alt="Medici Social"
-            className={`h-10 w-10 shrink-0 ${sidebarLogoUrl ? 'object-cover' : 'object-contain'}`}
+            className="h-10 w-10 shrink-0 rounded-full object-contain"
           />
         )}
         <div className="min-w-0 flex-1 pt-0.5">
@@ -92,6 +142,11 @@ export default function EnterprisePortalLayout({
   profileLabel,
   profileColor = '#810100',
   profileImageUrl,
+  profileLogo,
+  brandLayout = false,
+  brandName,
+  brandColor,
+  brandLogo,
   sidebarLogoUrl,
   onSidebarLogoClick,
   sidebarLogoMessage,
@@ -112,8 +167,10 @@ export default function EnterprisePortalLayout({
   const notificationButtonRef = useRef(null);
   const notificationsOpen = controlledNotificationsOpen ?? internalNotificationsOpen;
   const setNotificationsOpen = onNotificationsOpenChange ?? setInternalNotificationsOpen;
-  const initials = clientInitials(profileLabel || 'MS');
+  const initials = clientInitials(profileLabel || brandName || 'MS');
   const resolvedSidebarLogo = sidebarLogoUrl || '/medici-social-logo.png';
+  const resolvedProfileLogo = profileLogo ?? profileImageUrl;
+  const normalizedProfileLogo = normalizeClientLogo(resolvedProfileLogo);
 
   useEffect(() => {
     if (!profileOpen) {
@@ -195,7 +252,7 @@ export default function EnterprisePortalLayout({
               }}
               className="block w-full px-4 py-2.5 text-left text-xs text-white/60 transition-colors duration-300 hover:bg-white/[0.04] hover:text-white"
             >
-              Profile
+              {brandLayout ? 'Settings' : 'Profile'}
             </button>
           )}
           {onSignOut && (
@@ -265,6 +322,10 @@ export default function EnterprisePortalLayout({
   const sidebarContent = (
     <>
       <SidebarBrand
+        brandLayout={brandLayout}
+        brandName={brandName}
+        brandColor={brandColor}
+        brandLogo={brandLogo}
         resolvedSidebarLogo={resolvedSidebarLogo}
         sidebarLogoUrl={sidebarLogoUrl}
         onSidebarLogoClick={onSidebarLogoClick}
@@ -337,6 +398,14 @@ export default function EnterprisePortalLayout({
             </button>
 
             <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-4">
+              {brandLayout && brandName && (
+                <p
+                  className="truncate text-sm font-semibold tracking-tight text-white lg:hidden"
+                  style={brandColor ? { color: brandColor } : undefined}
+                >
+                  {brandName}
+                </p>
+              )}
               {headerFilter && (
                 <div className="hidden min-w-0 shrink-0 md:block">{headerFilter}</div>
               )}
@@ -366,27 +435,39 @@ export default function EnterprisePortalLayout({
                   ref={profileButtonRef}
                   type="button"
                   onClick={() => setProfileOpen((open) => !open)}
-                  className="portal-profile-btn flex items-center gap-2.5 py-1 pl-1 pr-2.5"
+                  className={`portal-profile-btn flex items-center py-1 ${
+                    brandLayout ? 'pl-0 pr-0' : 'gap-2.5 pl-1 pr-2.5'
+                  }`}
                   aria-expanded={profileOpen}
                   aria-haspopup="menu"
+                  aria-label={brandLayout ? 'Settings' : profileLabel}
+                  title={brandLayout ? 'Settings' : profileLabel}
                 >
-                  <span
-                    className="flex h-7 w-7 items-center justify-center overflow-hidden text-[10px] font-semibold text-white"
-                    style={
-                      profileImageUrl
-                        ? undefined
-                        : { backgroundColor: `${profileColor}33`, color: profileColor }
-                    }
-                  >
-                    {profileImageUrl ? (
-                      <img src={profileImageUrl} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      initials
-                    )}
-                  </span>
-                  <span className="hidden max-w-[120px] truncate text-xs font-medium text-white/75 sm:block">
-                    {profileLabel}
-                  </span>
+                  {brandLayout ? (
+                    <span className="portal-icon-btn flex h-9 w-9 items-center justify-center text-white/55">
+                      <IconSettings className="h-4 w-4" />
+                    </span>
+                  ) : normalizedProfileLogo ? (
+                    <ClientLogoAvatar
+                      logo={normalizedProfileLogo}
+                      name={profileLabel || brandName}
+                      color={profileColor || brandColor}
+                      size="header"
+                      ringClassName="ring-2 ring-white/15"
+                    />
+                  ) : (
+                    <span
+                      className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold text-white ring-2 ring-white/15"
+                      style={{ backgroundColor: `${profileColor}33`, color: profileColor }}
+                    >
+                      {initials}
+                    </span>
+                  )}
+                  {!brandLayout && (
+                    <span className="hidden max-w-[120px] truncate text-xs font-medium text-white/75 sm:block">
+                      {profileLabel}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>

@@ -1,3 +1,5 @@
+import { getLogoSrc } from './clientLogo';
+
 function hasSocialLogins(socialLogins) {
   if (!socialLogins || typeof socialLogins !== 'object') return false;
   return Object.values(socialLogins).some((entry) => {
@@ -32,7 +34,7 @@ export function buildClientPortalTasks({
     });
   }
 
-  if (!clientLogo) {
+  if (!getLogoSrc(clientLogo)) {
     setupTasks.push({
       id: 'logo',
       label: 'Upload your brand photo',

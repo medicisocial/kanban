@@ -1,3 +1,4 @@
+import { getLogoSrc } from '../utils/clientLogo';
 import { btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 export default function ClientPortalHealthChecklist({
@@ -49,7 +50,7 @@ export default function ClientPortalHealthChecklist({
     {
       id: 'logo',
       label: 'Brand photo',
-      ok: !!logo,
+      ok: !!getLogoSrc(logo),
       hint: 'Upload a profile photo.',
       tab: 'profile',
     },

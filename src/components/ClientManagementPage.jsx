@@ -4,10 +4,17 @@ import { useStaffAuth } from '../context/StaffAuthContext';
 import { CLIENT_COLOR_PALETTE, INTERNAL_TEAM_CLIENT } from '../constants';
 import { BUSINESS_TYPES } from '../utils/eventFormSchemas';
 import { getClientPortalBrands } from '../utils/clients';
-import { readClientProfileImage } from '../utils/clientImage';
 import { syncClientPortalCredentialsToCloud } from '../utils/clientPortalAdmin';
+import { readClientProfileImage } from '../utils/clientImage';
+import {
+  DEFAULT_LOGO_CROP,
+  normalizeClientLogo,
+  serializeClientLogo,
+} from '../utils/clientLogo';
 import AddClientModal from './AddClientModal';
 import ClientAvatar from './ClientAvatar';
+import ClientLogoAvatar from './clientPortal/ClientLogoAvatar';
+import LogoCropEditor from './clientPortal/LogoCropEditor';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import ClientPortalUsersEditor from './clientPortal/ClientPortalUsersEditor';
 import ClientContactsEditor from './clientPortal/ClientContactsEditor';
@@ -50,7 +57,8 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
   const [activeTab, setActiveTab] = useState(initialTab);
   const [color, setColor] = useState('');
   const [businessType, setBusinessType] = useState('');
-  const [previewLogo, setPreviewLogo] = useState(null);
+  const [previewSrc, setPreviewSrc] = useState(null);
+  const [logoCrop, setLogoCrop] = useState(DEFAULT_LOGO_CROP);
   const [pendingLogo, setPendingLogo] = useState(undefined);
   const [profileError, setProfileError] = useState('');
   const [profileMessage, setProfileMessage] = useState('');
@@ -74,7 +82,13 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
     if (!selectedClient) return;
     setColor(getClientColor(selectedClient));
     setBusinessType(getClientBusinessType(selectedClient));
-    setPreviewLogo(getClientLogo(selectedClient));
+    const normalized = normalizeClientLogo(getClientLogo(selectedClient));
+    setPreviewSrc(normalized?.src || null);
+    setLogoCrop({
+      zoom: normalized?.zoom ?? DEFAULT_LOGO_CROP.zoom,
+      x: normalized?.x ?? DEFAULT_LOGO_CROP.x,
+      y: normalized?.y ?? DEFAULT_LOGO_CROP.y,
+    });
     setPendingLogo(undefined);
     setProfileError('');
     setProfileMessage('');
@@ -88,16 +102,25 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
     setProfileError('');
     try {
       const dataUrl = await readClientProfileImage(file);
-      setPreviewLogo(dataUrl);
-      setPendingLogo(dataUrl);
+      setPreviewSrc(dataUrl);
+      setLogoCrop(DEFAULT_LOGO_CROP);
+      setPendingLogo(serializeClientLogo({ src: dataUrl, ...DEFAULT_LOGO_CROP }));
     } catch (err) {
       setProfileError(err.message || 'Could not upload image.');
     }
   };
 
   const handleRemoveLogo = () => {
-    setPreviewLogo(null);
+    setPreviewSrc(null);
+    setLogoCrop(DEFAULT_LOGO_CROP);
     setPendingLogo(null);
+  };
+
+  const handleCropChange = (crop) => {
+    setLogoCrop(crop);
+    if (previewSrc) {
+      setPendingLogo(serializeClientLogo({ src: previewSrc, ...crop }));
+    }
   };
 
   const handleSaveProfile = () => {
@@ -202,11 +225,12 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
 
         <div className="min-w-0 flex-1">
           <div className="mb-6 flex items-center gap-4 border-b border-white/[0.06] pb-6">
-            {previewLogo ? (
-              <img src={previewLogo} alt="" className="h-14 w-14 shrink-0 object-cover" />
-            ) : (
-              <ClientAvatar client={selectedClient} size="xl" color={color} />
-            )}
+            <ClientLogoAvatar
+              logo={previewSrc ? { src: previewSrc, ...logoCrop } : getClientLogo(selectedClient)}
+              name={selectedClient}
+              color={color}
+              size="xl"
+            />
             <div className="min-w-0">
               <h3 className="text-xl font-semibold tracking-tight text-white">{selectedClient}</h3>
             </div>
@@ -231,25 +255,31 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
 
           {activeTab === 'profile' && (
             <div key={`profile-${selectedClient}`} className="portal-content-fade max-w-xl space-y-5">
-              <div className="flex items-center gap-4 border border-white/[0.08] bg-white/[0.02] p-4">
-                {previewLogo ? (
-                  <img src={previewLogo} alt="" className="h-16 w-16 shrink-0 object-cover" />
-                ) : (
-                  <ClientAvatar client={selectedClient} size="xl" color={color} />
+              <div className="space-y-4 border border-white/[0.08] bg-white/[0.02] p-4">
+                <div className="flex justify-center">
+                  <ClientLogoAvatar
+                    logo={previewSrc ? { src: previewSrc, ...logoCrop } : getClientLogo(selectedClient)}
+                    name={selectedClient}
+                    color={color}
+                    size="2xl"
+                  />
+                </div>
+                {previewSrc && (
+                  <LogoCropEditor src={previewSrc} crop={logoCrop} onCropChange={handleCropChange} />
                 )}
-                <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex flex-wrap justify-center gap-2">
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className={`${btnSecondaryClass} w-full py-2 text-[10px]`}
+                    className={`${btnSecondaryClass} py-2 text-[10px]`}
                   >
-                    Upload photo
+                    {previewSrc ? 'Change photo' : 'Upload photo'}
                   </button>
-                  {previewLogo && (
+                  {previewSrc && (
                     <button
                       type="button"
                       onClick={handleRemoveLogo}
-                      className="w-full py-1.5 text-[10px] text-white/45 transition-colors duration-300 hover:text-rose-300"
+                      className="py-1.5 text-[10px] text-white/45 transition-colors duration-300 hover:text-rose-300"
                     >
                       Remove photo
                     </button>

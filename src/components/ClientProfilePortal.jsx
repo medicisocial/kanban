@@ -6,7 +6,13 @@ import {
   normalizeClientSocialLogins,
 } from '../utils/clientProfile';
 import { readClientProfileImage } from '../utils/clientImage';
-import ClientAvatar from './ClientAvatar';
+import {
+  DEFAULT_LOGO_CROP,
+  normalizeClientLogo,
+  serializeClientLogo,
+} from '../utils/clientLogo';
+import ClientLogoAvatar from './clientPortal/ClientLogoAvatar';
+import LogoCropEditor from './clientPortal/LogoCropEditor';
 import ClientContactsEditor from './clientPortal/ClientContactsEditor';
 import ClientSocialLoginsEditor from './clientPortal/ClientSocialLoginsEditor';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
@@ -39,7 +45,8 @@ export default function ClientProfilePortal({
   socialLogins = {},
   onSaveProfile,
 }) {
-  const [previewLogo, setPreviewLogo] = useState(clientLogo);
+  const [previewSrc, setPreviewSrc] = useState(null);
+  const [logoCrop, setLogoCrop] = useState(DEFAULT_LOGO_CROP);
   const [pendingLogo, setPendingLogo] = useState(undefined);
   const [draftContacts, setDraftContacts] = useState(contacts);
   const [draftSocialLogins, setDraftSocialLogins] = useState(() =>
@@ -51,13 +58,32 @@ export default function ClientProfilePortal({
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    setPreviewLogo(clientLogo);
+    const normalized = normalizeClientLogo(clientLogo);
+    setPreviewSrc(normalized?.src || null);
+    setLogoCrop({
+      zoom: normalized?.zoom ?? DEFAULT_LOGO_CROP.zoom,
+      x: normalized?.x ?? DEFAULT_LOGO_CROP.x,
+      y: normalized?.y ?? DEFAULT_LOGO_CROP.y,
+    });
     setPendingLogo(undefined);
     setDraftContacts(contacts);
     setDraftSocialLogins(normalizeClientSocialLogins(socialLogins));
     setMessage('');
     setError('');
   }, [client, clientLogo, contacts, socialLogins]);
+
+  const applyLogoDraft = (src, crop) => {
+    setPreviewSrc(src);
+    setLogoCrop(crop);
+    setPendingLogo(serializeClientLogo({ src, ...crop }));
+  };
+
+  const handleCropChange = (crop) => {
+    setLogoCrop(crop);
+    if (previewSrc) {
+      setPendingLogo(serializeClientLogo({ src: previewSrc, ...crop }));
+    }
+  };
 
   const getClientContacts = useCallback(() => contacts, [contacts]);
   const getClientSocialLogins = useCallback(() => socialLogins, [socialLogins]);
@@ -70,15 +96,15 @@ export default function ClientProfilePortal({
     setError('');
     try {
       const dataUrl = await readClientProfileImage(file);
-      setPreviewLogo(dataUrl);
-      setPendingLogo(dataUrl);
+      applyLogoDraft(dataUrl, DEFAULT_LOGO_CROP);
     } catch (err) {
       setError(err.message || 'Could not upload image.');
     }
   };
 
   const handleRemoveLogo = () => {
-    setPreviewLogo(null);
+    setPreviewSrc(null);
+    setLogoCrop(DEFAULT_LOGO_CROP);
     setPendingLogo(null);
   };
 
@@ -115,43 +141,56 @@ export default function ClientProfilePortal({
   return (
     <section>
       <ClientPortalSectionHeader
-        title="Profile"
+        title="Settings"
         description="Update your brand photo, contacts, and social logins. Business type and brand color are managed by Medici Social."
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         <div className={`${surfacePanelClass} space-y-5 p-5`}>
-          <div className="flex items-center gap-4 border border-white/[0.08] bg-white/[0.02] p-4">
-            {previewLogo ? (
-              <img src={previewLogo} alt="" className="h-16 w-16 shrink-0 object-cover" />
+          <div className="space-y-4 border border-white/[0.08] bg-white/[0.02] p-4">
+            <div className="flex justify-center">
+              <ClientLogoAvatar
+                logo={previewSrc ? { src: previewSrc, ...logoCrop } : null}
+                name={client}
+                color={clientColor}
+                size="2xl"
+                ringClassName="ring-2 ring-white/15"
+              />
+            </div>
+
+            {previewSrc ? (
+              <LogoCropEditor src={previewSrc} crop={logoCrop} onCropChange={handleCropChange} />
             ) : (
-              <ClientAvatar client={client} size="xl" color={clientColor} />
+              <p className="text-center text-xs text-white/45">
+                Upload a square or wide logo — you can zoom and drag to fit the circle.
+              </p>
             )}
-            <div className="min-w-0 flex-1 space-y-2">
+
+            <div className="flex flex-wrap justify-center gap-2">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className={`${btnSecondaryClass} w-full py-2 text-[10px]`}
+                className={`${btnSecondaryClass} py-2 text-[10px]`}
               >
-                Upload photo
+                {previewSrc ? 'Change photo' : 'Upload photo'}
               </button>
-              {previewLogo && (
+              {previewSrc && (
                 <button
                   type="button"
                   onClick={handleRemoveLogo}
-                  className="w-full py-1.5 text-[10px] text-white/45 transition-colors duration-300 hover:text-rose-300"
+                  className="py-2 text-[10px] text-white/45 transition-colors duration-300 hover:text-rose-300"
                 >
                   Remove photo
                 </button>
               )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                onChange={handleFileChange}
-                className="hidden"
-              />
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              onChange={handleFileChange}
+              className="hidden"
+            />
           </div>
 
           <div>

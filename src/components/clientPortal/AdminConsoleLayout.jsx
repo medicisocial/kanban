@@ -14,6 +14,7 @@ import EnterprisePortalLayout from './EnterprisePortalLayout';
 import { useWorkspaceAdmin } from '../FilterBar';
 import { useClientsContext } from '../../context/ClientsContext';
 import { INTERNAL_TEAM_CLIENT } from '../../constants';
+import { DEFAULT_LOGO_CROP, serializeClientLogo } from '../../utils/clientLogo';
 import { readClientProfileImage } from '../../utils/clientImage';
 
 const NAV_SECTIONS_BASE = [
@@ -93,7 +94,7 @@ export default function AdminConsoleLayout({
 
     try {
       const dataUrl = await readClientProfileImage(file);
-      setClientLogo(INTERNAL_TEAM_CLIENT, dataUrl);
+      setClientLogo(INTERNAL_TEAM_CLIENT, serializeClientLogo({ src: dataUrl, ...DEFAULT_LOGO_CROP }));
       showLogoMessage('Logo updated.');
     } catch (error) {
       showLogoMessage(error.message || 'Could not upload image.', true);
