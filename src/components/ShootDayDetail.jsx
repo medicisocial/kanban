@@ -5,6 +5,7 @@ import {
   buildShootTimeline,
   aggregateModelsWithSlots,
   aggregateNeeds,
+  getShootDayTitle,
 } from "../utils/shootDay";
 import ShootDayItem from "./ShootDayItem";
 import ShootDayTimeline from "./ShootDayTimeline";
@@ -29,6 +30,7 @@ export default function ShootDayDetail({
   onUpdatePlan,
   onRemoveFromSchedule,
   onRemoveClientShoot,
+  onMoveClientShootDay,
 }) {
   return (
     <>
@@ -82,6 +84,7 @@ export default function ShootDayDetail({
               onUpdatePlan={(updates) => onUpdatePlan(client, dateKey, updates)}
               onRemoveFromSchedule={onRemoveFromSchedule}
               onRemoveClientShoot={() => onRemoveClientShoot(client, dateKey, clientCards)}
+              onMoveShootDay={onMoveClientShootDay}
             />
           ))}
         </div>
@@ -102,6 +105,7 @@ function ClientShootSection({
   onUpdatePlan,
   onRemoveFromSchedule,
   onRemoveClientShoot,
+  onMoveShootDay,
 }) {
   const { getClientColor } = useClientsContext();
   const [scriptCard, setScriptCard] = useState(null);
@@ -124,12 +128,15 @@ function ClientShootSection({
       <header className="border-b border-white/5 px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-base font-semibold" style={{ color: client }}>
-              {client}
+            <h3 className="text-base font-semibold text-white">
+              {getShootDayTitle(plan, client)}
             </h3>
             <p className="text-xs text-gray-500">
-              {clientCards.length} shoot{clientCards.length === 1 ? "" : "s"} ·{" "}
-              {timeline.length} timed slot{timeline.length === 1 ? "" : "s"}
+              <span style={{ color }}>{client}</span>
+              {' · '}
+              {clientCards.length} item{clientCards.length === 1 ? "" : "s"}
+              {timeline.length > 0 &&
+                ` · ${timeline.length} timed slot${timeline.length === 1 ? "" : "s"}`}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -171,6 +178,20 @@ function ClientShootSection({
           <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
             Session details
           </h4>
+          <label className="mb-4 block max-w-xs">
+            <span className="mb-1 block text-xs font-medium text-gray-400">Shoot date</span>
+            <input
+              type="date"
+              value={dateKey}
+              onChange={(e) => {
+                const nextDateKey = e.target.value;
+                if (nextDateKey && nextDateKey !== dateKey) {
+                  onMoveShootDay?.(client, dateKey, nextDateKey);
+                }
+              }}
+              className="select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50"
+            />
+          </label>
           <ShootDaySessionFields plan={plan} onUpdatePlan={onUpdatePlan} />
         </div>
 

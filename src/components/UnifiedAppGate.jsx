@@ -40,20 +40,25 @@ export default function UnifiedAppGate() {
     let cancelled = false;
 
     (async () => {
-      const staff = loadStaffSession();
-      if (staff && (await isStaffSessionValid(staff))) {
-        if (!cancelled) setMode('staff');
-        return;
-      }
-      if (staff) clearStaffSession();
+      try {
+        const staff = loadStaffSession();
+        if (staff && (await isStaffSessionValid(staff))) {
+          if (!cancelled) setMode('staff');
+          return;
+        }
+        if (staff) clearStaffSession();
 
-      const client = loadClientSession();
-      if (client?.brand) {
-        if (!cancelled) setMode('client');
-        return;
-      }
+        const client = loadClientSession();
+        if (client?.brand) {
+          if (!cancelled) setMode('client');
+          return;
+        }
 
-      if (!cancelled) setMode('login');
+        if (!cancelled) setMode('login');
+      } catch {
+        clearStaffSession();
+        if (!cancelled) setMode('login');
+      }
     })();
 
     return () => {
@@ -96,8 +101,11 @@ export default function UnifiedAppGate() {
 
   if (mode === 'loading') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
-        <p className="text-sm text-gray-500">Loading…</p>
+      <div
+        className="flex min-h-screen items-center justify-center bg-black"
+        style={{ color: 'rgba(255,255,255,0.75)' }}
+      >
+        <p className="text-sm">Loading…</p>
       </div>
     );
   }

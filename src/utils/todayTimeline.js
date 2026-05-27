@@ -4,6 +4,16 @@ import {
   expandMeetingsForRange,
   getMeetingContactLabel,
 } from './meetingsCalendar';
+import { cardIsAssignedToStaff } from './staffMembers';
+import {
+  getShootCards,
+  getCardsForShootDate,
+  groupShootDayClients,
+  getShootDayTitle,
+  resolveShootDayTime,
+  resolveShootDayEndTime,
+  buildShootDayTimelineSubtitle,
+} from './shootDay';
 
 export function buildTodayHeadline(meetingCount, shootCount) {
   const parts = [];
@@ -17,10 +27,102 @@ export function buildTodayHeadline(meetingCount, shootCount) {
   return `You have ${parts.join(' and ')} today.`;
 }
 
-export function buildTodayTimeline({ meetings = [], shoots = [], clientFilter = 'all' }) {
+function cardMatchesScope(card, personalScope, staffName, clientAccountManagers) {
+  if (!personalScope || !staffName) return true;
+  return cardIsAssignedToStaff(card, staffName, clientAccountManagers);
+}
+
+function buildTodayShootItems({
+  cards,
+  plans,
+  getPlan,
+  today,
+  clientFilter = 'all',
+  clientOrder = [],
+  staffName = '',
+  clientAccountManagers = {},
+  personalScope = false,
+  includePlanOnlyDays = true,
+}) {
+  let shootCards = getShootCards(cards);
+  if (clientFilter !== 'all') {
+    shootCards = shootCards.filter((card) => card.client === clientFilter);
+  }
+
+  const todayCards = getCardsForShootDate(shootCards, today);
+  const cardSource = includePlanOnlyDays ? todayCards : todayCards.filter((card) =>
+    cardMatchesScope(card, personalScope, staffName, clientAccountManagers),
+  );
+
+  const groups = groupShootDayClients(
+    cardSource,
+    today,
+    getPlan,
+    plans,
+    clientOrder,
+  );
+
+  const items = [];
+
+  for (const group of groups) {
+    if (clientFilter !== 'all' && group.client !== clientFilter) continue;
+
+    const scopedCards = group.cards.filter((card) =>
+      cardMatchesScope(card, personalScope, staffName, clientAccountManagers),
+    );
+
+    if (personalScope && staffName && scopedCards.length === 0) continue;
+    if (scopedCards.length === 0 && !includePlanOnlyDays) continue;
+
+    const plan = getPlan?.(group.client, today) || {};
+    const time = resolveShootDayTime(plan, scopedCards);
+    const endTime = resolveShootDayEndTime(plan, scopedCards);
+
+    items.push({
+      id: `shoot-day-${group.client}-${today}`,
+      kind: 'shoot',
+      sortTime: time,
+      time,
+      endTime,
+      title: getShootDayTitle(plan, group.client),
+      subtitle: buildShootDayTimelineSubtitle(group.client, scopedCards, plan),
+      shootDay: {
+        client: group.client,
+        dateKey: today,
+      },
+    });
+  }
+
+  return items;
+}
+
+export function buildTodayTimeline({
+  meetings = [],
+  cards = [],
+  plans = {},
+  getPlan,
+  clientFilter = 'all',
+  clientOrder = [],
+  staffName = '',
+  clientAccountManagers = {},
+  personalScope = false,
+  includePlanOnlyDays = true,
+}) {
   const today = toDateKey(new Date());
   const visibleMeetings = filterMeetings(meetings, { client: clientFilter });
   const todayMeetings = expandMeetingsForRange(visibleMeetings, today, today);
+  const shootItems = buildTodayShootItems({
+    cards,
+    plans,
+    getPlan,
+    today,
+    clientFilter,
+    clientOrder,
+    staffName,
+    clientAccountManagers,
+    personalScope,
+    includePlanOnlyDays,
+  });
 
   const items = [];
 
@@ -37,18 +139,7 @@ export function buildTodayTimeline({ meetings = [], shoots = [], clientFilter = 
     });
   }
 
-  for (const card of shoots) {
-    items.push({
-      id: `shoot-${card.id}`,
-      kind: 'shoot',
-      sortTime: card.shootTime || '',
-      time: card.shootTime || '',
-      endTime: card.shootEndTime || '',
-      title: card.title,
-      subtitle: [card.client, card.contentType, card.contentCreator].filter(Boolean).join(' · '),
-      card,
-    });
-  }
+  items.push(...shootItems);
 
   items.sort((a, b) => {
     const timeCompare = (a.sortTime || '99:99').localeCompare(b.sortTime || '99:99');
@@ -60,7 +151,8 @@ export function buildTodayTimeline({ meetings = [], shoots = [], clientFilter = 
   return {
     today,
     meetingCount: todayMeetings.length,
-    shootCount: shoots.length,
+    shootCount: shootItems.length,
+    shootDayCount: shootItems.length,
     items,
   };
 }

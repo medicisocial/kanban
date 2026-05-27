@@ -1,6 +1,7 @@
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import { buildWorkspaceHomeSummary, buildMyWorkGreeting } from '../utils/workspaceHome';
 import { buildTodayTimeline, buildTodayHeadline } from '../utils/todayTimeline';
+import { useClientsContext } from '../context/ClientsContext';
 import { btnSecondaryClass } from './clientPortal/clientPortalUi';
 import { formatTime } from '../utils';
 
@@ -71,10 +72,10 @@ function formatTimelineTime(time, endTime) {
   return formatTime(time);
 }
 
-function TodayTimelineItem({ item, onOpenMeeting, onOpenCard }) {
+function TodayTimelineItem({ item, onOpenMeeting, onOpenShoot }) {
   const handleClick = () => {
     if (item.kind === 'meeting') onOpenMeeting?.(item.meeting);
-    else onOpenCard?.(item.card);
+    else if (item.kind === 'shoot') onOpenShoot?.(item.shootDay);
   };
 
   return (
@@ -96,7 +97,7 @@ function TodayTimelineItem({ item, onOpenMeeting, onOpenCard }) {
   );
 }
 
-function OverviewTodayPanel({ timeline, onOpenMeeting, onOpenCard, onNavigate }) {
+function OverviewTodayPanel({ timeline, onOpenMeeting, onOpenShoot, onNavigate }) {
   const todayLabel = new Date(`${timeline.today}T12:00:00`).toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -122,7 +123,7 @@ function OverviewTodayPanel({ timeline, onOpenMeeting, onOpenCard, onNavigate })
           )}
           {timeline.shootCount > 0 && (
             <PanelHeaderAction
-              label={`Shoots (${timeline.shootCount})`}
+              label={`Shoots (${timeline.shootDayCount ?? timeline.shootCount})`}
               prominent={timeline.meetingCount === 0}
               onClick={() => onNavigate('shoot')}
             />
@@ -136,7 +137,7 @@ function OverviewTodayPanel({ timeline, onOpenMeeting, onOpenCard, onNavigate })
             key={item.id}
             item={item}
             onOpenMeeting={onOpenMeeting}
-            onOpenCard={onOpenCard}
+            onOpenShoot={onOpenShoot}
           />
         ))}
       </div>
@@ -149,6 +150,8 @@ export default function WorkspaceHomePage({
   ideas,
   adminTasks,
   meetings = [],
+  plans = {},
+  getPlan,
   clientFilter,
   syncTotal,
   staffName = '',
@@ -157,10 +160,12 @@ export default function WorkspaceHomePage({
   companyWideView = false,
   showAccountManagerQueue = true,
   onNavigate,
-  onOpenCard,
   onOpenMeeting,
+  onOpenShoot,
   onOpenNotifications,
 }) {
+  const { clients } = useClientsContext();
+
   const summary = buildWorkspaceHomeSummary({
     cards,
     ideas,
@@ -176,13 +181,21 @@ export default function WorkspaceHomePage({
 
   const todayTimeline = buildTodayTimeline({
     meetings,
-    shoots: summary.shootsToday,
+    cards,
+    plans,
+    getPlan,
     clientFilter,
+    clientOrder: clients,
+    staffName,
+    clientAccountManagers,
+    personalScope: myWorkOnly && !companyWideView,
+    includePlanOnlyDays: companyWideView || !myWorkOnly,
   });
 
   const summaryWithToday = {
     ...summary,
     meetingsTodayCount: todayTimeline.meetingCount,
+    shootsTodayCount: todayTimeline.shootDayCount ?? todayTimeline.shootCount,
   };
 
   const firstName = staffName.trim().split(/\s+/)[0] || '';
@@ -321,7 +334,7 @@ export default function WorkspaceHomePage({
         <OverviewTodayPanel
           timeline={todayTimeline}
           onOpenMeeting={onOpenMeeting}
-          onOpenCard={onOpenCard}
+          onOpenShoot={onOpenShoot}
           onNavigate={onNavigate}
         />
       )}

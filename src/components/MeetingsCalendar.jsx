@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   getDefaultCalendarDate,
   addMonths,
   toDateKey,
   getMonthGridRange,
+  parseDateKey,
 } from '../utils/calendar';
 import {
   filterMeetings,
@@ -29,9 +30,27 @@ export default function MeetingsCalendar({
   onDeleteMeeting,
   embedded = false,
   hideSectionHeader = false,
+  openMeetingRequest,
+  onOpenMeetingRequestHandled,
 }) {
   const [focusDate, setFocusDate] = useState(() => getDefaultCalendarDate());
   const [modal, setModal] = useState(null);
+
+  useEffect(() => {
+    if (!openMeetingRequest?.meeting) return;
+
+    const meeting = openMeetingRequest.meeting;
+    const occurrenceDate = meeting.occurrenceDate || meeting.date;
+    if (occurrenceDate) {
+      setFocusDate(parseDateKey(occurrenceDate));
+    }
+    setModal({
+      mode: 'edit',
+      meeting,
+      occurrenceDate,
+    });
+    onOpenMeetingRequestHandled?.();
+  }, [openMeetingRequest, onOpenMeetingRequestHandled]);
 
   const effectiveClientFilter = scopedBrand || clientFilter;
   const showAllClients = !scopedBrand && effectiveClientFilter === 'all';

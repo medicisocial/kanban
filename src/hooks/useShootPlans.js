@@ -17,6 +17,7 @@ function createPlan(client, dateKey) {
     client,
     dateKey,
     manual: false,
+    title: "",
     location: "",
     callTime: "",
     shootStartTime: "",

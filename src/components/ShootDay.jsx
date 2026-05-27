@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { filterCards } from '../utils';
 import {
   getDefaultShootDate,
@@ -33,11 +33,24 @@ export default function ShootDay({
   onRemoveFromSchedule,
   onRemoveClientShoot,
   embedded = false,
+  focusRequest,
+  onMoveClientShootDay,
+  onNavigate,
 }) {
   const { clients } = useClientsContext();
   const [focusDate, setFocusDate] = useState(() => getDefaultShootDate());
   const [viewMode, setViewMode] = useState('month');
   const [shootModal, setShootModal] = useState(null);
+  const [pinnedClient, setPinnedClient] = useState(null);
+
+  useEffect(() => {
+    if (!focusRequest?.dateKey) return;
+    setFocusDate(inputValueToDate(focusRequest.dateKey));
+    setViewMode('day');
+    if (focusRequest.client) {
+      setPinnedClient(focusRequest.client);
+    }
+  }, [focusRequest?.dateKey, focusRequest?.token, focusRequest?.client]);
 
   const dateKey = toDateKey(focusDate);
 
@@ -78,6 +91,22 @@ export default function ShootDay({
 
   const goToday = () => setFocusDate(getDefaultShootDate());
 
+  const handleFocusDateChange = (value) => {
+    const nextDateKey = value;
+    if (!nextDateKey || nextDateKey === dateKey) return;
+
+    if (viewMode === 'day' && hasShootDay && onMoveClientShootDay) {
+      const moveClient =
+        pinnedClient || (clientGroups.length === 1 ? clientGroups[0].client : null);
+      if (moveClient) {
+        onMoveClientShootDay(moveClient, dateKey, nextDateKey);
+        return;
+      }
+    }
+
+    setFocusDate(inputValueToDate(nextDateKey));
+  };
+
   const handleDayClick = (day) => {
     setFocusDate(day);
     setViewMode('day');
@@ -101,6 +130,27 @@ export default function ShootDay({
 
   const shootBody = (
     <>
+      {embedded && viewMode === 'day' && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setViewMode('month')}
+            className={`${btnSecondaryClass} py-1.5 text-[11px] normal-case tracking-normal`}
+          >
+            ← Month calendar
+          </button>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate('calendars')}
+              className={`${btnSecondaryClass} py-1.5 text-[11px] normal-case tracking-normal`}
+            >
+              Calendars
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <button type="button" onClick={goPrev} className={navBtnClass}>
@@ -116,8 +166,13 @@ export default function ShootDay({
             <input
               type="date"
               value={dateKeyToInputValue(focusDate)}
-              onChange={(e) => setFocusDate(inputValueToDate(e.target.value))}
+              onChange={(e) => handleFocusDateChange(e.target.value)}
               className={`${inputClass} w-auto text-xs`}
+              title={
+                hasShootDay && (pinnedClient || clientGroups.length === 1)
+                  ? 'Change shoot date'
+                  : 'View another day'
+              }
             />
           )}
         </div>
@@ -165,6 +220,7 @@ export default function ShootDay({
             onUpdatePlan={onUpdatePlan}
             onRemoveFromSchedule={onRemoveFromSchedule}
             onRemoveClientShoot={onRemoveClientShoot}
+            onMoveClientShootDay={onMoveClientShootDay}
           />
         ) : (
           <ShootDayMonthView
@@ -204,7 +260,17 @@ export default function ShootDay({
         <ClientPortalSectionHeader
           title="Scheduled shoots"
           description="Plan on-set days, assign clients, and manage content scheduled for each session."
-        />
+        >
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate('home')}
+              className={`${btnSecondaryClass} py-1.5 text-[11px] normal-case tracking-normal`}
+            >
+              ← Overview
+            </button>
+          )}
+        </ClientPortalSectionHeader>
         {shootBody}
       </section>
     );

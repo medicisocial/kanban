@@ -429,6 +429,42 @@ export function aggregateNeeds(cards, sessionNeeds = "") {
   return [...set];
 }
 
+export function getShootDayTitle(plan, client) {
+  const trimmed = plan?.title?.trim();
+  if (trimmed) return trimmed;
+  return `${client} shoot`;
+}
+
+export function resolveShootDayTime(plan, cards = []) {
+  if (plan?.shootStartTime) return plan.shootStartTime;
+  if (plan?.callTime) return plan.callTime;
+
+  const cardTimes = cards
+    .map((card) => card.shootTime)
+    .filter(Boolean)
+    .sort((a, b) => (parseTimeToMinutes(a) ?? 9999) - (parseTimeToMinutes(b) ?? 9999));
+  return cardTimes[0] || '';
+}
+
+export function resolveShootDayEndTime(plan, cards = []) {
+  if (plan?.shootEndTime) return plan.shootEndTime;
+
+  const cardEndTimes = cards
+    .map((card) => card.shootEndTime || getDefaultShootEndTime(card.shootTime, card.contentType))
+    .filter(Boolean)
+    .sort((a, b) => (parseTimeToMinutes(b) ?? 0) - (parseTimeToMinutes(a) ?? 0));
+  return cardEndTimes[0] || '';
+}
+
+export function buildShootDayTimelineSubtitle(client, cards, plan) {
+  const parts = [client];
+  if (cards.length > 0) {
+    parts.push(`${cards.length} item${cards.length === 1 ? '' : 's'}`);
+  }
+  if (plan?.location?.trim()) parts.push(plan.location.trim());
+  return parts.join(' · ');
+}
+
 export function getShootPlanKey(client, dateKey) {
   return `${client}|${dateKey}`;
 }

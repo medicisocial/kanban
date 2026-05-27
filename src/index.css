@@ -91,11 +91,9 @@ select option:hover {
 
 @keyframes login-fade-in {
   from {
-    opacity: 0;
     transform: translateY(10px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
   }
 }
@@ -541,11 +539,9 @@ select option:hover {
 
 @keyframes portal-content-fade {
   from {
-    opacity: 0;
     transform: translateY(8px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
   }
 }
@@ -822,7 +818,7 @@ select option:hover {
 }
 
 .overview-timeline-dot-shoot {
-  background: #810100;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .overview-timeline-content {
@@ -843,7 +839,7 @@ select option:hover {
 }
 
 .overview-timeline-kind-shoot {
-  color: rgba(220, 38, 38, 0.75);
+  color: rgba(255, 255, 255, 0.38);
 }
 
 @media (max-width: 640px) {
@@ -873,10 +869,10 @@ select option:hover {
 
 @keyframes portal-sidebar-in {
   from {
-    opacity: 0;
+    transform: translateX(-6px);
   }
   to {
-    opacity: 1;
+    transform: translateX(0);
   }
 }
 

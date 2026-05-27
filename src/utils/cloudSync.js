@@ -11,6 +11,7 @@ import {
 
 const REMOTE_POLL_MS = 4000;
 const LOCAL_PUSH_DEBOUNCE_MS = 1500;
+const FETCH_TIMEOUT_MS = 12000;
 
 function authHeaders(session) {
   return {
@@ -19,12 +20,31 @@ function authHeaders(session) {
   };
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export { REMOTE_POLL_MS, LOCAL_PUSH_DEBOUNCE_MS };
 
 export async function fetchWorkspace(session) {
-  const response = await fetch('/api/workspace', {
-    headers: authHeaders(session),
-  });
+  let response;
+  try {
+    response = await fetchWithTimeout('/api/workspace', {
+      headers: authHeaders(session),
+    });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      return { unavailable: true, workspace: null };
+    }
+    throw error;
+  }
 
   if (response.status === 401) {
     throw new Error('Session expired. Please sign in again.');
@@ -38,16 +58,35 @@ export async function fetchWorkspace(session) {
     throw new Error('Could not load workspace from cloud.');
   }
 
-  const workspace = await response.json();
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    return { unavailable: true, workspace: null };
+  }
+
+  let workspace;
+  try {
+    workspace = await response.json();
+  } catch {
+    return { unavailable: true, workspace: null };
+  }
+
   return { unavailable: false, workspace };
 }
 
 export async function pushWorkspace(session, payload = buildBackupPayloadForPush()) {
-  const response = await fetch('/api/workspace', {
-    method: 'PUT',
-    headers: authHeaders(session),
-    body: JSON.stringify(payload),
-  });
+  let response;
+  try {
+    response = await fetchWithTimeout('/api/workspace', {
+      method: 'PUT',
+      headers: authHeaders(session),
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      return { unavailable: true };
+    }
+    throw error;
+  }
 
   if (response.status === 401) {
     throw new Error('Session expired. Please sign in again.');
@@ -87,8 +126,8 @@ export async function syncWorkspace(session) {
   const localTime = getPayloadTimestamp(local);
 
   if (!localHasData || remoteTime > localTime) {
-    applyBackupPayload(remote);
-    return { status: 'downloaded', reload: true };
+    const applied = applyBackupPayload(remote);
+    return applied ? { status: 'downloaded', reload: true } : { status: 'error' };
   }
 
   if (localTime > remoteTime || isLocalWorkspaceDirty()) {
@@ -116,6 +155,6 @@ export async function pullIfRemoteNewer(session) {
     return { updated: false, skippedDirty: false };
   }
 
-  applyBackupPayload(remote);
-  return { updated: true, skippedDirty: false };
+  const applied = applyBackupPayload(remote);
+  return applied ? { updated: true, skippedDirty: false } : { updated: false, skippedDirty: false };
 }

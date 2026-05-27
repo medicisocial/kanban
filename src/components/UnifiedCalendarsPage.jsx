@@ -3,7 +3,7 @@ import Calendar from './Calendar';
 import EventsCalendar from './EventsCalendar';
 import MeetingsCalendar from './MeetingsCalendar';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import { btnPrimaryClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass } from './clientPortal/clientPortalUi';
 
 export default function UnifiedCalendarsPage({
   cards,
@@ -11,6 +11,9 @@ export default function UnifiedCalendarsPage({
   meetings,
   clientFilter,
   initialTab = 'content',
+  openMeetingRequest,
+  onOpenMeetingRequestHandled,
+  onNavigate,
   onCardClick,
   onAddCalendarPost,
   onRemoveFromCalendar,
@@ -27,6 +30,12 @@ export default function UnifiedCalendarsPage({
     setTab(initialTab);
   }, [initialTab]);
 
+  useEffect(() => {
+    if (openMeetingRequest?.meeting) {
+      setTab('meetings');
+    }
+  }, [openMeetingRequest]);
+
   const tabClass = (id) =>
     `px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition ${
       tab === id ? `${btnPrimaryClass} py-1.5` : 'text-white/45 hover:text-white'
@@ -36,18 +45,28 @@ export default function UnifiedCalendarsPage({
     <section>
       <ClientPortalSectionHeader
         title="Calendars"
-        description="Content publishing schedule, team meetings, and client industry events."
-      />
+        description="Content publishing schedule, client industry events, and team meetings."
+      >
+        {onNavigate && (
+          <button
+            type="button"
+            onClick={() => onNavigate('home')}
+            className={`${btnSecondaryClass} py-1.5 text-[11px] normal-case tracking-normal`}
+          >
+            ← Overview
+          </button>
+        )}
+      </ClientPortalSectionHeader>
 
       <div className="mb-6 flex w-fit border border-white/10 bg-white/[0.03] p-0.5">
         <button type="button" onClick={() => setTab('content')} className={tabClass('content')}>
           Content
         </button>
-        <button type="button" onClick={() => setTab('meetings')} className={tabClass('meetings')}>
-          Meetings
-        </button>
         <button type="button" onClick={() => setTab('events')} className={tabClass('events')}>
           Events
+        </button>
+        <button type="button" onClick={() => setTab('meetings')} className={tabClass('meetings')}>
+          Meetings
         </button>
       </div>
 
@@ -71,6 +90,8 @@ export default function UnifiedCalendarsPage({
           onDeleteMeeting={onDeleteMeeting}
           embedded
           hideSectionHeader
+          openMeetingRequest={openMeetingRequest}
+          onOpenMeetingRequestHandled={onOpenMeetingRequestHandled}
         />
       )}
 

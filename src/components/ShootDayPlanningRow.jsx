@@ -200,6 +200,21 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="block sm:col-span-2">
+        <span className="mb-1 block text-xs font-medium text-gray-400">Shoot name</span>
+        <input
+          type="text"
+          value={plan.title || ""}
+          onChange={(e) => onUpdatePlan({ title: e.target.value, manual: true })}
+          disabled={readOnly}
+          placeholder={`e.g. ${plan.client || "Client"} spring campaign`}
+          className={inputClassWide}
+        />
+        <p className="mt-1 text-[10px] text-gray-500">
+          Appears on the Overview timeline and shoot day header.
+        </p>
+      </label>
+
+      <label className="block sm:col-span-2">
         <span className="mb-1 block text-xs font-medium text-gray-400">Location</span>
         <input
           type="text"

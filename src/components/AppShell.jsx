@@ -83,6 +83,8 @@ export default function AppShell({ onSignOut }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [tasksRole, setTasksRole] = useState('creator');
   const [calendarsTab, setCalendarsTab] = useState('content');
+  const [shootFocus, setShootFocus] = useState(null);
+  const [openMeetingRequest, setOpenMeetingRequest] = useState(null);
   const [handoffCard, setHandoffCard] = useState(null);
   const [responseCount, setResponseCount] = useState(() => loadClientResponses().length);
   const [contentReviewResponseCount, setContentReviewResponseCount] = useState(
@@ -101,12 +103,25 @@ export default function AppShell({ onSignOut }) {
     setSelectedCard(stored);
   };
 
-  const handleNavigate = useCallback((view, options) => {
+  const handleNavigate = useCallback((view, options = {}) => {
     if (options?.tasksRole) {
       setTasksRole(options.tasksRole);
     }
     if (options?.calendarsTab) {
       setCalendarsTab(options.calendarsTab);
+    }
+    if (options?.openMeeting) {
+      setOpenMeetingRequest({ meeting: options.openMeeting, token: Date.now() });
+    }
+    if (options?.shootDate) {
+      setShootFocus({
+        dateKey: options.shootDate,
+        client: options.shootClient || null,
+        token: Date.now(),
+      });
+    }
+    if (view !== 'shoot') {
+      setShootFocus(null);
     }
     setActiveView(view);
   }, []);
@@ -281,6 +296,56 @@ export default function AppShell({ onSignOut }) {
     );
   };
 
+  const handleMoveClientShootDay = useCallback(
+    (client, fromDateKey, toDateKey) => {
+      if (!client || !fromDateKey || !toDateKey || fromDateKey === toDateKey) return;
+
+      cards
+        .filter(
+          (card) =>
+            card.client === client &&
+            card.shootDate === fromDateKey &&
+            card.contentType !== "Story",
+        )
+        .forEach((card) => {
+          updateCard(card.id, { shootDate: toDateKey });
+        });
+
+      const oldPlan = getPlan(client, fromDateKey);
+      const hadShootContent =
+        oldPlan.manual ||
+        cards.some(
+          (card) =>
+            card.client === client &&
+            card.shootDate === fromDateKey &&
+            card.contentType !== "Story",
+        );
+
+      if (hadShootContent) {
+        updatePlan(client, toDateKey, {
+          title: oldPlan.title || "",
+          location: oldPlan.location || "",
+          callTime: oldPlan.callTime || "",
+          shootStartTime: oldPlan.shootStartTime || "",
+          shootEndTime: oldPlan.shootEndTime || "",
+          sessionModels: oldPlan.sessionModels || "",
+          sessionNeeds: oldPlan.sessionNeeds || "",
+          notes: oldPlan.notes || "",
+          manual: true,
+        });
+        deletePlan(client, fromDateKey);
+      }
+
+      setSelectedCard((prev) => {
+        if (!prev || prev.client !== client || prev.shootDate !== fromDateKey) return prev;
+        return { ...prev, shootDate: toDateKey };
+      });
+
+      setShootFocus({ dateKey: toDateKey, client, token: Date.now() });
+    },
+    [cards, updateCard, getPlan, updatePlan, deletePlan],
+  );
+
   const handleUpdate = (id, updates) => {
     updateCard(id, updates);
     setSelectedCard((prev) => {
@@ -293,6 +358,17 @@ export default function AppShell({ onSignOut }) {
       }
       return next;
     });
+
+    if (updates.shootDate !== undefined && activeView === "shoot") {
+      const card = cards.find((entry) => entry.id === id);
+      if (card?.client && updates.shootDate) {
+        setShootFocus({
+          dateKey: updates.shootDate,
+          client: card.client,
+          token: Date.now(),
+        });
+      }
+    }
   };
 
   const handleDelete = (id) => {
@@ -503,7 +579,7 @@ export default function AppShell({ onSignOut }) {
       cards,
       ideas,
       adminTasks,
-      clientFilter,
+      clientFilter: 'all',
       syncTotal,
       staffName,
       clientAccountManagers,
@@ -516,7 +592,6 @@ export default function AppShell({ onSignOut }) {
     cards,
     ideas,
     adminTasks,
-    clientFilter,
     syncTotal,
     staffName,
     clientAccountManagers,
@@ -527,8 +602,11 @@ export default function AppShell({ onSignOut }) {
 
   if (authRequired && !ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
-        <p className="text-sm text-gray-500">Loading…</p>
+      <div
+        className="flex min-h-screen items-center justify-center bg-black"
+        style={{ color: 'rgba(255,255,255,0.75)' }}
+      >
+        <p className="text-sm">Loading…</p>
       </div>
     );
   }
@@ -628,6 +706,8 @@ export default function AppShell({ onSignOut }) {
           ideas={ideas}
           adminTasks={adminTasks}
           meetings={meetings}
+          plans={plans}
+          getPlan={getPlan}
           clientFilter={clientFilter}
           syncTotal={syncTotal}
           staffName={staffName}
@@ -636,8 +716,12 @@ export default function AppShell({ onSignOut }) {
           companyWideView={companyWideView}
           showAccountManagerQueue={showAccountManagerQueue}
           onNavigate={handleNavigate}
-          onOpenCard={handleCardClick}
-          onOpenMeeting={() => handleNavigate('calendars', { calendarsTab: 'meetings' })}
+          onOpenMeeting={(meeting) =>
+            handleNavigate('calendars', { calendarsTab: 'meetings', openMeeting: meeting })
+          }
+          onOpenShoot={(shootDay) =>
+            handleNavigate('shoot', { shootDate: shootDay.dateKey, shootClient: shootDay.client })
+          }
           onOpenNotifications={() => setNotificationsOpen(true)}
         />
       )}
@@ -679,6 +763,9 @@ export default function AppShell({ onSignOut }) {
           meetings={meetings}
           clientFilter={clientFilter}
           initialTab={calendarsTab}
+          openMeetingRequest={openMeetingRequest}
+          onOpenMeetingRequestHandled={() => setOpenMeetingRequest(null)}
+          onNavigate={handleNavigate}
           onCardClick={handleCardClick}
           onAddCalendarPost={handleAddCalendarPost}
           onRemoveFromCalendar={handleRemoveFromCalendar}
@@ -721,6 +808,9 @@ export default function AppShell({ onSignOut }) {
           cards={cards}
           clientFilter={clientFilter}
           plans={plans}
+          focusRequest={shootFocus}
+          onMoveClientShootDay={handleMoveClientShootDay}
+          onNavigate={handleNavigate}
           onCardClick={handleCardClick}
           onUpdateCard={updateCard}
           onAddShootItem={handleAddShootItem}
