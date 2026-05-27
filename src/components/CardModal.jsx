@@ -12,7 +12,7 @@ import {
 import { useClientsContext } from '../context/ClientsContext';
 import { hasStoryRecurrence, hasStoryDailyRange, getStoryScheduleMode, parseRecurrenceDays, parseStoryOccurrenceNotes } from '../utils/calendar';
 import { formatScheduledDateTime, formatDate, formatTime } from '../utils';
-import { getDefaultShootEndTime, parseTimeToMinutes, getClientUpcomingShoots } from '../utils/shootDay';
+import { getDefaultShootEndTime, parseTimeToMinutes, getClientUpcomingShoots, sortCardsByShootTime } from '../utils/shootDay';
 import StoryRecurrencePicker from './StoryRecurrencePicker';
 import ModelTagInput from './ModelTagInput';
 import TimeInput from './TimeInput';
@@ -39,6 +39,7 @@ export default function CardModal({
   onOpenCard,
 }) {
   const overlayRef = useRef(null);
+  const pendingTabRef = useRef(null);
   const [activeTab, setActiveTab] = useState('details');
   const { clients, getClientAccountManager, getMemberNamesForRole } = useClientsContext();
   const editors = getMemberNamesForRole('Editor');
@@ -46,7 +47,12 @@ export default function CardModal({
   const accountManagers = getMemberNamesForRole('Account Manager');
 
   useEffect(() => {
-    setActiveTab('details');
+    if (pendingTabRef.current) {
+      setActiveTab(pendingTabRef.current);
+      pendingTabRef.current = null;
+    } else {
+      setActiveTab('details');
+    }
   }, [card?.id]);
 
   useEffect(() => {
@@ -63,14 +69,13 @@ export default function CardModal({
 
   const shootDayCards = useMemo(() => {
     if (!card?.shootDate || !needsShootSchedule(card?.contentType)) return [];
-    return cards
-      .filter(
-        (entry) =>
-          entry.client === card.client &&
-          entry.shootDate === card.shootDate &&
-          needsShootSchedule(entry.contentType),
-      )
-      .sort((a, b) => a.title.localeCompare(b.title));
+    const filtered = cards.filter(
+      (entry) =>
+        entry.client === card.client &&
+        entry.shootDate === card.shootDate &&
+        needsShootSchedule(entry.contentType),
+    );
+    return sortCardsByShootTime(filtered);
   }, [cards, card?.client, card?.shootDate, card?.contentType]);
 
   const upcomingShoots = useMemo(() => {
@@ -91,6 +96,49 @@ export default function CardModal({
       shootTime: session.shootTime || '',
       shootEndTime: session.shootEndTime || '',
     });
+  };
+
+  const openShootCard = (entry) => {
+    if (!onOpenCard || entry.id === card.id) return;
+    pendingTabRef.current = 'production';
+    onOpenCard(entry);
+  };
+
+  const renderShootRosterItem = (entry, { isCurrent = entry.id === card.id } = {}) => {
+    const entryStyle = getContentTypeStyle(entry.contentType);
+    const canOpen = !isCurrent && onOpenCard;
+
+    return (
+      <li key={entry.id}>
+        <button
+          type="button"
+          onClick={() => openShootCard(entry)}
+          disabled={!canOpen}
+          className={`w-full rounded-lg border px-3 py-2 text-left transition ${
+            isCurrent
+              ? 'cursor-default border-[#810100]/40 bg-[#810100]/10'
+              : canOpen
+                ? 'cursor-pointer border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.06]'
+                : 'cursor-default border-white/10 bg-white/[0.02]'
+          }`}
+          style={isCurrent ? { borderLeftWidth: 3, borderLeftColor: entryStyle.border } : undefined}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-white">{entry.title}</p>
+              <p className="mt-0.5 text-xs text-gray-500">
+                <span className={entryStyle.label}>{entry.contentType}</span>
+                {entry.shootTime ? ` · ${formatTime(entry.shootTime)}` : ''}
+                {isCurrent ? ' · this card' : canOpen ? ' · click to open' : ''}
+              </p>
+            </div>
+            {canOpen && (
+              <span className="shrink-0 text-xs font-medium text-[#fca5a5]">Open →</span>
+            )}
+          </div>
+        </button>
+      </li>
+    );
   };
 
   const handleChange = (field, value) => {
@@ -448,6 +496,11 @@ export default function CardModal({
                         )}
                       </div>
                     </div>
+                    {session.cards.length > 0 && (
+                      <ul className="mt-3 space-y-1.5 border-t border-white/5 pt-3">
+                        {session.cards.map((entry) => renderShootRosterItem(entry))}
+                      </ul>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -480,41 +533,7 @@ export default function CardModal({
                 )}
               </div>
               <ul className="space-y-2">
-                {shootDayCards.map((entry) => {
-                  const entryStyle = getContentTypeStyle(entry.contentType);
-                  const isCurrent = entry.id === card.id;
-                  return (
-                    <li
-                      key={entry.id}
-                      className={`rounded-lg border px-3 py-2 ${
-                        isCurrent
-                          ? 'border-[#810100]/40 bg-[#810100]/10'
-                          : 'border-white/10 bg-white/[0.02]'
-                      }`}
-                      style={isCurrent ? { borderLeftWidth: 3, borderLeftColor: entryStyle.border } : undefined}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-white">{entry.title}</p>
-                          <p className="mt-0.5 text-xs text-gray-500">
-                            <span className={entryStyle.label}>{entry.contentType}</span>
-                            {entry.shootTime ? ` · ${formatTime(entry.shootTime)}` : ''}
-                            {isCurrent ? ' · this card' : ''}
-                          </p>
-                        </div>
-                        {!isCurrent && onOpenCard && (
-                          <button
-                            type="button"
-                            onClick={() => onOpenCard(entry)}
-                            className="shrink-0 text-xs text-gray-400 hover:text-white"
-                          >
-                            Open
-                          </button>
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
+                {shootDayCards.map((entry) => renderShootRosterItem(entry))}
               </ul>
               {shootDayCards.length === 1 && (
                 <p className="mt-3 text-xs text-gray-500">
