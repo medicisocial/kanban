@@ -7,6 +7,8 @@ import { clientInitials } from './clientPortalUi';
 import { normalizeClientLogo } from '../../utils/clientLogo';
 
 const SIDEBAR_COLLAPSED_KEY = 'portal-sidebar-collapsed';
+const SIDEBAR_WIDTH_EXPANDED = 280;
+const SIDEBAR_WIDTH_COLLAPSED = 72;
 
 function SidebarBrand({
   brandLayout = false,
@@ -74,7 +76,7 @@ function SidebarBrand({
           />
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-[15px] font-semibold leading-tight tracking-tight text-white">
+              <h1 className="truncate text-base font-semibold leading-tight tracking-tight text-white">
                 {brandName}
               </h1>
               {subtitle && (
@@ -103,7 +105,7 @@ function SidebarBrand({
         {renderStaffLogo()}
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[15px] font-semibold leading-tight tracking-tight text-white">
+            <h1 className="truncate text-base font-semibold leading-tight tracking-tight text-white">
               {productTitle}
             </h1>
             {subtitle && (
@@ -395,7 +397,7 @@ export default function EnterprisePortalLayout({
         onNavigate={handleNav}
       />
 
-      <div className={`shrink-0 space-y-1 border-t border-white/[0.04] py-3 ${sidebarCompact ? 'px-2' : 'px-3 lg:px-4'}`}>
+      <div className={`shrink-0 space-y-1 border-t border-white/[0.04] py-3 ${sidebarCompact ? 'px-2' : 'px-3 lg:px-5'}`}>
         {sidebarFooter && (
           <div className={sidebarCompact ? '[&_.portal-sidebar-footer-label]:hidden' : ''}>
             {sidebarFooter}
@@ -436,8 +438,8 @@ export default function EnterprisePortalLayout({
       <aside
         className={`portal-sidebar fixed inset-y-0 left-0 z-50 flex flex-col backdrop-blur-xl lg:relative lg:z-auto lg:shrink-0 lg:translate-x-0 ${
           navOpen
-            ? 'w-[min(252px,88vw)] translate-x-0'
-            : `-translate-x-full ${sidebarCompact ? 'lg:w-[68px]' : 'lg:w-[252px]'}`
+            ? `w-[min(${SIDEBAR_WIDTH_EXPANDED}px,88vw)] translate-x-0`
+            : `-translate-x-full ${sidebarCompact ? `lg:w-[${SIDEBAR_WIDTH_COLLAPSED}px]` : `lg:w-[${SIDEBAR_WIDTH_EXPANDED}px]`}`
         }`}
       >
         {sidebarContent}

@@ -73,14 +73,14 @@ export default function PortalSidebarNav({
         onClick={() => onNavigate(id)}
         title={sidebarCompact ? label : undefined}
         aria-current={active ? 'page' : undefined}
-        className={`portal-nav-item relative z-[1] flex w-full items-center rounded-lg py-2 text-left text-[13px] ${
-          sidebarCompact ? 'justify-center px-2' : 'gap-2.5 px-2.5'
+        className={`portal-nav-item relative z-[1] flex w-full items-center rounded-lg py-2.5 text-left text-sm ${
+          sidebarCompact ? 'justify-center px-2' : 'gap-3 px-3'
         } ${active ? 'portal-nav-item-active' : 'portal-nav-item-idle'} ${
           active && sidebarCompact ? 'portal-nav-item-active-compact' : ''
         }`}
       >
         {showIcon && Icon && (
-          <Icon className="portal-nav-icon h-4 w-4 shrink-0 opacity-50" aria-hidden />
+          <Icon className="portal-nav-icon h-[18px] w-[18px] shrink-0 opacity-50" aria-hidden />
         )}
         {!sidebarCompact && (
           <span className="portal-nav-label min-w-0 flex-1 truncate font-medium tracking-tight">{label}</span>
@@ -96,7 +96,7 @@ export default function PortalSidebarNav({
   return (
     <nav
       ref={navRef}
-      className={`flex-1 overflow-y-auto py-4 ${sidebarCompact ? 'px-2' : 'px-3 lg:px-4'}`}
+      className={`flex-1 overflow-y-auto py-4 ${sidebarCompact ? 'px-2' : 'px-3 lg:px-5'}`}
     >
       {sections.map((section, index) => {
         const sectionKey = section.label || String(index);

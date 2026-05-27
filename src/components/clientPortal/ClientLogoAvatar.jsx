@@ -9,8 +9,8 @@ const SIZE_PX = {
   xl: 56,
   '2xl': 88,
   '3xl': 128,
-  sidebar: 52,
-  compact: 40,
+  sidebar: 56,
+  compact: 44,
   header: 36,
 };
 
