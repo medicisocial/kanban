@@ -1,7 +1,6 @@
 import { getRedis, loadWorkspace, saveWorkspace } from './_lib/redis.mjs';
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
-
-import { mergeClientPortalAuth } from './_lib/clientPortalAuth.mjs';
+import { mergeClientPortalAuth, normalizeBrandUsers } from './_lib/clientPortalAuth.mjs';
 
 const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
 
@@ -50,8 +49,12 @@ export default async function handler(req, res) {
   await saveWorkspace(redis, workspace);
   const savedAuth = workspace.data[CLIENT_PORTAL_AUTH_KEY];
   const brandsWithPasswords = Object.entries(savedAuth)
-    .filter(([, entry]) => entry?.passwordHash)
+    .filter(([, entry]) => normalizeBrandUsers(entry).some((user) => user.passwordHash))
     .map(([brand]) => brand);
+  const userCount = Object.values(savedAuth).reduce(
+    (total, entry) => total + normalizeBrandUsers(entry).filter((user) => user.passwordHash).length,
+    0,
+  );
 
-  return res.status(200).json({ ok: true, brands: brandsWithPasswords });
+  return res.status(200).json({ ok: true, brands: brandsWithPasswords, userCount });
 }

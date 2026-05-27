@@ -2,6 +2,8 @@ import { useRef, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { syncClientPortalCredentialsToCloud } from '../utils/clientPortalAdmin';
+import { getClientPortalBrands } from '../utils/clients';
+import { INTERNAL_TEAM_CLIENT } from '../constants';
 import { exportBackupFile, importBackupFile } from '../utils/dataBackup';
 import AddClientModal from './AddClientModal';
 import ClientAssignmentsModal from './ClientAssignmentsModal';
@@ -15,17 +17,20 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
     addClient,
     clientAccountManagers,
     setClientAccountManager,
-    getCredential,
-    setClientPortalCredential,
+    getClientUsers,
+    setClientPortalUsers,
   } = useClientsContext();
   const { session } = useStaffAuth();
   const [showAddClient, setShowAddClient] = useState(false);
   const [showAssignments, setShowAssignments] = useState(false);
   const [showPortalLogins, setShowPortalLogins] = useState(false);
+  const [showTeamUsers, setShowTeamUsers] = useState(false);
   const [showClientProfiles, setShowClientProfiles] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [backupMessage, setBackupMessage] = useState('');
   const importInputRef = useRef(null);
+
+  const clientPortalBrands = getClientPortalBrands(clients, INTERNAL_TEAM_CLIENT);
 
   const handleAddClient = (name, color, logo) => {
     const result = addClient(name, color, logo);
@@ -101,11 +106,29 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
 
       {showPortalLogins && (
         <ClientPortalCredentialsModal
-          clients={clients}
-          getCredential={getCredential}
-          onSaveCredential={setClientPortalCredential}
+          clients={clientPortalBrands}
+          getClientUsers={getClientUsers}
+          onSaveClientUsers={setClientPortalUsers}
           onSyncToCloud={(credentials) => syncClientPortalCredentialsToCloud(session, credentials)}
           onClose={() => setShowPortalLogins(false)}
+          variant="clients"
+          title="Client portal users"
+          description="Add logins for client brands. Each user signs in at the main site URL."
+          saveLabel="Save client users"
+        />
+      )}
+
+      {showTeamUsers && clients.includes(INTERNAL_TEAM_CLIENT) && (
+        <ClientPortalCredentialsModal
+          clients={[INTERNAL_TEAM_CLIENT]}
+          getClientUsers={getClientUsers}
+          onSaveClientUsers={setClientPortalUsers}
+          onSyncToCloud={(credentials) => syncClientPortalCredentialsToCloud(session, credentials)}
+          onClose={() => setShowTeamUsers(false)}
+          variant="team"
+          title="Medici Social Team"
+          description="Internal team logins for Medici Social. Separate from client brand access."
+          saveLabel="Save team users"
         />
       )}
 
@@ -173,13 +196,16 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
             <button type="button" onClick={() => openModal(setShowClientProfiles)} className={menuItemClass}>
               Client profiles
             </button>
+            <button type="button" onClick={() => openModal(setShowPortalLogins)} className={menuItemClass}>
+              Client users
+            </button>
 
             <p className={groupLabelClass}>Team</p>
             <button type="button" onClick={() => openModal(setShowAssignments)} className={menuItemClass}>
               AM assignments
             </button>
-            <button type="button" onClick={() => openModal(setShowPortalLogins)} className={menuItemClass}>
-              Client logins
+            <button type="button" onClick={() => openModal(setShowTeamUsers)} className={menuItemClass}>
+              Medici Social Team
             </button>
 
             <p className={groupLabelClass}>Data</p>
@@ -212,6 +238,7 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
     setShowAssignments,
     setShowClientProfiles,
     setShowPortalLogins,
+    setShowTeamUsers,
     handleExport,
     importInputRef,
     backupMessage,
@@ -239,7 +266,10 @@ export default function FilterBar({ clientFilter, onClientChange }) {
           Client profiles
         </button>
         <button type="button" onClick={() => admin.setShowPortalLogins(true)} className={actionBtnClass}>
-          Client logins
+          Client users
+        </button>
+        <button type="button" onClick={() => admin.setShowTeamUsers(true)} className={actionBtnClass}>
+          Medici Social Team
         </button>
         <button type="button" onClick={admin.handleExport} className={actionBtnClass}>
           Export backup

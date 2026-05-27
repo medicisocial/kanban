@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 
 const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -26,49 +26,82 @@ export function getClientPortalAuthMap(workspace) {
   return workspace?.data?.[CLIENT_PORTAL_AUTH_KEY] || {};
 }
 
-function normalizeCredentialEntry(entry) {
-  if (!entry || typeof entry !== 'object') return null;
-  const username = entry.username?.trim() || '';
-  const passwordHash = entry.passwordHash?.trim().toLowerCase() || '';
+function normalizeClientUser(user, fallbackId) {
+  if (!user || typeof user !== 'object') return null;
+  const username = user.username?.trim() || '';
+  const passwordHash = user.passwordHash?.trim().toLowerCase() || '';
+  const displayName = user.displayName?.trim() || '';
   if (!username && !passwordHash) return null;
-  return { username, passwordHash };
+  return {
+    id: user.id || fallbackId || randomUUID(),
+    username,
+    passwordHash,
+    displayName,
+  };
+}
+
+export function normalizeBrandUsers(entry) {
+  if (Array.isArray(entry)) {
+    return entry.map((user) => normalizeClientUser(user)).filter(Boolean);
+  }
+  if (entry && typeof entry === 'object' && (entry.username || entry.passwordHash)) {
+    return [normalizeClientUser(entry)].filter(Boolean);
+  }
+  return [];
+}
+
+function mergeBrandUsers(existingUsers, incomingUsers) {
+  const existingById = new Map(existingUsers.map((user) => [user.id, user]));
+  const merged = [];
+
+  for (const incoming of incomingUsers) {
+    const previous =
+      existingById.get(incoming.id) ||
+      existingUsers.find((user) => user.username.toLowerCase() === incoming.username.toLowerCase());
+
+    const passwordHash = incoming.passwordHash || previous?.passwordHash || '';
+    const username = incoming.username || previous?.username || '';
+    if (!passwordHash || !username) continue;
+
+    merged.push({
+      id: incoming.id || previous?.id || randomUUID(),
+      username,
+      passwordHash,
+      displayName: incoming.displayName || previous?.displayName || '',
+    });
+  }
+
+  return merged;
 }
 
 export function mergeClientPortalAuth(existing = {}, incoming = {}) {
   const merged = { ...existing };
 
   for (const [brand, rawEntry] of Object.entries(incoming)) {
-    const entry = normalizeCredentialEntry(rawEntry);
-    if (!entry) continue;
+    const incomingUsers = normalizeBrandUsers(rawEntry);
+    if (!incomingUsers.length) continue;
 
-    const previous = normalizeCredentialEntry(merged[brand]);
-    const passwordHash = entry.passwordHash || previous?.passwordHash || '';
-    const username = entry.username || previous?.username || '';
-
-    if (!passwordHash) {
-      if (previous?.passwordHash) {
-        merged[brand] = {
-          username: username || previous.username,
-          passwordHash: previous.passwordHash,
-        };
-      }
-      continue;
-    }
-
-    merged[brand] = { username, passwordHash };
+    const existingUsers = normalizeBrandUsers(merged[brand]);
+    merged[brand] = mergeBrandUsers(existingUsers, incomingUsers);
   }
 
   return merged;
 }
 
-export function findBrandByUsername(authMap, username) {
+export function findClientLogin(authMap, username) {
   const normalized = username.trim().toLowerCase();
   for (const [brand, entry] of Object.entries(authMap)) {
-    if (entry?.username?.trim()?.toLowerCase() === normalized) {
-      return brand;
+    for (const user of normalizeBrandUsers(entry)) {
+      if (user.username.toLowerCase() === normalized) {
+        return { brand, user };
+      }
     }
   }
   return null;
+}
+
+export function findBrandByUsername(authMap, username) {
+  return findClientLogin(authMap, username)?.brand || null;
 }
 
 export function verifyClientPassword(entry, password) {

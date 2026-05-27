@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
-import { CLIENT_COLOR_PALETTE } from '../constants';
+import { CLIENT_COLOR_PALETTE, INTERNAL_TEAM_CLIENT } from '../constants';
 import { BUSINESS_TYPES } from '../utils/eventFormSchemas';
+import { getClientPortalBrands } from '../utils/clients';
 import { readClientProfileImage } from '../utils/clientImage';
 import ClientAvatar from './ClientAvatar';
 import { btnPrimaryClass, btnSecondaryClass, selectClass } from './clientPortal/clientPortalUi';
@@ -16,7 +17,8 @@ export default function ClientProfileModal({ onClose }) {
     setClientLogo,
     setClientBusinessType,
   } = useClientsContext();
-  const [selectedClient, setSelectedClient] = useState(clients[0] || '');
+  const profileClients = getClientPortalBrands(clients, INTERNAL_TEAM_CLIENT);
+  const [selectedClient, setSelectedClient] = useState(profileClients[0] || '');
   const [color, setColor] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [previewLogo, setPreviewLogo] = useState(null);
@@ -38,10 +40,10 @@ export default function ClientProfileModal({ onClose }) {
   }, [onClose]);
 
   useEffect(() => {
-    if (!selectedClient && clients.length > 0) {
-      setSelectedClient(clients[0]);
+    if (!selectedClient && profileClients.length > 0) {
+      setSelectedClient(profileClients[0]);
     }
-  }, [clients, selectedClient]);
+  }, [profileClients, selectedClient]);
 
   useEffect(() => {
     if (!selectedClient) return;
@@ -96,6 +98,10 @@ export default function ClientProfileModal({ onClose }) {
     (selectedClient && color !== getClientColor(selectedClient)) ||
     (selectedClient && businessType !== getClientBusinessType(selectedClient));
 
+  if (profileClients.length === 0) {
+    return null;
+  }
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
@@ -126,7 +132,7 @@ export default function ClientProfileModal({ onClose }) {
                 onChange={(e) => setSelectedClient(e.target.value)}
                 className={`${selectClass} w-full`}
               >
-                {clients.map((client) => (
+                {profileClients.map((client) => (
                   <option key={client} value={client}>
                     {client}
                   </option>

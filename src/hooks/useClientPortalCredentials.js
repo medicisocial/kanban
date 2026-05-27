@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CLIENT_PORTAL_AUTH_STORAGE_KEY } from '../constants';
 import { defaultPortalUsername } from '../utils/clientPortalAuth';
+import {
+  createClientPortalUserId,
+  getClientUsersFromStore,
+  mergeBrandUserDrafts,
+  normalizeBrandUsers,
+} from '../utils/clientPortalCredentials';
 import { hashPassword } from '../utils/staffAuth';
 
 function loadCredentials() {
@@ -25,29 +31,52 @@ export function useClientPortalCredentials() {
     localStorage.setItem(CLIENT_PORTAL_AUTH_STORAGE_KEY, JSON.stringify(credentials));
   }, [credentials]);
 
-  const getCredential = useCallback(
-    (client) => credentials[client] || { username: defaultPortalUsername(client), passwordHash: '' },
+  const getClientUsers = useCallback(
+    (client) => getClientUsersFromStore(credentials, client),
     [credentials],
   );
 
-  const setClientPortalCredential = useCallback(async (client, username, password) => {
-    const trimmedUser = (username || defaultPortalUsername(client)).trim();
-    const existing = loadCredentials()[client];
-    const entry = { username: trimmedUser, passwordHash: '' };
+  const getCredential = useCallback(
+    (client) => {
+      const users = getClientUsersFromStore(credentials, client);
+      if (users[0]) return users[0];
+      return { id: createClientPortalUserId(), username: defaultPortalUsername(client), passwordHash: '' };
+    },
+    [credentials],
+  );
 
-    if (password) {
-      entry.passwordHash = await hashPassword(password);
-    } else if (existing?.passwordHash) {
-      entry.passwordHash = existing.passwordHash;
-    }
+  const setClientPortalUsers = useCallback(async (client, draftUsers) => {
+    const existingUsers = normalizeBrandUsers(loadCredentials()[client]);
+    const mergedUsers = await mergeBrandUserDrafts(existingUsers, draftUsers, hashPassword);
+    const activeUsers = mergedUsers.filter((user) => user.passwordHash && user.username);
 
     setCredentials((prev) => {
-      const next = { ...prev, [client]: entry };
+      const next = { ...prev, [client]: activeUsers };
       localStorage.setItem(CLIENT_PORTAL_AUTH_STORAGE_KEY, JSON.stringify(next));
       return next;
     });
-    return entry;
+
+    return activeUsers;
   }, []);
+
+  const setClientPortalCredential = useCallback(async (client, username, password) => {
+    const users = getClientUsersFromStore(loadCredentials(), client);
+    const primary = users[0] || {
+      id: createClientPortalUserId(),
+      username: defaultPortalUsername(client),
+      passwordHash: '',
+      displayName: '',
+    };
+
+    return setClientPortalUsers(client, [
+      {
+        id: primary.id,
+        username: username || primary.username,
+        password,
+        displayName: primary.displayName,
+      },
+    ]);
+  }, [setClientPortalUsers]);
 
   const clearClientPortalCredential = useCallback((client) => {
     setCredentials((prev) => {
@@ -60,7 +89,9 @@ export function useClientPortalCredentials() {
 
   return {
     credentials,
+    getClientUsers,
     getCredential,
+    setClientPortalUsers,
     setClientPortalCredential,
     clearClientPortalCredential,
   };

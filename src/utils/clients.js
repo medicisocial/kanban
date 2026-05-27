@@ -22,3 +22,17 @@ export function pickNextClientColor(clientColors, palette) {
 export function normalizeClientName(name) {
   return name.trim().replace(/\s+/g, ' ');
 }
+
+export function mergeDefaultClients(names, defaults) {
+  const merged = [...names];
+  for (const client of defaults) {
+    if (!merged.some((name) => name.toLowerCase() === client.toLowerCase())) {
+      merged.push(client);
+    }
+  }
+  return merged;
+}
+
+export function getClientPortalBrands(clients, internalClient) {
+  return clients.filter((client) => client !== internalClient);
+}

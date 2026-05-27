@@ -7,7 +7,7 @@ import {
   CLIENT_COLOR_PALETTE,
 } from '../constants';
 import { DEFAULT_CLIENT_BUSINESS_TYPES, normalizeBusinessType } from '../utils/eventFormSchemas';
-import { normalizeClientName, pickNextClientColor } from '../utils/clients';
+import { normalizeClientName, pickNextClientColor, mergeDefaultClients } from '../utils/clients';
 
 function normalizeBusinessTypesMap(types = {}) {
   const normalized = {};
@@ -24,7 +24,7 @@ function loadClients() {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed.names) && parsed.names.length > 0) {
         return {
-          names: parsed.names,
+          names: mergeDefaultClients(parsed.names, DEFAULT_CLIENTS),
           colors: { ...DEFAULT_CLIENT_COLORS, ...(parsed.colors || {}) },
           logos: { ...(parsed.logos || {}) },
           accountManagers: {

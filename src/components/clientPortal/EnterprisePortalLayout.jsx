@@ -17,6 +17,10 @@ export default function EnterprisePortalLayout({
   profileLabel,
   profileColor = '#810100',
   profileImageUrl,
+  sidebarLogoUrl,
+  onSidebarLogoClick,
+  sidebarLogoMessage,
+  sidebarLogoMessageIsError = false,
   onSignOut,
   sidebarFooter,
   headerFilter,
@@ -25,17 +29,36 @@ export default function EnterprisePortalLayout({
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const initials = clientInitials(profileLabel || 'MS');
+  const resolvedSidebarLogo = sidebarLogoUrl || '/medici-social-logo.png';
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#070707] text-white">
       <aside className="flex w-[260px] shrink-0 flex-col border-r border-white/10 bg-[#0a0a0a]">
         <div className="border-b border-white/10 px-6 py-7">
           <div className="flex items-start gap-3">
-            <img
-              src="/medici-social-logo.png"
-              alt="Medici Social"
-              className="h-11 w-11 shrink-0 object-contain"
-            />
+            {onSidebarLogoClick ? (
+              <button
+                type="button"
+                onClick={onSidebarLogoClick}
+                title="Change logo"
+                className="group relative h-11 w-11 shrink-0 overflow-hidden border border-transparent transition-colors hover:border-white/20"
+              >
+                <img
+                  src={resolvedSidebarLogo}
+                  alt="Medici Social"
+                  className={`h-full w-full ${sidebarLogoUrl ? 'object-cover' : 'object-contain'}`}
+                />
+                <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-[9px] font-medium uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  Edit
+                </span>
+              </button>
+            ) : (
+              <img
+                src={resolvedSidebarLogo}
+                alt="Medici Social"
+                className={`h-11 w-11 shrink-0 ${sidebarLogoUrl ? 'object-cover' : 'object-contain'}`}
+              />
+            )}
             <div className="min-w-0 pt-0.5">
               <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/45">{productKicker}</p>
               <h1 className="mt-1 text-base font-semibold tracking-tight text-white">{productTitle}</h1>
@@ -45,6 +68,13 @@ export default function EnterprisePortalLayout({
                   style={subtitleColor ? { color: subtitleColor } : undefined}
                 >
                   {subtitle}
+                </p>
+              )}
+              {sidebarLogoMessage && (
+                <p
+                  className={`mt-1 text-[10px] ${sidebarLogoMessageIsError ? 'text-rose-300/90' : 'text-emerald-300/90'}`}
+                >
+                  {sidebarLogoMessage}
                 </p>
               )}
             </div>

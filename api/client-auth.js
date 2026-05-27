@@ -1,7 +1,7 @@
 import { getRedis, loadWorkspace } from './_lib/redis.mjs';
 import {
   createClientSession,
-  findBrandByUsername,
+  findClientLogin,
   getClientPortalAuthMap,
   verifyClientPassword,
 } from './_lib/clientPortalAuth.mjs';
@@ -35,16 +35,15 @@ export default async function handler(req, res) {
     });
   }
 
-  const brand = findBrandByUsername(authMap, username);
-  if (!brand) {
+  const login = findClientLogin(authMap, username);
+  if (!login) {
     return res.status(401).json({ error: 'Invalid username or password.' });
   }
 
-  const entry = authMap[brand];
-  if (!verifyClientPassword(entry, password)) {
+  if (!verifyClientPassword(login.user, password)) {
     return res.status(401).json({ error: 'Invalid username or password.' });
   }
 
-  const session = createClientSession(brand, entry.username || username);
-  return res.status(200).json({ session, brand });
+  const session = createClientSession(login.brand, login.user.username || username);
+  return res.status(200).json({ session, brand: login.brand });
 }

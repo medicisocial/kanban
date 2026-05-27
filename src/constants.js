@@ -14,6 +14,7 @@ export const DEFAULT_CLIENTS = [
   'Arco Fit',
   'Ara Med Spa',
   'Fulshear Regional',
+  'Medici Social',
 ];
 
 /** @deprecated Use useClientsContext().clients */
@@ -25,6 +26,7 @@ export const DEFAULT_CLIENT_COLORS = {
   'Arco Fit': '#3b82f6',
   'Ara Med Spa': '#ec4899',
   'Fulshear Regional': '#ef4444',
+  'Medici Social': '#810100',
 };
 
 /** @deprecated Use useClientsContext().clientColors */
@@ -44,6 +46,8 @@ export const CLIENT_COLOR_PALETTE = [
 ];
 
 export const CLIENTS_STORAGE_KEY = 'medici-social-clients';
+
+export const INTERNAL_TEAM_CLIENT = 'Medici Social';
 
 export const CONTENT_TYPES = [
   'Reel',
@@ -108,6 +112,7 @@ export const DEFAULT_CLIENT_ACCOUNT_MANAGERS = {
   'Arco Fit': DEFAULT_ACCOUNT_MANAGER,
   'Ara Med Spa': DEFAULT_ACCOUNT_MANAGER,
   'Fulshear Regional': DEFAULT_ACCOUNT_MANAGER,
+  'Medici Social': DEFAULT_ACCOUNT_MANAGER,
 };
 
 export const STORAGE_KEY = 'medici-social-kanban';
