@@ -2,6 +2,11 @@ import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader'
 import { buildClientPortalTasks } from '../utils/clientPortalTasks';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
+const taskActionBtnClass =
+  'inline-flex shrink-0 items-center justify-center rounded-sm bg-white px-3 py-1.5 text-[10px] font-medium normal-case tracking-normal text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40';
+
+const panelActionBtnClass = taskActionBtnClass;
+
 function StatCard({ label, value, onClick }) {
   const inner = (
     <>
@@ -93,8 +98,15 @@ export default function ClientPortalHome({
         <div className="space-y-6">
           {summary.actionItems.length > 0 && (
             <div className={`${surfacePanelClass} overflow-hidden`}>
-              <div className="border-b border-white/10 px-4 py-3">
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
                 <h3 className="text-sm font-semibold text-white">Needs your review</h3>
+                <button
+                  type="button"
+                  onClick={() => onNavigate(summary.actionItems[0]?.tab || 'review')}
+                  className={panelActionBtnClass}
+                >
+                  Review ({summary.actionItems.length})
+                </button>
               </div>
               <ul className="divide-y divide-white/[0.06]">
                 {summary.actionItems.map((item) => (
@@ -126,27 +138,41 @@ export default function ClientPortalHome({
 
           {summary.setupTasks.length > 0 && (
             <div className={`${surfacePanelClass} overflow-hidden`}>
-              <div className="border-b border-white/10 px-4 py-3">
-                <h3 className="text-sm font-semibold text-white">Complete your profile</h3>
-                <p className="mt-1 text-xs text-white/45">
-                  These help your production team work smoothly with your brand.
-                </p>
+              <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Complete your profile</h3>
+                  <p className="mt-1 text-xs text-white/45">
+                    These help your production team work smoothly with your brand.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onNavigate('profile')}
+                  className={panelActionBtnClass}
+                >
+                  Finish setup ({summary.setupCount})
+                </button>
               </div>
               <ul className="divide-y divide-white/[0.06]">
                 {summary.setupTasks.map((task) => (
-                  <li key={task.id}>
+                  <li
+                    key={task.id}
+                    className="flex items-center justify-between gap-4 px-4 py-3 transition hover:bg-white/[0.03]"
+                  >
                     <button
                       type="button"
                       onClick={() => onNavigate(task.tab)}
-                      className="flex w-full items-start justify-between gap-4 px-4 py-3 text-left transition hover:bg-white/[0.03]"
+                      className="min-w-0 flex-1 text-left"
                     >
-                      <span className="min-w-0">
-                        <span className="block text-sm font-medium text-white">{task.label}</span>
-                        <span className="mt-0.5 block text-xs text-white/45">{task.detail}</span>
-                      </span>
-                      <span className="shrink-0 text-[10px] font-medium uppercase tracking-wider text-[#c88]">
-                        Set up
-                      </span>
+                      <span className="block text-sm font-medium text-white">{task.label}</span>
+                      <span className="mt-0.5 block text-xs text-white/45">{task.detail}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate(task.tab)}
+                      className={taskActionBtnClass}
+                    >
+                      Set up
                     </button>
                   </li>
                 ))}

@@ -245,35 +245,73 @@ export default function EnterprisePortalLayout({
       <>
         <button
           type="button"
-          className="fixed inset-0 z-[200] cursor-default bg-transparent"
+          className="portal-dropdown-backdrop fixed inset-0 z-[200] cursor-default"
           aria-label="Close profile menu"
           onClick={() => setProfileOpen(false)}
         />
         <div
-          className="fixed z-[210] w-44 border border-white/[0.08] bg-black/95 py-1 shadow-2xl backdrop-blur-xl"
+          className="portal-dropdown-panel fixed z-[210] w-72"
           style={{ top: profileMenuStyle.top, right: profileMenuStyle.right }}
+          role="menu"
         >
-          {onProfileClick && (
-            <button
-              type="button"
-              onClick={() => {
-                setProfileOpen(false);
-                onProfileClick();
-              }}
-              className="block w-full px-4 py-2.5 text-left text-xs text-white/60 transition-colors duration-300 hover:bg-white/[0.04] hover:text-white"
-            >
-              {brandLayout ? 'Settings' : 'Profile'}
-            </button>
-          )}
-          {onSignOut && (
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="block w-full px-4 py-2.5 text-left text-xs text-white/60 transition-colors duration-300 hover:bg-white/[0.04] hover:text-white"
-            >
-              Sign out
-            </button>
-          )}
+          <div className="portal-dropdown-header">
+            <div className="flex items-center gap-3">
+              {brandLayout ? (
+                <span className="portal-profile-trigger-ring flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.04] text-white/70">
+                  <IconSettings className="h-4 w-4" />
+                </span>
+              ) : normalizedProfileLogo ? (
+                <ClientLogoAvatar
+                  logo={normalizedProfileLogo}
+                  name={profileLabel || brandName}
+                  color={profileColor || brandColor}
+                  size="header"
+                  ringClassName="portal-profile-trigger-ring ring-2 ring-white/15"
+                />
+              ) : (
+                <span
+                  className="portal-profile-trigger-ring flex h-8 w-8 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold text-white ring-2 ring-white/15"
+                  style={{ backgroundColor: `${profileColor}33`, color: profileColor }}
+                >
+                  {initials}
+                </span>
+              )}
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium tracking-tight text-white/92">
+                  {brandLayout ? brandName || 'Account' : profileLabel || 'Account'}
+                </p>
+                <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white/35">
+                  {brandLayout ? 'Client workspace' : productTitle || 'Workspace'}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="portal-dropdown-body portal-dropdown-items">
+            {onProfileClick && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setProfileOpen(false);
+                  onProfileClick();
+                }}
+                className="portal-dropdown-item"
+              >
+                {brandLayout ? 'Settings' : 'Profile'}
+              </button>
+            )}
+            {onProfileClick && onSignOut && <div className="portal-dropdown-divider" aria-hidden />}
+            {onSignOut && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleSignOut}
+                className="portal-dropdown-item portal-dropdown-item-muted"
+              >
+                Sign out
+              </button>
+            )}
+          </div>
         </div>
       </>,
       document.body,
@@ -287,15 +325,22 @@ export default function EnterprisePortalLayout({
       <>
         <button
           type="button"
-          className="fixed inset-0 z-[200] cursor-default bg-transparent"
+          className="portal-dropdown-backdrop fixed inset-0 z-[200] cursor-default"
           aria-label="Close notifications"
           onClick={() => setNotificationsOpen(false)}
         />
         <div
-          className="fixed z-[210] w-[min(360px,calc(100vw-2rem))] border border-white/[0.08] bg-black/95 p-4 shadow-2xl backdrop-blur-xl"
+          className="portal-dropdown-panel portal-dropdown-panel-wide fixed z-[210]"
           style={{ top: notificationMenuStyle.top, right: notificationMenuStyle.right }}
         >
-          {notificationPanel}
+          <div className="portal-dropdown-header py-3">
+            <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/38">
+              Notifications
+            </p>
+          </div>
+          <div className="portal-dropdown-body-flush max-h-[min(70vh,480px)] overflow-y-auto">
+            {notificationPanel}
+          </div>
         </div>
       </>,
       document.body,
@@ -423,14 +468,22 @@ export default function EnterprisePortalLayout({
                 <button
                   ref={notificationButtonRef}
                   type="button"
-                  onClick={() => setNotificationsOpen((open) => !open)}
-                  className="portal-icon-btn relative flex h-9 w-9 items-center justify-center text-white/55"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    setNotificationsOpen((open) => !open);
+                  }}
+                  className="portal-icon-btn relative flex h-10 w-10 items-center justify-center text-white/55"
                   title="Notifications"
+                  aria-label={
+                    notificationCount > 0
+                      ? `Notifications, ${notificationCount} unread`
+                      : 'Notifications'
+                  }
                   aria-expanded={notificationsOpen}
                 >
-                  <IconBell className="h-4 w-4" />
+                  <IconBell className="h-5 w-5" />
                   {notificationCount > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center bg-white px-1 text-[9px] font-semibold text-black">
+                    <span className="portal-notification-badge">
                       {notificationCount > 9 ? '9+' : notificationCount}
                     </span>
                   )}
@@ -441,7 +494,10 @@ export default function EnterprisePortalLayout({
                 <button
                   ref={profileButtonRef}
                   type="button"
-                  onClick={() => setProfileOpen((open) => !open)}
+                  onClick={() => {
+                    setNotificationsOpen(false);
+                    setProfileOpen((open) => !open);
+                  }}
                   className={`portal-profile-btn flex items-center py-1 ${
                     brandLayout ? 'pl-0 pr-0' : 'gap-2.5 pl-1 pr-2.5'
                   }`}

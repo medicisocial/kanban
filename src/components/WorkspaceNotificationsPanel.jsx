@@ -21,21 +21,20 @@ export default function WorkspaceNotificationsPanel({
   if (!total) {
     return (
       <div>
-        <p className="text-xs font-medium uppercase tracking-wider text-white/45">Notifications</p>
-        <p className="mt-3 text-sm text-white/50">You&apos;re all caught up.</p>
+        <p className="text-sm text-white/50">You&apos;re all caught up.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-h-[min(70vh,480px)] overflow-y-auto">
-      <p className="text-xs font-medium uppercase tracking-wider text-white/45">
-        {total} notification{total === 1 ? '' : 's'}
+    <div>
+      <p className="text-xs font-medium tracking-tight text-white/55">
+        {total} unread
       </p>
 
       {syncTotal > 0 && (
         <div className="mt-4 border-b border-white/[0.06] pb-4">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-amber-200/90">
+          <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/38">
             Client portal sync
           </p>
           <p className="mt-1 text-xs text-white/45">Apply responses from client reviews.</p>
@@ -62,7 +61,7 @@ export default function WorkspaceNotificationsPanel({
       {alerts.length > 0 && (
         <ul className={`space-y-3 ${syncTotal > 0 ? 'mt-4' : 'mt-3'}`}>
           {alerts.map((alert) => (
-            <li key={alert.id} className="border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+            <li key={alert.id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
               <p className={`text-xs font-medium ${toneClass[alert.tone] || 'text-white/70'}`}>
                 {alert.title}
               </p>

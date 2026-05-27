@@ -3,6 +3,25 @@ import { buildWorkspaceHomeSummary, buildMyWorkGreeting } from '../utils/workspa
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 import { formatDate } from '../utils';
 
+const panelActionBtnClass =
+  'inline-flex shrink-0 items-center justify-center rounded-sm bg-white px-3 py-1.5 text-[10px] font-medium normal-case tracking-normal text-black transition-opacity duration-300 hover:opacity-75';
+
+function PanelHeaderAction({ label, onClick, prominent = false }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        prominent
+          ? panelActionBtnClass
+          : `${btnSecondaryClass} py-1.5 text-[10px] normal-case tracking-normal`
+      }
+    >
+      {label}
+    </button>
+  );
+}
+
 function StatCard({ label, value, onClick }) {
   const inner = (
     <>
@@ -121,9 +140,15 @@ export default function WorkspaceHomePage({
         <div className={`${surfacePanelClass} p-5`}>
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-white">Today&apos;s shoots</h3>
-            <button type="button" onClick={() => onNavigate('shoot')} className={`${btnSecondaryClass} py-1.5 text-[10px]`}>
-              Scheduled shoots
-            </button>
+            <PanelHeaderAction
+              label={
+                summary.shootsTodayCount > 0
+                  ? `View shoots (${summary.shootsTodayCount})`
+                  : 'Scheduled shoots'
+              }
+              prominent={summary.shootsTodayCount > 0}
+              onClick={() => onNavigate('shoot')}
+            />
           </div>
           {summary.shootsToday.length === 0 ? (
             <div className="text-center py-6">
@@ -157,13 +182,15 @@ export default function WorkspaceHomePage({
           <div className={`${surfacePanelClass} p-5`}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-white">Awaiting client review</h3>
-              <button
-                type="button"
+              <PanelHeaderAction
+                label={
+                  summary.inReviewCount > 0
+                    ? `Review posts (${summary.inReviewCount})`
+                    : 'Account manager tasks'
+                }
+                prominent={summary.inReviewCount > 0}
                 onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-                className={`${btnSecondaryClass} py-1.5 text-[10px]`}
-              >
-                Account manager tasks
-              </button>
+              />
             </div>
             {summary.inReview.length === 0 ? (
               <div className="text-center py-6">
@@ -199,13 +226,15 @@ export default function WorkspaceHomePage({
           <div className={`${surfacePanelClass} p-5`}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-white">Need post date</h3>
-              <button
-                type="button"
+              <PanelHeaderAction
+                label={
+                  summary.needPostDateCount > 0
+                    ? `Set post dates (${summary.needPostDateCount})`
+                    : 'Account manager tasks'
+                }
+                prominent={summary.needPostDateCount > 0}
                 onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-                className={`${btnSecondaryClass} py-1.5 text-[10px]`}
-              >
-                Account manager tasks
-              </button>
+              />
             </div>
             {summary.needPostDate.length === 0 ? (
               <div className="text-center py-6">
@@ -243,13 +272,15 @@ export default function WorkspaceHomePage({
           <div className={`${surfacePanelClass} p-5`}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-white">Needs scheduling</h3>
-              <button
-                type="button"
+              <PanelHeaderAction
+                label={
+                  summary.needsSchedulingCount > 0
+                    ? `Schedule posts (${summary.needsSchedulingCount})`
+                    : 'Account manager tasks'
+                }
+                prominent={summary.needsSchedulingCount > 0}
                 onClick={() => onNavigate('todo', { tasksRole: 'account' })}
-                className={`${btnSecondaryClass} py-1.5 text-[10px]`}
-              >
-                Account manager tasks
-              </button>
+              />
             </div>
             {summary.needsScheduling.length === 0 ? (
               <div className="text-center py-6">
@@ -287,9 +318,15 @@ export default function WorkspaceHomePage({
         <div className={`${surfacePanelClass} p-5 lg:col-span-2`}>
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-white">Scheduled this week</h3>
-            <button type="button" onClick={() => onNavigate('calendars')} className={`${btnSecondaryClass} py-1.5 text-[10px]`}>
-              Calendars
-            </button>
+            <PanelHeaderAction
+              label={
+                summary.scheduledThisWeekCount > 0
+                  ? `View calendar (${summary.scheduledThisWeekCount})`
+                  : 'Calendars'
+              }
+              prominent={summary.scheduledThisWeekCount > 0}
+              onClick={() => onNavigate('calendars')}
+            />
           </div>
           {summary.scheduledThisWeek.length === 0 ? (
             <div className="text-center py-6">
