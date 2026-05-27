@@ -214,16 +214,6 @@ export default function WorkspaceHomePage({
 
   const pipelineGroups = [
     {
-      label: 'Client',
-      items: [
-        {
-          label: 'Pending ideas',
-          value: summary.pendingIdeasCount,
-          onClick: () => onNavigate('ideas'),
-        },
-      ],
-    },
-    {
       label: 'Content creator',
       items: [
         {
