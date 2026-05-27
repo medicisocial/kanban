@@ -24,30 +24,28 @@ function SidebarBrand({
 }) {
   if (brandLayout) {
     return (
-      <div className="border-b border-white/[0.06] px-6 py-8 lg:px-7">
-        <div className="flex items-start justify-between gap-3">
+      <div className="border-b border-white/[0.06] px-5 py-5 lg:px-6">
+        <div className="flex items-center gap-3.5">
+          <ClientLogoAvatar
+            logo={brandLogo}
+            name={brandName}
+            size="lg"
+            initialsVariant="neutral"
+            ringClassName="ring-1 ring-white/[0.08]"
+          />
           <div className="min-w-0 flex-1">
-            <div className="flex flex-col items-center text-center">
-              <ClientLogoAvatar
-                logo={brandLogo}
-                name={brandName}
-                color={brandColor}
-                size="2xl"
-                ringClassName="ring-2 ring-white/10"
-              />
-              <h1
-                className="mt-4 text-lg font-semibold tracking-tight text-white"
-                style={brandColor ? { color: brandColor } : undefined}
-              >
-                {brandName}
-              </h1>
-            </div>
+            <h1 className="truncate text-[15px] font-semibold leading-tight tracking-tight text-white">
+              {brandName}
+            </h1>
+            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.22em] text-white/35">
+              Client workspace
+            </p>
           </div>
           {showClose && (
             <button
               type="button"
               onClick={onCloseNav}
-              className="flex h-9 w-9 shrink-0 items-center justify-center text-white/50 transition-colors duration-300 hover:text-white lg:hidden"
+              className="flex h-9 w-9 shrink-0 items-center justify-center text-white/45 transition-colors duration-300 hover:text-white lg:hidden"
               aria-label="Close menu"
             >
               <IconClose />
@@ -399,10 +397,7 @@ export default function EnterprisePortalLayout({
 
             <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-4">
               {brandLayout && brandName && (
-                <p
-                  className="truncate text-sm font-semibold tracking-tight text-white lg:hidden"
-                  style={brandColor ? { color: brandColor } : undefined}
-                >
+                <p className="truncate text-sm font-semibold tracking-tight text-white/90 lg:hidden">
                   {brandName}
                 </p>
               )}

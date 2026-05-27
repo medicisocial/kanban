@@ -28,15 +28,17 @@ export default function ClientLogoAvatar({
   size = 'md',
   className = '',
   ringClassName = 'ring-1 ring-white/10',
+  initialsVariant = 'brand',
 }) {
   const px = SIZE_PX[size] || SIZE_PX.md;
   const normalized = normalizeClientLogo(logo);
   const src = normalized?.src;
+  const useNeutralInitials = initialsVariant === 'neutral';
 
   if (src) {
     return (
       <span
-        className={`relative inline-flex shrink-0 overflow-hidden rounded-full bg-black/40 ${ringClassName} ${className}`}
+        className={`relative inline-flex shrink-0 overflow-hidden rounded-full bg-white/[0.04] ${ringClassName} ${className}`}
         style={{ width: px, height: px }}
       >
         <img
@@ -52,12 +54,12 @@ export default function ClientLogoAvatar({
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-full font-semibold ${TEXT_CLASS[size] || TEXT_CLASS.md} ${ringClassName} ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full font-medium ${TEXT_CLASS[size] || TEXT_CLASS.md} ${ringClassName} ${className}`}
       style={{
         width: px,
         height: px,
-        backgroundColor: `${color}33`,
-        color,
+        backgroundColor: useNeutralInitials ? 'rgba(255,255,255,0.06)' : `${color}22`,
+        color: useNeutralInitials ? 'rgba(255,255,255,0.88)' : color,
       }}
     >
       {clientInitials(name || 'Brand')}
