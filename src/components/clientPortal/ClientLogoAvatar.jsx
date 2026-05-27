@@ -4,21 +4,25 @@ import { getLogoSrc, logoCropStyle, normalizeClientLogo } from '../../utils/clie
 const SIZE_PX = {
   xs: 20,
   sm: 24,
-  md: 28,
-  lg: 36,
-  xl: 44,
-  '2xl': 72,
-  header: 32,
+  md: 32,
+  lg: 44,
+  xl: 56,
+  '2xl': 88,
+  '3xl': 128,
+  sidebar: 52,
+  header: 36,
 };
 
 const TEXT_CLASS = {
   xs: 'text-[8px]',
   sm: 'text-[9px]',
   md: 'text-[10px]',
-  lg: 'text-[11px]',
-  xl: 'text-xs',
-  '2xl': 'text-sm',
-  header: 'text-[10px]',
+  lg: 'text-xs',
+  xl: 'text-sm',
+  '2xl': 'text-base',
+  '3xl': 'text-lg',
+  sidebar: 'text-sm',
+  header: 'text-[11px]',
 };
 
 export default function ClientLogoAvatar({

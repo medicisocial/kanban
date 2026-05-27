@@ -5,7 +5,7 @@ export default function LogoCropEditor({
   src,
   crop = DEFAULT_LOGO_CROP,
   onCropChange,
-  previewSize = 160,
+  previewSize = 220,
 }) {
   const frameRef = useRef(null);
   const [dragging, setDragging] = useState(false);

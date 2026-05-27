@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CLIENT_COLOR_PALETTE } from '../constants';
 import { readClientProfileImage } from '../utils/clientImage';
-import { DEFAULT_LOGO_CROP, serializeClientLogo } from '../utils/clientLogo';
+import { DEFAULT_LOGO_CROP, serializeClientLogo, bakeLogoCrop } from '../utils/clientLogo';
 import ClientLogoAvatar from './clientPortal/ClientLogoAvatar';
 import LogoCropEditor from './clientPortal/LogoCropEditor';
 import { btnPrimaryClass, inputClass } from './clientPortal/clientPortalUi';
@@ -39,14 +39,19 @@ export default function AddClientModal({ onClose, onAdd, existingClients }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const result = onAdd(
-      name,
-      color,
-      logoPreview ? serializeClientLogo({ src: logoPreview, ...logoCrop }) : null,
-    );
+    let logo = null;
+    if (logoPreview) {
+      try {
+        logo = await bakeLogoCrop(serializeClientLogo({ src: logoPreview, ...logoCrop }));
+      } catch (err) {
+        setError(err.message || 'Could not process photo.');
+        return;
+      }
+    }
+    const result = onAdd(name, color, logo);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -108,7 +113,7 @@ export default function AddClientModal({ onClose, onAdd, existingClients }) {
                   src={logoPreview}
                   crop={logoCrop}
                   onCropChange={setLogoCrop}
-                  previewSize={140}
+                  previewSize={200}
                 />
               )}
               <div className="flex flex-wrap justify-center gap-2">

@@ -8,6 +8,7 @@ import {
 import { readClientProfileImage } from '../utils/clientImage';
 import {
   DEFAULT_LOGO_CROP,
+  bakeLogoCrop,
   normalizeClientLogo,
   serializeClientLogo,
 } from '../utils/clientLogo';
@@ -125,7 +126,8 @@ export default function ClientProfilePortal({
         socialLogins: buildSocialPayload(draftSocialLogins, socialLogins),
       };
       if (pendingLogo !== undefined) {
-        payload.logo = pendingLogo;
+        payload.logo =
+          pendingLogo === null ? null : await bakeLogoCrop(pendingLogo);
       }
       await onSaveProfile(payload);
       setPendingLogo(undefined);
@@ -148,22 +150,24 @@ export default function ClientProfilePortal({
       <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         <div className={`${surfacePanelClass} space-y-5 p-5`}>
           <div className="space-y-4 border border-white/[0.08] bg-white/[0.02] p-4">
-            <div className="flex justify-center">
-              <ClientLogoAvatar
-                logo={previewSrc ? { src: previewSrc, ...logoCrop } : null}
-                name={client}
-                color={clientColor}
-                size="2xl"
-                ringClassName="ring-2 ring-white/15"
-              />
-            </div>
-
             {previewSrc ? (
               <LogoCropEditor src={previewSrc} crop={logoCrop} onCropChange={handleCropChange} />
             ) : (
-              <p className="text-center text-xs text-white/45">
-                Upload a square or wide logo — you can zoom and drag to fit the circle.
-              </p>
+              <>
+                <div className="flex justify-center py-2">
+                  <ClientLogoAvatar
+                    logo={null}
+                    name={client}
+                    color={clientColor}
+                    size="3xl"
+                    initialsVariant="neutral"
+                    ringClassName="ring-2 ring-white/15"
+                  />
+                </div>
+                <p className="text-center text-xs text-white/45">
+                  Upload a square or wide photo — you can zoom and drag to fit the circle.
+                </p>
+              </>
             )}
 
             <div className="flex flex-wrap justify-center gap-2">

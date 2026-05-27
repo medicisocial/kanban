@@ -1,4 +1,7 @@
+import { encodeCanvas, loadImage } from './clientImage';
+
 export const DEFAULT_LOGO_CROP = { zoom: 1, x: 50, y: 50 };
+export const LOGO_OUTPUT_SIZE = 512;
 
 export function normalizeClientLogo(logo) {
   if (!logo) return null;
@@ -40,6 +43,49 @@ export function logoCropStyle(crop) {
     transform: `scale(${normalized.zoom})`,
     transformOrigin: `${normalized.x}% ${normalized.y}%`,
   };
+}
+
+/** Render crop + zoom into a sharp square image (avoids grainy CSS upscaling). */
+export async function bakeLogoCrop(logo, outputSize = LOGO_OUTPUT_SIZE) {
+  const normalized = normalizeClientLogo(logo);
+  if (!normalized?.src) return null;
+
+  const img = await loadImage(normalized.src);
+  const { zoom, x, y } = normalized;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = outputSize;
+  canvas.height = outputSize;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Could not render photo.');
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  const coverScale = Math.max(outputSize / img.width, outputSize / img.height) * zoom;
+  const drawW = img.width * coverScale;
+  const drawH = img.height * coverScale;
+  const drawX = (outputSize - drawW) * (x / 100);
+  const drawY = (outputSize - drawH) * (y / 100);
+
+  ctx.drawImage(img, drawX, drawY, drawW, drawH);
+
+  return serializeClientLogo({
+    src: encodeCanvas(canvas),
+    zoom: 1,
+    x: 50,
+    y: 50,
+  });
+}
+
+export function needsLogoBake(logo) {
+  const normalized = normalizeClientLogo(logo);
+  if (!normalized?.src) return false;
+  return (
+    normalized.zoom !== 1 ||
+    normalized.x !== 50 ||
+    normalized.y !== 50
+  );
 }
 
 function clampPercent(value) {

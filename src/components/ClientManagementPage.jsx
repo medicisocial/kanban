@@ -10,6 +10,7 @@ import {
   DEFAULT_LOGO_CROP,
   normalizeClientLogo,
   serializeClientLogo,
+  bakeLogoCrop,
 } from '../utils/clientLogo';
 import AddClientModal from './AddClientModal';
 import ClientAvatar from './ClientAvatar';
@@ -123,7 +124,7 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
     }
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (!selectedClient) return;
     setSavingProfile(true);
     setProfileError('');
@@ -133,7 +134,16 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
       setClientColor(selectedClient, color);
       setClientBusinessType(selectedClient, businessType);
       if (pendingLogo !== undefined) {
-        setClientLogo(selectedClient, pendingLogo);
+        const logoToSave =
+          pendingLogo === null ? null : await bakeLogoCrop(pendingLogo);
+        setClientLogo(selectedClient, logoToSave);
+        if (logoToSave) {
+          setPreviewSrc(logoToSave.src);
+          setLogoCrop({ zoom: 1, x: 50, y: 50 });
+        } else {
+          setPreviewSrc(null);
+          setLogoCrop(DEFAULT_LOGO_CROP);
+        }
       }
       setProfileMessage('Profile saved.');
       setPendingLogo(undefined);
@@ -265,7 +275,12 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
                   />
                 </div>
                 {previewSrc && (
-                  <LogoCropEditor src={previewSrc} crop={logoCrop} onCropChange={handleCropChange} />
+                  <LogoCropEditor
+                    src={previewSrc}
+                    crop={logoCrop}
+                    onCropChange={handleCropChange}
+                    previewSize={200}
+                  />
                 )}
                 <div className="flex flex-wrap justify-center gap-2">
                   <button

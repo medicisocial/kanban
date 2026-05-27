@@ -29,7 +29,7 @@ function SidebarBrand({
           <ClientLogoAvatar
             logo={brandLogo}
             name={brandName}
-            size="lg"
+            size="sidebar"
             initialsVariant="neutral"
             ringClassName="ring-1 ring-white/[0.08]"
           />
