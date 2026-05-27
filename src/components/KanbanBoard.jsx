@@ -16,7 +16,7 @@ import { filterCards, getBoardCards } from '../utils';
 import KanbanColumn from './KanbanColumn';
 import CardPreview from './CardPreview';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import { btnPrimaryClass, btnSecondaryClass, glassSegmentClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass } from './clientPortal/clientPortalUi';
 
 const COLUMN_IDS = new Set(COLUMNS.map((c) => c.id));
 const COLUMN_BY_ID = Object.fromEntries(COLUMNS.map((c) => [c.id, c]));
@@ -105,7 +105,6 @@ export default function KanbanBoard({
     return map;
   }, [filteredCards]);
 
-  const finishedCount = cardsByColumn.finished?.length || 0;
 
   const handleDragStart = useCallback((event) => {
     const card = cards.find((c) => c.id === event.active.id);
@@ -157,19 +156,12 @@ export default function KanbanBoard({
       onDragCancel={handleDragCancel}
     >
       {embedded && (
-        <ClientPortalSectionHeader
-          title="Pipeline"
-          description="Drag cards through create → edit → review → publish. Finished one-off projects stay in archive."
-        />
-      )}
-
-      {embedded && (
-        <div className={`${glassSegmentClass} mb-4 flex w-fit flex-wrap gap-0.5 p-0.5`}>
+        <ClientPortalSectionHeader title="Pipeline" compact>
           {staffName && (
             <button
               type="button"
               onClick={() => setMyCardsOnly((value) => !value)}
-              className={myCardsOnly ? `${btnPrimaryClass} py-1.5 text-[10px]` : `${btnSecondaryClass} py-1.5 text-[10px] border-0 bg-transparent`}
+              className={myCardsOnly ? `${btnPrimaryClass} py-1.5 text-[10px]` : `${btnSecondaryClass} py-1.5 text-[10px]`}
             >
               My cards
             </button>
@@ -182,7 +174,7 @@ export default function KanbanBoard({
               className={
                 focusGroup === group.id
                   ? `${btnPrimaryClass} py-1.5 text-[10px]`
-                  : `${btnSecondaryClass} py-1.5 text-[10px] border-0 bg-transparent`
+                  : `${btnSecondaryClass} py-1.5 text-[10px]`
               }
             >
               {group.label}
@@ -195,16 +187,16 @@ export default function KanbanBoard({
                 setMyCardsOnly(false);
                 setFocusGroup(null);
               }}
-              className={`${btnSecondaryClass} py-1.5 text-[10px] border-0 bg-transparent text-white/45`}
+              className={`${btnSecondaryClass} py-1.5 text-[10px] text-white/45`}
             >
-              Clear filters
+              Clear
             </button>
           )}
-        </div>
+        </ClientPortalSectionHeader>
       )}
 
       {embedded && filteredCards.length === 0 && (
-        <div className="overview-role-panel glass-surface mb-4 px-6 py-10 text-center">
+        <div className="mb-4 border border-dashed border-white/10 px-6 py-10 text-center">
           <p className="text-sm text-white/45">No cards match the current filters.</p>
           {(myCardsOnly || focusGroup) && (
             <button
@@ -222,84 +214,85 @@ export default function KanbanBoard({
       )}
 
       <div className={`w-full overflow-x-auto ${embedded ? 'pb-2' : 'scroll-px-4 pb-6 sm:scroll-px-6'}`}>
-        <div className={embedded ? 'flex w-max gap-4' : 'flex justify-center px-4 sm:px-6'}>
-          <div className="flex w-max gap-4">
+        <div className={embedded ? 'flex w-max gap-3' : 'flex justify-center px-4 sm:px-6'}>
+          <div className="flex w-max gap-3">
             {visibleGroups.map((group) => {
               const isArchive = group.collapsible;
+              const solo = group.columnIds.length === 1;
+              const primaryColumn = COLUMN_BY_ID[group.columnIds[0]];
               const groupCount = group.columnIds.reduce(
                 (sum, id) => sum + (cardsByColumn[id]?.length || 0),
                 0,
               );
+              const canAdd = primaryColumn && primaryColumn.id !== 'finished';
 
               if (isArchive && !finishedExpanded) {
                 return (
-                  <div key={group.id} className="overview-role-panel glass-surface flex w-[160px] shrink-0 flex-col">
-                    <div className="overview-role-panel-header">
-                      <h3 className="overview-role-title">{group.label}</h3>
-                    </div>
-                    <div className="overview-role-panel-body overview-role-panel-body-single mx-4 mb-4">
-                      <button
-                        type="button"
-                        onClick={() => setFinishedExpanded(true)}
-                        className="overview-pipeline-metric overview-pipeline-metric-interactive w-full text-left"
-                      >
-                        <p className="overview-pipeline-metric-label">Finished projects</p>
-                        <p className="overview-pipeline-metric-value">{groupCount}</p>
-                        <p className="mt-1 text-[11px] text-white/40">Tap to expand</p>
-                      </button>
-                    </div>
-                  </div>
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => setFinishedExpanded(true)}
+                    className="kanban-archive-collapsed glass-surface"
+                    aria-label={`Expand archive, ${groupCount} finished projects`}
+                  >
+                    <span className="kanban-archive-collapsed-label">Archive</span>
+                    <span className="kanban-archive-collapsed-count">{groupCount}</span>
+                  </button>
                 );
               }
 
               return (
-                <div key={group.id} className="overview-role-panel glass-surface flex shrink-0 flex-col">
-                  <div className="overview-role-panel-header-row">
-                    <h3 className="overview-role-title">{group.label}</h3>
-                    <div className="flex shrink-0 items-center gap-3">
-                      <span className="text-sm font-semibold tabular-nums text-white/45">{groupCount}</span>
+                <section key={group.id} className={`kanban-stage glass-surface ${solo ? '' : 'kanban-stage-wide'}`}>
+                  <div className="kanban-stage-header">
+                    <h3 className="kanban-stage-title">{group.label}</h3>
+                    <div className="kanban-stage-actions">
                       {isArchive && (
                         <button
                           type="button"
                           onClick={() => setFinishedExpanded(false)}
-                          className="text-[11px] text-white/40 transition hover:text-white/75"
+                          className="kanban-stage-action"
                         >
                           Collapse
                         </button>
                       )}
+                      {solo && canAdd && (
+                        <button
+                          type="button"
+                          onClick={() => onAddCard(primaryColumn.id)}
+                          className="kanban-stage-add"
+                          aria-label={`Add card to ${group.label}`}
+                        >
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="overview-role-panel-body overview-role-panel-body-kanban mx-4 mb-4">
-                    <div className="kanban-group-columns">
-                      {group.columnIds.map((columnId) => {
-                        const column = COLUMN_BY_ID[columnId];
-                        if (!column) return null;
-                        return (
-                          <KanbanColumn
-                            key={column.id}
-                            column={column}
-                            cards={cardsByColumn[column.id]}
-                            onAddCard={onAddCard}
-                            onCardClick={onCardClick}
-                            onDeleteCard={onDeleteCard}
-                            embedded={embedded}
-                          />
-                        );
-                      })}
-                    </div>
+                  <div className={`kanban-stage-columns ${solo ? 'kanban-stage-columns-solo' : ''}`}>
+                    {group.columnIds.map((columnId) => {
+                      const column = COLUMN_BY_ID[columnId];
+                      if (!column) return null;
+                      return (
+                        <KanbanColumn
+                          key={column.id}
+                          column={column}
+                          cards={cardsByColumn[column.id]}
+                          onAddCard={onAddCard}
+                          onCardClick={onCardClick}
+                          onDeleteCard={onDeleteCard}
+                          embedded={embedded}
+                          solo={solo}
+                        />
+                      );
+                    })}
                   </div>
-                </div>
+                </section>
               );
             })}
           </div>
         </div>
       </div>
-
-      {finishedCount > 0 && !finishedExpanded && embedded && (
-        <p className="mt-2 text-xs text-white/35">
-          {finishedCount} finished one-off project{finishedCount === 1 ? '' : 's'} in archive.
-        </p>
-      )}
 
       <DragOverlay
         style={{ cursor: 'grabbing' }}

@@ -6,9 +6,14 @@ export default function ClientPortalSectionHeader({
   actionLabel,
   onAction,
   children,
+  compact = false,
 }) {
   return (
-    <div className="portal-section-header mb-8 flex flex-col gap-4 border-b border-white/[0.06] pb-8 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-6">
+    <div
+      className={`portal-section-header flex flex-col gap-4 border-b border-white/[0.06] sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-6 ${
+        compact ? 'mb-4 pb-4' : 'mb-8 pb-8'
+      }`}
+    >
       <div className="min-w-0 flex-1">
         {eyebrow && (
           <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.28em] text-white/35">
