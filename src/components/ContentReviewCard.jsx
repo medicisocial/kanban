@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getContentTypeStyle } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
+import { glassCardClass } from './clientPortal/clientPortalUi';
 
 const inputClass =
   'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50';
@@ -24,7 +25,7 @@ export default function ContentReviewCard({ card, onApprove, onDeny }) {
 
   return (
     <article
-      className="flex flex-col overflow-hidden rounded-xl border border-white/8 bg-[#111111]"
+      className={`${glassCardClass} flex flex-col overflow-hidden`}
       style={{ borderTopColor: clientColor, borderTopWidth: '3px' }}
     >
       <div className="p-4">

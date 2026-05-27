@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import ClientCalendarPortal from './ClientCalendarPortal';
 import EventsCalendar from './EventsCalendar';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import { btnPrimaryClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 
 export default function ClientUnifiedCalendarsPortal({
   client,
@@ -32,7 +32,7 @@ export default function ClientUnifiedCalendarsPortal({
         description="Switch between your publishing schedule and industry events."
       />
 
-      <div className="mb-6 flex w-fit border border-white/10 bg-white/[0.03] p-0.5">
+      <div className={`${glassSegmentClass} mb-6 flex w-fit p-0.5`}>
         <button type="button" onClick={() => setTab('content')} className={tabClass('content')}>
           Content
         </button>

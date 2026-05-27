@@ -6,7 +6,7 @@ import { formatDate, formatTime } from '../utils';
 import { buildContentCreatorTasks } from '../utils/contentCreatorTodo';
 import { resolveStaffMemberName } from '../utils/staffMembers';
 import { usesPersonalWorkspaceView } from '../utils/staffAuth';
-import { btnPrimaryClass, btnSecondaryClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass, glassCardClass } from './clientPortal/clientPortalUi';
 
 export default function ContentCreatorTodo({
   cards,
@@ -53,7 +53,7 @@ export default function ContentCreatorTodo({
         return (
           <article
             key={task.id}
-            className="rounded-xl border border-white/8 bg-[#111111] p-4"
+            className={`${glassCardClass} p-4`}
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <button

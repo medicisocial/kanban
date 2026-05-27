@@ -15,7 +15,7 @@ import CalendarMonthView from './CalendarMonthView';
 import CalendarSharePanel from './CalendarSharePanel';
 import AddCalendarPostModal from './AddCalendarPostModal';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 
 export default function Calendar({
   cards,
@@ -104,7 +104,7 @@ export default function Calendar({
       <CalendarSharePanel cards={cards} clientFilter={clientFilter} />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className={`flex border border-white/10 bg-white/[0.03] p-0.5 ${embedded ? '' : 'rounded-lg bg-white/5'}`}>
+        <div className={`${glassSegmentClass} flex p-0.5 ${embedded ? '' : 'rounded-lg'}`}>
           <button type="button" onClick={() => setCalendarTab('posts')} className={tabBtnClass('posts')}>
             Content
           </button>
@@ -131,7 +131,7 @@ export default function Calendar({
           <button type="button" onClick={() => openAddModal()} className={addBtnClass}>
             + {isStories ? 'Add story' : 'Add post'}
           </button>
-          <div className={`flex border border-white/10 bg-white/[0.03] p-0.5 ${embedded ? '' : 'rounded-lg bg-white/5'}`}>
+          <div className={`${glassSegmentClass} flex p-0.5 ${embedded ? '' : 'rounded-lg'}`}>
             <button type="button" onClick={() => setViewMode('month')} className={viewBtnClass('month')}>
               Month
             </button>

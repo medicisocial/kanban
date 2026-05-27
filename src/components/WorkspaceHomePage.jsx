@@ -57,7 +57,7 @@ function StatCard({ label, value, onClick, compact = false, fill = false }) {
 
 function RolePanel({ label, children, wide = false, grid = false }) {
   return (
-    <div className={`overview-role-panel ${wide ? 'overview-role-panel-wide' : ''}`}>
+    <div className={`overview-role-panel glass-surface ${wide ? 'overview-role-panel-wide' : ''}`}>
       <p className="overview-role-group-label">{label}</p>
       <div className={grid ? 'overview-role-panel-items-grid' : 'overview-role-panel-items'}>
         {children}
@@ -105,7 +105,7 @@ function OverviewTodayPanel({ timeline, onOpenMeeting, onOpenShoot, onNavigate }
   });
 
   return (
-    <div className="overview-today-panel mb-8">
+    <div className="overview-today-panel glass-surface mb-8">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/38">Today</p>
@@ -275,7 +275,7 @@ export default function WorkspaceHomePage({
         <button
           type="button"
           onClick={onOpenNotifications}
-          className="overview-sync-banner mb-6 flex w-full items-center justify-between gap-3 text-left transition-colors hover:border-white/16 hover:bg-white/[0.04]"
+          className="overview-sync-banner glass-surface mb-6 flex w-full items-center justify-between gap-3 text-left transition-colors hover:border-white/16"
         >
           <span className="text-sm text-white/75">
             {summary.syncTotal} client portal response{summary.syncTotal === 1 ? '' : 's'} ready to apply

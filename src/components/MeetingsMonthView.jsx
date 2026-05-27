@@ -55,20 +55,17 @@ export default function MeetingsMonthView({
     <div className="flex flex-col">
       <p className="mb-3 text-xs text-white/45">{formatMonthYear(focusDate)}</p>
 
-      <div className="overflow-x-auto border border-white/10 bg-white/[0.02]">
-        <div className="grid grid-cols-7 border-b border-white/10">
+      <div className="calendar-grid-shell">
+        <div className="calendar-grid-head grid grid-cols-7">
           {DAY_NAMES.map((name) => (
-            <div
-              key={name}
-              className="px-2 py-2 text-center text-[10px] font-medium uppercase tracking-wider text-white/40"
-            >
+            <div key={name} className="calendar-grid-head-cell">
               {name}
             </div>
           ))}
         </div>
 
         {weeks.map((week, wi) => (
-          <div key={wi} className="grid grid-cols-7 border-b border-white/[0.06] last:border-b-0">
+          <div key={wi} className="calendar-grid-row grid grid-cols-7">
             {week.map((day) => {
               const key = toDateKey(day);
               const dayMeetings = meetingsByDate[key] || [];
@@ -80,14 +77,19 @@ export default function MeetingsMonthView({
                   key={key}
                   type="button"
                   onClick={() => onDayClick?.(day, key)}
-                  className={`min-h-[108px] border-r border-white/[0.06] p-1.5 text-left transition last:border-r-0 sm:min-h-[124px] sm:p-2 ${
-                    !inMonth ? 'bg-black/20 opacity-45' : 'hover:bg-white/[0.03]'
-                  } ${today ? 'bg-[#810100]/10 ring-1 ring-inset ring-[#810100]/25' : ''}`}
+                  className={`calendar-grid-cell min-h-[108px] p-1.5 sm:min-h-[124px] sm:p-2 ${
+                    !inMonth ? 'bg-black/20 opacity-45' : ''
+                  } ${today ? 'calendar-cell-today' : ''}`}
+                  aria-current={today ? 'date' : undefined}
                 >
                   <div className="mb-1 flex items-center justify-between">
                     <span
-                      className={`flex h-6 w-6 items-center justify-center text-xs font-semibold ${
-                        today ? 'bg-[#810100] text-white' : inMonth ? 'text-white/85' : 'text-white/35'
+                      className={`text-xs font-semibold ${
+                        today
+                          ? 'calendar-day-number-today'
+                          : inMonth
+                            ? 'flex h-6 w-6 items-center justify-center text-white/85'
+                            : 'flex h-6 w-6 items-center justify-center text-white/35'
                       }`}
                     >
                       {day.getDate()}

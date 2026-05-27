@@ -19,7 +19,7 @@ import CalendarMonthView from './CalendarMonthView';
 import CardTitleLink from './CardTitleLink';
 import { formatTime } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 
 function ClientCalendarDetail({ card, onClose }) {
   const typeStyle = getContentTypeStyle(card.contentType);
@@ -188,7 +188,7 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
           </button>
         </div>
 
-        <div className={`flex border border-white/10 bg-white/[0.03] p-0.5 ${embedded ? '' : 'rounded-lg bg-white/5'}`}>
+        <div className={`${glassSegmentClass} flex p-0.5 ${embedded ? '' : 'rounded-lg'}`}>
           <button
             type="button"
             onClick={() => setViewMode('month')}

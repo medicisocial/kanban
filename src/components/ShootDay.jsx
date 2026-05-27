@@ -18,7 +18,7 @@ import ShootDayDetail from './ShootDayDetail';
 import ShootDayMonthView from './ShootDayMonthView';
 import AddShootDayModal from './AddShootDayModal';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import { btnPrimaryClass, btnSecondaryClass, inputClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass, inputClass, surfacePanelClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 
 export default function ShootDay({
   cards,
@@ -177,7 +177,7 @@ export default function ShootDay({
           )}
         </div>
 
-        <div className={`flex border border-white/10 bg-white/[0.03] p-0.5 ${embedded ? '' : 'rounded-lg bg-white/5'}`}>
+        <div className={`${glassSegmentClass} flex p-0.5 ${embedded ? '' : 'rounded-lg'}`}>
           <button
             type="button"
             onClick={() => setShootModal({ mode: viewMode === 'day' ? 'item' : 'day' })}

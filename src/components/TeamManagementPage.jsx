@@ -6,6 +6,7 @@ import {
   btnPrimaryClass,
   inputClass,
   statusBadgeClass,
+  surfacePanelClass,
 } from './clientPortal/clientPortalUi';
 
 function RoleSummary({ roles }) {
@@ -74,7 +75,7 @@ export default function TeamManagementPage() {
       />
 
       <div className="max-w-3xl space-y-8">
-        <div className="border border-white/[0.08] bg-white/[0.02] p-5">
+        <div className={`${surfacePanelClass} p-5`}>
           <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">
             Add team member
           </p>
@@ -114,7 +115,7 @@ export default function TeamManagementPage() {
               key={member.id}
               type="button"
               onClick={() => setSelectedMemberId(member.id)}
-              className="portal-nav-item w-full border border-white/[0.08] bg-white/[0.02] px-4 py-4 text-left transition-colors duration-300 hover:border-white/15 hover:bg-white/[0.04] sm:px-5"
+              className={`portal-nav-item ${surfacePanelClass} w-full px-4 py-4 text-left transition-colors duration-300 hover:border-white/15 sm:px-5`}
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">

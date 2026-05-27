@@ -1,6 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { COLUMN_BG } from '../constants';
 import KanbanCard from './KanbanCard';
+import { glassCardClass } from './clientPortal/clientPortalUi';
 
 export default function KanbanColumn({ column, cards, onAddCard, onCardClick, onDeleteCard, embedded = false }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -11,9 +12,9 @@ export default function KanbanColumn({ column, cards, onAddCard, onCardClick, on
   return (
     <div
       ref={setNodeRef}
-      className={`flex w-[min(85vw,300px)] shrink-0 flex-col border border-white/10 sm:w-[300px] ${
-        COLUMN_BG[column.id] || 'bg-white/[0.03]'
-      } ${isOver ? 'ring-1 ring-[#810100]/50 bg-[#a00000]/5' : ''}`}
+      className={`${glassCardClass} flex w-[min(85vw,300px)] shrink-0 flex-col sm:w-[300px] ${
+        COLUMN_BG[column.id] || ''
+      } ${isOver ? 'ring-1 ring-white/20 bg-white/[0.04]' : ''}`}
       style={{ minHeight: embedded ? '520px' : 'calc(100vh - 180px)' }}
     >
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-3">

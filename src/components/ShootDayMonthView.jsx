@@ -25,20 +25,17 @@ export default function ShootDayMonthView({
     <div className="flex flex-col">
       <p className="mb-3 text-sm text-gray-400">{formatMonthYear(focusDate)} scheduled shoots</p>
 
-      <div className="overflow-x-auto rounded-xl border border-white/5 bg-[#111111]">
-        <div className="grid grid-cols-7 border-b border-white/5">
+      <div className="calendar-grid-shell">
+        <div className="calendar-grid-head grid grid-cols-7">
           {DAY_NAMES.map((name) => (
-            <div
-              key={name}
-              className="px-2 py-2 text-center text-xs font-semibold uppercase tracking-wider text-gray-500"
-            >
+            <div key={name} className="calendar-grid-head-cell">
               {name}
             </div>
           ))}
         </div>
 
         {weeks.map((week, wi) => (
-          <div key={wi} className="grid grid-cols-7 border-b border-white/5 last:border-b-0">
+          <div key={wi} className="calendar-grid-row grid grid-cols-7">
             {week.map((day) => {
               const key = toDateKey(day);
               const dayShoots = shootsByDate[key] || [];
@@ -60,20 +57,21 @@ export default function ShootDayMonthView({
                   key={key}
                   type="button"
                   onClick={() => onDayClick(day)}
-                  className={`min-h-[120px] border-r border-white/5 p-1.5 text-left transition last:border-r-0 hover:bg-white/5 sm:min-h-[140px] sm:p-2 ${
+                  className={`calendar-grid-cell min-h-[120px] p-1.5 sm:min-h-[140px] sm:p-2 ${
                     !inMonth ? "bg-black/20 opacity-50" : ""
-                  } ${today ? "bg-[#a00000]/10 ring-1 ring-inset ring-[#810100]/30" : ""} ${
-                    hasShoot ? "hover:ring-1 hover:ring-[#810100]/20" : ""
+                  } ${today ? 'calendar-cell-today' : ''} ${
+                    hasShoot ? "hover:ring-1 hover:ring-white/10" : ""
                   }`}
+                  aria-current={today ? 'date' : undefined}
                 >
                   <div className="mb-1 flex items-center justify-between">
                     <span
-                      className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+                      className={`text-xs font-semibold ${
                         today
-                          ? "bg-[#a00000] text-white"
+                          ? 'calendar-day-number-today'
                           : inMonth
-                            ? "text-[#f9f6f2]"
-                            : "text-gray-600"
+                            ? 'flex h-6 w-6 items-center justify-center text-[#f9f6f2]'
+                            : 'flex h-6 w-6 items-center justify-center text-gray-600'
                       }`}
                     >
                       {day.getDate()}

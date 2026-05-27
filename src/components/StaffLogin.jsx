@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { isStaffAuthConfigured } from '../utils/staffAuth';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { surfacePanelClass } from './clientPortal/clientPortalUi';
 
 const inputClass =
   'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30';
@@ -26,7 +27,7 @@ export default function StaffLogin() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-black px-4 py-8">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#111111] p-6 shadow-2xl sm:p-8">
+      <div className={`${surfacePanelClass} w-full max-w-md p-6 sm:p-8`}>
         <div className="mb-6 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#810100] to-[#a00000] shadow-lg shadow-[#810100]/20">
             <span className="text-sm font-bold text-white">M</span>

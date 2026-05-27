@@ -4,7 +4,7 @@ import {
   mergeClientSocialLogins,
 } from '../../utils/clientProfile';
 import PasswordField from './PasswordField';
-import { btnPrimaryClass, inputClass } from './clientPortalUi';
+import { btnPrimaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 
 function buildDraftSocialLogins(client, getClientSocialLogins) {
   const stored = getClientSocialLogins(client);
@@ -97,7 +97,7 @@ export default function ClientSocialLoginsEditor({
 
       <div className="space-y-4">
         {CLIENT_SOCIAL_PLATFORMS.map(({ id, label }) => (
-          <div key={id} className="border border-white/[0.08] bg-white/[0.02] px-4 py-4">
+          <div key={id} className={`${glassInsetClass} px-4 py-4`}>
             <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">{label}</p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <label className="block">

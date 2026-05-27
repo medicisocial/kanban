@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useClientAuth } from '../context/ClientAuthContext';
+import { surfacePanelClass } from './clientPortal/clientPortalUi';
 
 export default function ClientPortalLogin() {
   const { login } = useClientAuth();
@@ -23,7 +24,7 @@ export default function ClientPortalLogin() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-black px-4">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#111111] p-8 shadow-2xl">
+      <div className={`${surfacePanelClass} w-full max-w-md p-8`}>
         <div className="mb-6 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#810100] to-[#a00000]">
             <span className="text-lg font-bold text-white">M</span>

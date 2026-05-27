@@ -11,7 +11,7 @@ import {
 } from '../utils/editorTodo';
 import AddEditorTaskModal from './AddEditorTaskModal';
 import NeedsEditsModal from './NeedsEditsModal';
-import { btnPrimaryClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, glassCardClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 const taskActionBtnClass =
   'inline-flex items-center justify-center rounded-sm bg-white px-3 py-1.5 text-[10px] font-medium normal-case tracking-normal text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40';
@@ -49,7 +49,7 @@ function EditorTodoItem({
 
   return (
     <article
-      className={`rounded-xl border border-white/8 bg-[#111111] p-4 transition ${
+      className={`${glassCardClass} p-4 transition ${
         task.completed ? 'opacity-60' : ''
       }`}
     >
@@ -208,7 +208,7 @@ function EditorTaskList({ tasks, emptyMessage, itemProps }) {
 
 function EditorTaskColumn({ title, description, count, accentClass, tasks, emptyMessage, itemProps }) {
   return (
-    <section className="min-w-0 rounded-2xl border border-white/10 bg-[#0d0d0d] p-4 sm:p-5">
+    <section className={`min-w-0 ${surfacePanelClass} p-4 sm:p-5`}>
       <div className="mb-4 border-b border-white/8 pb-4">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-base font-semibold text-white">{title}</h3>

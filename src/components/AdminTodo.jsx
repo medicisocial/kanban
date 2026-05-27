@@ -7,6 +7,7 @@ import {
   groupAdminTasksByDate,
 } from '../utils/adminTodo';
 import AddAdminTaskModal from './AddAdminTaskModal';
+import { glassCardClass } from './clientPortal/clientPortalUi';
 
 export default function AdminTodo({
   embedded = false,
@@ -119,7 +120,7 @@ export default function AdminTodo({
                   return (
                     <article
                       key={task.id}
-                      className={`rounded-xl border border-white/8 bg-[#111111] p-4 transition ${
+                      className={`${glassCardClass} p-4 transition ${
                         task.completed ? 'opacity-60' : ''
                       }`}
                     >

@@ -183,10 +183,35 @@ select option:hover {
 }
 
 .portal-nav-section-panel {
+  position: relative;
   overflow: hidden;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.022);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.038) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.portal-nav-section-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 120% 80% at 50% -20%,
+    rgba(255, 255, 255, 0.05) 0%,
+    transparent 58%
+  );
+}
+
+.portal-nav-section-panel > * {
+  position: relative;
+  z-index: 1;
 }
 
 .portal-nav-section-label {
@@ -297,6 +322,229 @@ select option:hover {
 
 .portal-sidebar-collapse-btn[data-collapsed='true'] svg {
   transform: rotate(180deg);
+}
+
+.calendar-cell-today {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.055) 0%,
+    rgba(255, 255, 255, 0.018) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 32px rgba(255, 255, 255, 0.035);
+}
+
+.calendar-cell-today::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 90% 70% at 50% -10%,
+    rgba(255, 255, 255, 0.08) 0%,
+    transparent 70%
+  );
+}
+
+.calendar-cell-today:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.07) 0%,
+    rgba(255, 255, 255, 0.028) 100%
+  );
+}
+
+.calendar-day-number-today {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  height: 1.625rem;
+  width: 1.625rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #0a0a0a;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 2px 12px rgba(0, 0, 0, 0.32);
+}
+
+.calendar-day-number-today-lg {
+  height: 1.875rem;
+  width: 1.875rem;
+  font-size: 0.875rem;
+}
+
+.glass-surface {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.042) 0%,
+    rgba(255, 255, 255, 0.012) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 16px 48px rgba(0, 0, 0, 0.2);
+}
+
+.glass-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 120% 80% at 50% -20%,
+    rgba(255, 255, 255, 0.055) 0%,
+    transparent 58%
+  );
+}
+
+.glass-surface > * {
+  position: relative;
+  z-index: 1;
+}
+
+.glass-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.036) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition:
+    border-color 0.32s ease,
+    background-color 0.32s ease,
+    box-shadow 0.32s ease;
+}
+
+.glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 100% 70% at 50% -15%,
+    rgba(255, 255, 255, 0.045) 0%,
+    transparent 65%
+  );
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 24px rgba(255, 255, 255, 0.03);
+}
+
+.glass-segment {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.018);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.glass-inset {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.016);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.calendar-grid-shell {
+  position: relative;
+  overflow: hidden;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.038) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 16px 48px rgba(0, 0, 0, 0.22);
+}
+
+.calendar-grid-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 100% 60% at 50% -15%,
+    rgba(255, 255, 255, 0.05) 0%,
+    transparent 62%
+  );
+}
+
+.calendar-grid-head {
+  position: relative;
+  z-index: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.calendar-grid-head-cell {
+  padding: 0.625rem 0.5rem;
+  text-align: center;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.34);
+}
+
+.calendar-grid-row {
+  position: relative;
+  z-index: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.calendar-grid-row:last-child {
+  border-bottom: none;
+}
+
+.calendar-grid-cell {
+  position: relative;
+  z-index: 1;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  text-align: left;
+  transition:
+    background-color 0.32s ease,
+    box-shadow 0.32s ease;
+}
+
+.calendar-grid-cell:last-child {
+  border-right: none;
+}
+
+.calendar-grid-cell:hover:not(.calendar-cell-today) {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.calendar-week-column {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.008) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .portal-icon-btn {
@@ -557,14 +805,37 @@ select option:hover {
 .portal-stat-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.042) 0%,
+    rgba(255, 255, 255, 0.012) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 40px rgba(0, 0, 0, 0.18);
   transition:
-    transform 0.42s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.42s ease,
-    background-color 0.42s ease,
-    box-shadow 0.42s ease;
+    border-color 0.32s ease,
+    background-color 0.32s ease,
+    box-shadow 0.32s ease;
+}
+
+.portal-stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 120% 80% at 50% -20%,
+    rgba(255, 255, 255, 0.055) 0%,
+    transparent 58%
+  );
+}
+
+.portal-stat-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .portal-stat-card-interactive {
@@ -582,10 +853,16 @@ select option:hover {
 }
 
 .portal-stat-card-interactive:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.035);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.26);
+  transform: none;
+  border-color: rgba(255, 255, 255, 0.16);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.055) 0%,
+    rgba(255, 255, 255, 0.022) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 0 28px rgba(255, 255, 255, 0.035);
 }
 
 .portal-stat-card-interactive:hover::after {
@@ -601,7 +878,7 @@ select option:hover {
 }
 
 .portal-stat-card-interactive:active {
-  transform: translateY(-1px);
+  transform: none;
   transition-duration: 0.12s;
 }
 
@@ -614,24 +891,36 @@ select option:hover {
 }
 
 .portal-overview-row {
+  position: relative;
+  overflow: hidden;
   width: 100%;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.032) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   padding: 0.625rem 0.75rem;
   text-align: left;
   transition:
-    transform 0.38s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.38s ease,
-    background-color 0.38s ease,
-    box-shadow 0.38s ease;
+    border-color 0.32s ease,
+    background-color 0.32s ease,
+    box-shadow 0.32s ease;
 }
 
 .portal-overview-row:hover {
-  transform: translateX(2px);
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  transform: none;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.048) 0%,
+    rgba(255, 255, 255, 0.016) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 0 20px rgba(255, 255, 255, 0.025);
 }
 
 .portal-overview-row:hover .portal-overview-row-title {
@@ -639,7 +928,7 @@ select option:hover {
 }
 
 .portal-overview-row:active {
-  transform: translateX(1px);
+  transform: none;
   transition-duration: 0.1s;
 }
 
@@ -661,7 +950,7 @@ select option:hover {
 .overview-pipeline-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
+  gap: 0.875rem;
 }
 
 @media (min-width: 768px) {
@@ -671,9 +960,6 @@ select option:hover {
 }
 
 .overview-role-panel {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
   padding: 1.125rem 1.25rem 1.25rem;
 }
 
@@ -682,22 +968,29 @@ select option:hover {
 }
 
 .overview-role-group-label {
+  position: relative;
+  z-index: 1;
   margin-bottom: 0.875rem;
   padding-bottom: 0.625rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: rgba(255, 255, 255, 0.62);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.38);
 }
 
 .overview-role-panel-items {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
 }
 
 .overview-role-panel-items-grid {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.75rem;
@@ -707,6 +1000,46 @@ select option:hover {
   .overview-role-panel-items-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
+
+.overview-role-panel-items .portal-stat-card,
+.overview-role-panel-items-grid .portal-stat-card {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.018);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.overview-role-panel-items .portal-stat-card-interactive:hover,
+.overview-role-panel-items-grid .portal-stat-card-interactive:hover {
+  transform: none;
+  border-color: rgba(255, 255, 255, 0.15);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.055) 0%,
+    rgba(255, 255, 255, 0.022) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 0 28px rgba(255, 255, 255, 0.035);
+}
+
+.overview-role-panel-items .portal-stat-card-interactive:active,
+.overview-role-panel-items-grid .portal-stat-card-interactive:active {
+  transform: none;
+}
+
+.overview-role-panel-items .portal-stat-card-compact .portal-stat-card-value,
+.overview-role-panel-items-grid .portal-stat-card-compact .portal-stat-card-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.overview-role-panel-items .portal-stat-card-compact .portal-stat-card-label,
+.overview-role-panel-items-grid .portal-stat-card-compact .portal-stat-card-label {
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.42);
 }
 
 .portal-stat-card-compact {
@@ -741,9 +1074,6 @@ select option:hover {
 }
 
 .overview-today-panel {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.025);
   padding: 1.25rem 1.375rem;
 }
 
@@ -850,9 +1180,6 @@ select option:hover {
 }
 
 .overview-sync-banner {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
   padding: 0.875rem 1.125rem;
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createClientContactId, normalizeClientContacts } from '../../utils/clientProfile';
-import { btnPrimaryClass, btnSecondaryClass, inputClass } from './clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 
 function buildDraftContacts(client, getClientContacts) {
   const contacts = getClientContacts(client);
@@ -96,7 +96,7 @@ export default function ClientContactsEditor({
 
   return (
     <div className="space-y-4">
-      <div className="border border-white/[0.08] bg-white/[0.02]">
+      <div className={glassInsetClass}>
         <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3">
           <div>
             <p className="text-sm font-medium text-white">Contacts</p>

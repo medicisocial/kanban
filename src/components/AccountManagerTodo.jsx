@@ -15,6 +15,7 @@ import {
 import { getEditorTaskStatusOptions } from '../utils/editorTodo';
 import NeedsEditsModal from './NeedsEditsModal';
 import PlanPostDateModal from './PlanPostDateModal';
+import { glassCardClass } from './clientPortal/clientPortalUi';
 
 const taskActionBtnClass =
   'inline-flex items-center justify-center rounded-sm bg-white px-3 py-1.5 text-[10px] font-medium normal-case tracking-normal text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40';
@@ -35,7 +36,7 @@ function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate }) {
   const openCard = () => onOpenCard(task.card);
 
   return (
-    <article className="rounded-xl border border-amber-500/30 bg-[#111111] p-4">
+    <article className={`${glassCardClass} border-amber-500/30 p-4`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -103,7 +104,7 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onAppr
   const openCard = () => onOpenCard(task.card);
 
   return (
-    <article className="rounded-xl border border-white/8 bg-[#111111] p-4">
+    <article className={`${glassCardClass} p-4`}>
       <div className="flex flex-wrap items-start gap-3">
         <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] text-gray-400">
           →
@@ -194,7 +195,7 @@ function ApprovedScheduleTaskCard({ task, getClientColor, onOpenCard, onMarkSche
   const openCard = () => onOpenCard(task.card);
 
   return (
-    <article className="rounded-xl border border-white/8 bg-[#111111] p-4">
+    <article className={`${glassCardClass} p-4`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -261,7 +262,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted }) {
   const openCard = () => onOpenCard(task.card);
 
   return (
-    <article className="rounded-xl border border-white/8 bg-[#111111] p-4">
+    <article className={`${glassCardClass} p-4`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">

@@ -31,14 +31,21 @@ export default function CalendarWeekView({
             <div
               key={key}
               className={`flex w-[160px] shrink-0 flex-col rounded-xl sm:w-[200px] ${
-                today ? "bg-[#a00000]/10 ring-1 ring-[#810100]/30" : "bg-[#111111]"
+                today ? 'calendar-cell-today' : 'calendar-week-column'
               }`}
+              aria-current={today ? 'date' : undefined}
             >
-              <div className={`border-b border-white/5 px-3 py-2.5 ${today ? "text-[#fca5a5]" : "text-gray-300"}`}>
+              <div className="relative z-[1] border-b border-white/5 px-3 py-2.5 text-gray-300">
                 <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
                   {DAY_NAMES[day.getDay()]}
                 </p>
-                <p className="text-lg font-semibold">{day.getDate()}</p>
+                <span
+                  className={
+                    today ? 'calendar-day-number-today calendar-day-number-today-lg' : 'text-lg font-semibold'
+                  }
+                >
+                  {day.getDate()}
+                </span>
                 <p className="text-[10px] text-gray-500">
                   {dayCards.length} post{dayCards.length === 1 ? "" : "s"}
                 </p>

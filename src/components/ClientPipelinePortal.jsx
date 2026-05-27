@@ -11,6 +11,7 @@ import {
   statusBadgeClass,
   statusDotClass,
   surfacePanelClass,
+  glassInsetClass,
 } from './clientPortal/clientPortalUi';
 
 const COLUMN_TONES = {
@@ -54,7 +55,7 @@ export default function ClientPipelinePortal({ cards, clientColor, embedded = fa
                   return (
                     <article
                       key={card.id}
-                      className="mb-2 border border-white/[0.06] bg-white/[0.02] p-3 transition-colors last:mb-0 hover:border-white/12 hover:bg-white/[0.04]"
+                      className={`${glassInsetClass} mb-2 p-3 transition-colors last:mb-0 hover:border-white/12`}
                       style={{ borderLeftColor: typeStyle.border, borderLeftWidth: '2px' }}
                     >
                       <div className="flex items-start justify-between gap-2">

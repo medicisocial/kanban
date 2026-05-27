@@ -142,20 +142,20 @@ export default function ClientPortalHome({
 
           {summary.setupTasks.length > 0 && (
             <div className={`${surfacePanelClass} overflow-hidden`}>
-              <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-3">
-                <div>
+              <div className="border-b border-white/10 px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
                   <h3 className="text-sm font-semibold text-white">Complete your profile</h3>
-                  <p className="mt-1 text-xs text-white/45">
-                    These help your production team work smoothly with your brand.
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('profile')}
+                    className={panelActionBtnClass}
+                  >
+                    Finish setup ({summary.setupCount})
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onNavigate('profile')}
-                  className={panelActionBtnClass}
-                >
-                  Finish setup ({summary.setupCount})
-                </button>
+                <p className="mt-1 text-xs text-white/45">
+                  These help your production team work smoothly with your brand.
+                </p>
               </div>
               <ul className="divide-y divide-white/[0.06]">
                 {summary.setupTasks.map((task) => (

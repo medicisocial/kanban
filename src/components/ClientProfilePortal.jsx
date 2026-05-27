@@ -17,7 +17,7 @@ import LogoCropEditor from './clientPortal/LogoCropEditor';
 import ClientContactsEditor from './clientPortal/ClientContactsEditor';
 import ClientSocialLoginsEditor from './clientPortal/ClientSocialLoginsEditor';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass, glassInsetClass } from './clientPortal/clientPortalUi';
 
 function buildSocialPayload(draftLogins, savedLogins) {
   return Object.fromEntries(
@@ -149,7 +149,7 @@ export default function ClientProfilePortal({
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         <div className={`${surfacePanelClass} space-y-5 p-5`}>
-          <div className="space-y-4 border border-white/[0.08] bg-white/[0.02] p-4">
+          <div className={`${glassInsetClass} space-y-4 p-4`}>
             {previewSrc ? (
               <LogoCropEditor src={previewSrc} crop={logoCrop} onCropChange={handleCropChange} />
             ) : (
@@ -201,7 +201,7 @@ export default function ClientProfilePortal({
             <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
               Business type
             </span>
-            <p className="border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-sm text-white/75">
+            <p className={`${glassInsetClass} px-3 py-2.5 text-sm text-white/75`}>
               {businessType || 'Not set yet'}
             </p>
             <p className="mt-1.5 text-[10px] text-white/35">Set by your Medici Social team.</p>
@@ -211,7 +211,7 @@ export default function ClientProfilePortal({
             <span className="mb-2 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
               Brand color
             </span>
-            <div className="flex items-center gap-3 border border-white/[0.08] bg-white/[0.02] px-3 py-2.5">
+            <div className={`${glassInsetClass} flex items-center gap-3 px-3 py-2.5`}>
               <span
                 className="h-8 w-8 shrink-0 border border-white/15"
                 style={{ backgroundColor: clientColor }}

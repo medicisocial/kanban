@@ -4,7 +4,7 @@ import AccountManagerTodo from './AccountManagerTodo';
 import AdminTodo from './AdminTodo';
 import ContentCreatorTodo from './ContentCreatorTodo';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import { btnPrimaryClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 
 export default function CompanyTasks({
   cards,
@@ -46,11 +46,9 @@ export default function CompanyTasks({
   const content = (
     <>
       <div
-        className={
-          embedded
-            ? 'mb-5 flex flex-wrap border border-white/10 bg-white/[0.03] p-0.5 w-fit gap-0.5'
-            : 'mb-6 flex flex-wrap justify-center rounded-lg border border-white/10 bg-white/5 p-0.5 w-fit gap-0.5 mx-auto'
-        }
+        className={`${glassSegmentClass} mb-5 flex w-fit flex-wrap gap-0.5 p-0.5 ${
+          embedded ? '' : 'mx-auto mb-6 justify-center'
+        }`}
       >
         <button type="button" onClick={() => setActiveRole('creator')} className={tabClass('creator')}>
           Content creators

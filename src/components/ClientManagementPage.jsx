@@ -25,7 +25,7 @@ import ClientSharePanel from './ClientSharePanel';
 import CalendarSharePanel from './CalendarSharePanel';
 import ContentReviewSharePanel from './ContentReviewSharePanel';
 import ClientPortalHealthChecklist from './ClientPortalHealthChecklist';
-import { btnPrimaryClass, btnSecondaryClass, selectClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass, selectClass, glassSegmentClass, glassInsetClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 const TABS = [
   { id: 'profile', label: 'Profile' },
@@ -240,7 +240,7 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
             </div>
           </div>
 
-          <div className="mb-6 flex flex-wrap gap-1 border border-white/[0.08] bg-white/[0.02] p-1 w-fit">
+          <div className={`${glassSegmentClass} mb-6 flex w-fit flex-wrap gap-1 p-1`}>
             {TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -259,7 +259,7 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
 
           {activeTab === 'profile' && (
             <div key={`profile-${selectedClient}`} className="portal-content-fade max-w-xl space-y-5">
-              <div className="space-y-4 border border-white/[0.08] bg-white/[0.02] p-4">
+              <div className={`${glassInsetClass} space-y-4 p-4`}>
                 <div className="flex justify-center">
                   <ClientLogoAvatar
                     logo={previewSrc ? { src: previewSrc, ...logoCrop } : getClientLogo(selectedClient)}

@@ -1,9 +1,12 @@
-export const surfaceClass =
-  'border border-white/[0.08] bg-white/[0.02]';
+export const surfaceClass = 'glass-surface';
 
-export const surfacePanelClass =
-  'border border-white/[0.08] bg-white/[0.02]';
+export const surfacePanelClass = 'glass-surface';
 
+export const glassCardClass = 'glass-card';
+
+export const glassSegmentClass = 'glass-segment';
+
+export const glassInsetClass = 'glass-inset';
 export const btnPrimaryClass =
   'inline-flex items-center justify-center rounded-sm bg-white px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.2em] text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40';
 
