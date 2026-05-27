@@ -24,7 +24,6 @@ import ModelScheduleSummary from "./ModelScheduleSummary";
 function planToUpdates(plan) {
   return {
     location: plan.location || "",
-    callTime: plan.callTime || "",
     shootStartTime: plan.shootStartTime || "",
     shootEndTime: plan.shootEndTime || "",
     sessionModels: plan.sessionModels || "",

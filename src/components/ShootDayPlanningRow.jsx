@@ -5,6 +5,7 @@ import {
   parseTimeToMinutes,
 } from "../utils/shootDay";
 import ModelTagInput from "./ModelTagInput";
+import ShootLocationLink from "./ShootLocationLink";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-2.5 py-1.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50";
@@ -198,26 +199,21 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <label className="block">
+      <label className="block sm:col-span-2">
         <span className="mb-1 block text-xs font-medium text-gray-400">Location</span>
         <input
           type="text"
           value={plan.location || ""}
           onChange={(e) => onUpdatePlan({ location: e.target.value })}
           disabled={readOnly}
-          placeholder="Studio, client office, etc."
+          placeholder="123 Main St, Austin TX — opens in Apple Maps"
           className={inputClassWide}
         />
-      </label>
-      <label className="block">
-        <span className="mb-1 block text-xs font-medium text-gray-400">Crew call time</span>
-        <input
-          type="time"
-          value={plan.callTime || ""}
-          onChange={(e) => onUpdatePlan({ callTime: e.target.value })}
-          disabled={readOnly}
-          className={inputClassWide}
-        />
+        {plan.location?.trim() && (
+          <p className="mt-1.5 text-xs">
+            <ShootLocationLink location={plan.location} showIcon />
+          </p>
+        )}
       </label>
 
       <div className="sm:col-span-2 rounded-lg border border-[#810100]/20 bg-[#a00000]/5 p-3">

@@ -140,7 +140,6 @@ function sessionInfoGrid(plan) {
   return `
     <table class="meta avoid-break">
       ${row("Location", plan.location)}
-      ${row("Crew call time", plan.callTime ? formatTimeInput(plan.callTime) : "")}
       ${row("Shoot window", windowLabel !== "—" ? windowLabel : "")}
     </table>`;
 }
@@ -476,10 +475,9 @@ function drawPdfSessionTable(doc, autoTable, startY, plan) {
 
   autoTable(doc, {
     startY,
-    head: [["Location", "Crew call time", "Shoot window"]],
+    head: [["Location", "Shoot window"]],
     body: [[
       plan.location || "—",
-      plan.callTime ? formatTimeInput(plan.callTime) : "—",
       windowLabel,
     ]],
     theme: "grid",

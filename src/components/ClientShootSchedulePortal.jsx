@@ -2,6 +2,7 @@ import { getContentTypeStyle } from '../constants';
 import { getClientShootCards, stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import { formatTime } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
+import ShootLocationLink from './ShootLocationLink';
 import { surfacePanelClass } from './clientPortal/clientPortalUi';
 
 export default function ClientShootSchedulePortal({
@@ -47,8 +48,11 @@ export default function ClientShootSchedulePortal({
                 <div className="border-b border-white/10 px-4 py-3">
                   <h3 className="text-sm font-semibold text-white">{label}</h3>
                   <div className="mt-1 flex flex-wrap gap-x-4 text-xs text-white/45">
-                    {plan?.location && <span>Location: {plan.location}</span>}
-                    {plan?.callTime && <span>Call time: {formatTime(plan.callTime)}</span>}
+                    {plan?.location && (
+                      <span>
+                        Location: <ShootLocationLink location={plan.location} linkClassName="text-[#c88] underline-offset-2 hover:underline" />
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="divide-y divide-white/[0.06]">
@@ -96,7 +100,7 @@ export default function ClientShootSchedulePortal({
       <section>
         <ClientPortalSectionHeader
           title="Shoot Schedule"
-          description="Upcoming production days, call times, and content planned for each session."
+          description="Upcoming production days, locations, and content planned for each session."
         />
         {content}
       </section>
