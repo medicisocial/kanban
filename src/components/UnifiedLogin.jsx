@@ -7,6 +7,7 @@ import {
 } from '../utils/staffAuth';
 import { authenticateTeamMemberCredentials } from '../utils/teamAuth';
 import { loginClientPortal } from '../utils/clientPortalAuth';
+import { signInStaffSupabaseSession } from '../lib/staffSupabaseAuth';
 
 const labelClass =
   'mb-2 block text-[10px] font-medium uppercase tracking-[0.28em] text-white/45';
@@ -40,6 +41,11 @@ export default function UnifiedLogin({ onAuthenticated, checking = false }) {
       if (isStaffAuthConfigured()) {
         const staffOk = await verifyStaffCredentials(username, password);
         if (staffOk) {
+          const supabaseLogin = await signInStaffSupabaseSession(password);
+          if (!supabaseLogin.ok) {
+            setError(supabaseLogin.error);
+            return;
+          }
           const session = await createStaffSession(username);
           saveStaffSession(session);
           onAuthenticated('staff');

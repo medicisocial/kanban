@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   clearStaffSession,
+  isSharedOperationsLogin,
   isStaffSessionValid,
   loadStaffSession,
 } from '../utils/staffAuth';
 import { clearClientSession, loadClientSession } from '../utils/clientPortalAuth';
+import { hasStaffSupabaseSession } from '../lib/staffSupabaseAuth';
 import { ClientsProvider } from '../context/ClientsContext';
 import { StaffAuthProvider } from '../context/StaffAuthContext';
 import { WorkspaceSyncProvider } from '../context/WorkspaceSyncContext';
@@ -43,10 +45,15 @@ export default function UnifiedAppGate() {
       try {
         const staff = loadStaffSession();
         if (staff && (await isStaffSessionValid(staff))) {
-          if (!cancelled) setMode('staff');
-          return;
+          if (isSharedOperationsLogin(staff) && !(await hasStaffSupabaseSession())) {
+            clearStaffSession();
+          } else {
+            if (!cancelled) setMode('staff');
+            return;
+          }
+        } else if (staff) {
+          clearStaffSession();
         }
-        if (staff) clearStaffSession();
 
         const client = loadClientSession();
         if (client?.brand) {
