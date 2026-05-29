@@ -1,10 +1,12 @@
 import { useCallback } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { buildClientShareUrl } from '../utils/clientShare';
+import { useClientEmailSend } from '../hooks/useClientEmailSend';
 import ShareLinkStrip from './ShareLinkStrip';
 
 export default function ClientSharePanel({ ideas, clientFilter = 'all' }) {
   const { clients } = useClientsContext();
+  const { openSend, modal } = useClientEmailSend('ideas');
 
   const getClientMeta = useCallback(
     (client) => {
@@ -27,14 +29,26 @@ export default function ClientSharePanel({ ideas, clientFilter = 'all' }) {
     }
   };
 
+  const handleSend = (row) => {
+    openSend({
+      client: row.client,
+      shareUrl: buildClientShareUrl(row.client, row.payload),
+      itemCount: row.count,
+    });
+  };
+
   return (
-    <ShareLinkStrip
-      title="Share ideas"
-      emptyHint="No pending ideas to share"
-      clients={clients}
-      clientFilter={clientFilter}
-      getClientMeta={getClientMeta}
-      onCopy={handleCopy}
-    />
+    <>
+      <ShareLinkStrip
+        title="Share ideas"
+        emptyHint="No pending ideas to share"
+        clients={clients}
+        clientFilter={clientFilter}
+        getClientMeta={getClientMeta}
+        onCopy={handleCopy}
+        onSend={handleSend}
+      />
+      {modal}
+    </>
   );
 }

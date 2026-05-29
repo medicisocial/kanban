@@ -10,12 +10,22 @@ function LinkIcon({ className = 'h-3 w-3' }) {
   );
 }
 
+function MailIcon({ className = 'h-3 w-3' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+      <path d="M4 7h16v10H4z" strokeLinejoin="round" />
+      <path d="m4 7 8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export default function ShareLinkStrip({
   title = 'Share',
   emptyHint = 'Nothing to share yet',
   clients,
   getClientMeta,
   onCopy,
+  onSend,
   clientFilter = 'all',
 }) {
   const [copiedClient, setCopiedClient] = useState(null);
@@ -46,6 +56,9 @@ export default function ShareLinkStrip({
 
   if (visibleClients.length === 0) return null;
 
+  const actionClass =
+    'inline-flex items-center gap-1 border px-2 py-1 text-[10px] transition-colors disabled:cursor-not-allowed disabled:opacity-30';
+
   return (
     <div className="mb-3 border border-white/10 bg-white/[0.02] px-3 py-2">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
@@ -61,37 +74,56 @@ export default function ShareLinkStrip({
               const isCopied = copiedClient === row.client;
               const inactive = row.disabled || row.count === 0;
               return (
-                <button
+                <div
                   key={row.client}
-                  type="button"
-                  onClick={() => handleCopy(row)}
-                  disabled={inactive}
-                  title={
-                    inactive
-                      ? `${row.client} — nothing to share`
-                      : `Copy link for ${row.client}`
-                  }
-                  className={`inline-flex max-w-[160px] items-center gap-1.5 border px-2 py-1 text-[10px] transition-colors ${
-                    inactive
-                      ? 'cursor-not-allowed border-white/[0.04] text-white/25'
-                      : isCopied
-                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200/90'
-                        : 'border-white/10 text-white/70 hover:border-white/20 hover:bg-white/[0.04] hover:text-white'
+                  className={`inline-flex items-center gap-1 border px-1.5 py-1 ${
+                    inactive ? 'border-white/[0.04] text-white/25' : 'border-white/10 text-white/70'
                   }`}
                 >
                   <ClientAvatar client={row.client} size="xs" />
-                  <span className="truncate font-medium">{row.client}</span>
+                  <span className="max-w-[96px] truncate text-[10px] font-medium">{row.client}</span>
                   {row.count > 0 && (
-                    <span className="shrink-0 tabular-nums text-white/40">{row.count}</span>
+                    <span className="shrink-0 tabular-nums text-[10px] text-white/40">{row.count}</span>
                   )}
-                  {!inactive && (
-                    isCopied ? (
-                      <span className="shrink-0 text-[9px] uppercase tracking-wider">Copied</span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(row)}
+                    disabled={inactive}
+                    title={inactive ? `${row.client} — nothing to share` : `Copy link for ${row.client}`}
+                    className={`${actionClass} ${
+                      inactive
+                        ? 'border-transparent text-white/25'
+                        : isCopied
+                          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200/90'
+                          : 'border-white/10 hover:border-white/20 hover:bg-white/[0.04] hover:text-white'
+                    }`}
+                  >
+                    {isCopied ? (
+                      <span className="text-[9px] uppercase tracking-wider">Copied</span>
                     ) : (
-                      <LinkIcon className="h-2.5 w-2.5 shrink-0 opacity-50" />
-                    )
+                      <>
+                        <LinkIcon className="h-2.5 w-2.5 opacity-50" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                  {onSend && (
+                    <button
+                      type="button"
+                      onClick={() => onSend(row)}
+                      disabled={inactive}
+                      title={inactive ? `${row.client} — nothing to send` : `Email ${row.client}`}
+                      className={`${actionClass} ${
+                        inactive
+                          ? 'border-transparent text-white/25'
+                          : 'border-white/10 hover:border-white/20 hover:bg-white/[0.04] hover:text-white'
+                      }`}
+                    >
+                      <MailIcon className="h-2.5 w-2.5 opacity-50" />
+                      <span>Send</span>
+                    </button>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
