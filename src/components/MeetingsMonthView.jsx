@@ -7,6 +7,7 @@ import {
 import { formatTime } from '../utils';
 import { useClientsContext } from '../context/ClientsContext';
 import { getMeetingContactLabel, isRecurringMeeting } from '../utils/meetingsCalendar';
+import { getMeetingLinkShortLabel, getMeetingVideoLink } from '../utils/meetingLinks';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -50,7 +51,9 @@ export default function MeetingsMonthView({
   const getMeetingTitle = (meeting) => {
     const contact = getMeetingContactLabel(meeting);
     const recurring = isRecurringMeeting(meeting) ? ' ↻' : '';
-    return `${contact} · ${meeting.title}${recurring}`;
+    const video = getMeetingLinkShortLabel(getMeetingVideoLink(meeting));
+    const videoSuffix = video ? ` · ${video}` : '';
+    return `${contact} · ${meeting.title}${recurring}${videoSuffix}`;
   };
 
   return (

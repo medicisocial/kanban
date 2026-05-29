@@ -16,6 +16,7 @@ const STORAGE_KEY = 'medici-social-kanban';
 const VIDEO_IDEAS_STORAGE_KEY = 'medici-social-video-ideas';
 const SHOOT_PLANS_STORAGE_KEY = 'medici-social-shoot-plans';
 const EVENTS_STORAGE_KEY = 'medici-social-events';
+const MEETINGS_STORAGE_KEY = 'medici-social-meetings';
 const CLIENTS_STORAGE_KEY = 'medici-social-clients';
 const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
 const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
@@ -28,22 +29,24 @@ const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
 async function loadPortalWorkspace() {
   if (isSupabaseConfigured()) {
     try {
-      const [cards, ideas, events, plans, clientsRows, authMap] = await Promise.all([
+      const [cards, ideas, events, meetings, plans, clientsRows, authMap] = await Promise.all([
         fetchCollection('cards'),
         fetchCollection('video_ideas'),
         fetchCollection('events'),
+        fetchCollection('meetings'),
         fetchCollectionMap('shoot_plans'),
         fetchCollection('clients'),
         fetchCollectionMap('client_portal_credentials'),
       ]);
 
-      if (cards && ideas && events && plans && clientsRows && authMap) {
+      if (cards && ideas && events && meetings && plans && clientsRows && authMap) {
         return {
           exportedAt: new Date().toISOString(),
           data: {
             [STORAGE_KEY]: cards,
             [VIDEO_IDEAS_STORAGE_KEY]: ideas,
             [EVENTS_STORAGE_KEY]: events,
+            [MEETINGS_STORAGE_KEY]: meetings,
             [SHOOT_PLANS_STORAGE_KEY]: plans,
             [CLIENTS_STORAGE_KEY]: clientsRows[0] || {},
             [CLIENT_PORTAL_AUTH_KEY]: authMap,
@@ -135,5 +138,6 @@ export default async function handler(req, res) {
     ideas: filterForBrand(data[VIDEO_IDEAS_STORAGE_KEY], brand),
     plans: filterPlansForBrand(data[SHOOT_PLANS_STORAGE_KEY], brand),
     events: filterForBrand(data[EVENTS_STORAGE_KEY], brand),
+    meetings: filterForBrand(data[MEETINGS_STORAGE_KEY], brand),
   });
 }

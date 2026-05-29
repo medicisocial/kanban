@@ -16,12 +16,14 @@ import {
 const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
 const CONTENT_REVIEW_RESPONSES_KEY = 'medici-social-content-review-responses';
 const EVENTS_STORAGE_KEY = 'medici-social-events';
+const MEETINGS_STORAGE_KEY = 'medici-social-meetings';
 const CLIENTS_STORAGE_KEY = 'medici-social-clients';
 const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
 
 const CARDS_TABLE = 'cards';
 const VIDEO_IDEAS_TABLE = 'video_ideas';
 const EVENTS_TABLE = 'events';
+const MEETINGS_TABLE = 'meetings';
 const CLIENTS_TABLE = 'clients';
 const CREDENTIALS_TABLE = 'client_portal_credentials';
 const CLIENTS_RECORD_ID = 'workspace';
@@ -155,6 +157,54 @@ async function applyResponseToSupabase(res, session, type, response) {
     }
 
     return res.status(400).json({ error: 'Unknown event action.' });
+  }
+
+  if (type === 'meeting') {
+    const action = response.action;
+
+    if (action === 'create') {
+      if (!response.meeting || typeof response.meeting !== 'object') {
+        return res.status(400).json({ error: 'Invalid meeting payload.' });
+      }
+      const id = response.meeting.id || `mtg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const meeting = {
+        ...response.meeting,
+        client: brand,
+        prospectName: '',
+        id,
+        createdAt: response.meeting.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      };
+      await upsertRecord(MEETINGS_TABLE, id, meeting);
+      return res.status(200).json({ ok: true, id });
+    }
+
+    if (action === 'update') {
+      const id = response.meeting?.id;
+      if (!id) return res.status(400).json({ error: 'Invalid meeting payload.' });
+      const existing = await fetchRecord(MEETINGS_TABLE, id);
+      if (!existing || existing.client !== brand) return res.status(403).json({ error: 'Forbidden.' });
+      const meeting = {
+        ...existing,
+        ...response.meeting,
+        client: brand,
+        prospectName: '',
+        updatedAt: Date.now(),
+      };
+      await upsertRecord(MEETINGS_TABLE, id, meeting);
+      return res.status(200).json({ ok: true });
+    }
+
+    if (action === 'delete') {
+      const id = response.meetingId;
+      if (!id) return res.status(400).json({ error: 'Invalid meeting payload.' });
+      const existing = await fetchRecord(MEETINGS_TABLE, id);
+      if (!existing || existing.client !== brand) return res.status(403).json({ error: 'Forbidden.' });
+      await deleteRecord(MEETINGS_TABLE, id);
+      return res.status(200).json({ ok: true });
+    }
+
+    return res.status(400).json({ error: 'Unknown meeting action.' });
   }
 
   if (type === 'profile') {
@@ -294,6 +344,47 @@ export default async function handler(req, res) {
     }
 
     workspace.data[EVENTS_STORAGE_KEY] = events;
+  } else if (type === 'meeting') {
+    let meetings = Array.isArray(workspace.data[MEETINGS_STORAGE_KEY])
+      ? [...workspace.data[MEETINGS_STORAGE_KEY]]
+      : [];
+    const action = response.action;
+
+    if (action === 'create') {
+      if (!response.meeting || typeof response.meeting !== 'object') {
+        return res.status(400).json({ error: 'Invalid meeting payload.' });
+      }
+      meetings.push({
+        ...response.meeting,
+        client: session.brand,
+        prospectName: '',
+        id: response.meeting.id || `mtg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        createdAt: response.meeting.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      });
+    } else if (action === 'update') {
+      const idx = meetings.findIndex((item) => item.id === response.meeting?.id);
+      if (idx === -1 || meetings[idx].client !== session.brand) {
+        return res.status(403).json({ error: 'Forbidden.' });
+      }
+      meetings[idx] = {
+        ...meetings[idx],
+        ...response.meeting,
+        client: session.brand,
+        prospectName: '',
+        updatedAt: Date.now(),
+      };
+    } else if (action === 'delete') {
+      const idx = meetings.findIndex((item) => item.id === response.meetingId);
+      if (idx === -1 || meetings[idx].client !== session.brand) {
+        return res.status(403).json({ error: 'Forbidden.' });
+      }
+      meetings = meetings.filter((item) => item.id !== response.meetingId);
+    } else {
+      return res.status(400).json({ error: 'Unknown meeting action.' });
+    }
+
+    workspace.data[MEETINGS_STORAGE_KEY] = meetings;
   } else if (type === 'profile') {
     const brand = session.brand;
     const clientStore = workspace.data[CLIENTS_STORAGE_KEY] || {};

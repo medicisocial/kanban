@@ -4,6 +4,7 @@ import {
   expandMeetingsForRange,
   getMeetingContactLabel,
 } from './meetingsCalendar';
+import { getMeetingLinkShortLabel, getMeetingVideoLink } from './meetingLinks';
 import { cardIsAssignedToStaff } from './staffMembers';
 import {
   getShootCards,
@@ -134,7 +135,13 @@ export function buildTodayTimeline({
       time: meeting.time || '',
       endTime: meeting.endTime || '',
       title: meeting.title,
-      subtitle: [getMeetingContactLabel(meeting), meeting.location].filter(Boolean).join(' · '),
+      subtitle: [
+        getMeetingContactLabel(meeting),
+        meeting.location && !getMeetingVideoLink(meeting) ? meeting.location : '',
+        getMeetingLinkShortLabel(getMeetingVideoLink(meeting)),
+      ]
+        .filter(Boolean)
+        .join(' · '),
       meeting,
     });
   }

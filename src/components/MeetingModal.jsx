@@ -18,9 +18,11 @@ import {
   groupMeetingsByDate,
   isRecurringMeeting,
 } from '../utils/meetingsCalendar';
+import { getMeetingLinkShortLabel, getMeetingVideoLink } from '../utils/meetingLinks';
 import MeetingsMonthView from './MeetingsMonthView';
 import TimeInput from './TimeInput';
 import DateInput from './DateInput';
+import MeetingVideoLink from './MeetingVideoLink';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, selectClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 const CONTACT_TYPES = [
@@ -56,6 +58,7 @@ function segmentBtnClass(active) {
 function MeetingSidebarChip({ meeting, onClick, draft = false }) {
   const contact = getMeetingContactLabel(meeting);
   const recurring = isRecurringMeeting(meeting);
+  const videoLabel = getMeetingLinkShortLabel(getMeetingVideoLink(meeting));
 
   return (
     <button
@@ -76,6 +79,7 @@ function MeetingSidebarChip({ meeting, onClick, draft = false }) {
         {meeting.time ? formatTime(meeting.time) : 'No start time'}
         {meeting.endTime ? ` – ${formatTime(meeting.endTime)}` : ''}
         {recurring ? ' · Recurring' : ''}
+        {videoLabel ? ` · ${videoLabel}` : ''}
       </p>
     </button>
   );
@@ -111,6 +115,7 @@ export default function MeetingModal({
   );
   const [prospectName, setProspectName] = useState(meeting?.prospectName || '');
   const [location, setLocation] = useState(meeting?.location || '');
+  const [videoLink, setVideoLink] = useState(meeting?.videoLink || '');
   const [notes, setNotes] = useState(meeting?.notes || '');
   const [recurrence, setRecurrence] = useState(meeting?.recurrence || 'none');
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(meeting?.recurrenceEndDate || '');
@@ -255,9 +260,10 @@ export default function MeetingModal({
       date,
       time,
       endTime,
-      client: contactType === 'client' ? client : '',
+      client: clientLocked || contactType === 'client' ? client || lockedClient || '' : '',
       prospectName: contactType === 'prospect' ? prospectName.trim() : '',
       location: location.trim(),
+      videoLink: videoLink.trim(),
       notes: notes.trim(),
       recurrence,
       recurrenceEndDate: recurrence === 'none' ? '' : recurrenceEndDate,
@@ -282,6 +288,7 @@ export default function MeetingModal({
   const scheduleSummary = date
     ? `${formatDate(date)}${time ? ` · ${formatTime(time)}` : ''}${endTime ? ` – ${formatTime(endTime)}` : ''}`
     : 'Pick a date on the calendar';
+  const draftVideoLink = getMeetingVideoLink({ videoLink, location });
 
   return createPortal(
     <div
@@ -303,7 +310,7 @@ export default function MeetingModal({
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-wider text-violet-300">Meetings calendar</p>
             <h2 id="meeting-modal-title" className="mt-1 text-lg font-semibold text-white">
-              {isEdit ? (recurring ? 'Edit recurring meeting' : 'Edit meeting') : 'Schedule meeting'}
+              {isEdit ? (recurring ? 'Edit recurring meeting' : 'Edit meeting') : clientLocked ? 'Schedule a meeting' : 'Schedule meeting'}
             </h2>
             <p className="mt-1 text-sm text-gray-400">
               {isEdit && displayDate
@@ -376,6 +383,11 @@ export default function MeetingModal({
                 <div>
                   <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">Meeting schedule</p>
                   <p className="mt-1 text-base font-semibold text-white">{scheduleSummary}</p>
+                  {draftVideoLink && (
+                    <p className="mt-2">
+                      <MeetingVideoLink url={draftVideoLink} linkClassName="text-sm font-medium text-violet-300 underline-offset-2 hover:underline" />
+                    </p>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -430,64 +442,66 @@ export default function MeetingModal({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className={inputClass}
-                  placeholder="Kickoff call, weekly sync, discovery call…"
+                  placeholder={clientLocked ? 'Weekly sync, kickoff call, review…' : 'Kickoff call, weekly sync, discovery call…'}
                   autoFocus
                 />
               </div>
 
-              <div>
-                <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-white/50">
-                  Meeting with
-                </label>
-                <div className="flex overflow-hidden border border-white/10">
-                  {CONTACT_TYPES.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => handleContactTypeChange(option.value)}
-                      disabled={clientLocked && option.value !== 'client'}
-                      className={segmentBtnClass(contactType === option.value)}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {!clientLocked && (
+                <>
+                  <div>
+                    <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-white/50">
+                      Meeting with
+                    </label>
+                    <div className="flex overflow-hidden border border-white/10">
+                      {CONTACT_TYPES.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => handleContactTypeChange(option.value)}
+                          className={segmentBtnClass(contactType === option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              {contactType === 'client' && (
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-white/50">
-                    Client
-                  </label>
-                  <select
-                    value={client}
-                    onChange={(e) => setClient(e.target.value)}
-                    className={selectClass}
-                    disabled={clientLocked}
-                  >
-                    <option value="">Select client…</option>
-                    {clients.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+                  {contactType === 'client' && (
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-white/50">
+                        Client
+                      </label>
+                      <select
+                        value={client}
+                        onChange={(e) => setClient(e.target.value)}
+                        className={selectClass}
+                      >
+                        <option value="">Select client…</option>
+                        {clients.map((name) => (
+                          <option key={name} value={name}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-              {contactType === 'prospect' && (
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-white/50">
-                    Prospective client
-                  </label>
-                  <input
-                    type="text"
-                    value={prospectName}
-                    onChange={(e) => setProspectName(e.target.value)}
-                    className={inputClass}
-                    placeholder="Company or contact name"
-                  />
-                </div>
+                  {contactType === 'prospect' && (
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-white/50">
+                        Prospective client
+                      </label>
+                      <input
+                        type="text"
+                        value={prospectName}
+                        onChange={(e) => setProspectName(e.target.value)}
+                        className={inputClass}
+                        placeholder="Company or contact name"
+                      />
+                    </div>
+                  )}
+                </>
               )}
 
               {recurrence !== 'none' && (
@@ -509,14 +523,32 @@ export default function MeetingModal({
 
               <div>
                 <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-white/50">
-                  Location or link
+                  Video call link
+                </label>
+                <input
+                  type="url"
+                  value={videoLink}
+                  onChange={(e) => setVideoLink(e.target.value)}
+                  className={inputClass}
+                  placeholder="https://zoom.us/j/… or https://meet.google.com/…"
+                />
+                <p className="mt-1 text-[11px] text-white/35">
+                  {recurrence !== 'none'
+                    ? 'This Zoom or Google Meet link is used for every recurring occurrence.'
+                    : 'Paste a Zoom, Google Meet, or Teams link for this meeting.'}
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-white/50">
+                  Location
                 </label>
                 <input
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   className={inputClass}
-                  placeholder="Zoom link, office, phone…"
+                  placeholder="Office, address, or phone number"
                 />
               </div>
 

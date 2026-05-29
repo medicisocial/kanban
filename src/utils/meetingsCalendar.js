@@ -27,6 +27,12 @@ export function filterMeetings(meetings, { client } = {}) {
   });
 }
 
+/** Client portal — only meetings tagged to this brand (excludes internal team meetings). */
+export function filterClientBrandMeetings(meetings, client) {
+  if (!Array.isArray(meetings) || !client) return [];
+  return meetings.filter((meeting) => meeting.client === client);
+}
+
 function compareDateKeys(a, b) {
   return a.localeCompare(b);
 }

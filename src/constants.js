@@ -223,6 +223,7 @@ export function createMeeting(overrides = {}) {
     client: '',
     prospectName: '',
     location: '',
+    videoLink: '',
     notes: '',
     recurrence: 'none',
     recurrenceEndDate: '',

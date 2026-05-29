@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import ClientCalendarPortal from './ClientCalendarPortal';
 import EventsCalendar from './EventsCalendar';
+import MeetingsCalendar from './MeetingsCalendar';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import { btnPrimaryClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 
@@ -8,11 +9,15 @@ export default function ClientUnifiedCalendarsPortal({
   client,
   cards,
   events,
+  meetings,
   businessType,
   initialTab = 'content',
   onAddEvent,
   onUpdateEvent,
   onDeleteEvent,
+  onAddMeeting,
+  onUpdateMeeting,
+  onDeleteMeeting,
 }) {
   const [tab, setTab] = useState(initialTab);
 
@@ -29,21 +34,26 @@ export default function ClientUnifiedCalendarsPortal({
     <section>
       <ClientPortalSectionHeader
         title="Calendar"
-        description="Switch between your publishing schedule and industry events."
+        description="Your publishing schedule, industry events, and meetings with your team."
       />
 
-      <div className={`${glassSegmentClass} mb-6 flex w-fit p-0.5`}>
+      <div className={`${glassSegmentClass} mb-6 flex w-fit flex-wrap p-0.5`}>
         <button type="button" onClick={() => setTab('content')} className={tabClass('content')}>
           Content
         </button>
         <button type="button" onClick={() => setTab('events')} className={tabClass('events')}>
           Events
         </button>
+        <button type="button" onClick={() => setTab('meetings')} className={tabClass('meetings')}>
+          Meetings
+        </button>
       </div>
 
-      {tab === 'content' ? (
+      {tab === 'content' && (
         <ClientCalendarPortal client={client} cards={cards} embedded hideSectionHeader />
-      ) : (
+      )}
+
+      {tab === 'events' && (
         <EventsCalendar
           events={events}
           scopedBrand={client}
@@ -52,6 +62,20 @@ export default function ClientUnifiedCalendarsPortal({
           onAddEvent={onAddEvent}
           onUpdateEvent={onUpdateEvent}
           onDeleteEvent={onDeleteEvent}
+          clientMode
+          embedded
+          hideSectionHeader
+        />
+      )}
+
+      {tab === 'meetings' && (
+        <MeetingsCalendar
+          meetings={meetings}
+          scopedBrand={client}
+          lockedClient={client}
+          onAddMeeting={onAddMeeting}
+          onUpdateMeeting={onUpdateMeeting}
+          onDeleteMeeting={onDeleteMeeting}
           clientMode
           embedded
           hideSectionHeader

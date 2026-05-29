@@ -11,7 +11,7 @@ import ClientUnifiedCalendarsPortal from './ClientUnifiedCalendarsPortal';
 import ClientPortalLayout from './clientPortal/ClientPortalLayout';
 import ClientPortalNotificationsPanel from './clientPortal/ClientPortalNotificationsPanel';
 import { filterEvents } from '../utils/eventsCalendar';
-import { createEvent } from '../constants';
+import { createEvent, createMeeting } from '../constants';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import { buildClientPortalTasks } from '../utils/clientPortalTasks';
 
@@ -26,6 +26,11 @@ export default function ClientHubPortal({ onSignOut }) {
   const handleTabChange = (tab) => {
     if (tab === 'events') {
       setCalendarTab('events');
+      setActiveTab('calendar');
+      return;
+    }
+    if (tab === 'meetings') {
+      setCalendarTab('meetings');
       setActiveTab('calendar');
       return;
     }
@@ -48,6 +53,7 @@ export default function ClientHubPortal({ onSignOut }) {
     () => filterEvents(portalData?.events || [], { client: brand }),
     [portalData?.events, brand],
   );
+  const meetings = useMemo(() => portalData?.meetings || [], [portalData?.meetings]);
 
   const notificationCount = useMemo(() => {
     const pendingIdeas = ideas.filter((idea) => idea.client === brand && idea.status === 'pending').length;
@@ -107,6 +113,26 @@ export default function ClientHubPortal({ onSignOut }) {
 
   const handleDeleteEvent = async (id) => {
     await queueCloudResponse('event', { action: 'delete', eventId: id });
+  };
+
+  const handleAddMeeting = async (data) => {
+    await queueCloudResponse('meeting', {
+      action: 'create',
+      meeting: createMeeting({ ...data, client: brand }),
+    });
+  };
+
+  const handleUpdateMeeting = async (id, updates) => {
+    const existing = meetings.find((meeting) => meeting.id === id);
+    if (!existing) return;
+    await queueCloudResponse('meeting', {
+      action: 'update',
+      meeting: { ...existing, ...updates, id, client: brand },
+    });
+  };
+
+  const handleDeleteMeeting = async (id) => {
+    await queueCloudResponse('meeting', { action: 'delete', meetingId: id });
   };
 
   const handleSignOut = () => {
@@ -193,11 +219,15 @@ export default function ClientHubPortal({ onSignOut }) {
           client={brand}
           cards={cards}
           events={events}
+          meetings={meetings}
           businessType={businessType}
           initialTab={calendarTab}
           onAddEvent={handleAddEvent}
           onUpdateEvent={handleUpdateEvent}
           onDeleteEvent={handleDeleteEvent}
+          onAddMeeting={handleAddMeeting}
+          onUpdateMeeting={handleUpdateMeeting}
+          onDeleteMeeting={handleDeleteMeeting}
         />
       )}
 

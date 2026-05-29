@@ -8,6 +8,7 @@ import {
 } from '../utils/calendar';
 import {
   filterMeetings,
+  filterClientBrandMeetings,
   groupMeetingsByDate,
   getUpcomingMeetings,
   expandMeetingsForRange,
@@ -18,6 +19,8 @@ import { formatTime } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import MeetingsMonthView from './MeetingsMonthView';
 import MeetingModal from './MeetingModal';
+import MeetingVideoLink from './MeetingVideoLink';
+import { getMeetingLinkShortLabel, getMeetingVideoLink } from '../utils/meetingLinks';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 export default function MeetingsCalendar({
@@ -30,6 +33,7 @@ export default function MeetingsCalendar({
   onDeleteMeeting,
   embedded = false,
   hideSectionHeader = false,
+  clientMode = false,
   openMeetingRequest,
   onOpenMeetingRequestHandled,
 }) {
@@ -55,10 +59,12 @@ export default function MeetingsCalendar({
   const effectiveClientFilter = scopedBrand || clientFilter;
   const showAllClients = !scopedBrand && effectiveClientFilter === 'all';
 
-  const visibleMeetings = useMemo(
-    () => filterMeetings(meetings, { client: effectiveClientFilter }),
-    [meetings, effectiveClientFilter],
-  );
+  const visibleMeetings = useMemo(() => {
+    if (clientMode && scopedBrand) {
+      return filterClientBrandMeetings(meetings, scopedBrand);
+    }
+    return filterMeetings(meetings, { client: effectiveClientFilter });
+  }, [meetings, effectiveClientFilter, clientMode, scopedBrand]);
 
   const monthRange = useMemo(() => getMonthGridRange(focusDate), [focusDate]);
 
@@ -166,11 +172,21 @@ export default function MeetingsCalendar({
                     <p className="mt-0.5 text-xs text-white/45">
                       {[
                         showAllClients && getMeetingContactLabel(meeting),
-                        meeting.location,
+                        meeting.location && !getMeetingVideoLink(meeting) ? meeting.location : '',
+                        getMeetingLinkShortLabel(getMeetingVideoLink(meeting)),
                       ]
                         .filter(Boolean)
                         .join(' · ')}
                     </p>
+                    {getMeetingVideoLink(meeting) && (
+                      <p className="mt-1">
+                        <MeetingVideoLink
+                          meeting={meeting}
+                          compact
+                          linkClassName="text-xs font-medium text-violet-300 underline-offset-2 hover:underline"
+                        />
+                      </p>
+                    )}
                   </div>
                   <div className="shrink-0 text-right text-xs tabular-nums text-white/50">
                     <p>
@@ -205,9 +221,11 @@ export default function MeetingsCalendar({
             <ClientPortalSectionHeader
               title="Meetings Calendar"
               description={
-                showAllClients
-                  ? 'Schedule internal syncs, client calls, and prospect meetings. Set one-time or recurring.'
-                  : `Showing meetings for ${effectiveClientFilter} and internal team meetings.`
+                clientMode
+                  ? 'Schedule and view your calls with the team — one-time or recurring.'
+                  : showAllClients
+                    ? 'Schedule internal syncs, client calls, and prospect meetings. Set one-time or recurring.'
+                    : `Showing meetings for ${effectiveClientFilter} and internal team meetings.`
               }
             />
             {body}
