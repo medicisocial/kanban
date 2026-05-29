@@ -1,4 +1,4 @@
-import { getRedis, loadWorkspace, saveWorkspace } from './_lib/redis.mjs';
+import { getRedis, loadWorkspace } from './_lib/redis.mjs';
 import {
   getClientSessionFromRequest,
   getClientPortalAuthMap,
@@ -10,13 +10,55 @@ import {
   normalizeClientSocialLogins,
   mergeClientSocialLogins,
 } from './_lib/clientProfile.mjs';
+import { isSupabaseConfigured, fetchCollection, fetchCollectionMap } from './_lib/supabase.mjs';
 
 const STORAGE_KEY = 'medici-social-kanban';
 const VIDEO_IDEAS_STORAGE_KEY = 'medici-social-video-ideas';
 const SHOOT_PLANS_STORAGE_KEY = 'medici-social-shoot-plans';
 const EVENTS_STORAGE_KEY = 'medici-social-events';
 const CLIENTS_STORAGE_KEY = 'medici-social-clients';
+const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
 const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
+
+/**
+ * Supabase is the source of truth. Assemble the per-table rows into the same
+ * workspace shape the rest of this handler already expects. Fall back to the
+ * Upstash KV blob only if Supabase isn't configured or a request fails.
+ */
+async function loadPortalWorkspace() {
+  if (isSupabaseConfigured()) {
+    try {
+      const [cards, ideas, events, plans, clientsRows, authMap] = await Promise.all([
+        fetchCollection('cards'),
+        fetchCollection('video_ideas'),
+        fetchCollection('events'),
+        fetchCollectionMap('shoot_plans'),
+        fetchCollection('clients'),
+        fetchCollectionMap('client_portal_credentials'),
+      ]);
+
+      if (cards && ideas && events && plans && clientsRows && authMap) {
+        return {
+          exportedAt: new Date().toISOString(),
+          data: {
+            [STORAGE_KEY]: cards,
+            [VIDEO_IDEAS_STORAGE_KEY]: ideas,
+            [EVENTS_STORAGE_KEY]: events,
+            [SHOOT_PLANS_STORAGE_KEY]: plans,
+            [CLIENTS_STORAGE_KEY]: clientsRows[0] || {},
+            [CLIENT_PORTAL_AUTH_KEY]: authMap,
+          },
+        };
+      }
+    } catch (error) {
+      console.error('[client-portal] Supabase fetch failed, falling back to KV:', error?.message || error);
+    }
+  }
+
+  const redis = getRedis();
+  if (!redis) return null;
+  return loadWorkspace(redis);
+}
 
 function unauthorized(res) {
   return res.status(401).json({ error: 'Unauthorized' });
@@ -62,10 +104,9 @@ export default async function handler(req, res) {
   const session = getClientSessionFromRequest(req);
   if (!isClientSessionValid(session)) return unauthorized(res);
 
-  const redis = getRedis();
-  if (!redis) return unavailable(res);
+  const workspace = await loadPortalWorkspace();
+  if (!workspace) return unavailable(res);
 
-  const workspace = await loadWorkspace(redis);
   const data = workspace?.data || {};
   const brand = session.brand;
   const clientStore = data[CLIENTS_STORAGE_KEY] || {};
