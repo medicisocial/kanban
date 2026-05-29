@@ -7,6 +7,7 @@ import {
   mergeTeamMemberUpdates,
   normalizeTeamMember,
 } from '../utils/teamMembers';
+import { useReloadFromStorage } from './useReloadFromStorage';
 
 function loadTeamMembers() {
   try {
@@ -25,6 +26,11 @@ function loadTeamMembers() {
 
 export function useTeamMembers() {
   const [teamMembers, setTeamMembers] = useState(loadTeamMembers);
+
+  const reloadFromStorage = useCallback(() => {
+    setTeamMembers(loadTeamMembers());
+  }, []);
+  useReloadFromStorage(reloadFromStorage);
 
   useEffect(() => {
     localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(teamMembers));

@@ -4,6 +4,7 @@ import { useStaffAuth } from '../context/StaffAuthContext';
 import { syncClientPortalCredentialsToCloud } from '../utils/clientPortalAdmin';
 import { INTERNAL_TEAM_CLIENT } from '../constants';
 import { exportBackupFile, importBackupFile } from '../utils/dataBackup';
+import { notifyWorkspaceReload } from '../utils/workspaceReload';
 import ClientPortalCredentialsModal from './ClientPortalCredentialsModal';
 import ClientFilterSelect from './clientPortal/ClientFilterSelect';
 import { btnSecondaryClass } from './clientPortal/clientPortalUi';
@@ -38,7 +39,7 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
 
     try {
       await importBackupFile(file);
-      window.location.reload();
+      notifyWorkspaceReload();
     } catch (error) {
       setBackupMessage(error.message || 'Import failed.');
       setTimeout(() => setBackupMessage(''), 4000);

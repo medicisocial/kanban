@@ -80,3 +80,8 @@ export function undo() {
 export function canUndo() {
   return stack.length > 0;
 }
+
+export function clearUndoStack() {
+  stack = [];
+  notifyStackChange();
+}

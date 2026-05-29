@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { EVENTS_STORAGE_KEY, createEvent } from '../constants';
 import { notifyMutation } from '../utils/undoHistory';
+import { useReloadFromStorage } from './useReloadFromStorage';
 
 function loadEvents() {
   try {
@@ -17,6 +18,11 @@ function loadEvents() {
 
 export function useEvents() {
   const [events, setEvents] = useState(loadEvents);
+
+  const reloadFromStorage = useCallback(() => {
+    setEvents(loadEvents());
+  }, []);
+  useReloadFromStorage(reloadFromStorage);
 
   useEffect(() => {
     localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));

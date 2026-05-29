@@ -8,6 +8,7 @@ import {
   normalizeBrandUsers,
 } from '../utils/clientPortalCredentials';
 import { hashPassword } from '../utils/staffAuth';
+import { useReloadFromStorage } from './useReloadFromStorage';
 
 function loadCredentials() {
   try {
@@ -26,6 +27,11 @@ export { loadCredentials };
 
 export function useClientPortalCredentials() {
   const [credentials, setCredentials] = useState(loadCredentials);
+
+  const reloadFromStorage = useCallback(() => {
+    setCredentials(loadCredentials());
+  }, []);
+  useReloadFromStorage(reloadFromStorage);
 
   useEffect(() => {
     localStorage.setItem(CLIENT_PORTAL_AUTH_STORAGE_KEY, JSON.stringify(credentials));

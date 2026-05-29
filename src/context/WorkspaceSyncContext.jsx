@@ -12,43 +12,14 @@ import {
   REMOTE_POLL_MS,
   syncWorkspace,
 } from '../utils/cloudSync';
+import { notifyWorkspaceReload } from '../utils/workspaceReload';
 import { useStaffAuth } from './StaffAuthContext';
 
 const WorkspaceSyncContext = createContext(null);
-const SYNC_RELOAD_GUARD_KEY = 'medici-sync-reload-guard';
 
-function shouldBlockReload() {
-  try {
-    const raw = sessionStorage.getItem(SYNC_RELOAD_GUARD_KEY);
-    const guard = raw ? JSON.parse(raw) : { count: 0, startedAt: Date.now() };
-    const now = Date.now();
-
-    if (now - guard.startedAt > 15000) {
-      sessionStorage.setItem(
-        SYNC_RELOAD_GUARD_KEY,
-        JSON.stringify({ count: 1, startedAt: now }),
-      );
-      return false;
-    }
-
-    if (guard.count >= 2) return true;
-
-    sessionStorage.setItem(
-      SYNC_RELOAD_GUARD_KEY,
-      JSON.stringify({ count: guard.count + 1, startedAt: guard.startedAt }),
-    );
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-function clearReloadGuard() {
-  try {
-    sessionStorage.removeItem(SYNC_RELOAD_GUARD_KEY);
-  } catch {
-    /* ignore */
-  }
+function applyRemoteWorkspaceUpdate(lastPushedRef) {
+  lastPushedRef.current = getLocalSyncMeta().snapshot || getWorkspaceDataSnapshot();
+  notifyWorkspaceReload();
 }
 
 export function WorkspaceSyncProvider({ children }) {
@@ -70,17 +41,9 @@ export function WorkspaceSyncProvider({ children }) {
 
     try {
       const result = await syncWorkspace(session);
-      if (result.reload) {
-        if (shouldBlockReload()) {
-          setSyncError('Cloud sync kept reloading the page. Open the app again or clear site data for this URL.');
-          setSyncStatus('error');
-          return;
-        }
-        window.location.reload();
-        return;
+      if (result.rehydrate) {
+        applyRemoteWorkspaceUpdate(lastPushedRef);
       }
-
-      clearReloadGuard();
 
       if (result.status === 'unavailable') {
         setSyncStatus('unavailable');
@@ -105,14 +68,9 @@ export function WorkspaceSyncProvider({ children }) {
     try {
       const result = await pullIfRemoteNewer(session);
       if (result.updated) {
-        if (shouldBlockReload()) {
-          setSyncError('Cloud sync update loop detected. Refresh manually when ready.');
-          setSyncStatus('error');
-          return;
-        }
+        applyRemoteWorkspaceUpdate(lastPushedRef);
         setRemoteUpdating(true);
-        window.setTimeout(() => setRemoteUpdating(false), 8000);
-        window.location.reload();
+        window.setTimeout(() => setRemoteUpdating(false), 2000);
       }
     } catch {
       /* ignore background poll errors */
@@ -212,10 +170,9 @@ export function WorkspaceSyncProvider({ children }) {
         </div>
       )}
       {remoteUpdating && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 px-6 text-center">
-          <div>
-            <p className="text-sm text-white/85">Updating from another computer…</p>
-            <p className="mt-2 text-xs text-white/50">Pulling the latest board changes.</p>
+        <div className="pointer-events-none fixed inset-x-0 top-0 z-[100] flex justify-center px-4 pt-3">
+          <div className="rounded-full border border-white/10 bg-black/90 px-4 py-2 text-xs text-white/75 shadow-lg backdrop-blur-sm">
+            Updated from cloud
           </div>
         </div>
       )}

@@ -4,7 +4,9 @@ import {
   unregisterUndo,
   undo as undoHistory,
   canUndo as canUndoHistory,
+  clearUndoStack,
 } from '../utils/undoHistory';
+import { subscribeWorkspaceReload } from '../utils/workspaceReload';
 
 export function useUndoHistory({
   cards,
@@ -62,6 +64,8 @@ export function useUndoHistory({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
+
+  useEffect(() => subscribeWorkspaceReload(clearUndoStack), []);
 
   return { canUndo, undo };
 }

@@ -180,6 +180,9 @@ export function importBackupFile(file) {
         for (const key of keys) {
           localStorage.setItem(key, JSON.stringify(payload.data[key]));
         }
+        if (payload.exportedAt) {
+          setLocalSyncMeta(payload.exportedAt, JSON.stringify(payload.data));
+        }
         resolve(keys.length);
       } catch {
         reject(new Error('Could not read backup file.'));

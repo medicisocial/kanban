@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { STORAGE_KEY, COLUMNS, PLATFORM, createCard, EDITOR_TODO_STORAGE_KEY, isScheduledPostType, isOneOffProjectCard, syncOneOffScheduleFields } from '../constants';
 import { notifyMutation } from '../utils/undoHistory';
+import { useReloadFromStorage } from './useReloadFromStorage';
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
 import {
   toDateKey,
@@ -143,6 +144,11 @@ function canMoveCardToColumn(card, targetColumnId) {
 
 export function useKanban() {
   const [cards, setCards] = useState(loadCards);
+
+  const reloadFromStorage = useCallback(() => {
+    setCards(loadCards());
+  }, []);
+  useReloadFromStorage(reloadFromStorage);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));

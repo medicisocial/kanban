@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MEETINGS_STORAGE_KEY, createMeeting } from '../constants';
 import { notifyMutation } from '../utils/undoHistory';
+import { useReloadFromStorage } from './useReloadFromStorage';
 
 function loadMeetings() {
   try {
@@ -17,6 +18,11 @@ function loadMeetings() {
 
 export function useMeetings() {
   const [meetings, setMeetings] = useState(loadMeetings);
+
+  const reloadFromStorage = useCallback(() => {
+    setMeetings(loadMeetings());
+  }, []);
+  useReloadFromStorage(reloadFromStorage);
 
   useEffect(() => {
     localStorage.setItem(MEETINGS_STORAGE_KEY, JSON.stringify(meetings));

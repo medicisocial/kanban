@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { SHOOT_PLANS_STORAGE_KEY } from "../constants";
 import { getShootPlanKey } from "../utils/shootDay";
 import { notifyMutation } from "../utils/undoHistory";
+import { useReloadFromStorage } from "./useReloadFromStorage";
 
 function loadPlans() {
   try {
@@ -32,6 +33,11 @@ function createPlan(client, dateKey) {
 
 export function useShootPlans() {
   const [plans, setPlans] = useState(loadPlans);
+
+  const reloadFromStorage = useCallback(() => {
+    setPlans(loadPlans());
+  }, []);
+  useReloadFromStorage(reloadFromStorage);
 
   useEffect(() => {
     localStorage.setItem(SHOOT_PLANS_STORAGE_KEY, JSON.stringify(plans));

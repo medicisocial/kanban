@@ -13,6 +13,7 @@ import {
   normalizeClientContacts,
   normalizeClientSocialLogins,
 } from '../utils/clientProfile';
+import { useReloadFromStorage } from './useReloadFromStorage';
 
 function normalizeBusinessTypesMap(types = {}) {
   const normalized = {};
@@ -61,6 +62,11 @@ function loadClients() {
 
 export function useClients() {
   const [state, setState] = useState(loadClients);
+
+  const reloadFromStorage = useCallback(() => {
+    setState(loadClients());
+  }, []);
+  useReloadFromStorage(reloadFromStorage);
 
   useEffect(() => {
     localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(state));

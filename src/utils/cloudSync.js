@@ -127,7 +127,7 @@ export async function syncWorkspace(session) {
 
   if (!localHasData || remoteTime > localTime) {
     const applied = applyBackupPayload(remote);
-    return applied ? { status: 'downloaded', reload: true } : { status: 'error' };
+    return applied ? { status: 'downloaded', rehydrate: true } : { status: 'error' };
   }
 
   if (localTime > remoteTime || isLocalWorkspaceDirty()) {

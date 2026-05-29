@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ADMIN_TASKS_STORAGE_KEY } from '../constants';
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
 import { notifyMutation } from '../utils/undoHistory';
+import { useReloadFromStorage } from './useReloadFromStorage';
 
 function createAdminTask(overrides = {}) {
   return {
@@ -33,6 +34,11 @@ function loadAdminTasks() {
 
 export function useAdminTasks() {
   const [adminTasks, setAdminTasks] = useState(loadAdminTasks);
+
+  const reloadFromStorage = useCallback(() => {
+    setAdminTasks(loadAdminTasks());
+  }, []);
+  useReloadFromStorage(reloadFromStorage);
 
   useEffect(() => {
     localStorage.setItem(ADMIN_TASKS_STORAGE_KEY, JSON.stringify(adminTasks));

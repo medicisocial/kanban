@@ -5,6 +5,7 @@ import {
 } from "../constants";
 import { loadClientResponses, clearClientResponses } from "../utils/clientShare";
 import { notifyMutation } from "../utils/undoHistory";
+import { useReloadFromStorage } from "./useReloadFromStorage";
 
 function createIdea(overrides = {}) {
   return {
@@ -71,6 +72,11 @@ function loadIdeas() {
 
 export function useVideoIdeas() {
   const [ideas, setIdeas] = useState(loadIdeas);
+
+  const reloadFromStorage = useCallback(() => {
+    setIdeas(loadIdeas());
+  }, []);
+  useReloadFromStorage(reloadFromStorage);
 
   useEffect(() => {
     localStorage.setItem(VIDEO_IDEAS_STORAGE_KEY, JSON.stringify(ideas));
