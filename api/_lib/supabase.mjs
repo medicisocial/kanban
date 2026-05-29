@@ -2,26 +2,66 @@
 // PostgREST REST API via global fetch) so it adds no bundle weight to the
 // serverless functions.
 //
-// Reads project env vars. The VITE_-prefixed vars are also available to the
-// serverless runtime on Vercel, so this works with the same values the client
-// build uses. A dedicated server key can be added later:
-//   SUPABASE_SERVICE_ROLE_KEY  (preferred — bypasses RLS, never sent to the client)
-//   SUPABASE_URL / SUPABASE_ANON_KEY / ORG_ID
+// Env vars (server-only — never use VITE_ prefix for the service-role key):
+//   SUPABASE_SERVICE_ROLE_KEY  (required in production when Supabase URL is set)
+//   SUPABASE_URL / SUPABASE_ANON_KEY / ORG_ID  (optional overrides)
 
-function getConfig() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+function getSupabaseUrl() {
+  return (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '')
+    .trim()
+    .replace(/\/$/, '');
+}
+
+function isProductionRuntime() {
+  return process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+}
+
+function resolveServerKey() {
+  const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (serviceRole) return serviceRole;
+
+  if (isProductionRuntime() && getSupabaseUrl()) {
+    throw new Error(
+      'SUPABASE_SERVICE_ROLE_KEY is required in production when Supabase URL is set. ' +
+        'Add it in Vercel environment variables (never use a VITE_ prefix).',
+    );
+  }
+
+  // Non-production only: allow anon for local dev without the secret key.
+  return (
     process.env.SUPABASE_ANON_KEY ||
     process.env.VITE_SUPABASE_ANON_KEY ||
-    '';
+    ''
+  ).trim();
+}
+
+function getConfig() {
+  const url = getSupabaseUrl();
+  const key = resolveServerKey();
   const orgId = process.env.ORG_ID || process.env.VITE_ORG_ID || 'medici';
-  return { url: url.replace(/\/$/, ''), key, orgId };
+  return { url, key, orgId };
 }
 
 export function isSupabaseConfigured() {
-  const { url, key } = getConfig();
-  return Boolean(url && key);
+  const url = getSupabaseUrl();
+  if (!url) return false;
+
+  const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (serviceRole) return true;
+
+  if (isProductionRuntime()) {
+    throw new Error(
+      'SUPABASE_SERVICE_ROLE_KEY is required in production when Supabase URL is set. ' +
+        'Add it in Vercel environment variables (never use a VITE_ prefix).',
+    );
+  }
+
+  const anon = (
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    ''
+  ).trim();
+  return Boolean(anon);
 }
 
 async function fetchRows(table) {
