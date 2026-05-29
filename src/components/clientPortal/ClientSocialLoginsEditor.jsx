@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   CLIENT_SOCIAL_PLATFORMS,
   mergeClientSocialLogins,
@@ -32,18 +32,21 @@ export default function ClientSocialLoginsEditor({
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const dirtyRef = useRef(false);
 
   useEffect(() => {
+    dirtyRef.current = false;
     setLogins(buildDraftSocialLogins(client, getClientSocialLogins));
     setMessage('');
     setError('');
-  }, [client, getClientSocialLogins]);
+  }, [client]);
 
   useEffect(() => {
     onSocialLoginsChange?.(logins);
   }, [logins, onSocialLoginsChange]);
 
   const updatePlatform = (platformId, patch) => {
+    dirtyRef.current = true;
     setLogins((prev) => ({
       ...prev,
       [platformId]: { ...prev[platformId], ...patch },
@@ -68,6 +71,7 @@ export default function ClientSocialLoginsEditor({
 
       const merged = mergeClientSocialLogins(getClientSocialLogins(client), payload);
       onSaveClientSocialLogins(client, payload);
+      dirtyRef.current = false;
       setLogins(
         Object.fromEntries(
           CLIENT_SOCIAL_PLATFORMS.map(({ id }) => [

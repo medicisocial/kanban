@@ -19,9 +19,9 @@ export function ClientAuthProvider({ children }) {
   const [loadingData, setLoadingData] = useState(false);
   const [dataError, setDataError] = useState('');
 
-  const refreshPortalData = useCallback(async (activeSession = session) => {
+  const refreshPortalData = useCallback(async (activeSession = session, { silent = false } = {}) => {
     if (!activeSession) return;
-    setLoadingData(true);
+    if (!silent) setLoadingData(true);
     setDataError('');
     try {
       const data = await fetchClientPortalData(activeSession);
@@ -51,7 +51,7 @@ export function ClientAuthProvider({ children }) {
   useEffect(() => {
     if (!session) return;
     refreshPortalData(session);
-    const interval = setInterval(() => refreshPortalData(session), 30000);
+    const interval = setInterval(() => refreshPortalData(session, { silent: true }), 30000);
     return () => clearInterval(interval);
   }, [session, refreshPortalData]);
 

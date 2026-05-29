@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CLIENT_SOCIAL_PLATFORMS,
   mergeClientSocialLogins,
@@ -76,18 +76,41 @@ export default function ClientProfilePortal({
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const contactsDirtyRef = useRef(false);
+  const socialDirtyRef = useRef(false);
 
   useEffect(() => {
+    contactsDirtyRef.current = false;
+    socialDirtyRef.current = false;
     setPendingLogo(undefined);
     setPendingUserAvatar(undefined);
     setDraftContacts(contacts);
     setDraftSocialLogins(normalizeClientSocialLogins(socialLogins));
     setMessage('');
     setError('');
-  }, [client, clientLogo, contacts, socialLogins, userAvatar]);
+  }, [client]);
+
+  useEffect(() => {
+    if (!contactsDirtyRef.current) {
+      setDraftContacts(contacts);
+    }
+    if (!socialDirtyRef.current) {
+      setDraftSocialLogins(normalizeClientSocialLogins(socialLogins));
+    }
+  }, [contacts, socialLogins]);
 
   const getClientContacts = useCallback(() => contacts, [contacts]);
   const getClientSocialLogins = useCallback(() => socialLogins, [socialLogins]);
+
+  const handleDraftContactsChange = useCallback((next) => {
+    contactsDirtyRef.current = true;
+    setDraftContacts(next);
+  }, []);
+
+  const handleDraftSocialLoginsChange = useCallback((next) => {
+    socialDirtyRef.current = true;
+    setDraftSocialLogins(next);
+  }, []);
 
   const tabHasChanges = (tabId) => {
     if (tabId === 'account') return pendingUserAvatar !== undefined;
@@ -122,6 +145,8 @@ export default function ClientProfilePortal({
           pendingUserAvatar === null ? null : await bakeLogoCrop(pendingUserAvatar);
       }
       await onSaveProfile(payload);
+      contactsDirtyRef.current = false;
+      socialDirtyRef.current = false;
       setPendingLogo(undefined);
       setPendingUserAvatar(undefined);
       setMessage('Settings saved.');
@@ -240,7 +265,7 @@ export default function ClientProfilePortal({
                 onSaveClientContacts={() => {}}
                 showSaveButton={false}
                 embedded
-                onContactsChange={setDraftContacts}
+                onContactsChange={handleDraftContactsChange}
               />
             </SettingsPanel>
           )}
@@ -257,7 +282,7 @@ export default function ClientProfilePortal({
                 showSaveButton={false}
                 embedded
                 clientMode
-                onSocialLoginsChange={setDraftSocialLogins}
+                onSocialLoginsChange={handleDraftSocialLoginsChange}
               />
             </SettingsPanel>
           )}

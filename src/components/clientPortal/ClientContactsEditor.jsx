@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   createClientContactId,
   normalizeClientContacts,
@@ -41,24 +41,28 @@ export default function ClientContactsEditor({
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const dirtyRef = useRef(false);
 
   useEffect(() => {
+    dirtyRef.current = false;
     setContacts(buildDraftContacts(client, getClientContacts));
     setMessage('');
     setError('');
-  }, [client, getClientContacts]);
+  }, [client]);
 
   useEffect(() => {
     onContactsChange?.(contacts);
   }, [contacts, onContactsChange]);
 
   const updateContact = (contactId, patch) => {
+    dirtyRef.current = true;
     setContacts((prev) =>
       prev.map((contact) => (contact.id === contactId ? { ...contact, ...patch } : contact)),
     );
   };
 
   const addContact = () => {
+    dirtyRef.current = true;
     setContacts((prev) => [
       ...prev,
       {
@@ -74,6 +78,7 @@ export default function ClientContactsEditor({
   };
 
   const removeContact = (contactId) => {
+    dirtyRef.current = true;
     setContacts((prev) => {
       const next = prev.filter((contact) => contact.id !== contactId);
       return next.length > 0
@@ -100,6 +105,7 @@ export default function ClientContactsEditor({
     try {
       const normalized = await prepareClientContactsForSave(contacts);
       onSaveClientContacts(client, normalized);
+      dirtyRef.current = false;
       setContacts(
         normalized.length > 0
           ? normalized.map((contact) => ({ ...contact, pendingAvatar: undefined }))
