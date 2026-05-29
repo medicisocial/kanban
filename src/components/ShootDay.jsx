@@ -56,6 +56,15 @@ export default function ShootDay({
 
   const dateKey = toDateKey(focusDate);
 
+  const visiblePlans = useMemo(() => {
+    if (!clientFilter || clientFilter === 'all') return plans;
+    const filtered = {};
+    for (const [key, plan] of Object.entries(plans || {})) {
+      if (plan?.client === clientFilter) filtered[key] = plan;
+    }
+    return filtered;
+  }, [plans, clientFilter]);
+
   const visibleShootCards = useMemo(
     () => filterCards(getShootCards(cards), { client: clientFilter }),
     [cards, clientFilter],
@@ -72,13 +81,13 @@ export default function ShootDay({
   );
 
   const clientGroups = useMemo(
-    () => groupShootDayClients(shootCards, dateKey, getPlan, plans, clients),
-    [shootCards, dateKey, getPlan, plans, clients],
+    () => groupShootDayClients(shootCards, dateKey, getPlan, visiblePlans, clients),
+    [shootCards, dateKey, getPlan, visiblePlans, clients],
   );
 
   const planClientsForDay = useMemo(
-    () => getPlanClientsForDate(plans, dateKey, clients),
-    [plans, dateKey, clients],
+    () => getPlanClientsForDate(visiblePlans, dateKey, clients),
+    [visiblePlans, dateKey, clients],
   );
 
   const hasShootDay = shootCards.length > 0 || planClientsForDay.length > 0;
@@ -231,7 +240,7 @@ export default function ShootDay({
           <ShootDayMonthView
             focusDate={focusDate}
             shootsByDate={shootsByDate}
-            plans={plans}
+            plans={visiblePlans}
             onDayClick={handleDayClick}
             getPlan={getPlan}
             onRemoveClientShoot={onRemoveClientShoot}
