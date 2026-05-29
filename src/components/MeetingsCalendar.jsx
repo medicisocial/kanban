@@ -13,7 +13,10 @@ import {
   getUpcomingMeetings,
   expandMeetingsForRange,
   getMeetingContactLabel,
+  getMeetingScheduledDate,
+  buildMeetingUpdate,
   isRecurringMeeting,
+  isOccurrenceRescheduled,
 } from '../utils/meetingsCalendar';
 import { formatTime } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
@@ -110,10 +113,20 @@ export default function MeetingsCalendar({
 
   const handleSave = (data) => {
     if (modal?.mode === 'edit' && modal.meeting) {
-      onUpdateMeeting?.(modal.meeting.id, data);
+      const existing = meetings.find((entry) => entry.id === modal.meeting.id) || modal.meeting;
+      const scheduledDate = getMeetingScheduledDate(
+        existing,
+        modal.meeting.scheduledDate || modal.occurrenceDate,
+      );
+      const updates = buildMeetingUpdate(existing, data, {
+        editScope: data.editScope || 'series',
+        scheduledDate,
+      });
+      onUpdateMeeting?.(modal.meeting.id, updates);
       return;
     }
-    onAddMeeting?.(data);
+    const { editScope: _editScope, scheduledDate: _scheduledDate, ...createData } = data;
+    onAddMeeting?.(createData);
   };
 
   const navBtnClass = `${btnSecondaryClass} px-3 py-1.5 text-[11px] normal-case tracking-normal`;
@@ -166,6 +179,11 @@ export default function MeetingsCalendar({
                       {isRecurringMeeting(meeting) && (
                         <span className="text-[10px] font-medium uppercase tracking-wider text-white/35">
                           Recurring
+                        </span>
+                      )}
+                      {isOccurrenceRescheduled(meeting) && (
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-amber-300/80">
+                          Rescheduled
                         </span>
                       )}
                     </div>

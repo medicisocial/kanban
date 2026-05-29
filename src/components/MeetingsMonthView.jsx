@@ -6,7 +6,7 @@ import {
 } from '../utils/calendar';
 import { formatTime } from '../utils';
 import { useClientsContext } from '../context/ClientsContext';
-import { getMeetingContactLabel, isRecurringMeeting } from '../utils/meetingsCalendar';
+import { getMeetingContactLabel, isRecurringMeeting, isOccurrenceRescheduled } from '../utils/meetingsCalendar';
 import { getMeetingLinkShortLabel, getMeetingVideoLink } from '../utils/meetingLinks';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -51,9 +51,10 @@ export default function MeetingsMonthView({
   const getMeetingTitle = (meeting) => {
     const contact = getMeetingContactLabel(meeting);
     const recurring = isRecurringMeeting(meeting) ? ' ↻' : '';
+    const moved = isOccurrenceRescheduled(meeting) ? ' ↔' : '';
     const video = getMeetingLinkShortLabel(getMeetingVideoLink(meeting));
     const videoSuffix = video ? ` · ${video}` : '';
-    return `${contact} · ${meeting.title}${recurring}${videoSuffix}`;
+    return `${contact} · ${meeting.title}${recurring}${moved}${videoSuffix}`;
   };
 
   return (
@@ -129,6 +130,9 @@ export default function MeetingsMonthView({
                       >
                         {isRecurringMeeting(meeting) && (
                           <span className="mr-0.5 opacity-70">↻</span>
+                        )}
+                        {isOccurrenceRescheduled(meeting) && (
+                          <span className="mr-0.5 opacity-70">↔</span>
                         )}
                         {meeting.time ? `${formatTime(meeting.time)} ` : ''}
                         {showClientName && `${getMeetingContactLabel(meeting)}: `}

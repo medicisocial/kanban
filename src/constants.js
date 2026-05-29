@@ -227,6 +227,7 @@ export function createMeeting(overrides = {}) {
     notes: '',
     recurrence: 'none',
     recurrenceEndDate: '',
+    occurrenceOverrides: {},
     createdAt: Date.now(),
     updatedAt: Date.now(),
     ...overrides,

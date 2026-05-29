@@ -69,6 +69,109 @@ function advanceToDateKey(meeting, cursor, targetKey) {
   return next;
 }
 
+function normalizeOccurrenceOverrides(overrides) {
+  if (!overrides || typeof overrides !== 'object') return {};
+  const next = {};
+  for (const [slot, value] of Object.entries(overrides)) {
+    if (!value || typeof value !== 'object') continue;
+    const date = String(value.date || '').trim();
+    if (!date) continue;
+    next[slot] = {
+      date,
+      time: String(value.time || '').trim(),
+      endTime: String(value.endTime || '').trim(),
+    };
+  }
+  return next;
+}
+
+export function getMeetingScheduledDate(meeting, occurrenceDate) {
+  if (meeting?.scheduledDate) return meeting.scheduledDate;
+  const target = occurrenceDate || meeting?.occurrenceDate;
+  const overrides = meeting?.occurrenceOverrides || {};
+  if (target && overrides && typeof overrides === 'object') {
+    for (const [slot, override] of Object.entries(overrides)) {
+      if (override?.date === target) return slot;
+    }
+  }
+  return target || meeting?.date || '';
+}
+
+export function isOccurrenceRescheduled(meeting) {
+  const scheduled = meeting?.scheduledDate;
+  const display = meeting?.occurrenceDate || meeting?.date;
+  return Boolean(scheduled && display && scheduled !== display);
+}
+
+export function buildMeetingUpdate(existing, formData, { editScope = 'series', scheduledDate } = {}) {
+  const shared = {
+    title: formData.title,
+    location: formData.location,
+    videoLink: formData.videoLink,
+    notes: formData.notes,
+  };
+
+  if (!isRecurringMeeting(existing) || editScope === 'series') {
+    return {
+      ...shared,
+      date: formData.date,
+      time: formData.time,
+      endTime: formData.endTime,
+      recurrence: formData.recurrence,
+      recurrenceEndDate: formData.recurrenceEndDate,
+      client: formData.client,
+      prospectName: formData.prospectName,
+    };
+  }
+
+  const slot = scheduledDate || getMeetingScheduledDate(existing, formData.date);
+  const overrides = normalizeOccurrenceOverrides(existing.occurrenceOverrides);
+  const matchesSeries =
+    formData.date === slot &&
+    formData.time === existing.time &&
+    formData.endTime === existing.endTime;
+
+  if (matchesSeries) {
+    delete overrides[slot];
+  } else {
+    overrides[slot] = {
+      date: formData.date,
+      time: formData.time,
+      endTime: formData.endTime,
+    };
+  }
+
+  return {
+    ...shared,
+    occurrenceOverrides: overrides,
+  };
+}
+
+function pushOccurrence(occurrences, meeting, naturalKey, rangeStartKey, effectiveEndKey) {
+  const overrides = normalizeOccurrenceOverrides(meeting.occurrenceOverrides);
+  const override = overrides[naturalKey];
+  const displayDate = override?.date || naturalKey;
+  const displayTime = override?.time || meeting.time;
+  const displayEndTime = override?.endTime || meeting.endTime;
+
+  if (
+    compareDateKeys(displayDate, rangeStartKey) < 0 ||
+    compareDateKeys(displayDate, effectiveEndKey) > 0
+  ) {
+    return;
+  }
+
+  occurrences.push({
+    ...meeting,
+    scheduledDate: naturalKey,
+    occurrenceDate: displayDate,
+    time: displayTime,
+    endTime: displayEndTime,
+    occurrenceKey: `${meeting.id}:${naturalKey}`,
+    rescheduled: Boolean(override?.date && override.date !== naturalKey),
+  });
+}
+
 export function expandMeetingOccurrences(meeting, rangeStartKey, rangeEndKey) {
   if (!meeting?.date || !rangeStartKey || !rangeEndKey) return [];
 
@@ -102,12 +205,8 @@ export function expandMeetingOccurrences(meeting, rangeStartKey, rangeEndKey) {
   }
 
   while (cursor <= rangeEnd) {
-    const dateKey = toDateKey(cursor);
-    occurrences.push({
-      ...meeting,
-      occurrenceDate: dateKey,
-      occurrenceKey: `${meeting.id}:${dateKey}`,
-    });
+    const naturalKey = toDateKey(cursor);
+    pushOccurrence(occurrences, meeting, naturalKey, rangeStartKey, effectiveEndKey);
     cursor = nextOccurrenceDate(meeting, cursor);
   }
 

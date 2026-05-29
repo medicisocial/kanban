@@ -15,7 +15,9 @@ import {
   expandMeetingsForRange,
   filterMeetings,
   getMeetingContactLabel,
+  getMeetingScheduledDate,
   groupMeetingsByDate,
+  isOccurrenceRescheduled,
   isRecurringMeeting,
 } from '../utils/meetingsCalendar';
 import { getMeetingLinkShortLabel, getMeetingVideoLink } from '../utils/meetingLinks';
@@ -101,14 +103,28 @@ export default function MeetingModal({
   const { clients } = useClientsContext();
   const isEdit = Boolean(meeting?.id);
   const recurring = isRecurringMeeting(meeting);
+  const displayOccurrenceDate = occurrenceDate || meeting?.occurrenceDate;
+  const scheduledDate = meeting?.scheduledDate || getMeetingScheduledDate(meeting, displayOccurrenceDate);
+  const rescheduledOccurrence = isOccurrenceRescheduled({
+    ...meeting,
+    scheduledDate,
+    occurrenceDate: displayOccurrenceDate,
+  });
 
   const [title, setTitle] = useState(meeting?.title || '');
-  const [date, setDate] = useState(meeting?.date || defaultDate || toDateKey(new Date()));
+  const [date, setDate] = useState(
+    displayOccurrenceDate || meeting?.date || defaultDate || toDateKey(new Date()),
+  );
   const [focusDate, setFocusDate] = useState(() =>
-    meeting?.date || defaultDate ? parseDateKey(meeting?.date || defaultDate) : getDefaultCalendarDate(),
+    displayOccurrenceDate || meeting?.date || defaultDate
+      ? parseDateKey(displayOccurrenceDate || meeting?.date || defaultDate)
+      : getDefaultCalendarDate(),
   );
   const [time, setTime] = useState(meeting?.time || '');
   const [endTime, setEndTime] = useState(meeting?.endTime || '');
+  const [editScope, setEditScope] = useState(() =>
+    meeting?.id && recurring ? 'occurrence' : 'series',
+  );
   const [contactType, setContactType] = useState(() => getInitialContactType(meeting));
   const [client, setClient] = useState(
     meeting?.client || lockedClient || defaultClient || '',
@@ -267,6 +283,8 @@ export default function MeetingModal({
       notes: notes.trim(),
       recurrence,
       recurrenceEndDate: recurrence === 'none' ? '' : recurrenceEndDate,
+      editScope,
+      scheduledDate,
     });
     onClose();
   };
@@ -310,11 +328,21 @@ export default function MeetingModal({
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-wider text-violet-300">Meetings calendar</p>
             <h2 id="meeting-modal-title" className="mt-1 text-lg font-semibold text-white">
-              {isEdit ? (recurring ? 'Edit recurring meeting' : 'Edit meeting') : clientLocked ? 'Schedule a meeting' : 'Schedule meeting'}
+              {isEdit
+                ? recurring && editScope === 'occurrence'
+                  ? 'Reschedule this meeting'
+                  : recurring
+                    ? 'Edit recurring meeting'
+                    : 'Edit meeting'
+                : clientLocked
+                  ? 'Schedule a meeting'
+                  : 'Schedule meeting'}
             </h2>
             <p className="mt-1 text-sm text-gray-400">
               {isEdit && displayDate
-                ? `${occurrenceDate && recurring ? 'Selected occurrence · ' : ''}${scheduleSummary}`
+                ? recurring && editScope === 'occurrence'
+                  ? `Move this occurrence to a new day or time. The regular ${MEETING_RECURRENCE_OPTIONS.find((o) => o.value === recurrence)?.label?.toLowerCase() || 'recurring'} schedule stays the same.`
+                  : `${occurrenceDate && recurring ? 'Selected occurrence · ' : ''}${scheduleSummary}`
                 : 'Click a day to pick when this meeting happens. Use the client filter to see that client’s schedule.'}
             </p>
           </div>
@@ -383,6 +411,11 @@ export default function MeetingModal({
                 <div>
                   <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">Meeting schedule</p>
                   <p className="mt-1 text-base font-semibold text-white">{scheduleSummary}</p>
+                  {rescheduledOccurrence && scheduledDate && (
+                    <p className="mt-1 text-xs text-amber-200/80">
+                      Rescheduled from {formatDate(scheduledDate)}
+                    </p>
+                  )}
                   {draftVideoLink && (
                     <p className="mt-2">
                       <MeetingVideoLink url={draftVideoLink} linkClassName="text-sm font-medium text-violet-300 underline-offset-2 hover:underline" />
@@ -398,19 +431,53 @@ export default function MeetingModal({
                   </div>
                   <div>
                     <p className="mb-1.5 text-xs font-medium text-gray-400">Repeat</p>
-                    <select
-                      value={recurrence}
-                      onChange={(e) => setRecurrence(e.target.value)}
-                      className={selectClass}
-                    >
-                      {MEETING_RECURRENCE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                    {editScope === 'occurrence' ? (
+                      <p className="rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-sm text-[#f9f6f2]">
+                        {MEETING_RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label || 'Recurring'}
+                      </p>
+                    ) : (
+                      <select
+                        value={recurrence}
+                        onChange={(e) => setRecurrence(e.target.value)}
+                        className={selectClass}
+                      >
+                        {MEETING_RECURRENCE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
+                {recurring && isEdit && (
+                  <div>
+                    <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                      What to update
+                    </p>
+                    <div className="flex overflow-hidden border border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => setEditScope('occurrence')}
+                        className={segmentBtnClass(editScope === 'occurrence')}
+                      >
+                        This meeting only
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditScope('series')}
+                        className={segmentBtnClass(editScope === 'series')}
+                      >
+                        Entire series
+                      </button>
+                    </div>
+                    <p className="mt-2 text-[11px] text-white/35">
+                      {editScope === 'occurrence'
+                        ? 'Pick a new date on the calendar — only this week changes.'
+                        : 'Changes apply to every occurrence in the series.'}
+                    </p>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <label className="block">
                     <span className="mb-1.5 block text-xs font-medium text-gray-400">Start time</span>
@@ -504,7 +571,7 @@ export default function MeetingModal({
                 </>
               )}
 
-              {recurrence !== 'none' && (
+              {recurrence !== 'none' && editScope === 'series' && (
                 <div>
                   <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-white/50">
                     Repeat until
