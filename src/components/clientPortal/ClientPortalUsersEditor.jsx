@@ -1,13 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { defaultPortalUsername } from '../../utils/clientPortalAuth';
 import {
   createClientPortalUserId,
   getClientUsersFromStore,
 } from '../../utils/clientPortalCredentials';
+import {
+  isValidPortalEmail,
+  normalizePortalLogin,
+  suggestPortalEmailFromContacts,
+} from '../../utils/portalLogin';
 import { updatePortalPasswordVault, getPortalPasswordForUser } from '../../utils/clientPortalPasswordVault';
 import { loadCredentials } from '../../hooks/useClientPortalCredentials';
 import PasswordField from './PasswordField';
 import ProfilePhotoEditor from './ProfilePhotoEditor';
+import PortalInviteTemplate from './PortalInviteTemplate';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 
 export function nextDefaultUsername(client, users) {
@@ -23,7 +29,7 @@ export function nextDefaultUsername(client, users) {
   return candidate;
 }
 
-function buildDraftUsers(client, getClientUsers) {
+function buildDraftUsers(client, getClientUsers, getClientContacts, requireEmail) {
   const users = getClientUsers(client);
   if (users.length > 0) {
     return users.map((user) => ({
@@ -35,11 +41,16 @@ function buildDraftUsers(client, getClientUsers) {
       pendingAvatar: undefined,
     }));
   }
+
+  const suggestedEmail = requireEmail
+    ? suggestPortalEmailFromContacts(getClientContacts?.(client) || [])
+    : '';
+
   return [
     {
       id: createClientPortalUserId(),
       displayName: '',
-      username: defaultPortalUsername(client),
+      username: suggestedEmail || (requireEmail ? '' : defaultPortalUsername(client)),
       password: '',
       avatar: null,
       pendingAvatar: undefined,
@@ -51,36 +62,52 @@ export default function ClientPortalUsersEditor({
   client,
   clientColor = '#810100',
   getClientUsers,
+  getClientContacts,
   onSaveClientUsers,
   onSyncToCloud,
-  labelPlaceholder = 'e.g. Owner, Chef',
-  saveLabel = 'Save portal users',
+  labelPlaceholder = 'e.g. Owner, Marketing lead',
+  saveLabel = 'Save portal access',
+  requireEmail = true,
+  loginFieldLabel = requireEmail ? 'Work email' : 'Username',
 }) {
-  const [users, setUsers] = useState(() => buildDraftUsers(client, getClientUsers));
+  const [users, setUsers] = useState(() =>
+    buildDraftUsers(client, getClientUsers, getClientContacts, requireEmail),
+  );
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [inviteDetails, setInviteDetails] = useState(null);
 
   useEffect(() => {
-    setUsers(buildDraftUsers(client, getClientUsers));
+    setUsers(buildDraftUsers(client, getClientUsers, getClientContacts, requireEmail));
     setMessage('');
     setError('');
-  }, [client, getClientUsers]);
+    setInviteDetails(null);
+  }, [client, getClientUsers, getClientContacts, requireEmail]);
 
   const updateUser = (userId, patch) => {
     setUsers((prev) => prev.map((user) => (user.id === userId ? { ...user, ...patch } : user)));
   };
 
   const addUser = () => {
-    setUsers((prev) => [
-      ...prev,
-      {
-        id: createClientPortalUserId(),
-        displayName: '',
-        username: nextDefaultUsername(client, prev),
-        password: '',
-      },
-    ]);
+    setUsers((prev) => {
+      const suggestedEmail = requireEmail
+        ? suggestPortalEmailFromContacts(getClientContacts?.(client) || [])
+        : '';
+      return [
+        ...prev,
+        {
+          id: createClientPortalUserId(),
+          displayName: '',
+          username: requireEmail
+            ? suggestedEmail
+            : nextDefaultUsername(client, prev),
+          password: '',
+          avatar: null,
+          pendingAvatar: undefined,
+        },
+      ];
+    });
   };
 
   const removeUser = (userId) => {
@@ -88,14 +115,7 @@ export default function ClientPortalUsersEditor({
       const nextUsers = prev.filter((user) => user.id !== userId);
       return nextUsers.length > 0
         ? nextUsers
-        : [
-            {
-              id: createClientPortalUserId(),
-              displayName: '',
-              username: defaultPortalUsername(client),
-              password: '',
-            },
-          ];
+        : buildDraftUsers(client, () => [], getClientContacts, requireEmail);
     });
   };
 
@@ -112,6 +132,7 @@ export default function ClientPortalUsersEditor({
     setSaving(true);
     setMessage('');
     setError('');
+    setInviteDetails(null);
 
     try {
       const credentials = { ...loadCredentials() };
@@ -120,23 +141,28 @@ export default function ClientPortalUsersEditor({
       for (const [brand, brandUsers] of Object.entries(credentials)) {
         if (brand === client) continue;
         for (const user of getClientUsersFromStore(credentials, brand)) {
-          takenUsernames.add(user.username.trim().toLowerCase());
+          takenUsernames.add(normalizePortalLogin(user.username));
         }
       }
 
       const seen = new Set();
       for (const user of users) {
-        const username = user.username.trim().toLowerCase();
+        const raw = user.username.trim();
+        const username = requireEmail ? normalizePortalLogin(raw) : raw.trim();
         if (!username) {
-          setError('Enter a username for every portal user.');
+          setError(requireEmail ? 'Enter a work email for every portal user.' : 'Enter a username for every portal user.');
+          return;
+        }
+        if (requireEmail && !isValidPortalEmail(username)) {
+          setError(`"${raw}" is not a valid work email address.`);
           return;
         }
         if (seen.has(username)) {
-          setError(`Username "${user.username.trim()}" is used more than once.`);
+          setError(`"${raw}" is used more than once for ${client}.`);
           return;
         }
         if (takenUsernames.has(username)) {
-          setError(`Username "${user.username.trim()}" is already used by another brand.`);
+          setError(`"${raw}" is already registered to another brand.`);
           return;
         }
         seen.add(username);
@@ -144,7 +170,7 @@ export default function ClientPortalUsersEditor({
 
       const savableUsers = users.filter(userHasLogin);
       if (savableUsers.length === 0) {
-        setError('Enter a password for at least one user to save.');
+        setError('Set a password for at least one user before saving.');
         return;
       }
 
@@ -153,7 +179,7 @@ export default function ClientPortalUsersEditor({
         users.map((user) => ({
           id: user.id,
           displayName: user.displayName,
-          username: user.username,
+          username: requireEmail ? normalizePortalLogin(user.username) : user.username.trim(),
           password: user.password,
           avatar: user.pendingAvatar !== undefined ? user.pendingAvatar : undefined,
         })),
@@ -167,31 +193,52 @@ export default function ClientPortalUsersEditor({
         const savedCount = result?.userCount || result?.brands?.length || 0;
         setMessage(
           savedCount
-            ? `Saved ${savedCount} portal login${savedCount === 1 ? '' : 's'} to cloud.`
-            : 'Saved locally but cloud sync returned no active logins. Check your connection and try again.',
+            ? `${savedCount} portal login${savedCount === 1 ? '' : 's'} saved and synced.`
+            : 'Saved locally — cloud sync returned no active logins. Check your connection and try again.',
         );
       } else {
-        setMessage('Portal logins saved locally.');
+        setMessage('Portal access saved locally.');
       }
 
-      setUsers(buildDraftUsers(client, () => savedUsers));
-      setTimeout(() => setMessage(''), 6000);
+      const primarySaved = savableUsers[0];
+      if (requireEmail && primarySaved?.username) {
+        setInviteDetails({
+          email: normalizePortalLogin(primarySaved.username),
+          password: primarySaved.password || '',
+        });
+      }
+
+      setUsers(buildDraftUsers(client, () => savedUsers, getClientContacts, requireEmail));
+      setTimeout(() => setMessage(''), 8000);
     } catch (err) {
-      setError(err.message || 'Could not save portal logins.');
+      setError(err.message || 'Could not save portal access.');
     } finally {
       setSaving(false);
     }
   };
 
   const activeCount = users.filter(userHasLogin).length;
+  const headerCopy = useMemo(() => {
+    if (requireEmail) {
+      return {
+        title: 'Portal access',
+        subtitle: 'Each person signs in with their work email and password at portal.medicisocial.com.',
+      };
+    }
+    return {
+      title: 'Team logins',
+      subtitle: 'Internal usernames for Medici Social staff — separate from client access.',
+    };
+  }, [requireEmail]);
 
   return (
     <div className="space-y-4">
       <div className={glassInsetClass}>
         <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3">
           <div>
-            <p className="text-sm font-medium text-white">Portal logins</p>
-            <p className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-white/40">
+            <p className="text-sm font-medium text-white">{headerCopy.title}</p>
+            <p className="mt-0.5 max-w-xl text-xs leading-relaxed text-white/40">{headerCopy.subtitle}</p>
+            <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-white/35">
               {activeCount} active login{activeCount === 1 ? '' : 's'}
             </p>
           </div>
@@ -230,7 +277,7 @@ export default function ClientPortalUsersEditor({
               <div className="grid gap-3 sm:grid-cols-3">
                 <label className="block sm:col-span-1">
                   <span className="mb-1.5 block text-[10px] uppercase tracking-[0.22em] text-white/40">
-                    Label (optional)
+                    Role label (optional)
                   </span>
                   <input
                     type="text"
@@ -242,12 +289,13 @@ export default function ClientPortalUsersEditor({
                 </label>
                 <label className="block sm:col-span-1">
                   <span className="mb-1.5 block text-[10px] uppercase tracking-[0.22em] text-white/40">
-                    Username
+                    {loginFieldLabel}
                   </span>
                   <input
-                    type="text"
+                    type={requireEmail ? 'email' : 'text'}
                     value={user.username}
                     onChange={(e) => updateUser(user.id, { username: e.target.value })}
+                    placeholder={requireEmail ? 'owner@yourbrand.com' : 'username'}
                     className={inputClass}
                     autoComplete="off"
                   />
@@ -258,6 +306,7 @@ export default function ClientPortalUsersEditor({
                     value={user.password}
                     onChange={(e) => updateUser(user.id, { password: e.target.value })}
                     autoComplete="new-password"
+                    placeholder={requireEmail ? 'Temporary password' : ''}
                   />
                 </div>
               </div>
@@ -269,13 +318,17 @@ export default function ClientPortalUsersEditor({
       {error && <p className="text-sm text-rose-300">{error}</p>}
       {message && <p className="text-sm text-emerald-300">{message}</p>}
 
+      {inviteDetails && (
+        <PortalInviteTemplate brand={client} email={inviteDetails.email} password={inviteDetails.password} />
+      )}
+
       <button
         type="button"
         onClick={handleSave}
         disabled={saving}
         className={`${btnPrimaryClass} disabled:opacity-60`}
       >
-        {saving ? 'Saving to cloud…' : saveLabel}
+        {saving ? 'Saving…' : saveLabel}
       </button>
     </div>
   );

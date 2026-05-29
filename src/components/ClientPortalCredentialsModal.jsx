@@ -44,6 +44,8 @@ export default function ClientPortalCredentialsModal({
             onSyncToCloud={onSyncToCloud}
             labelPlaceholder="e.g. Account manager, Editor"
             saveLabel={saveLabel}
+            requireEmail={false}
+            loginFieldLabel="Username"
           />
         </div>
       </div>

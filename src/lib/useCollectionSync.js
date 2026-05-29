@@ -53,6 +53,14 @@ export function useCollectionSync({ table, items, setItems, getId, normalize, lo
         setItems(rows.map((row) => (normalize ? normalize(row.data) : row.data)));
       } catch (err) {
         console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
+        if (loadLocal) {
+          const local = loadLocal();
+          if (local.length) {
+            applyingRemoteRef.current = true;
+            syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
+            setItems(local.map((r) => (normalize ? normalize(r) : r)));
+          }
+        }
         loadedRef.current = true;
       }
     };

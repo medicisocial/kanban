@@ -32,7 +32,7 @@ const TABS = [
   { id: 'contacts', label: 'Contacts' },
   { id: 'social', label: 'Social logins' },
   { id: 'share', label: 'Client links' },
-  { id: 'users', label: 'Portal users' },
+  { id: 'users', label: 'Portal access' },
 ];
 
 export default function ClientManagementPage({ initialTab = 'profile', onClientAdded, cards = [], ideas = [] }) {
@@ -408,13 +408,11 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
 
           {activeTab === 'users' && (
             <div key={`users-${selectedClient}`} className="portal-content-fade max-w-3xl">
-              <p className="mb-5 text-sm text-white/45">
-                Portal usernames and passwords for {selectedClient}. Each user signs in at the main site URL.
-              </p>
               <ClientPortalUsersEditor
                 client={selectedClient}
                 clientColor={getClientColor(selectedClient)}
                 getClientUsers={getClientUsers}
+                getClientContacts={getClientContacts}
                 onSaveClientUsers={setClientPortalUsers}
                 onSyncToCloud={(credentials) => syncClientPortalCredentialsToCloud(session, credentials)}
               />

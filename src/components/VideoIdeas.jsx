@@ -16,7 +16,7 @@ export default function VideoIdeas({
   onUpdateIdea,
   onGoToBoard,
 }) {
-  const [statusFilter, setStatusFilter] = useState('pending');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [ideaModal, setIdeaModal] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
 

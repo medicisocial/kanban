@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { isStaffAuthConfigured } from '../utils/staffAuth';
 import { loginClientPortal } from '../utils/clientPortalAuth';
+import { normalizePortalLogin } from '../utils/portalLogin';
 import { useStaffAuth } from '../context/StaffAuthContext';
 
 const labelClass =
@@ -22,6 +23,7 @@ function AmbientBackground() {
 
 export default function UnifiedLogin({ onAuthenticated, checking = false }) {
   const { login } = useStaffAuth();
+  const [agencyMode, setAgencyMode] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -32,32 +34,40 @@ export default function UnifiedLogin({ onAuthenticated, checking = false }) {
     setError('');
     setSubmitting(true);
 
+    const loginId = agencyMode ? username.trim() : normalizePortalLogin(username);
+
     try {
-      if (isStaffAuthConfigured()) {
-        const staffResult = await login(username, password);
+      if (agencyMode) {
+        if (!isStaffAuthConfigured()) {
+          setError('Agency login is not configured for this deployment.');
+          return;
+        }
+
+        const staffResult = await login(loginId, password);
         if (staffResult.ok) {
           onAuthenticated('staff');
           return;
         }
-        if (staffResult.error && staffResult.error !== 'Invalid username or password.') {
-          setError(staffResult.error);
-          return;
-        }
+        setError(staffResult.error || 'Invalid username or password.');
+        return;
       }
 
-      let clientError = 'Invalid username or password.';
+      let clientError = 'Invalid email or password.';
       try {
-        await loginClientPortal(username, password);
+        await loginClientPortal(loginId, password);
         onAuthenticated('client');
-        return;
       } catch (err) {
         clientError = err.message || clientError;
+        setError(clientError);
       }
-
-      setError(clientError);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const toggleAgencyMode = () => {
+    setAgencyMode((prev) => !prev);
+    setError('');
   };
 
   return (
@@ -77,20 +87,16 @@ export default function UnifiedLogin({ onAuthenticated, checking = false }) {
       <div className="login-fade-in login-fade-in-delay relative z-10 flex flex-1 flex-col items-center px-6 pb-16 pt-4 md:pt-8">
         <div className="w-full max-w-[480px]">
           <p className="text-[10px] font-medium uppercase tracking-[0.32em] text-white/40">
-            Client portal
+            {agencyMode ? 'Agency console' : 'Client portal'}
           </p>
 
           <h1 className="mt-3 text-[1.75rem] font-semibold leading-tight tracking-tight text-white md:text-[2rem]">
             Sign in
           </h1>
 
-          <p className="mt-2 text-sm text-white/50">
-            Sign in with your team or client portal credentials. Logins work from any computer once saved to cloud.
-          </p>
-
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <label className="block">
-              <span className={labelClass}>Username</span>
+              <span className={labelClass}>{agencyMode ? 'Team username' : 'Username'}</span>
               <input
                 type="text"
                 value={username}
@@ -98,7 +104,7 @@ export default function UnifiedLogin({ onAuthenticated, checking = false }) {
                 autoComplete="username"
                 className={inputClass}
                 autoFocus={!checking}
-                disabled={checking}
+                disabled={checking || submitting}
                 required
               />
             </label>
@@ -111,7 +117,7 @@ export default function UnifiedLogin({ onAuthenticated, checking = false }) {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 className={inputClass}
-                disabled={checking}
+                disabled={checking || submitting}
                 required
               />
             </label>
@@ -130,6 +136,18 @@ export default function UnifiedLogin({ onAuthenticated, checking = false }) {
               {submitting ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
+
+          {isStaffAuthConfigured() && (
+            <div className="mt-8 border-t border-white/[0.06] pt-6">
+              <button
+                type="button"
+                onClick={toggleAgencyMode}
+                className="mx-auto block text-[10px] font-medium uppercase tracking-[0.2em] text-white/35 transition-colors hover:text-white/60"
+              >
+                {agencyMode ? '← Client sign in' : 'Medici Social team sign in'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </main>

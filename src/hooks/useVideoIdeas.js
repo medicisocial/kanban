@@ -92,7 +92,6 @@ export function useVideoIdeas() {
   });
 
   useEffect(() => {
-    if (SUPABASE_ENABLED) return;
     localStorage.setItem(VIDEO_IDEAS_STORAGE_KEY, JSON.stringify(ideas));
   }, [ideas]);
 

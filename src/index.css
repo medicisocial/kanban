@@ -158,6 +158,12 @@ textarea:focus::placeholder {
   animation-delay: 0.1s;
 }
 
+.login-form-card {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
 /* Portal shell — shared admin + client console */
 .portal-ambient {
   background: linear-gradient(165deg, #0c0c0c 0%, #000 45%, #080808 100%);

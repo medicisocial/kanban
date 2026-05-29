@@ -68,6 +68,16 @@ export default function AdminIdeasTable({
     );
   };
 
+  const statusCounts = useMemo(
+    () => ({
+      all: ideas.length,
+      pending: ideas.filter((idea) => idea.status === 'pending').length,
+      approved: ideas.filter((idea) => idea.status === 'approved').length,
+      declined: ideas.filter((idea) => idea.status === 'declined').length,
+    }),
+    [ideas],
+  );
+
   const filtered = useMemo(() => {
     let rows = [...ideas];
 
@@ -103,10 +113,10 @@ export default function AdminIdeasTable({
             onChange={(e) => onStatusFilterChange(e.target.value)}
             className={`${selectClass} min-w-[140px]`}
           >
-            <option value="pending">Pending review</option>
-            <option value="approved">Approved</option>
-            <option value="declined">Passed</option>
-            <option value="all">All statuses</option>
+            <option value="pending">Pending review ({statusCounts.pending})</option>
+            <option value="approved">Approved ({statusCounts.approved})</option>
+            <option value="declined">Passed ({statusCounts.declined})</option>
+            <option value="all">All statuses ({statusCounts.all})</option>
           </select>
           <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-white/35">
             ▾
@@ -131,7 +141,11 @@ export default function AdminIdeasTable({
 
       <div className="md:hidden">
         {filtered.length === 0 ? (
-          <p className="px-4 py-12 text-center text-sm text-white/40">No ideas match your filters.</p>
+          <p className="px-4 py-12 text-center text-sm text-white/40">
+            {ideas.length > 0 && statusFilter !== 'all'
+              ? `No ${statusFilter} ideas. Try "All statuses" to see every record for this filter.`
+              : 'No ideas match your filters.'}
+          </p>
         ) : (
           filtered.map((idea) => {
             const expanded = expandedId === idea.id;
@@ -222,7 +236,9 @@ export default function AdminIdeasTable({
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={selectable ? 8 : 7} className="px-4 py-16 text-center text-sm text-white/40">
-                  No ideas match your filters.
+                  {ideas.length > 0 && statusFilter !== 'all'
+                    ? `No ${statusFilter} ideas. Try "All statuses" to see every record for this filter.`
+                    : 'No ideas match your filters.'}
                 </td>
               </tr>
             ) : (
