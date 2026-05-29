@@ -43,7 +43,7 @@ export default async function handler(req, res) {
   if (!isEmailConfigured()) {
     return res.status(503).json({
       error:
-        'Platform email is not configured. Add RESEND_API_KEY and EMAIL_FROM in Vercel environment variables.',
+        'Platform email is not configured. In Vercel, add RESEND_API_KEY (name exactly that, value = your re_… key from Resend), optionally EMAIL_FROM, then redeploy production.',
     });
   }
 
