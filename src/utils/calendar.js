@@ -455,6 +455,15 @@ export function getScheduledCards(cards) {
   return cards.filter((c) => c.columnId === 'scheduled' && c.dueDate);
 }
 
+/** Full content calendar — posts and stories on the staff calendar (all pipeline stages with dates). */
+export function getContentCalendarCards(cards) {
+  const byId = new Map();
+  for (const card of [...getCalendarPosts(cards), ...getCalendarStories(cards)]) {
+    byId.set(card.id, card);
+  }
+  return [...byId.values()];
+}
+
 export function getScheduledPosts(cards) {
   return cards.filter(
     (c) => c.columnId === 'scheduled' && c.dueDate && isScheduledPostType(c.contentType),

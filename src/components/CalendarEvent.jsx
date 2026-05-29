@@ -28,6 +28,7 @@ export default function CalendarEvent({
   const isPosted = isCalendarEventPosted(card);
   const columnMeta = COLUMNS.find((col) => col.id === card.columnId);
   const boardStatus = isPosted ? 'Posted' : (columnMeta?.title ?? null);
+  const showBoardStatus = boardStatus && (!hideClient || isPosted);
   const statusClass = isPosted
     ? 'text-gray-400'
     : card.columnId === 'scheduled'
@@ -142,7 +143,7 @@ export default function CalendarEvent({
         {!card.dueTime && hasStorySchedule && (
           <span className="mb-0.5 block text-[9px] font-medium text-[#fca5a5]">↻ {scheduleSummary || 'recurring'}</span>
         )}
-        {boardStatus && (
+        {showBoardStatus && (
           <span className={`mb-0.5 block text-[9px] font-semibold ${statusClass}`}>
             {boardStatus}
           </span>
@@ -183,7 +184,7 @@ export default function CalendarEvent({
             </span>
           )}
           <div className={`flex shrink-0 items-center gap-1.5${hideClient ? ' ml-auto' : ''}`}>
-            {boardStatus && (
+            {showBoardStatus && (
               <span className={`text-[10px] font-semibold ${statusClass}`}>{boardStatus}</span>
             )}
             <span className={`text-[10px] font-semibold ${typeStyle.label}`}>

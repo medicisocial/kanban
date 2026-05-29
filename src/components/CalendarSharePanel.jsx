@@ -1,29 +1,29 @@
 import { useCallback } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
-import { getScheduledCards } from '../utils/calendar';
+import { getContentCalendarCards } from '../utils/calendar';
 import { buildCalendarShareUrl } from '../utils/calendarShare';
 import { useClientEmailSend } from '../hooks/useClientEmailSend';
 import ShareLinkStrip from './ShareLinkStrip';
 
 export default function CalendarSharePanel({ cards, clientFilter = 'all' }) {
   const { clients } = useClientsContext();
-  const scheduled = getScheduledCards(cards);
+  const calendarCards = getContentCalendarCards(cards);
   const { openSend, modal } = useClientEmailSend('calendar');
 
   const getClientMeta = useCallback(
     (client) => {
-      const clientScheduled = scheduled.filter((c) => c.client === client);
+      const clientCalendar = calendarCards.filter((c) => c.client === client);
       return {
-        count: clientScheduled.length,
-        disabled: clientScheduled.length === 0,
+        count: clientCalendar.length,
+        disabled: clientCalendar.length === 0,
         payload: null,
       };
     },
-    [scheduled],
+    [calendarCards],
   );
 
   const handleCopy = async (client) => {
-    const url = buildCalendarShareUrl(client, scheduled);
+    const url = buildCalendarShareUrl(client, cards);
     try {
       await navigator.clipboard.writeText(url);
     } catch {
@@ -34,7 +34,7 @@ export default function CalendarSharePanel({ cards, clientFilter = 'all' }) {
   const handleSend = (row) => {
     openSend({
       client: row.client,
-      shareUrl: buildCalendarShareUrl(row.client, scheduled),
+      shareUrl: buildCalendarShareUrl(row.client, cards),
       itemCount: row.count,
     });
   };
@@ -43,7 +43,7 @@ export default function CalendarSharePanel({ cards, clientFilter = 'all' }) {
     <>
       <ShareLinkStrip
         title="Share calendar"
-        emptyHint="No scheduled posts to share"
+        emptyHint="No content on the calendar yet"
         clients={clients}
         clientFilter={clientFilter}
         getClientMeta={getClientMeta}

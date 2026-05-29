@@ -7,8 +7,9 @@ import {
   addWeeks,
   addMonths,
   groupCardsByDate,
-  getScheduledPosts,
-  getScheduledStories,
+  getCalendarPosts,
+  getCalendarStories,
+  getContentCalendarCards,
   buildStoryCalendarByDate,
   formatRecurrenceDays,
   hasStoryRecurrence,
@@ -58,7 +59,7 @@ function ClientCalendarDetail({ card, onClose }) {
       >
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Scheduled post</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Content</p>
             <CardTitleLink
               title={card.title}
               dropboxLink={card.dropboxLink}
@@ -125,20 +126,18 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
 
   useEffect(() => {
     const snapshot = parseCalendarShareHash();
-    const scheduled = stripInternalCardsForClientPortal(
-      cards.filter((c) => c.columnId === 'scheduled'),
-    );
-    const merged = mergePortalCalendarCards(scheduled, client, snapshot);
+    const calendarCards = stripInternalCardsForClientPortal(getContentCalendarCards(cards));
+    const merged = mergePortalCalendarCards(calendarCards, client, snapshot);
     setLocalCards(merged.filter((c) => c.client === client));
   }, [cards, client]);
 
   const clientColor = getClientColor(client);
   const visibleCards = localCards;
-  const totalScheduled = visibleCards.length;
+  const totalOnCalendar = visibleCards.length;
 
   const cardsByDate = useMemo(() => {
-    const posts = getScheduledPosts(visibleCards);
-    const stories = getScheduledStories(visibleCards);
+    const posts = getCalendarPosts(visibleCards);
+    const stories = getCalendarStories(visibleCards);
     const postsByDate = groupCardsByDate(posts);
     const storiesByDate = buildStoryCalendarByDate(stories, focusDate, viewMode);
     const merged = { ...postsByDate };
@@ -175,7 +174,7 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
     <>
       {!embedded && (
         <p className="mb-4 text-sm text-white/45">
-          {totalScheduled} scheduled post{totalScheduled === 1 ? '' : 's'} — your content only.
+          {totalOnCalendar} item{totalOnCalendar === 1 ? '' : 's'} on your content calendar.
         </p>
       )}
 
@@ -249,7 +248,7 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
       <section>
         <ClientPortalSectionHeader
           title="Content Calendar"
-          description={`${totalScheduled} scheduled post${totalScheduled === 1 ? '' : 's'} across your publishing calendar.`}
+          description={`${totalOnCalendar} item${totalOnCalendar === 1 ? '' : 's'} across your publishing calendar.`}
         />
         {content}
       </section>

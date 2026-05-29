@@ -1,4 +1,4 @@
-import { hasStoryRecurrence } from './calendar';
+import { hasStoryRecurrence, getContentCalendarCards } from './calendar';
 import { encodeSharePayload, decodeSharePayload } from './sharePayload';
 
 export function getCalendarPortalClient() {
@@ -97,13 +97,8 @@ export function snapshotCalendarCard(card) {
   };
 }
 
-export function buildCalendarShareUrl(client, scheduledCards) {
-  const clientCards = scheduledCards.filter(
-    (c) =>
-      c.client === client &&
-      c.columnId === 'scheduled' &&
-      (c.dueDate || hasStoryRecurrence(c)),
-  );
+export function buildCalendarShareUrl(client, cards) {
+  const clientCards = getContentCalendarCards(cards).filter((c) => c.client === client);
   const payload = encodeSharePayload({
     v: 2,
     i: clientCards.map(compactCalendarCard),
@@ -113,12 +108,7 @@ export function buildCalendarShareUrl(client, scheduledCards) {
 }
 
 export function mergePortalCalendarCards(storedCards, client, snapshot) {
-  const stored = storedCards.filter(
-    (c) =>
-      c.client === client &&
-      c.columnId === 'scheduled' &&
-      (c.dueDate || hasStoryRecurrence(c)),
-  );
+  const stored = getContentCalendarCards(storedCards).filter((c) => c.client === client);
 
   if (!snapshot?.cards?.length) return stored;
 
