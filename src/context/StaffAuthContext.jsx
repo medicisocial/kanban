@@ -11,8 +11,16 @@ import {
   verifyStaffCredentials,
 } from '../utils/staffAuth';
 import { authenticateTeamMemberCredentials } from '../utils/teamAuth';
+import { supabase, SUPABASE_ENABLED } from '../lib/supabaseClient';
 
 const StaffAuthContext = createContext(null);
+
+// The shared staff Supabase Auth account. Staff keep using their normal
+// username/password; behind the scenes that signs into this account so the
+// browser carries an authenticated JWT (required for DB writes once RLS is locked).
+const STAFF_SUPABASE_EMAIL = (
+  import.meta.env.VITE_SUPABASE_STAFF_EMAIL || 'info@medicisocial.com'
+).trim();
 
 export function StaffAuthProvider({ children }) {
   const authRequired = isStaffAuthRequired();
@@ -30,7 +38,23 @@ export function StaffAuthProvider({ children }) {
     (async () => {
       const stored = loadStaffSession();
       if (stored && (await isStaffSessionValid(stored))) {
-        if (!cancelled) setSession(stored);
+        let supabaseOk = true;
+        if (SUPABASE_ENABLED && supabase) {
+          try {
+            const { data } = await supabase.auth.getSession();
+            supabaseOk = Boolean(data?.session);
+          } catch {
+            supabaseOk = false;
+          }
+        }
+        if (supabaseOk) {
+          if (!cancelled) setSession(stored);
+        } else {
+          // Staff session is still valid, but the Supabase auth session is gone.
+          // Force a fresh login so the database session (needed to save changes
+          // under locked-down RLS) gets re-established.
+          clearStaffSession();
+        }
       } else {
         clearStaffSession();
       }
@@ -52,6 +76,19 @@ export function StaffAuthProvider({ children }) {
 
     const ok = await verifyStaffCredentials(username, password);
     if (ok) {
+      if (SUPABASE_ENABLED && supabase) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: STAFF_SUPABASE_EMAIL,
+          password,
+        });
+        if (error) {
+          return {
+            ok: false,
+            error:
+              'Your password was accepted but a secure database session could not be established. Please try again in a moment.',
+          };
+        }
+      }
       const nextSession = await createStaffSession(username);
       saveStaffSession(nextSession);
       setSession(nextSession);
@@ -71,6 +108,9 @@ export function StaffAuthProvider({ children }) {
 
   const logout = useCallback(() => {
     clearStaffSession();
+    if (SUPABASE_ENABLED && supabase) {
+      supabase.auth.signOut().catch(() => {});
+    }
     setSession(null);
   }, []);
 
