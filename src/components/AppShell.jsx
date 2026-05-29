@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { SUPABASE_ENABLED } from "../lib/supabaseClient";
 import { useKanban } from "../hooks/useKanban";
 import { useVideoIdeas, applyClientResponses } from "../hooks/useVideoIdeas";
 import { useShootPlans } from "../hooks/useShootPlans";
@@ -645,6 +646,28 @@ export default function AppShell({ onSignOut }) {
     createCardFromIdea,
     addIdea,
   ]);
+
+  // Supabase mode: client portal approvals land directly on the idea record
+  // (status='approved', no boardCardId). Mirror the legacy behaviour by creating
+  // the board card here. Idempotent: a board card exists once boardCardId is set,
+  // and the session ref guards against re-processing while state settles.
+  const processedClientIdeaIdsRef = useRef(new Set());
+  useEffect(() => {
+    if (!SUPABASE_ENABLED) return;
+    const processed = processedClientIdeaIdsRef.current;
+    const pending = ideas.filter(
+      (idea) => idea.status === "approved" && !idea.boardCardId && !processed.has(idea.id),
+    );
+    if (!pending.length) return;
+
+    runWithoutUndoCapture(() => {
+      for (const idea of pending) {
+        processed.add(idea.id);
+        const boardCardId = createCardFromIdea({ ...idea, clientComment: idea.clientComment || "" });
+        markApproved(idea.id, idea.clientComment || "", boardCardId);
+      }
+    });
+  }, [ideas, createCardFromIdea, markApproved]);
 
   useEffect(() => {
     if (!importData?.responses?.length) return;

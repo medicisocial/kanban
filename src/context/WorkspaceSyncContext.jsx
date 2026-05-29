@@ -13,6 +13,7 @@ import {
   syncWorkspace,
 } from '../utils/cloudSync';
 import { notifyWorkspaceReload } from '../utils/workspaceReload';
+import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useStaffAuth } from './StaffAuthContext';
 
 const WorkspaceSyncContext = createContext(null);
@@ -31,7 +32,10 @@ export function WorkspaceSyncProvider({ children }) {
   const lastPushedRef = useRef(getLocalSyncMeta().snapshot || getWorkspaceDataSnapshot());
   const pushInFlightRef = useRef(false);
 
-  const shouldSync = authRequired && isAuthenticated && !isPublicClientPortal();
+  // When Supabase is enabled it is the single source of truth, so the legacy
+  // Upstash KV blob sync is disabled to avoid a second, conflicting sync loop.
+  const shouldSync =
+    !SUPABASE_ENABLED && authRequired && isAuthenticated && !isPublicClientPortal();
 
   const runInitialSync = useCallback(async () => {
     if (!session) return;

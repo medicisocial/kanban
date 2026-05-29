@@ -6,12 +6,29 @@ import {
   normalizeBrandUsers,
 } from './_lib/clientPortalAuth.mjs';
 import { normalizeClientContacts, mergeClientSocialLogins } from './_lib/clientProfile.mjs';
+import {
+  isSupabaseConfigured,
+  fetchRecord,
+  upsertRecord,
+  deleteRecord,
+} from './_lib/supabase.mjs';
 
 const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
 const CONTENT_REVIEW_RESPONSES_KEY = 'medici-social-content-review-responses';
 const EVENTS_STORAGE_KEY = 'medici-social-events';
 const CLIENTS_STORAGE_KEY = 'medici-social-clients';
 const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
+
+const CARDS_TABLE = 'cards';
+const VIDEO_IDEAS_TABLE = 'video_ideas';
+const EVENTS_TABLE = 'events';
+const CLIENTS_TABLE = 'clients';
+const CREDENTIALS_TABLE = 'client_portal_credentials';
+const CLIENTS_RECORD_ID = 'workspace';
+
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key);
+}
 
 function unauthorized(res) {
   return res.status(401).json({ error: 'Unauthorized' });
@@ -27,6 +44,164 @@ function appendResponse(existing, response, idKey) {
   return [...filtered, response];
 }
 
+/** Mirror of buildContentReviewDenyUpdates (src/utils/contentReviewShare.js) for server-side use. */
+function buildContentReviewDenyUpdates(card, comment, timestamp = Date.now()) {
+  const trimmed = (comment || '').trim();
+  const stamp = new Date(timestamp).toLocaleDateString();
+  const noteAppend = trimmed ? `\n\nClient revision notes (${stamp}): ${trimmed}` : '';
+  const backToEditing = Boolean(card.isOneOffProject);
+  return {
+    columnId: backToEditing ? 'editing' : 'not-approved',
+    status: backToEditing ? 'Editing' : 'Not Approved',
+    clientComment: trimmed,
+    notes: `${card.notes || ''}${noteAppend}`.trim(),
+  };
+}
+
+/**
+ * Supabase is the source of truth: write the client's action straight onto the
+ * canonical record (idea/card/event/clients/credentials) that staff already
+ * sync live. Throws on Supabase failure so the handler can surface an error.
+ */
+async function applyResponseToSupabase(res, session, type, response) {
+  const brand = session.brand;
+
+  if (type === 'idea') {
+    const ideaId = response.ideaId;
+    if (!ideaId) return res.status(400).json({ error: 'Missing ideaId.' });
+
+    const action = response.action;
+    const status = action === 'approved' ? 'approved' : action === 'declined' ? 'declined' : null;
+    if (!status) return res.status(400).json({ error: 'Unknown idea action.' });
+
+    const existing = await fetchRecord(VIDEO_IDEAS_TABLE, ideaId);
+    const base = existing || (response.idea ? { ...response.idea, id: ideaId } : null);
+    if (!base) return res.status(404).json({ error: 'Idea not found.' });
+
+    // Note: boardCardId is intentionally preserved from `base` and never set here.
+    // The staff app creates the board card idempotently when it sees an approved idea.
+    const next = {
+      ...base,
+      client: base.client || brand,
+      status,
+      clientComment: (response.comment || '').trim(),
+      reviewedAt: Date.now(),
+    };
+    await upsertRecord(VIDEO_IDEAS_TABLE, ideaId, next);
+    return res.status(200).json({ ok: true });
+  }
+
+  if (type === 'content') {
+    const cardId = response.cardId;
+    if (!cardId) return res.status(400).json({ error: 'Missing cardId.' });
+
+    const card = await fetchRecord(CARDS_TABLE, cardId);
+    if (!card || card.columnId !== 'in-review') {
+      return res.status(200).json({ ok: true, skipped: true });
+    }
+
+    const comment = (response.comment || '').trim();
+    let updates = null;
+    if (response.action === 'approved') {
+      updates = { columnId: 'approved', status: 'Approved', clientComment: comment };
+    } else if (response.action === 'denied') {
+      if (!comment) return res.status(200).json({ ok: true, skipped: true });
+      updates = buildContentReviewDenyUpdates(card, comment, response.timestamp);
+    } else {
+      return res.status(400).json({ error: 'Unknown content action.' });
+    }
+
+    await upsertRecord(CARDS_TABLE, cardId, { ...card, ...updates });
+    return res.status(200).json({ ok: true });
+  }
+
+  if (type === 'event') {
+    const action = response.action;
+
+    if (action === 'create') {
+      if (!response.event || typeof response.event !== 'object') {
+        return res.status(400).json({ error: 'Invalid event payload.' });
+      }
+      const id = response.event.id || `evt-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const event = {
+        ...response.event,
+        client: brand,
+        id,
+        createdAt: response.event.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      };
+      await upsertRecord(EVENTS_TABLE, id, event);
+      return res.status(200).json({ ok: true, id });
+    }
+
+    if (action === 'update') {
+      const id = response.event?.id;
+      if (!id) return res.status(400).json({ error: 'Invalid event payload.' });
+      const existing = await fetchRecord(EVENTS_TABLE, id);
+      if (!existing || existing.client !== brand) return res.status(403).json({ error: 'Forbidden.' });
+      const event = { ...existing, ...response.event, client: brand, updatedAt: Date.now() };
+      await upsertRecord(EVENTS_TABLE, id, event);
+      return res.status(200).json({ ok: true });
+    }
+
+    if (action === 'delete') {
+      const id = response.eventId;
+      if (!id) return res.status(400).json({ error: 'Invalid event payload.' });
+      const existing = await fetchRecord(EVENTS_TABLE, id);
+      if (!existing || existing.client !== brand) return res.status(403).json({ error: 'Forbidden.' });
+      await deleteRecord(EVENTS_TABLE, id);
+      return res.status(200).json({ ok: true });
+    }
+
+    return res.status(400).json({ error: 'Unknown event action.' });
+  }
+
+  if (type === 'profile') {
+    const store = (await fetchRecord(CLIENTS_TABLE, CLIENTS_RECORD_ID)) || {};
+    // Spread the full store first so client names/colors/etc. are never clobbered.
+    const nextStore = {
+      ...store,
+      logos: { ...(store.logos || {}) },
+      contacts: { ...(store.contacts || {}) },
+      socialLogins: { ...(store.socialLogins || {}) },
+    };
+
+    if (hasOwn(response, 'logo')) {
+      if (response.logo) nextStore.logos[brand] = response.logo;
+      else delete nextStore.logos[brand];
+    }
+    if (hasOwn(response, 'contacts')) {
+      nextStore.contacts[brand] = normalizeClientContacts(response.contacts);
+    }
+    if (hasOwn(response, 'socialLogins')) {
+      nextStore.socialLogins[brand] = mergeClientSocialLogins(
+        nextStore.socialLogins[brand],
+        response.socialLogins,
+      );
+    }
+
+    await upsertRecord(CLIENTS_TABLE, CLIENTS_RECORD_ID, nextStore);
+
+    if (hasOwn(response, 'userAvatar')) {
+      const brandUsers = normalizeBrandUsers(await fetchRecord(CREDENTIALS_TABLE, brand));
+      const sessionUsername = session.username.trim().toLowerCase();
+      const updatedUsers = brandUsers.map((user) => {
+        if (user.username.toLowerCase() !== sessionUsername) return user;
+        if (!response.userAvatar) {
+          const { avatar, ...rest } = user;
+          return rest;
+        }
+        return { ...user, avatar: response.userAvatar };
+      });
+      await upsertRecord(CREDENTIALS_TABLE, brand, updatedUsers);
+    }
+
+    return res.status(200).json({ ok: true });
+  }
+
+  return res.status(400).json({ error: 'Unknown response type.' });
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -36,9 +211,6 @@ export default async function handler(req, res) {
   const session = getClientSessionFromRequest(req);
   if (!isClientSessionValid(session)) return unauthorized(res);
 
-  const redis = getRedis();
-  if (!redis) return unavailable(res);
-
   const { type, response } = req.body || {};
   if (!response || typeof response !== 'object') {
     return res.status(400).json({ error: 'Invalid response payload.' });
@@ -47,6 +219,18 @@ export default async function handler(req, res) {
   if (response.client && response.client !== session.brand) {
     return res.status(403).json({ error: 'Forbidden.' });
   }
+
+  if (isSupabaseConfigured()) {
+    try {
+      return await applyResponseToSupabase(res, session, type, response);
+    } catch (error) {
+      console.error('[client-responses] Supabase write failed:', error?.message || error);
+      return res.status(502).json({ error: 'Could not save your response. Please try again.' });
+    }
+  }
+
+  const redis = getRedis();
+  if (!redis) return unavailable(res);
 
   const workspace = (await loadWorkspace(redis)) || {
     version: 1,
