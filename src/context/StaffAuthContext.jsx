@@ -44,6 +44,7 @@ export function StaffAuthProvider({ children }) {
           if (!cancelled) setSession(stored);
         } else {
           clearStaffSession();
+          signOutStaffSupabaseSession();
         }
       } else {
         clearStaffSession();

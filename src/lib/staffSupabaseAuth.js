@@ -8,15 +8,16 @@ const STAFF_SUPABASE_EMAIL = (
 export async function signInStaffSupabaseSession(password) {
   if (!SUPABASE_ENABLED || !supabase) return { ok: true };
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: STAFF_SUPABASE_EMAIL,
     password,
   });
 
-  if (error) {
+  if (error || !data?.session) {
     return {
       ok: false,
       error:
+        error?.message ||
         'Your password was accepted but a secure database session could not be established. Please try again in a moment.',
     };
   }

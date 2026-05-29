@@ -1,13 +1,7 @@
 import { useState } from 'react';
-import {
-  createStaffSession,
-  isStaffAuthConfigured,
-  saveStaffSession,
-  verifyStaffCredentials,
-} from '../utils/staffAuth';
-import { authenticateTeamMemberCredentials } from '../utils/teamAuth';
+import { isStaffAuthConfigured } from '../utils/staffAuth';
 import { loginClientPortal } from '../utils/clientPortalAuth';
-import { signInStaffSupabaseSession } from '../lib/staffSupabaseAuth';
+import { useStaffAuth } from '../context/StaffAuthContext';
 
 const labelClass =
   'mb-2 block text-[10px] font-medium uppercase tracking-[0.28em] text-white/45';
@@ -27,6 +21,7 @@ function AmbientBackground() {
 }
 
 export default function UnifiedLogin({ onAuthenticated, checking = false }) {
+  const { login } = useStaffAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -39,24 +34,13 @@ export default function UnifiedLogin({ onAuthenticated, checking = false }) {
 
     try {
       if (isStaffAuthConfigured()) {
-        const staffOk = await verifyStaffCredentials(username, password);
-        if (staffOk) {
-          const supabaseLogin = await signInStaffSupabaseSession(password);
-          if (!supabaseLogin.ok) {
-            setError(supabaseLogin.error);
-            return;
-          }
-          const session = await createStaffSession(username);
-          saveStaffSession(session);
+        const staffResult = await login(username, password);
+        if (staffResult.ok) {
           onAuthenticated('staff');
           return;
         }
-
-        const teamLoginName = await authenticateTeamMemberCredentials(username, password);
-        if (teamLoginName) {
-          const session = await createStaffSession(teamLoginName);
-          saveStaffSession(session);
-          onAuthenticated('staff');
+        if (staffResult.error && staffResult.error !== 'Invalid username or password.') {
+          setError(staffResult.error);
           return;
         }
       }

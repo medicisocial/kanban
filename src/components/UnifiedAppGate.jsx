@@ -1,14 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  clearStaffSession,
-  isSharedOperationsLogin,
-  isStaffSessionValid,
-  loadStaffSession,
-} from '../utils/staffAuth';
 import { clearClientSession, loadClientSession } from '../utils/clientPortalAuth';
-import { hasStaffSupabaseSession } from '../lib/staffSupabaseAuth';
+import { StaffAuthProvider, useStaffAuth } from '../context/StaffAuthContext';
 import { ClientsProvider } from '../context/ClientsContext';
-import { StaffAuthProvider } from '../context/StaffAuthContext';
 import { WorkspaceSyncProvider } from '../context/WorkspaceSyncContext';
 import ClientPortalApp from '../ClientPortalApp';
 import UnifiedLogin from './UnifiedLogin';
@@ -16,17 +9,16 @@ import AppShell from './AppShell';
 
 function StaffConsoleApp({ onSignOut }) {
   return (
-    <StaffAuthProvider>
-      <WorkspaceSyncProvider>
-        <ClientsProvider>
-          <AppShell onSignOut={onSignOut} />
-        </ClientsProvider>
-      </WorkspaceSyncProvider>
-    </StaffAuthProvider>
+    <WorkspaceSyncProvider>
+      <ClientsProvider>
+        <AppShell onSignOut={onSignOut} />
+      </ClientsProvider>
+    </WorkspaceSyncProvider>
   );
 }
 
-export default function UnifiedAppGate() {
+function UnifiedAppGateInner() {
+  const { ready, session } = useStaffAuth();
   const [mode, setMode] = useState('loading');
 
   useEffect(() => {
@@ -39,75 +31,33 @@ export default function UnifiedAppGate() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!ready) return;
 
-    (async () => {
-      try {
-        const staff = loadStaffSession();
-        if (staff && (await isStaffSessionValid(staff))) {
-          if (isSharedOperationsLogin(staff) && !(await hasStaffSupabaseSession())) {
-            clearStaffSession();
-          } else {
-            if (!cancelled) setMode('staff');
-            return;
-          }
-        } else if (staff) {
-          clearStaffSession();
-        }
+    if (session) {
+      setMode('staff');
+      return;
+    }
 
-        const client = loadClientSession();
-        if (client?.brand) {
-          if (!cancelled) setMode('client');
-          return;
-        }
+    const client = loadClientSession();
+    if (client?.brand) {
+      setMode('client');
+      return;
+    }
 
-        if (!cancelled) setMode('login');
-      } catch {
-        clearStaffSession();
-        if (!cancelled) setMode('login');
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (mode !== 'staff' && mode !== 'client') return;
-
-    let cancelled = false;
-
-    (async () => {
-      if (mode === 'staff') {
-        const staff = loadStaffSession();
-        const staffValid = staff && (await isStaffSessionValid(staff));
-        if (!staffValid) {
-          if (staff) clearStaffSession();
-          if (!cancelled) setMode('login');
-        }
-        return;
-      }
-
-      const client = loadClientSession();
-      if (!client?.brand) {
-        if (!cancelled) setMode('login');
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [mode]);
+    setMode('login');
+  }, [ready, session]);
 
   const handleSignOut = useCallback(() => {
-    clearStaffSession();
     clearClientSession();
     setMode('login');
   }, []);
 
-  if (mode === 'loading' || mode === 'login') {
-    return <UnifiedLogin onAuthenticated={setMode} checking={mode === 'loading'} />;
+  if (!ready || mode === 'loading') {
+    return <UnifiedLogin onAuthenticated={setMode} checking />;
+  }
+
+  if (mode === 'login') {
+    return <UnifiedLogin onAuthenticated={setMode} checking={false} />;
   }
 
   if (mode === 'client') {
@@ -115,4 +65,12 @@ export default function UnifiedAppGate() {
   }
 
   return <StaffConsoleApp onSignOut={handleSignOut} />;
+}
+
+export default function UnifiedAppGate() {
+  return (
+    <StaffAuthProvider>
+      <UnifiedAppGateInner />
+    </StaffAuthProvider>
+  );
 }

@@ -195,9 +195,9 @@ export default function AppShell({ onSignOut }) {
   }, [cards, shootDateCard?.id]);
 
   useEffect(() => {
-    if (authRequired && ready && !session && onSignOut) {
-      onSignOut();
-    }
+    if (!authRequired || !ready || session) return;
+    // Session was cleared during auth restore (e.g. stale login). Return to sign-in.
+    onSignOut?.();
   }, [authRequired, ready, session, onSignOut]);
 
   const handleAddCalendarPost = (data) => {
