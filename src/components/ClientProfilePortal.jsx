@@ -61,13 +61,10 @@ export default function ClientProfilePortal({
   businessType,
   contacts = [],
   socialLogins = {},
-  userAvatar,
-  userDisplayName,
   onSaveProfile,
 }) {
   const [settingsTab, setSettingsTab] = useState('brand');
   const [pendingLogo, setPendingLogo] = useState(undefined);
-  const [pendingUserAvatar, setPendingUserAvatar] = useState(undefined);
   const [draftContacts, setDraftContacts] = useState(contacts);
   const [draftSocialLogins, setDraftSocialLogins] = useState(() =>
     normalizeClientSocialLogins(socialLogins),
@@ -82,7 +79,6 @@ export default function ClientProfilePortal({
     contactsDirtyRef.current = false;
     socialDirtyRef.current = false;
     setPendingLogo(undefined);
-    setPendingUserAvatar(undefined);
     setDraftContacts(contacts);
     setDraftSocialLogins(normalizeClientSocialLogins(socialLogins));
     setMessage('');
@@ -120,7 +116,6 @@ export default function ClientProfilePortal({
 
   const hasChanges =
     pendingLogo !== undefined ||
-    pendingUserAvatar !== undefined ||
     contactsDraftHasChanges(draftContacts, contacts) ||
     !socialLoginsMatch(draftSocialLogins, socialLogins);
 
@@ -138,15 +133,10 @@ export default function ClientProfilePortal({
         payload.logo =
           pendingLogo === null ? null : await bakeLogoCrop(pendingLogo);
       }
-      if (pendingUserAvatar !== undefined) {
-        payload.userAvatar =
-          pendingUserAvatar === null ? null : await bakeLogoCrop(pendingUserAvatar);
-      }
       await onSaveProfile(payload);
       contactsDirtyRef.current = false;
       socialDirtyRef.current = false;
       setPendingLogo(undefined);
-      setPendingUserAvatar(undefined);
       setMessage('Settings saved.');
       setTimeout(() => setMessage(''), 4000);
     } catch (err) {
@@ -157,7 +147,6 @@ export default function ClientProfilePortal({
   };
 
   const brandPhotoValue = pendingLogo !== undefined ? pendingLogo : clientLogo;
-  const userPhotoValue = pendingUserAvatar !== undefined ? pendingUserAvatar : userAvatar;
 
   const tabClass = (tabId) =>
     `relative px-4 py-2 text-[11px] font-medium uppercase tracking-[0.18em] transition-all duration-300 ${
@@ -168,28 +157,11 @@ export default function ClientProfilePortal({
     <section className="pb-28">
       <ClientPortalSectionHeader
         title="Settings"
-        description="Manage your photo, brand, contacts, and social logins."
+        description="Manage your brand, contacts, and social logins."
       />
 
       <div className="max-w-3xl">
-        <SettingsPanel
-          title="Your photo"
-          description="Optional personal photo for your portal login."
-        >
-          <ProfilePhotoEditor
-            avatar={userPhotoValue}
-            name={userDisplayName || client}
-            color={clientColor}
-            label=""
-            hint="Upload a photo — zoom and drag to fit the circle."
-            onPendingChange={setPendingUserAvatar}
-          />
-          {pendingUserAvatar !== undefined && (
-            <p className="mt-3 text-xs text-amber-300/80">Unsaved photo change — use Save settings below.</p>
-          )}
-        </SettingsPanel>
-
-        <div className={`${glassSegmentClass} mb-6 mt-6 flex w-fit max-w-full flex-wrap gap-1 p-1`}>
+        <div className={`${glassSegmentClass} mb-6 flex w-fit max-w-full flex-wrap gap-1 p-1`}>
           {SETTINGS_TABS.map((tab) => (
             <button
               key={tab.id}
