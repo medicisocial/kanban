@@ -14,6 +14,8 @@ import {
   normalizeClientSocialLogins,
 } from '../utils/clientProfile';
 import { useReloadFromStorage } from './useReloadFromStorage';
+import { SUPABASE_ENABLED } from '../lib/supabaseClient';
+import { useSingletonSync } from '../lib/useSingletonSync';
 
 function normalizeBusinessTypesMap(types = {}) {
   const normalized = {};
@@ -64,11 +66,21 @@ export function useClients() {
   const [state, setState] = useState(loadClients);
 
   const reloadFromStorage = useCallback(() => {
+    if (SUPABASE_ENABLED) return;
     setState(loadClients());
   }, []);
   useReloadFromStorage(reloadFromStorage);
 
+  useSingletonSync({
+    table: 'clients',
+    value: state,
+    setValue: setState,
+    loadLocal: loadClients,
+    recordId: 'workspace',
+  });
+
   useEffect(() => {
+    if (SUPABASE_ENABLED) return;
     localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 

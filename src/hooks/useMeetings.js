@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { MEETINGS_STORAGE_KEY, createMeeting } from '../constants';
 import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
+import { SUPABASE_ENABLED } from '../lib/supabaseClient';
+import { useCollectionSync } from '../lib/useCollectionSync';
+
+const getMeetingId = (meeting) => meeting.id;
 
 function loadMeetings() {
   try {
@@ -20,11 +24,21 @@ export function useMeetings() {
   const [meetings, setMeetings] = useState(loadMeetings);
 
   const reloadFromStorage = useCallback(() => {
+    if (SUPABASE_ENABLED) return;
     setMeetings(loadMeetings());
   }, []);
   useReloadFromStorage(reloadFromStorage);
 
+  useCollectionSync({
+    table: 'meetings',
+    items: meetings,
+    setItems: setMeetings,
+    getId: getMeetingId,
+    loadLocal: loadMeetings,
+  });
+
   useEffect(() => {
+    if (SUPABASE_ENABLED) return;
     localStorage.setItem(MEETINGS_STORAGE_KEY, JSON.stringify(meetings));
   }, [meetings]);
 

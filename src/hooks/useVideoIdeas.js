@@ -6,6 +6,10 @@ import {
 import { loadClientResponses, clearClientResponses } from "../utils/clientShare";
 import { notifyMutation } from "../utils/undoHistory";
 import { useReloadFromStorage } from "./useReloadFromStorage";
+import { SUPABASE_ENABLED } from "../lib/supabaseClient";
+import { useCollectionSync } from "../lib/useCollectionSync";
+
+const getIdeaId = (idea) => idea.id;
 
 function createIdea(overrides = {}) {
   return {
@@ -74,11 +78,21 @@ export function useVideoIdeas() {
   const [ideas, setIdeas] = useState(loadIdeas);
 
   const reloadFromStorage = useCallback(() => {
+    if (SUPABASE_ENABLED) return;
     setIdeas(loadIdeas());
   }, []);
   useReloadFromStorage(reloadFromStorage);
 
+  useCollectionSync({
+    table: 'video_ideas',
+    items: ideas,
+    setItems: setIdeas,
+    getId: getIdeaId,
+    loadLocal: loadIdeas,
+  });
+
   useEffect(() => {
+    if (SUPABASE_ENABLED) return;
     localStorage.setItem(VIDEO_IDEAS_STORAGE_KEY, JSON.stringify(ideas));
   }, [ideas]);
 

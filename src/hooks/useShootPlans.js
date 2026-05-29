@@ -3,6 +3,8 @@ import { SHOOT_PLANS_STORAGE_KEY } from "../constants";
 import { getShootPlanKey } from "../utils/shootDay";
 import { notifyMutation } from "../utils/undoHistory";
 import { useReloadFromStorage } from "./useReloadFromStorage";
+import { SUPABASE_ENABLED } from "../lib/supabaseClient";
+import { useMapSync } from "../lib/useMapSync";
 
 function loadPlans() {
   try {
@@ -35,11 +37,20 @@ export function useShootPlans() {
   const [plans, setPlans] = useState(loadPlans);
 
   const reloadFromStorage = useCallback(() => {
+    if (SUPABASE_ENABLED) return;
     setPlans(loadPlans());
   }, []);
   useReloadFromStorage(reloadFromStorage);
 
+  useMapSync({
+    table: 'shoot_plans',
+    map: plans,
+    setMap: setPlans,
+    loadLocal: loadPlans,
+  });
+
   useEffect(() => {
+    if (SUPABASE_ENABLED) return;
     localStorage.setItem(SHOOT_PLANS_STORAGE_KEY, JSON.stringify(plans));
   }, [plans]);
 

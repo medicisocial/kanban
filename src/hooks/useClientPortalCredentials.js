@@ -9,6 +9,8 @@ import {
 } from '../utils/clientPortalCredentials';
 import { hashPassword } from '../utils/staffAuth';
 import { useReloadFromStorage } from './useReloadFromStorage';
+import { SUPABASE_ENABLED } from '../lib/supabaseClient';
+import { useMapSync } from '../lib/useMapSync';
 
 function loadCredentials() {
   try {
@@ -29,10 +31,20 @@ export function useClientPortalCredentials() {
   const [credentials, setCredentials] = useState(loadCredentials);
 
   const reloadFromStorage = useCallback(() => {
+    if (SUPABASE_ENABLED) return;
     setCredentials(loadCredentials());
   }, []);
   useReloadFromStorage(reloadFromStorage);
 
+  useMapSync({
+    table: 'client_portal_credentials',
+    map: credentials,
+    setMap: setCredentials,
+    loadLocal: loadCredentials,
+  });
+
+  // Keep localStorage as a write-through cache even when Supabase is enabled,
+  // because the mutation helpers below read existing users via loadCredentials().
   useEffect(() => {
     localStorage.setItem(CLIENT_PORTAL_AUTH_STORAGE_KEY, JSON.stringify(credentials));
   }, [credentials]);

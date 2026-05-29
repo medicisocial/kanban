@@ -8,6 +8,10 @@ import {
   normalizeTeamMember,
 } from '../utils/teamMembers';
 import { useReloadFromStorage } from './useReloadFromStorage';
+import { SUPABASE_ENABLED } from '../lib/supabaseClient';
+import { useCollectionSync } from '../lib/useCollectionSync';
+
+const getTeamMemberId = (member) => member.id;
 
 function loadTeamMembers() {
   try {
@@ -28,11 +32,22 @@ export function useTeamMembers() {
   const [teamMembers, setTeamMembers] = useState(loadTeamMembers);
 
   const reloadFromStorage = useCallback(() => {
+    if (SUPABASE_ENABLED) return;
     setTeamMembers(loadTeamMembers());
   }, []);
   useReloadFromStorage(reloadFromStorage);
 
+  useCollectionSync({
+    table: 'team_members',
+    items: teamMembers,
+    setItems: setTeamMembers,
+    getId: getTeamMemberId,
+    normalize: normalizeTeamMember,
+    loadLocal: loadTeamMembers,
+  });
+
   useEffect(() => {
+    if (SUPABASE_ENABLED) return;
     localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(teamMembers));
   }, [teamMembers]);
 

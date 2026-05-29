@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { STORAGE_KEY, COLUMNS, PLATFORM, createCard, EDITOR_TODO_STORAGE_KEY, isScheduledPostType, isOneOffProjectCard, syncOneOffScheduleFields } from '../constants';
 import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
+import { SUPABASE_ENABLED } from '../lib/supabaseClient';
+import { useCollectionSync } from '../lib/useCollectionSync';
+
+const getCardId = (card) => card.id;
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
 import {
   toDateKey,
@@ -146,11 +150,22 @@ export function useKanban() {
   const [cards, setCards] = useState(loadCards);
 
   const reloadFromStorage = useCallback(() => {
+    if (SUPABASE_ENABLED) return;
     setCards(loadCards());
   }, []);
   useReloadFromStorage(reloadFromStorage);
 
+  useCollectionSync({
+    table: 'cards',
+    items: cards,
+    setItems: setCards,
+    getId: getCardId,
+    normalize: normalizeCard,
+    loadLocal: loadCards,
+  });
+
   useEffect(() => {
+    if (SUPABASE_ENABLED) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
   }, [cards]);
 

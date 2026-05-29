@@ -3,6 +3,10 @@ import { ADMIN_TASKS_STORAGE_KEY } from '../constants';
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
 import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
+import { SUPABASE_ENABLED } from '../lib/supabaseClient';
+import { useCollectionSync } from '../lib/useCollectionSync';
+
+const getAdminTaskId = (task) => task.id;
 
 function createAdminTask(overrides = {}) {
   return {
@@ -36,11 +40,21 @@ export function useAdminTasks() {
   const [adminTasks, setAdminTasks] = useState(loadAdminTasks);
 
   const reloadFromStorage = useCallback(() => {
+    if (SUPABASE_ENABLED) return;
     setAdminTasks(loadAdminTasks());
   }, []);
   useReloadFromStorage(reloadFromStorage);
 
+  useCollectionSync({
+    table: 'admin_tasks',
+    items: adminTasks,
+    setItems: setAdminTasks,
+    getId: getAdminTaskId,
+    loadLocal: loadAdminTasks,
+  });
+
   useEffect(() => {
+    if (SUPABASE_ENABLED) return;
     localStorage.setItem(ADMIN_TASKS_STORAGE_KEY, JSON.stringify(adminTasks));
   }, [adminTasks]);
 
