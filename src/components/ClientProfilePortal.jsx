@@ -19,7 +19,6 @@ import {
 } from './clientPortal/clientPortalUi';
 
 const SETTINGS_TABS = [
-  { id: 'account', label: 'Account' },
   { id: 'brand', label: 'Brand' },
   { id: 'contacts', label: 'Contacts' },
   { id: 'social', label: 'Social' },
@@ -66,7 +65,7 @@ export default function ClientProfilePortal({
   userDisplayName,
   onSaveProfile,
 }) {
-  const [settingsTab, setSettingsTab] = useState('account');
+  const [settingsTab, setSettingsTab] = useState('brand');
   const [pendingLogo, setPendingLogo] = useState(undefined);
   const [pendingUserAvatar, setPendingUserAvatar] = useState(undefined);
   const [draftContacts, setDraftContacts] = useState(contacts);
@@ -113,7 +112,6 @@ export default function ClientProfilePortal({
   }, []);
 
   const tabHasChanges = (tabId) => {
-    if (tabId === 'account') return pendingUserAvatar !== undefined;
     if (tabId === 'brand') return pendingLogo !== undefined;
     if (tabId === 'contacts') return contactsDraftHasChanges(draftContacts, contacts);
     if (tabId === 'social') return !socialLoginsMatch(draftSocialLogins, socialLogins);
@@ -170,11 +168,28 @@ export default function ClientProfilePortal({
     <section className="pb-28">
       <ClientPortalSectionHeader
         title="Settings"
-        description="Manage your account, brand, contacts, and social logins."
+        description="Manage your photo, brand, contacts, and social logins."
       />
 
       <div className="max-w-3xl">
-        <div className={`${glassSegmentClass} mb-6 flex w-fit max-w-full flex-wrap gap-1 p-1`}>
+        <SettingsPanel
+          title="Your photo"
+          description="Optional personal photo for your portal login."
+        >
+          <ProfilePhotoEditor
+            avatar={userPhotoValue}
+            name={userDisplayName || client}
+            color={clientColor}
+            label=""
+            hint="Upload a photo — zoom and drag to fit the circle."
+            onPendingChange={setPendingUserAvatar}
+          />
+          {pendingUserAvatar !== undefined && (
+            <p className="mt-3 text-xs text-amber-300/80">Unsaved photo change — use Save settings below.</p>
+          )}
+        </SettingsPanel>
+
+        <div className={`${glassSegmentClass} mb-6 mt-6 flex w-fit max-w-full flex-wrap gap-1 p-1`}>
           {SETTINGS_TABS.map((tab) => (
             <button
               key={tab.id}
@@ -194,22 +209,6 @@ export default function ClientProfilePortal({
         </div>
 
         <div key={settingsTab} className="portal-content-fade">
-          {settingsTab === 'account' && (
-            <SettingsPanel
-              title="Your account"
-              description="This photo appears in the menu when you're signed in."
-            >
-              <ProfilePhotoEditor
-                avatar={userPhotoValue}
-                name={userDisplayName || client}
-                color={clientColor}
-                label=""
-                hint="Upload a photo — zoom and drag to fit the circle."
-                onPendingChange={setPendingUserAvatar}
-              />
-            </SettingsPanel>
-          )}
-
           {settingsTab === 'brand' && (
             <SettingsPanel
               title="Brand identity"
