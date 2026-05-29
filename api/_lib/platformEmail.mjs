@@ -54,25 +54,25 @@ export function buildNotificationEmail({ shareType, client, agencyName, shareUrl
       subject: `${brand} — video ideas to review`,
       preview: `${agencyName} sent ${countLabel} for your review.`,
       headline: 'Video ideas ready for your review',
-      body: `Your team at <strong>${escapeHtml(agencyName)}</strong> submitted ${escapeHtml(countLabel)} for <strong>${escapeHtml(brand)}</strong>. Sign in to approve the concepts you want produced, or decline with feedback.`,
+      body: `Your team at <strong>${escapeHtml(agencyName)}</strong> submitted ${escapeHtml(countLabel)} for <strong>${escapeHtml(brand)}</strong>. Open the link below to approve concepts or decline with feedback — no sign-in required.`,
       cta: 'Review ideas',
-      portalHint: 'After signing in, open the <strong>Ideas</strong> tab.',
+      hint: 'Your responses are saved on this page and sent back to your account manager.',
     },
     calendar: {
       subject: `${brand} — content calendar update`,
       preview: `${agencyName} shared your upcoming content schedule.`,
       headline: 'Your content calendar is ready',
-      body: `<strong>${escapeHtml(agencyName)}</strong> shared ${escapeHtml(countLabel)} on the production calendar for <strong>${escapeHtml(brand)}</strong>.`,
+      body: `<strong>${escapeHtml(agencyName)}</strong> shared ${escapeHtml(countLabel)} on the production calendar for <strong>${escapeHtml(brand)}</strong>. Open the link below to view your schedule — no sign-in required.`,
       cta: 'View calendar',
-      portalHint: 'After signing in, open the <strong>Calendar</strong> tab.',
+      hint: 'This link shows only your brand’s calendar content.',
     },
     review: {
       subject: `${brand} — content awaiting approval`,
       preview: `${agencyName} sent content for your review.`,
       headline: 'Content ready for approval',
-      body: `<strong>${escapeHtml(agencyName)}</strong> has ${escapeHtml(countLabel)} waiting for your approval for <strong>${escapeHtml(brand)}</strong>.`,
+      body: `<strong>${escapeHtml(agencyName)}</strong> has ${escapeHtml(countLabel)} waiting for your approval for <strong>${escapeHtml(brand)}</strong>. Open the link below to review and respond — no sign-in required.`,
       cta: 'Review content',
-      portalHint: 'After signing in, open <strong>Content review</strong>.',
+      hint: 'Your approve or decline responses are saved on this page and sent back to your account manager.',
     },
     portal_invite: {
       subject: `Your ${brand} client portal`,
@@ -80,11 +80,17 @@ export function buildNotificationEmail({ shareType, client, agencyName, shareUrl
       headline: `Welcome to your ${escapeHtml(brand)} workspace`,
       body: `<strong>${escapeHtml(agencyName)}</strong> set up a client portal for <strong>${escapeHtml(brand)}</strong>. Sign in to review ideas, approve content, and track production.`,
       cta: 'Sign in to portal',
-      portalHint: 'Use the email and password your account manager shared with you.',
+      hint: 'Use the email and password your account manager shared with you.',
     },
   };
 
   const template = templates[shareType] || templates.ideas;
+  const isPortalInvite = shareType === 'portal_invite';
+  const ctaHref = isPortalInvite ? portal : link;
+  const portalFooter =
+    !isPortalInvite && portal
+      ? `<p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#777;">Have a client portal login? <a href="${escapeHtml(portal)}" style="color:#c88;">Sign in here</a> for your full workspace.</p>`
+      : '';
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -93,10 +99,11 @@ export function buildNotificationEmail({ shareType, client, agencyName, shareUrl
       <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#888;">${escapeHtml(agencyName)}</p>
       <h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;font-weight:600;color:#fff;">${template.headline}</h1>
       <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#ccc;">${template.body}</p>
-      ${buttonHtml(portal, template.cta)}
-      <p style="margin:0 0 16px;font-size:13px;line-height:1.6;color:#999;">${template.portalHint}</p>
-      <p style="margin:0 0 8px;font-size:12px;line-height:1.6;color:#777;">Direct link:</p>
-      <p style="margin:0 0 24px;font-size:12px;line-height:1.6;word-break:break-all;"><a href="${escapeHtml(link)}" style="color:#c88;">${escapeHtml(link)}</a></p>
+      ${buttonHtml(ctaHref, template.cta)}
+      <p style="margin:0 0 16px;font-size:13px;line-height:1.6;color:#999;">${template.hint}</p>
+      ${portalFooter}
+      <p style="margin:16px 0 8px;font-size:12px;line-height:1.6;color:#777;">Link:</p>
+      <p style="margin:0 0 24px;font-size:12px;line-height:1.6;word-break:break-all;"><a href="${escapeHtml(ctaHref)}" style="color:#c88;">${escapeHtml(ctaHref)}</a></p>
       <hr style="border:none;border-top:1px solid #222;margin:24px 0;" />
       <p style="margin:0;font-size:11px;line-height:1.6;color:#666;">Sent via ${escapeHtml(getProductName())}. Reply to this email if you have questions.</p>
     </div>
@@ -108,13 +115,14 @@ export function buildNotificationEmail({ shareType, client, agencyName, shareUrl
     '',
     template.body.replace(/<[^>]+>/g, ''),
     '',
-    `${template.cta}: ${portal}`,
-    template.portalHint.replace(/<[^>]+>/g, ''),
-    '',
-    `Direct link: ${link}`,
+    `${template.cta}: ${ctaHref}`,
+    template.hint.replace(/<[^>]+>/g, ''),
+    !isPortalInvite && portal ? `Client portal: ${portal}` : '',
     '',
     `— ${agencyName}`,
-  ].join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   return {
     subject: template.subject,

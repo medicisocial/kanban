@@ -132,7 +132,7 @@ export default function ClientEmailSendModal({
             {shareLabel} — {client}
           </h2>
           <p className="mt-1 text-sm text-white/45">
-            Sent from {getAgencyDisplayName()} via platform email. Recipients get a sign-in link and your share link.
+            Sent from {getAgencyDisplayName()} via platform email. Recipients can open your share link without signing in.
           </p>
         </div>
 

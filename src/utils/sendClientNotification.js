@@ -28,8 +28,8 @@ export async function sendClientNotification(payload) {
 }
 
 export function getPortalSignInUrl() {
-  if (typeof window === 'undefined') return 'https://portal.medicisocial.com';
-  return `${window.location.origin}${window.location.pathname}`;
+  if (typeof window === 'undefined') return 'https://portal.medicisocial.com/?portal=1';
+  return `${window.location.origin}${window.location.pathname}?portal=1`;
 }
 
 export function getAgencyDisplayName() {
