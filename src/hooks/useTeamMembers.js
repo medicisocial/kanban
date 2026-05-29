@@ -46,8 +46,11 @@ export function useTeamMembers() {
     loadLocal: loadTeamMembers,
   });
 
+  // Keep localStorage as a write-through cache even when Supabase is enabled, so
+  // team-member logins keep working: verifyTeamMemberStaffCredentials() reads
+  // localStorage directly, and the /api/team-auth endpoint reads the KV blob fed
+  // from it. Supabase realtime updates flow into state -> here -> localStorage.
   useEffect(() => {
-    if (SUPABASE_ENABLED) return;
     localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(teamMembers));
   }, [teamMembers]);
 
