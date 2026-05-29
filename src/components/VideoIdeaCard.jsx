@@ -164,14 +164,14 @@ export default function VideoIdeaCard({
                 onClick={handleApprove}
                 className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500"
               >
-                ✓ Approve &amp; Send to Board
+                {reviewMode ? 'Approve' : '✓ Approve & Send to Board'}
               </button>
               <button
                 type="button"
                 onClick={() => onDecline(idea.id, comment)}
                 className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300 transition hover:bg-white/10 hover:text-white"
               >
-                Pass
+                {reviewMode ? 'Decline' : 'Pass'}
               </button>
               {!reviewMode && onDelete && (
                 <button

@@ -60,7 +60,7 @@ export default function ClientIdeasTable({
   clientLogo,
   onApprove,
   onDecline,
-  pendingIds = [],
+  busyIds = new Set(),
 }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [sort, setSort] = useState({ key: 'createdAt', dir: 'desc' });
@@ -127,7 +127,8 @@ export default function ClientIdeasTable({
           <p className="px-4 py-12 text-center text-sm text-white/40">No ideas match your filters.</p>
         ) : (
           filtered.map((idea) => {
-            const isPending = idea.status === 'pending' && pendingIds.includes(idea.id);
+            const isPending = idea.status === 'pending';
+            const isBusy = busyIds.has(idea.id);
             const expanded = expandedId === idea.id;
             const declining = declineId === idea.id;
 
@@ -153,9 +154,10 @@ export default function ClientIdeasTable({
                     <button
                       type="button"
                       onClick={() => onApprove?.(idea.id, '')}
-                      className={`${btnPrimaryClass} min-h-10 flex-1 px-3 py-2 text-[11px]`}
+                      disabled={isBusy}
+                      className={`${btnPrimaryClass} min-h-10 flex-1 px-3 py-2 text-[11px] disabled:opacity-40`}
                     >
-                      Approve
+                      {isBusy ? 'Saving…' : 'Approve'}
                     </button>
                     <button
                       type="button"
@@ -163,7 +165,8 @@ export default function ClientIdeasTable({
                         setDeclineId(idea.id);
                         setExpandedId(idea.id);
                       }}
-                      className={`${btnSecondaryClass} min-h-10 flex-1 px-3 py-2 text-[11px]`}
+                      disabled={isBusy}
+                      className={`${btnSecondaryClass} min-h-10 flex-1 px-3 py-2 text-[11px] disabled:opacity-40`}
                     >
                       Decline
                     </button>
@@ -241,7 +244,8 @@ export default function ClientIdeasTable({
               </tr>
             ) : (
               filtered.map((idea) => {
-                const isPending = idea.status === 'pending' && pendingIds.includes(idea.id);
+                const isPending = idea.status === 'pending';
+                const isBusy = busyIds.has(idea.id);
                 const expanded = expandedId === idea.id;
                 const declining = declineId === idea.id;
 
@@ -281,9 +285,10 @@ export default function ClientIdeasTable({
                             <button
                               type="button"
                               onClick={() => onApprove?.(idea.id, '')}
-                              className={`${btnPrimaryClass} px-2.5 py-1.5 text-[10px]`}
+                              disabled={isBusy}
+                              className={`${btnPrimaryClass} px-2.5 py-1.5 text-[10px] disabled:opacity-40`}
                             >
-                              Approve
+                              {isBusy ? 'Saving…' : 'Approve'}
                             </button>
                             <button
                               type="button"
@@ -291,7 +296,8 @@ export default function ClientIdeasTable({
                                 setDeclineId(idea.id);
                                 setExpandedId(idea.id);
                               }}
-                              className={`${btnSecondaryClass} px-2.5 py-1.5 text-[10px]`}
+                              disabled={isBusy}
+                              className={`${btnSecondaryClass} px-2.5 py-1.5 text-[10px] disabled:opacity-40`}
                             >
                               Decline
                             </button>

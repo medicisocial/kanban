@@ -77,6 +77,7 @@ async function applyResponseToSupabase(res, session, type, response) {
     const existing = await fetchRecord(VIDEO_IDEAS_TABLE, ideaId);
     const base = existing || (response.idea ? { ...response.idea, id: ideaId } : null);
     if (!base) return res.status(404).json({ error: 'Idea not found.' });
+    if (base.client && base.client !== brand) return res.status(403).json({ error: 'Forbidden.' });
 
     // Note: boardCardId is intentionally preserved from `base` and never set here.
     // The staff app creates the board card idempotently when it sees an approved idea.

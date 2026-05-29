@@ -26,15 +26,31 @@ export default function ClientReviewPortal({
   const [done, setDone] = useState(false);
   const [sessionResponses, setSessionResponses] = useState([]);
   const [respondedIds, setRespondedIds] = useState([]);
+  const [busyIds, setBusyIds] = useState(() => new Set());
+  const [actionError, setActionError] = useState('');
   const [copied, setCopied] = useState(false);
+
+  const clientColor = getClientColor(client);
+  const clientLogo = getClientLogo(client);
+  const canSyncLocally = !useCloudSync && ideas.some((i) => i.client === client);
+
+  const brandIdeas = useMemo(
+    () => ideas.filter((idea) => idea.client === client),
+    [ideas, client],
+  );
+
+  const pendingIdeas = useMemo(
+    () =>
+      brandIdeas.filter(
+        (idea) => idea.status === 'pending' && !respondedIds.includes(idea.id),
+      ),
+    [brandIdeas, respondedIds],
+  );
 
   useEffect(() => {
     if (useCloudSync) {
-      const pending = ideas.filter(
-        (idea) => idea.client === client && idea.status === 'pending' && !respondedIds.includes(idea.id),
-      );
-      setLocalIdeas(pending);
-      setDone(pending.length === 0);
+      setLocalIdeas(pendingIdeas);
+      setDone(pendingIdeas.length === 0);
       return;
     }
 
@@ -44,23 +60,10 @@ export default function ClientReviewPortal({
     );
     setLocalIdeas(merged);
     setDone(merged.length === 0);
-  }, [ideas, client, respondedIds, useCloudSync]);
-
-  const clientColor = getClientColor(client);
-  const clientLogo = getClientLogo(client);
-  const canSyncLocally = !useCloudSync && ideas.some((i) => i.client === client);
-
-  const pendingIds = useMemo(
-    () => localIdeas.map((idea) => idea.id),
-    [localIdeas],
-  );
+  }, [ideas, client, respondedIds, useCloudSync, pendingIdeas]);
 
   const recordResponse = (response) => {
     setSessionResponses((prev) => [...prev.filter((r) => r.ideaId !== response.ideaId), response]);
-    if (useCloudSync && onCloudQueueResponse) {
-      onCloudQueueResponse(response);
-      return;
-    }
     if (!canSyncLocally) {
       queueClientResponse(response);
     }
@@ -70,9 +73,25 @@ export default function ClientReviewPortal({
     setRespondedIds((prev) => (prev.includes(ideaId) ? prev : [...prev, ideaId]));
   };
 
-  const handleApprove = (ideaId, comment) => {
-    const idea = localIdeas.find((i) => i.id === ideaId) || ideas.find((i) => i.id === ideaId);
-    if (!idea) return;
+  const submitIdeaResponse = async (response) => {
+    if (useCloudSync && onCloudQueueResponse) {
+      await onCloudQueueResponse(response);
+      return;
+    }
+
+    recordResponse(response);
+    if (canSyncLocally) {
+      if (response.action === 'approved') {
+        onApprove?.(response.ideaId, response.comment, response.idea);
+      } else {
+        onDecline?.(response.ideaId, response.comment, response.idea);
+      }
+    }
+  };
+
+  const handleApprove = async (ideaId, comment) => {
+    const idea = pendingIdeas.find((i) => i.id === ideaId) || ideas.find((i) => i.id === ideaId);
+    if (!idea || idea.status !== 'pending') return;
 
     const response = {
       ideaId,
@@ -83,20 +102,31 @@ export default function ClientReviewPortal({
       timestamp: Date.now(),
     };
 
-    markResponded(ideaId);
-    recordResponse(response);
-    if (canSyncLocally) onApprove(ideaId, comment, idea);
+    setActionError('');
+    setBusyIds((prev) => new Set(prev).add(ideaId));
 
-    setLocalIdeas((prev) => {
-      const next = prev.filter((i) => i.id !== ideaId);
-      if (next.length === 0) setDone(true);
-      return next;
-    });
+    try {
+      await submitIdeaResponse(response);
+      markResponded(ideaId);
+      setLocalIdeas((prev) => {
+        const next = prev.filter((i) => i.id !== ideaId);
+        if (next.length === 0) setDone(true);
+        return next;
+      });
+    } catch (err) {
+      setActionError(err.message || 'Could not save your approval. Please try again.');
+    } finally {
+      setBusyIds((prev) => {
+        const next = new Set(prev);
+        next.delete(ideaId);
+        return next;
+      });
+    }
   };
 
-  const handleDecline = (ideaId, comment) => {
-    const idea = localIdeas.find((i) => i.id === ideaId) || ideas.find((i) => i.id === ideaId);
-    if (!idea) return;
+  const handleDecline = async (ideaId, comment) => {
+    const idea = pendingIdeas.find((i) => i.id === ideaId) || ideas.find((i) => i.id === ideaId);
+    if (!idea || idea.status !== 'pending') return;
 
     const response = {
       ideaId,
@@ -107,15 +137,26 @@ export default function ClientReviewPortal({
       timestamp: Date.now(),
     };
 
-    markResponded(ideaId);
-    recordResponse(response);
-    if (canSyncLocally) onDecline(ideaId, comment, idea);
+    setActionError('');
+    setBusyIds((prev) => new Set(prev).add(ideaId));
 
-    setLocalIdeas((prev) => {
-      const next = prev.filter((i) => i.id !== ideaId);
-      if (next.length === 0) setDone(true);
-      return next;
-    });
+    try {
+      await submitIdeaResponse(response);
+      markResponded(ideaId);
+      setLocalIdeas((prev) => {
+        const next = prev.filter((i) => i.id !== ideaId);
+        if (next.length === 0) setDone(true);
+        return next;
+      });
+    } catch (err) {
+      setActionError(err.message || 'Could not save your response. Please try again.');
+    } finally {
+      setBusyIds((prev) => {
+        const next = new Set(prev);
+        next.delete(ideaId);
+        return next;
+      });
+    }
   };
 
   const copyImportLink = async () => {
@@ -129,25 +170,44 @@ export default function ClientReviewPortal({
     }
   };
 
-  const pendingCount = localIdeas.length;
-  const brandIdeas = useMemo(
-    () => ideas.filter((idea) => idea.client === client),
-    [ideas, client],
-  );
+  const pendingCount = pendingIdeas.length;
 
   if (embedded) {
     return (
       <section>
         <ClientPortalSectionHeader
           title="Ideas"
-          description="Review and approve video concepts submitted for your brand. Pending items require your decision before production begins."
+          description="Approve concepts you want produced, or decline with feedback for your team."
         >
           {pendingCount > 0 && (
             <span className="border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-amber-200/90">
-              {pendingCount} pending
+              {pendingCount} awaiting approval
             </span>
           )}
         </ClientPortalSectionHeader>
+
+        {actionError && (
+          <p className="mb-4 border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-200/90">
+            {actionError}
+          </p>
+        )}
+
+        {pendingCount > 0 && (
+          <div className="mb-8 space-y-4">
+            <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">
+              Awaiting your decision
+            </p>
+            {pendingIdeas.map((idea) => (
+              <VideoIdeaCard
+                key={idea.id}
+                idea={idea}
+                reviewMode
+                onApprove={handleApprove}
+                onDecline={handleDecline}
+              />
+            ))}
+          </div>
+        )}
 
         {brandIdeas.length === 0 ? (
           <div className={`${surfacePanelClass} px-6 py-16 text-center`}>
@@ -157,15 +217,22 @@ export default function ClientReviewPortal({
             </p>
           </div>
         ) : (
-          <ClientIdeasTable
-            ideas={ideas}
-            client={client}
-            clientColor={clientColor}
-            clientLogo={clientLogo}
-            onApprove={handleApprove}
-            onDecline={handleDecline}
-            pendingIds={pendingIds}
-          />
+          <>
+            {pendingCount > 0 && (
+              <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">
+                All ideas
+              </p>
+            )}
+            <ClientIdeasTable
+              ideas={brandIdeas}
+              client={client}
+              clientColor={clientColor}
+              clientLogo={clientLogo}
+              onApprove={handleApprove}
+              onDecline={handleDecline}
+              busyIds={busyIds}
+            />
+          </>
         )}
       </section>
     );
