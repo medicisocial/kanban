@@ -58,6 +58,34 @@ export async function loginClientPortal(username, password) {
   return payload;
 }
 
+export async function requestClientPasswordReset(username) {
+  const response = await fetch('/api/client-password-reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'request', username }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || 'Could not send reset email.');
+  }
+  return payload;
+}
+
+export async function completeClientPasswordReset(token, password) {
+  const response = await fetch('/api/client-password-reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'reset', token, password }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || 'Could not reset password.');
+  }
+  return payload;
+}
+
 export async function fetchClientPortalData(session) {
   const response = await fetch('/api/client-portal', {
     headers: authHeaders(session),
@@ -91,13 +119,6 @@ export async function submitClientPortalResponse(session, type, response) {
 
 export async function submitClientPortalProfile(session, profile) {
   await submitClientPortalResponse(session, 'profile', profile);
-}
-
-export function defaultPortalUsername(clientName) {
-  return clientName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '')
-    .slice(0, 24) || 'client';
 }
 
 export function slugifyClientName(clientName) {

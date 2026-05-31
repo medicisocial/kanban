@@ -1,11 +1,41 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { normalizePlanType } from '../constants/plans';
 import { clearClientSession, loadClientSession } from '../utils/clientPortalAuth';
 import { StaffAuthProvider, useStaffAuth } from '../context/StaffAuthContext';
 import { ClientsProvider } from '../context/ClientsContext';
 import { WorkspaceSyncProvider } from '../context/WorkspaceSyncContext';
 import ClientPortalApp from '../ClientPortalApp';
 import UnifiedLogin from './UnifiedLogin';
+import PricingPage from './PricingPage';
+import MarketingLandingPage from './MarketingLandingPage';
 import AppShell from './AppShell';
+
+function parseGateView() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('pricing') === '1') {
+    return { view: 'pricing', plan: null, clientLogin: false, clientResetToken: '', agencyRecovery: false };
+  }
+  const plan = params.get('plan');
+  if (params.get('signup') === '1' && plan) {
+    return {
+      view: 'signup',
+      plan: normalizePlanType(plan),
+      clientLogin: false,
+      clientResetToken: '',
+      agencyRecovery: false,
+    };
+  }
+  if (params.get('login') === '1') {
+    return {
+      view: 'login',
+      plan: null,
+      clientLogin: params.get('client') === '1',
+      clientResetToken: params.get('client-reset') || '',
+      agencyRecovery: params.get('recovery') === '1',
+    };
+  }
+  return { view: 'landing', plan: null, clientLogin: false, clientResetToken: '', agencyRecovery: false };
+}
 
 function StaffConsoleApp({ onSignOut }) {
   return (
@@ -19,7 +49,13 @@ function StaffConsoleApp({ onSignOut }) {
 
 function UnifiedAppGateInner() {
   const { ready, session } = useStaffAuth();
+  const initialGate = useMemo(() => parseGateView(), []);
   const [mode, setMode] = useState('loading');
+  const [gateView, setGateView] = useState(initialGate.view);
+  const [selectedPlan, setSelectedPlan] = useState(initialGate.plan || 'starter');
+  const [clientLogin, setClientLogin] = useState(initialGate.clientLogin);
+  const [clientResetToken, setClientResetToken] = useState(initialGate.clientResetToken);
+  const [agencyRecovery, setAgencyRecovery] = useState(initialGate.agencyRecovery);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -50,21 +86,111 @@ function UnifiedAppGateInner() {
   const handleSignOut = useCallback(() => {
     clearClientSession();
     setMode('login');
+    setGateView('landing');
+    setClientLogin(false);
+    window.history.replaceState({}, '', window.location.pathname);
   }, []);
 
-  if (!ready || mode === 'loading') {
+  const openLanding = useCallback(() => {
+    setGateView('landing');
+    setClientLogin(false);
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
+
+  const openPricing = useCallback(() => {
+    setGateView('pricing');
+    setClientLogin(false);
+    window.history.replaceState({}, '', `${window.location.pathname}?pricing=1`);
+  }, []);
+
+  const openSignup = useCallback((planId) => {
+    const plan = normalizePlanType(planId);
+    setSelectedPlan(plan);
+    setGateView('signup');
+    setMode('login');
+    setClientLogin(false);
+    window.history.replaceState({}, '', `${window.location.pathname}?signup=1&plan=${plan}`);
+  }, []);
+
+  const openSignIn = useCallback((asClient = false) => {
+    setGateView('login');
+    setClientLogin(asClient);
+    setMode('login');
+    const params = new URLSearchParams({ login: '1' });
+    if (asClient) params.set('client', '1');
+    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+  }, []);
+
+  const openGetStarted = useCallback(() => {
+    openSignup('starter');
+  }, [openSignup]);
+
+  if (!ready) {
+    if (gateView === 'landing') {
+      return (
+        <MarketingLandingPage
+          onGetStarted={openGetStarted}
+          onSignIn={() => openSignIn(false)}
+          onPricing={openPricing}
+          onSelectPlan={openSignup}
+          onClientPortal={() => openSignIn(true)}
+        />
+      );
+    }
     return <UnifiedLogin onAuthenticated={setMode} checking />;
   }
 
-  if (mode === 'login') {
-    return <UnifiedLogin onAuthenticated={setMode} checking={false} />;
+  if (mode === 'loading') {
+    return <UnifiedLogin onAuthenticated={setMode} checking />;
   }
 
   if (mode === 'client') {
     return <ClientPortalApp onSignOut={handleSignOut} />;
   }
 
-  return <StaffConsoleApp onSignOut={handleSignOut} />;
+  if (mode === 'staff') {
+    return <StaffConsoleApp onSignOut={handleSignOut} />;
+  }
+
+  if (gateView === 'landing') {
+    return (
+      <MarketingLandingPage
+        onGetStarted={openGetStarted}
+        onSignIn={() => openSignIn(false)}
+        onPricing={openPricing}
+        onSelectPlan={openSignup}
+        onClientPortal={() => openSignIn(true)}
+      />
+    );
+  }
+
+  if (gateView === 'pricing') {
+    return (
+      <PricingPage
+        onSelectPlan={openSignup}
+        onSignIn={() => openSignIn(false)}
+        onBack={openLanding}
+        onHome={openLanding}
+        onGetStarted={openGetStarted}
+      />
+    );
+  }
+
+  return (
+    <UnifiedLogin
+      onAuthenticated={setMode}
+      checking={false}
+      signupMode={gateView === 'signup'}
+      selectedPlan={selectedPlan}
+      onOpenPricing={openPricing}
+      onOpenSignup={openSignup}
+      onBackFromSignup={openPricing}
+      onBackToHome={openLanding}
+      initialClientMode={clientLogin}
+      initialClientResetToken={clientResetToken}
+      initialAgencyRecovery={agencyRecovery}
+    />
+  );
 }
 
 export default function UnifiedAppGate() {

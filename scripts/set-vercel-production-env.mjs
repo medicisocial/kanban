@@ -7,7 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const VARS = [
   ['VITE_USE_SUPABASE', 'true', false],
   ['VITE_ORG_ID', 'medici', false],
-  ['VITE_STAFF_USERNAME', 'medicisocial', false],
+  ['VITE_STAFF_USERNAME', 'info@medicisocial.com', false],
   [
     'VITE_STAFF_PASSWORD_HASH',
     '288a74dd35327615ef98b375a2445d9ebd4c570a5e5d413181986ebf127f45e1',

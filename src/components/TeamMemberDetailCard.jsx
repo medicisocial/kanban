@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { TEAM_LEADERSHIP_ROLES, TEAM_OPERATIONAL_ROLES, TEAM_ROLE_DESCRIPTIONS, INTERNAL_TEAM_CLIENT } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import { bakeLogoCrop } from '../utils/clientLogo';
+import { isValidPortalEmail, normalizePortalLogin } from '../utils/portalLogin';
 import ProfilePhotoEditor from './clientPortal/ProfilePhotoEditor';
 import PasswordField from './clientPortal/PasswordField';
 import {
@@ -28,9 +29,8 @@ function buildDraft(member) {
   return {
     name: member.name || '',
     roles: [...(member.roles || [])],
-    username: member.username || '',
     password: member.password || '',
-    email: member.email || '',
+    email: member.email || member.username || '',
     phone: member.phone || '',
     pendingAvatar: undefined,
   };
@@ -73,16 +73,22 @@ export default function TeamMemberDetailCard({
       return;
     }
 
+    if (draft.password && !isValidPortalEmail(draft.email)) {
+      setError('Enter a work email for console login.');
+      return;
+    }
+
     setSaving(true);
     setError('');
 
     try {
+      const email = normalizePortalLogin(draft.email);
       const payload = {
         name: draft.name,
         roles: draft.roles,
-        username: draft.username,
+        username: email,
         password: draft.password,
-        email: draft.email,
+        email,
         phone: draft.phone,
       };
 
@@ -192,19 +198,20 @@ export default function TeamMemberDetailCard({
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block sm:col-span-2">
               <span className="mb-1.5 block text-[10px] uppercase tracking-[0.22em] text-white/40">
-                Company email
+                Work email
               </span>
               <input
                 type="email"
                 value={draft.email}
                 onChange={(e) => setDraft((prev) => ({ ...prev, email: e.target.value }))}
-                placeholder="name@medicisocial.com"
+                placeholder="name@agency.com"
                 className={inputClass}
                 autoComplete="email"
               />
+              <p className="mt-1.5 text-[10px] text-white/35">Used as the sign-in email for the Operations Console.</p>
             </label>
 
-            <label className="block">
+            <label className="block sm:col-span-2">
               <span className="mb-1.5 block text-[10px] uppercase tracking-[0.22em] text-white/40">
                 Phone
               </span>
@@ -215,20 +222,6 @@ export default function TeamMemberDetailCard({
                 placeholder="(555) 555-5555"
                 className={inputClass}
                 autoComplete="tel"
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-1.5 block text-[10px] uppercase tracking-[0.22em] text-white/40">
-                Username
-              </span>
-              <input
-                type="text"
-                value={draft.username}
-                onChange={(e) => setDraft((prev) => ({ ...prev, username: e.target.value }))}
-                placeholder="Login username"
-                className={inputClass}
-                autoComplete="off"
               />
             </label>
 

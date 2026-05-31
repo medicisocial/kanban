@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
+import { useStaffAuth } from '../context/StaffAuthContext';
 
 /**
  * Like useCollectionSync, but for collections stored as a plain object map
@@ -12,17 +13,20 @@ import { createCollectionStore } from './supabaseSync';
  * When Supabase is disabled this is a no-op and the hook keeps using localStorage.
  */
 export function useMapSync({ table, map, setMap, loadLocal }) {
+  const { orgId, orgReady, isLegacyOrg } = useStaffAuth();
   const storeRef = useRef(null);
   const syncedRef = useRef(null); // Map<key, JSON string of last-synced value>
   const applyingRemoteRef = useRef(false);
   const loadedRef = useRef(!SUPABASE_ENABLED);
 
-  if (SUPABASE_ENABLED && !storeRef.current) {
-    storeRef.current = createCollectionStore(table);
-  }
-
   useEffect(() => {
-    if (!SUPABASE_ENABLED) return undefined;
+    if (!SUPABASE_ENABLED || !orgReady || !orgId) return undefined;
+
+    storeRef.current = createCollectionStore(table);
+    syncedRef.current = null;
+    applyingRemoteRef.current = false;
+    loadedRef.current = false;
+
     const store = storeRef.current;
     let active = true;
 
@@ -31,8 +35,8 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
         const rows = await store.fetchAll();
         if (!active) return;
 
-        // First run with an empty table: seed it from existing local data.
-        if (rows.length === 0 && loadLocal) {
+        // First run with an empty table: seed from local data for the legacy org only.
+        if (rows.length === 0 && loadLocal && isLegacyOrg) {
           const local = loadLocal() || {};
           const keys = Object.keys(local);
           if (keys.length) {
@@ -43,6 +47,14 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
             setMap(local);
             return;
           }
+        }
+
+        if (rows.length === 0) {
+          applyingRemoteRef.current = true;
+          syncedRef.current = new Map();
+          loadedRef.current = true;
+          setMap({});
+          return;
         }
 
         const obj = {};
@@ -64,7 +76,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
       unsubscribe?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [orgId, orgReady, table, isLegacyOrg]);
 
   useEffect(() => {
     if (!SUPABASE_ENABLED) return;

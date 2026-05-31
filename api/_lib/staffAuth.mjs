@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 
-const PROD_STAFF_USERNAME = 'medicisocial';
+const PROD_STAFF_USERNAME = 'info@medicisocial.com';
 const PROD_STAFF_PASSWORD_HASH = '288a74dd35327615ef98b375a2445d9ebd4c570a5e5d413181986ebf127f45e1';
 
 function getConfiguredUsername() {

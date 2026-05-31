@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CLIENT_PORTAL_AUTH_STORAGE_KEY } from '../constants';
-import { defaultPortalUsername } from '../utils/clientPortalAuth';
 import {
   createClientPortalUserId,
   getClientUsersFromStore,
@@ -58,7 +57,7 @@ export function useClientPortalCredentials() {
     (client) => {
       const users = getClientUsersFromStore(credentials, client);
       if (users[0]) return users[0];
-      return { id: createClientPortalUserId(), username: defaultPortalUsername(client), passwordHash: '' };
+      return { id: createClientPortalUserId(), username: '', passwordHash: '' };
     },
     [credentials],
   );
@@ -81,7 +80,7 @@ export function useClientPortalCredentials() {
     const users = getClientUsersFromStore(loadCredentials(), client);
     const primary = users[0] || {
       id: createClientPortalUserId(),
-      username: defaultPortalUsername(client),
+      username: '',
       passwordHash: '',
       displayName: '',
     };

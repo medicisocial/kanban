@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
 import { hasStaffSupabaseSession } from './staffSupabaseAuth';
+import { useStaffAuth } from '../context/StaffAuthContext';
 
 /**
  * Mirrors an array of records to a Supabase table with per-record writes and
@@ -24,6 +25,7 @@ export function useCollectionSync({
   filterItems,
   loadLocal,
 }) {
+  const { orgId, orgReady, isLegacyOrg } = useStaffAuth();
   const storeRef = useRef(null);
   const syncedRef = useRef(null); // Map<id, JSON string of last-synced record>
   const applyingRemoteRef = useRef(false);
@@ -31,7 +33,7 @@ export function useCollectionSync({
   const pendingWriteRef = useRef(false);
   const [writeNonce, setWriteNonce] = useState(0);
 
-  if (SUPABASE_ENABLED && !storeRef.current) {
+  if (SUPABASE_ENABLED && orgReady && orgId) {
     storeRef.current = createCollectionStore(table);
   }
 
@@ -50,7 +52,13 @@ export function useCollectionSync({
   }, []);
 
   useEffect(() => {
-    if (!SUPABASE_ENABLED) return undefined;
+    if (!SUPABASE_ENABLED || !orgReady || !orgId) return undefined;
+
+    storeRef.current = createCollectionStore(table);
+    syncedRef.current = null;
+    applyingRemoteRef.current = false;
+    loadedRef.current = false;
+
     const store = storeRef.current;
     let active = true;
 
@@ -61,8 +69,8 @@ export function useCollectionSync({
 
         const mapRow = (row) => (normalize ? normalize(row.data ?? row) : row.data ?? row);
 
-        // First run with an empty table: seed it from existing local data.
-        if (rows.length === 0 && loadLocal) {
+        // First run with an empty table: seed from local data for the legacy org only.
+        if (rows.length === 0 && loadLocal && isLegacyOrg) {
           const local = loadLocal();
           if (local.length) {
             const canWrite = await hasStaffSupabaseSession();
@@ -80,6 +88,14 @@ export function useCollectionSync({
             setItems(local);
             return;
           }
+        }
+
+        if (rows.length === 0) {
+          applyingRemoteRef.current = true;
+          syncedRef.current = new Map();
+          loadedRef.current = true;
+          setItems([]);
+          return;
         }
 
         const allItems = rows.map(mapRow);
@@ -123,7 +139,7 @@ export function useCollectionSync({
       unsubscribe?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [orgId, orgReady, table, isLegacyOrg]);
 
   useEffect(() => {
     if (!SUPABASE_ENABLED) return;

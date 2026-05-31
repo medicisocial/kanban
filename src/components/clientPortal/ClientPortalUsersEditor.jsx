@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { defaultPortalUsername } from '../../utils/clientPortalAuth';
 import {
   createClientPortalUserId,
   getClientUsersFromStore,
@@ -16,20 +15,7 @@ import ProfilePhotoEditor from './ProfilePhotoEditor';
 import PortalInviteTemplate from './PortalInviteTemplate';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 
-export function nextDefaultUsername(client, users) {
-  const base = defaultPortalUsername(client);
-  if (users.length === 0) return base;
-  let index = users.length + 1;
-  let candidate = `${base}${index}`;
-  const taken = new Set(users.map((user) => user.username.trim().toLowerCase()));
-  while (taken.has(candidate.toLowerCase())) {
-    index += 1;
-    candidate = `${base}${index}`;
-  }
-  return candidate;
-}
-
-function buildDraftUsers(client, getClientUsers, getClientContacts, requireEmail) {
+function buildDraftUsers(client, getClientUsers, getClientContacts) {
   const users = getClientUsers(client);
   if (users.length > 0) {
     return users.map((user) => ({
@@ -42,15 +28,13 @@ function buildDraftUsers(client, getClientUsers, getClientContacts, requireEmail
     }));
   }
 
-  const suggestedEmail = requireEmail
-    ? suggestPortalEmailFromContacts(getClientContacts?.(client) || [])
-    : '';
+  const suggestedEmail = suggestPortalEmailFromContacts(getClientContacts?.(client) || []);
 
   return [
     {
       id: createClientPortalUserId(),
       displayName: '',
-      username: suggestedEmail || (requireEmail ? '' : defaultPortalUsername(client)),
+      username: suggestedEmail,
       password: '',
       avatar: null,
       pendingAvatar: undefined,
@@ -67,11 +51,10 @@ export default function ClientPortalUsersEditor({
   onSyncToCloud,
   labelPlaceholder = 'e.g. Owner, Marketing lead',
   saveLabel = 'Save portal access',
-  requireEmail = true,
-  loginFieldLabel = requireEmail ? 'Work email' : 'Username',
+  loginFieldLabel = 'Work email',
 }) {
   const [users, setUsers] = useState(() =>
-    buildDraftUsers(client, getClientUsers, getClientContacts, requireEmail),
+    buildDraftUsers(client, getClientUsers, getClientContacts),
   );
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -79,35 +62,28 @@ export default function ClientPortalUsersEditor({
   const [inviteDetails, setInviteDetails] = useState(null);
 
   useEffect(() => {
-    setUsers(buildDraftUsers(client, getClientUsers, getClientContacts, requireEmail));
+    setUsers(buildDraftUsers(client, getClientUsers, getClientContacts));
     setMessage('');
     setError('');
     setInviteDetails(null);
-  }, [client, getClientUsers, getClientContacts, requireEmail]);
+  }, [client, getClientUsers, getClientContacts]);
 
   const updateUser = (userId, patch) => {
     setUsers((prev) => prev.map((user) => (user.id === userId ? { ...user, ...patch } : user)));
   };
 
   const addUser = () => {
-    setUsers((prev) => {
-      const suggestedEmail = requireEmail
-        ? suggestPortalEmailFromContacts(getClientContacts?.(client) || [])
-        : '';
-      return [
-        ...prev,
-        {
-          id: createClientPortalUserId(),
-          displayName: '',
-          username: requireEmail
-            ? suggestedEmail
-            : nextDefaultUsername(client, prev),
-          password: '',
-          avatar: null,
-          pendingAvatar: undefined,
-        },
-      ];
-    });
+    setUsers((prev) => [
+      ...prev,
+      {
+        id: createClientPortalUserId(),
+        displayName: '',
+        username: suggestPortalEmailFromContacts(getClientContacts?.(client) || []),
+        password: '',
+        avatar: null,
+        pendingAvatar: undefined,
+      },
+    ]);
   };
 
   const removeUser = (userId) => {
@@ -115,7 +91,7 @@ export default function ClientPortalUsersEditor({
       const nextUsers = prev.filter((user) => user.id !== userId);
       return nextUsers.length > 0
         ? nextUsers
-        : buildDraftUsers(client, () => [], getClientContacts, requireEmail);
+        : buildDraftUsers(client, () => [], getClientContacts);
     });
   };
 
@@ -148,13 +124,13 @@ export default function ClientPortalUsersEditor({
       const seen = new Set();
       for (const user of users) {
         const raw = user.username.trim();
-        const username = requireEmail ? normalizePortalLogin(raw) : raw.trim();
+        const username = normalizePortalLogin(raw);
         if (!username) {
-          setError(requireEmail ? 'Enter a work email for every portal user.' : 'Enter a username for every portal user.');
+          setError('Enter a work email for every portal user.');
           return;
         }
-        if (requireEmail && !isValidPortalEmail(username)) {
-          setError(`"${raw}" is not a valid work email address.`);
+        if (!isValidPortalEmail(username)) {
+          setError(`"${raw}" is not a valid email address.`);
           return;
         }
         if (seen.has(username)) {
@@ -179,7 +155,7 @@ export default function ClientPortalUsersEditor({
         users.map((user) => ({
           id: user.id,
           displayName: user.displayName,
-          username: requireEmail ? normalizePortalLogin(user.username) : user.username.trim(),
+          username: normalizePortalLogin(user.username),
           password: user.password,
           avatar: user.pendingAvatar !== undefined ? user.pendingAvatar : undefined,
         })),
@@ -201,14 +177,14 @@ export default function ClientPortalUsersEditor({
       }
 
       const primarySaved = savableUsers[0];
-      if (requireEmail && primarySaved?.username) {
+      if (primarySaved?.username) {
         setInviteDetails({
           email: normalizePortalLogin(primarySaved.username),
           password: primarySaved.password || '',
         });
       }
 
-      setUsers(buildDraftUsers(client, () => savedUsers, getClientContacts, requireEmail));
+      setUsers(buildDraftUsers(client, () => savedUsers, getClientContacts));
       setTimeout(() => setMessage(''), 8000);
     } catch (err) {
       setError(err.message || 'Could not save portal access.');
@@ -218,18 +194,13 @@ export default function ClientPortalUsersEditor({
   };
 
   const activeCount = users.filter(userHasLogin).length;
-  const headerCopy = useMemo(() => {
-    if (requireEmail) {
-      return {
-        title: 'Portal access',
-        subtitle: 'Each person signs in with their work email and password at portal.medicisocial.com.',
-      };
-    }
-    return {
-      title: 'Team logins',
-      subtitle: 'Internal usernames for Medici Social staff — separate from client access.',
-    };
-  }, [requireEmail]);
+  const headerCopy = useMemo(
+    () => ({
+      title: 'Portal access',
+      subtitle: 'Each person signs in with the work email and password they were given.',
+    }),
+    [],
+  );
 
   return (
     <div className="space-y-4">
@@ -292,12 +263,12 @@ export default function ClientPortalUsersEditor({
                     {loginFieldLabel}
                   </span>
                   <input
-                    type={requireEmail ? 'email' : 'text'}
+                    type="email"
                     value={user.username}
                     onChange={(e) => updateUser(user.id, { username: e.target.value })}
-                    placeholder={requireEmail ? 'owner@yourbrand.com' : 'username'}
+                    placeholder="owner@yourbrand.com"
                     className={inputClass}
-                    autoComplete="off"
+                    autoComplete="email"
                   />
                 </label>
                 <div className="sm:col-span-1">
@@ -306,7 +277,7 @@ export default function ClientPortalUsersEditor({
                     value={user.password}
                     onChange={(e) => updateUser(user.id, { password: e.target.value })}
                     autoComplete="new-password"
-                    placeholder={requireEmail ? 'Temporary password' : ''}
+                    placeholder="Temporary password"
                   />
                 </div>
               </div>

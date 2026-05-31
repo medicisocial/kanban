@@ -167,8 +167,8 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
     (selectedClient && color !== getClientColor(selectedClient)) ||
     (selectedClient && businessType !== getClientBusinessType(selectedClient));
 
-  const handleAddClient = (name, clientColor, logo) => {
-    const result = addClient(name, clientColor, logo);
+  const handleAddClient = async (name, clientColor, logo) => {
+    const result = await addClient(name, clientColor, logo);
     if (result.ok) {
       setSelectedClient(result.name);
       onClientAdded?.(result.name);

@@ -31,7 +31,7 @@ function getSessionSecret() {
     .toLowerCase();
 }
 
-function hashValue(value) {
+export function hashValue(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 

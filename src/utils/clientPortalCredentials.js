@@ -1,4 +1,5 @@
 import { bakeLogoCrop, normalizeClientLogo, serializeClientLogo } from './clientLogo';
+import { normalizePortalLogin } from './portalLogin';
 
 export function createClientPortalUserId() {
   return crypto.randomUUID();
@@ -11,7 +12,7 @@ function normalizeUserAvatar(avatar) {
 
 export function normalizeClientUser(user, fallbackId) {
   if (!user || typeof user !== 'object') return null;
-  const username = user.username?.trim() || '';
+  const username = normalizePortalLogin(user.username || '');
   const passwordHash = user.passwordHash?.trim().toLowerCase() || '';
   const displayName = user.displayName?.trim() || '';
   if (!username && !passwordHash) return null;
@@ -81,7 +82,7 @@ export function mergeBrandUserDrafts(existingUsers, draftUsers, hashPassword) {
 
       return {
         id: draft.id || existing?.id || createClientPortalUserId(),
-        username: draft.username.trim(),
+        username: normalizePortalLogin(draft.username),
         passwordHash,
         displayName: draft.displayName?.trim() || existing?.displayName || '',
         avatar,

@@ -1,4 +1,5 @@
 import { verifyTeamMemberStaffCredentials } from './staffMembers';
+import { normalizePortalLogin } from './portalLogin';
 
 export async function loginTeamMemberRemote(username, password) {
   const response = await fetch('/api/team-auth', {
@@ -30,14 +31,15 @@ export async function loginTeamMemberRemote(username, password) {
 
 /** Try local team credentials first, then cloud workspace credentials. */
 export async function authenticateTeamMemberCredentials(username, password) {
-  const local = verifyTeamMemberStaffCredentials(username, password);
+  const key = normalizePortalLogin(username);
+  const local = verifyTeamMemberStaffCredentials(key, password);
   if (local) {
-    return local.username?.trim() || local.name;
+    return normalizePortalLogin(local.email || local.username);
   }
 
   try {
-    const remote = await loginTeamMemberRemote(username, password);
-    if (remote?.username) return remote.username;
+    const remote = await loginTeamMemberRemote(key, password);
+    if (remote?.username) return normalizePortalLogin(remote.username);
   } catch (error) {
     if (error?.code !== 'unavailable') throw error;
   }

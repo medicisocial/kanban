@@ -8,7 +8,7 @@ import {
   TEAM_ROLES,
   TEAM_STORAGE_KEY,
 } from '../constants';
-import { normalizeClientLogo, serializeClientLogo } from './clientLogo';
+import { isValidPortalEmail, normalizePortalLogin } from './portalLogin';
 
 export { TEAM_ROLES, TEAM_LEADERSHIP_ROLES, TEAM_OPERATIONAL_ROLES, TEAM_ROLE_COVERAGE };
 
@@ -45,13 +45,18 @@ export function normalizeTeamMember(member, fallbackId) {
   const roles = Array.isArray(member.roles)
     ? member.roles.filter((role) => TEAM_ROLES.includes(role))
     : [];
+  const email = normalizePortalLogin(member.email || '');
+  const username =
+    email && isValidPortalEmail(email)
+      ? email
+      : normalizePortalLogin(member.username || email);
   return {
     id: member.id || fallbackId || crypto.randomUUID(),
     name,
     roles,
-    username: member.username?.trim() || '',
+    username,
     password: typeof member.password === 'string' ? member.password : '',
-    email: member.email?.trim() || '',
+    email,
     phone: member.phone?.trim() || '',
     avatar: normalizeMemberAvatar(member.avatar),
   };
@@ -73,9 +78,14 @@ export function mergeTeamMemberUpdates(member, updates) {
       ...updates,
       name: updates.name !== undefined ? updates.name.trim() : member.name,
       roles,
-      username: updates.username !== undefined ? updates.username.trim() : member.username,
-      password,
       email: updates.email !== undefined ? updates.email.trim() : member.email,
+      username:
+        updates.email !== undefined
+          ? normalizePortalLogin(updates.email)
+          : updates.username !== undefined
+            ? normalizePortalLogin(updates.username)
+            : member.username,
+      password,
       phone: updates.phone !== undefined ? updates.phone.trim() : member.phone,
       avatar: updates.avatar !== undefined ? normalizeMemberAvatar(updates.avatar) : member.avatar,
     },

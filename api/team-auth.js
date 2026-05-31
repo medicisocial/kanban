@@ -3,6 +3,7 @@ import { findTeamMember, verifyTeamMemberPassword } from './_lib/teamAuth.mjs';
 import { isSupabaseConfigured, fetchCollection } from './_lib/supabase.mjs';
 
 const TEAM_STORAGE_KEY = 'medici-social-team';
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function unavailable(res) {
   return res.status(503).json({
@@ -36,10 +37,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const username = req.body?.username?.trim();
+  const username = String(req.body?.username || '')
+    .trim()
+    .toLowerCase();
   const password = req.body?.password || '';
   if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password are required.' });
+    return res.status(400).json({ error: 'Work email and password are required.' });
+  }
+  if (!EMAIL_PATTERN.test(username)) {
+    return res.status(400).json({ error: 'Enter the work email for your team account.' });
   }
 
   const workspace = await loadTeamWorkspace();
@@ -47,11 +53,13 @@ export default async function handler(req, res) {
 
   const member = findTeamMember(workspace, username);
   if (!member || !verifyTeamMemberPassword(member, password)) {
-    return res.status(401).json({ error: 'Invalid username or password.' });
+    return res.status(401).json({ error: 'Invalid email or password.' });
   }
 
+  const loginEmail = member.email?.trim().toLowerCase() || member.username?.trim().toLowerCase();
+
   return res.status(200).json({
-    username: member.username?.trim() || member.name,
+    username: loginEmail,
     name: member.name,
   });
 }

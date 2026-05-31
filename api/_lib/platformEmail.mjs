@@ -199,3 +199,49 @@ export async function sendClientNotificationEmails({
     results,
   };
 }
+
+export function buildClientPasswordResetEmail({ brand, resetUrl }) {
+  const agencyName = getAgencyName();
+  const productName = getProductName();
+  const subject = `Reset your ${brand} portal password`;
+  const headline = 'Reset your client portal password';
+  const body = `We received a request to reset the password for your <strong>${escapeHtml(brand)}</strong> client portal account. Click below to choose a new password. This link expires in one hour.`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+  <body style="margin:0;padding:0;background:#0a0a0a;font-family:Inter,Segoe UI,sans-serif;color:#f5f5f5;">
+    <div style="max-width:560px;margin:0 auto;padding:32px 24px;">
+      <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#888;">${escapeHtml(agencyName)}</p>
+      <h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;font-weight:600;color:#fff;">${headline}</h1>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#ccc;">${body}</p>
+      ${buttonHtml(resetUrl, 'Reset password')}
+      <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:#999;">If you did not request this, you can ignore this email.</p>
+      <hr style="border:none;border-top:1px solid #222;margin:24px 0;" />
+      <p style="margin:0;font-size:11px;line-height:1.6;color:#666;">Sent via ${escapeHtml(productName)}.</p>
+    </div>
+  </body>
+</html>`;
+
+  const text = [
+    headline,
+    '',
+    `Reset the password for your ${brand} client portal account:`,
+    resetUrl,
+    '',
+    'This link expires in one hour. If you did not request this, ignore this email.',
+    '',
+    `— ${agencyName}`,
+  ].join('\n');
+
+  return { subject, html, text };
+}
+
+export async function sendClientPasswordResetEmail({ to, brand, resetUrl }) {
+  const email = buildClientPasswordResetEmail({ brand, resetUrl });
+  await sendPlatformEmail({
+    to,
+    subject: email.subject,
+    html: email.html,
+    text: email.text,
+  });
+}

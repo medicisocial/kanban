@@ -3,7 +3,7 @@ import { useClients } from '../hooks/useClients';
 import { useClientPortalCredentials } from '../hooks/useClientPortalCredentials';
 import { useTeamMembers } from '../hooks/useTeamMembers';
 
-const ClientsContext = createContext(null);
+export const ClientsContext = createContext(null);
 
 export function ClientsProvider({ children }) {
   const clientsState = useClients();

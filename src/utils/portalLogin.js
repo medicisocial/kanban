@@ -9,8 +9,13 @@ export function isValidPortalEmail(value) {
   return normalized.length > 0 && EMAIL_PATTERN.test(normalized);
 }
 
+/** All console and portal logins use the signup email as the username. */
+export function isValidLoginEmail(value) {
+  return isValidPortalEmail(value);
+}
+
 export function looksLikeEmail(value) {
-  return String(value || '').includes('@');
+  return isValidPortalEmail(value);
 }
 
 export function suggestPortalEmailFromContacts(contacts = []) {

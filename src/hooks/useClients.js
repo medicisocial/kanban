@@ -7,7 +7,8 @@ import {
   CLIENT_COLOR_PALETTE,
 } from '../constants';
 import { DEFAULT_CLIENT_BUSINESS_TYPES, normalizeBusinessType } from '../utils/eventFormSchemas';
-import { normalizeClientName, pickNextClientColor, mergeDefaultClients } from '../utils/clients';
+import { normalizeClientName, pickNextClientColor, mergeDefaultClients, clientNamesConflict, isInternalClientName } from '../utils/clients';
+import { reserveClientBrandName, releaseClientBrandName } from '../utils/clientBrandNames';
 import {
   mergeClientSocialLogins,
   normalizeClientContacts,
@@ -18,6 +19,8 @@ import { normalizeClientSpecialMenus } from '../utils/clientSpecialMenus';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useSingletonSync } from '../lib/useSingletonSync';
+import { useStaffAuth } from '../context/StaffAuthContext';
+import { canAddClient, getPlanLimits } from '../utils/planLimits';
 
 function normalizeBusinessTypesMap(types = {}) {
   const normalized = {};
@@ -27,11 +30,11 @@ function normalizeBusinessTypesMap(types = {}) {
   return normalized;
 }
 
-function normalizeClientsState(data) {
+function normalizeClientsState(data, { includeDefaults = true } = {}) {
   const source = data && typeof data === 'object' ? data : {};
   const names = Array.isArray(source.names) && source.names.length > 0
-    ? mergeDefaultClients(source.names, DEFAULT_CLIENTS)
-    : [...DEFAULT_CLIENTS];
+    ? (includeDefaults ? mergeDefaultClients(source.names, DEFAULT_CLIENTS) : [...source.names])
+    : (includeDefaults ? [...DEFAULT_CLIENTS] : []);
 
   return {
     names,
@@ -52,35 +55,46 @@ function normalizeClientsState(data) {
   };
 }
 
-function loadClients() {
+function loadClientsRaw() {
   try {
     const stored = localStorage.getItem(CLIENTS_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed.names) && parsed.names.length > 0) {
-        return normalizeClientsState(parsed);
+        return parsed;
       }
     }
   } catch {
     /* fall through */
   }
-  return normalizeClientsState(null);
+  return null;
+}
+
+function loadClients() {
+  return normalizeClientsState(loadClientsRaw());
 }
 
 export function useClients() {
-  const [state, setState] = useState(loadClients);
+  const { isLegacyOrg, planType, orgId } = useStaffAuth();
+  const includeDefaults = isLegacyOrg;
+  const [state, setState] = useState(() => normalizeClientsState(loadClientsRaw(), { includeDefaults }));
+
+  const loadClientsForSync = useCallback(
+    () => normalizeClientsState(loadClientsRaw(), { includeDefaults }),
+    [includeDefaults],
+  );
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;
-    setState(loadClients());
-  }, []);
+    setState(loadClientsForSync());
+  }, [loadClientsForSync]);
   useReloadFromStorage(reloadFromStorage);
 
   useSingletonSync({
     table: 'clients',
     value: state,
-    setValue: (next) => setState(normalizeClientsState(next)),
-    loadLocal: loadClients,
+    setValue: (next) => setState(normalizeClientsState(next, { includeDefaults })),
+    loadLocal: loadClientsForSync,
     recordId: 'workspace',
   });
 
@@ -89,13 +103,36 @@ export function useClients() {
     localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const addClient = useCallback((name, color, logo = null, businessType = '') => {
+  const addClient = useCallback(async (name, color, logo = null, businessType = '') => {
     const trimmed = normalizeClientName(name);
     if (!trimmed) return { ok: false, error: 'Please enter a client name.' };
+    if (isInternalClientName(trimmed)) {
+      return { ok: false, error: 'That client name is reserved.' };
+    }
+
+    if (state.names.some((client) => clientNamesConflict(client, trimmed))) {
+      return { ok: false, error: 'A client with that name already exists in your workspace.' };
+    }
+
+    const limits = getPlanLimits(planType);
+    const realClientCount = state.names.filter(
+      (client) => client !== '__internal__' && !client.startsWith('__'),
+    ).length;
+    if (!canAddClient(planType, realClientCount)) {
+      return {
+        ok: false,
+        error: `Your ${limits.label} plan supports up to ${limits.maxClients} client${limits.maxClients === 1 ? '' : 's'}.`,
+      };
+    }
+
+    const reserved = await reserveClientBrandName(trimmed, orgId);
+    if (!reserved.ok) {
+      return reserved;
+    }
 
     let added = false;
     setState((prev) => {
-      if (prev.names.some((c) => c.toLowerCase() === trimmed.toLowerCase())) {
+      if (prev.names.some((client) => clientNamesConflict(client, trimmed))) {
         return prev;
       }
       const nextColor = color || pickNextClientColor(prev.colors, CLIENT_COLOR_PALETTE);
@@ -116,10 +153,11 @@ export function useClients() {
     });
 
     if (!added) {
-      return { ok: false, error: 'A client with that name already exists.' };
+      await releaseClientBrandName(trimmed, orgId);
+      return { ok: false, error: 'A client with that name already exists in your workspace.' };
     }
     return { ok: true, name: trimmed };
-  }, []);
+  }, [orgId, planType, state.names]);
 
   const getClientColor = useCallback(
     (client) => state.colors[client] || '#9ca3af',

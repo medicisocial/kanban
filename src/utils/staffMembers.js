@@ -8,7 +8,7 @@ export function resolveStaffMember(session, teamMembers) {
     teamMembers.find(
       (entry) =>
         entry.username?.trim().toLowerCase() === key ||
-        entry.name?.trim().toLowerCase() === key,
+        entry.email?.trim().toLowerCase() === key,
     ) || null
   );
 }
@@ -74,7 +74,7 @@ export function staffMemberHasRole(session, teamMembers, role) {
   return memberMatchesRole(member, role);
 }
 
-/** Team member console login — username + password from Team settings. */
+/** Team member console login — work email + password from Team settings. */
 export function verifyTeamMemberStaffCredentials(username, password) {
   const key = username.trim().toLowerCase();
   if (!key || !password) return null;
@@ -82,7 +82,7 @@ export function verifyTeamMemberStaffCredentials(username, password) {
   const member = loadTeamMembersFromStorage().find(
     (entry) =>
       entry.username?.trim().toLowerCase() === key ||
-      entry.name?.trim().toLowerCase() === key,
+      entry.email?.trim().toLowerCase() === key,
   );
 
   if (!member?.password || member.password !== password) return null;

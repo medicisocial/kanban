@@ -23,10 +23,23 @@ export function normalizeClientName(name) {
   return name.trim().replace(/\s+/g, ' ');
 }
 
+export function clientBrandNameKey(name) {
+  return normalizeClientName(name).toLowerCase();
+}
+
+export function isInternalClientName(name) {
+  const trimmed = normalizeClientName(name);
+  return trimmed === '__internal__' || trimmed.startsWith('__');
+}
+
+export function clientNamesConflict(a, b) {
+  return clientBrandNameKey(a) === clientBrandNameKey(b);
+}
+
 export function mergeDefaultClients(names, defaults) {
   const merged = [...names];
   for (const client of defaults) {
-    if (!merged.some((name) => name.toLowerCase() === client.toLowerCase())) {
+    if (!merged.some((name) => clientNamesConflict(name, client))) {
       merged.push(client);
     }
   }

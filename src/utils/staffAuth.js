@@ -1,7 +1,7 @@
 export const STAFF_SESSION_KEY = 'medici-staff-session';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-const PROD_STAFF_USERNAME = 'medicisocial';
+const PROD_STAFF_USERNAME = 'info@medicisocial.com';
 const PROD_STAFF_PASSWORD_HASH = '288a74dd35327615ef98b375a2445d9ebd4c570a5e5d413181986ebf127f45e1';
 
 function getConfiguredUsername() {
@@ -72,8 +72,8 @@ export async function verifyStaffCredentials(username, password) {
   if (!isStaffAuthConfigured()) return false;
 
   const expectedUser = getConfiguredUsername();
-  const normalizedUser = username.trim();
-  if (normalizedUser.toLowerCase() !== expectedUser.toLowerCase()) {
+  const normalizedUser = username.trim().toLowerCase();
+  if (normalizedUser !== expectedUser.toLowerCase()) {
     return false;
   }
 
@@ -104,7 +104,7 @@ export function getConfiguredStaffUsername() {
   return getConfiguredUsername();
 }
 
-/** Shared Medici Social ops login (e.g. medicisocial) — company-wide view, not personal queue. */
+/** Shared Medici Social ops login — company-wide view, not personal queue. */
 export function isSharedOperationsLogin(session) {
   if (!session?.username) return false;
   const configured = getConfiguredUsername();

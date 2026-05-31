@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const password = process.argv[2];
-const username = process.argv[3] || 'staff';
+const username = process.argv[3] || 'info@medicisocial.com';
 
 if (!password) {
   console.error('Usage: node scripts/generate-staff-hash.mjs <password> [username]');

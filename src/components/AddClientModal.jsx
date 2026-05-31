@@ -12,6 +12,7 @@ export default function AddClientModal({ onClose, onAdd, existingClients }) {
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoCrop, setLogoCrop] = useState(DEFAULT_LOGO_CROP);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -42,21 +43,29 @@ export default function AddClientModal({ onClose, onAdd, existingClients }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSubmitting(true);
+
     let logo = null;
     if (logoPreview) {
       try {
         logo = await bakeLogoCrop(serializeClientLogo({ src: logoPreview, ...logoCrop }));
       } catch (err) {
         setError(err.message || 'Could not process photo.');
+        setSubmitting(false);
         return;
       }
     }
-    const result = onAdd(name, color, logo);
-    if (!result.ok) {
-      setError(result.error);
-      return;
+
+    try {
+      const result = await onAdd(name, color, logo);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      onClose();
+    } finally {
+      setSubmitting(false);
     }
-    onClose();
   };
 
   return (
@@ -177,8 +186,8 @@ export default function AddClientModal({ onClose, onAdd, existingClients }) {
         </div>
 
         <div className="border-t border-white/10 px-5 py-4">
-          <button type="submit" className={`${btnPrimaryClass} w-full`}>
-            Add Client
+          <button type="submit" disabled={submitting} className={`${btnPrimaryClass} w-full disabled:opacity-50`}>
+            {submitting ? 'Adding…' : 'Add Client'}
           </button>
         </div>
       </form>
