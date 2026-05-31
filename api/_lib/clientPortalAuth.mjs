@@ -116,9 +116,16 @@ export function mergeClientPortalAuth(existing = {}, incoming = {}) {
 
 export function findClientLogin(authMap, username) {
   const normalized = username.trim().toLowerCase();
+  const emailLocal = normalized.includes('@') ? normalized.split('@')[0] : null;
+
   for (const [brand, entry] of Object.entries(authMap)) {
     for (const user of normalizeBrandUsers(entry)) {
-      if (user.username.toLowerCase() === normalized) {
+      const stored = user.username.toLowerCase();
+      if (stored === normalized) {
+        return { brand, user };
+      }
+      // Legacy portal usernames (e.g. plumehtx) still work when clients sign in with email.
+      if (emailLocal && stored === emailLocal) {
         return { brand, user };
       }
     }
