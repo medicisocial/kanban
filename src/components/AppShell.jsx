@@ -497,6 +497,8 @@ export default function AppShell({ onSignOut }) {
 
   const handlePortalApprove = (ideaId, clientComment, ideaSnapshot) => {
     const idea = ideas.find((i) => i.id === ideaId) || ideaSnapshot;
+    if (!idea) return;
+    if (ideas.some((i) => i.id === ideaId && i.status === "approved" && i.boardCardId)) return;
     if (ideas.some((i) => i.id === ideaId && i.status !== "pending")) return;
     beginBatch();
     try {
@@ -656,19 +658,25 @@ export default function AppShell({ onSignOut }) {
   useEffect(() => {
     if (!SUPABASE_ENABLED) return;
     const processed = processedClientIdeaIdsRef.current;
-    const pending = ideas.filter(
-      (idea) => idea.status === "approved" && !idea.boardCardId && !processed.has(idea.id),
-    );
+    const pending = ideas.filter((idea) => {
+      if (idea.status !== "approved" || processed.has(idea.id)) return false;
+      const existingCard = cards.find((card) => card.sourceIdeaId === idea.id);
+      if (existingCard) return idea.boardCardId !== existingCard.id;
+      return !idea.boardCardId;
+    });
     if (!pending.length) return;
 
     runWithoutUndoCapture(() => {
       for (const idea of pending) {
         processed.add(idea.id);
-        const boardCardId = createCardFromIdea({ ...idea, clientComment: idea.clientComment || "" });
+        const existingCard = cards.find((card) => card.sourceIdeaId === idea.id);
+        const boardCardId =
+          existingCard?.id ||
+          createCardFromIdea({ ...idea, clientComment: idea.clientComment || "" });
         markApproved(idea.id, idea.clientComment || "", boardCardId);
       }
     });
-  }, [ideas, createCardFromIdea, markApproved]);
+  }, [ideas, cards, createCardFromIdea, markApproved]);
 
   useEffect(() => {
     if (!importData?.responses?.length) return;
@@ -821,6 +829,7 @@ export default function AppShell({ onSignOut }) {
       <ClientReviewPortal
         client={portalClient}
         ideas={ideas}
+        onAddIdea={addIdea}
         onApprove={(id, comment, idea) => handlePortalApprove(id, comment, idea)}
         onDecline={(id, comment, idea) => {
           const snap = idea || ideas.find((i) => i.id === id);

@@ -8,12 +8,14 @@ import {
 } from '../utils/clientShare';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import ClientIdeasTable from './clientPortal/ClientIdeasTable';
+import VideoIdeaQuickAdd from './VideoIdeaQuickAdd';
 import SharePortalShell from './clientPortal/SharePortalShell';
 import { btnPrimaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 export default function ClientReviewPortal({
   client,
   ideas,
+  onAddIdea,
   onApprove,
   onDecline,
   useCloudSync = false,
@@ -82,9 +84,49 @@ export default function ClientReviewPortal({
     if (canSyncLocally) {
       if (response.action === 'approved') {
         onApprove?.(response.ideaId, response.comment, response.idea);
-      } else {
+      } else if (response.action === 'declined') {
         onDecline?.(response.ideaId, response.comment, response.idea);
       }
+    }
+  };
+
+  const buildIdeaPayload = (ideaData) => ({
+    id: crypto.randomUUID(),
+    client,
+    title: ideaData.title,
+    referenceVideo: ideaData.referenceVideo || '',
+    description: ideaData.description || '',
+    contentType: ideaData.contentType || 'Reel',
+    status: 'pending',
+    clientComment: ideaData.clientComment || '',
+    boardCardId: null,
+    createdAt: Date.now(),
+    reviewedAt: null,
+  });
+
+  const handleAddIdea = async (ideaData) => {
+    const idea = buildIdeaPayload(ideaData);
+
+    setActionError('');
+    try {
+      if (useCloudSync && onCloudQueueResponse) {
+        await onCloudQueueResponse({
+          action: 'create',
+          idea,
+          client,
+          timestamp: Date.now(),
+        });
+        return;
+      }
+
+      if (onAddIdea) {
+        onAddIdea(ideaData);
+        return;
+      }
+
+      throw new Error('Could not save your idea.');
+    } catch (err) {
+      setActionError(err.message || 'Could not save your idea. Please try again.');
     }
   };
 
@@ -176,7 +218,7 @@ export default function ClientReviewPortal({
       <section>
         <ClientPortalSectionHeader
           title="Ideas"
-          description="Approve concepts you want produced, or decline with feedback for your team."
+          description="Submit your own concepts or approve ideas from your production team."
         >
           {pendingCount > 0 && (
             <span className="border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-amber-200/90">
@@ -191,24 +233,22 @@ export default function ClientReviewPortal({
           </p>
         )}
 
-        {brandIdeas.length === 0 ? (
-          <div className={`${surfacePanelClass} px-6 py-16 text-center`}>
-            <h3 className="text-base font-semibold text-white">No ideas yet</h3>
-            <p className="mt-2 text-sm text-white/50">
-              Your account team will submit concepts here for your review.
-            </p>
-          </div>
-        ) : (
-          <ClientIdeasTable
-            ideas={brandIdeas}
-            client={client}
-            clientColor={clientColor}
-            clientLogo={clientLogo}
-            onApprove={handleApprove}
-            onDecline={handleDecline}
-            busyIds={busyIds}
-          />
-        )}
+        <VideoIdeaQuickAdd
+          clientOnly={client}
+          onAdd={handleAddIdea}
+          submitLabel="Submit idea"
+          hint="Paste a reference link and press Enter — your team will see it in the list below."
+        />
+
+        <ClientIdeasTable
+          ideas={brandIdeas}
+          client={client}
+          clientColor={clientColor}
+          clientLogo={clientLogo}
+          onApprove={handleApprove}
+          onDecline={handleDecline}
+          busyIds={busyIds}
+        />
       </section>
     );
   }

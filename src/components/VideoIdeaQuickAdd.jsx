@@ -9,14 +9,22 @@ function clientFromFilter(clientFilter, fallbackClient) {
   return fallbackClient;
 }
 
-export default function VideoIdeaQuickAdd({ clientFilter = 'all', onAdd, onAdded }) {
+export default function VideoIdeaQuickAdd({
+  clientFilter = 'all',
+  clientOnly,
+  onAdd,
+  onAdded,
+  submitLabel = 'Add idea',
+  hint = 'Press Enter to add — the idea appears in the list below. No popup.',
+}) {
   const { clients, defaultClient: firstClient } = useClientsContext();
   const titleRef = useRef(null);
   const referenceRef = useRef(null);
-  const lockedClient = Boolean(clientFilter && clientFilter !== 'all');
+  const lockedClient = Boolean(clientOnly || (clientFilter && clientFilter !== 'all'));
+  const hideClientField = Boolean(clientOnly);
 
   const [form, setForm] = useState(() => ({
-    client: clientFromFilter(clientFilter, firstClient),
+    client: clientOnly || clientFromFilter(clientFilter, firstClient),
     title: '',
     referenceVideo: '',
     contentType: 'Reel',
@@ -26,13 +34,13 @@ export default function VideoIdeaQuickAdd({ clientFilter = 'all', onAdd, onAdded
   useEffect(() => {
     setForm((prev) => ({
       ...prev,
-      client: clientFromFilter(clientFilter, firstClient),
+      client: clientOnly || clientFromFilter(clientFilter, firstClient),
     }));
-  }, [clientFilter, firstClient]);
+  }, [clientFilter, firstClient, clientOnly]);
 
   const resetForm = () => {
     setForm({
-      client: clientFromFilter(clientFilter, firstClient),
+      client: clientOnly || clientFromFilter(clientFilter, firstClient),
       title: '',
       referenceVideo: '',
       contentType: 'Reel',
@@ -89,7 +97,13 @@ export default function VideoIdeaQuickAdd({ clientFilter = 'all', onAdd, onAdded
         New idea
       </p>
 
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_auto_auto_auto] md:items-end">
+      <div
+        className={`grid gap-3 md:items-end ${
+          hideClientField
+            ? 'md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_auto_auto]'
+            : 'md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_auto_auto_auto]'
+        }`}
+      >
         <label className="block min-w-0">
           <span className="mb-1.5 block text-xs text-white/45">Title</span>
           <input
@@ -116,24 +130,26 @@ export default function VideoIdeaQuickAdd({ clientFilter = 'all', onAdd, onAdded
           />
         </label>
 
-        <label className="block min-w-[120px]">
-          <span className="mb-1.5 block text-xs text-white/45">Client</span>
-          {lockedClient ? (
-            <p className={`${inputClass} text-white/80`}>{form.client}</p>
-          ) : (
-            <select
-              value={form.client}
-              onChange={(e) => setForm({ ...form, client: e.target.value })}
-              className={`${selectClass} w-full`}
-            >
-              {clients.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          )}
-        </label>
+        {!hideClientField && (
+          <label className="block min-w-[120px]">
+            <span className="mb-1.5 block text-xs text-white/45">Client</span>
+            {lockedClient ? (
+              <p className={`${inputClass} text-white/80`}>{form.client}</p>
+            ) : (
+              <select
+                value={form.client}
+                onChange={(e) => setForm({ ...form, client: e.target.value })}
+                className={`${selectClass} w-full`}
+              >
+                {clients.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            )}
+          </label>
+        )}
 
         <label className="block min-w-[100px]">
           <span className="mb-1.5 block text-xs text-white/45">Type</span>
@@ -151,14 +167,12 @@ export default function VideoIdeaQuickAdd({ clientFilter = 'all', onAdd, onAdded
         </label>
 
         <button type="submit" className={`${btnPrimaryClass} w-full md:w-auto md:self-end`}>
-          Add idea
+          {submitLabel}
         </button>
       </div>
 
       {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
-      <p className="mt-2 text-[10px] text-white/30">
-        Press Enter to add — the idea appears in the list below. No popup.
-      </p>
+      {hint && <p className="mt-2 text-[10px] text-white/30">{hint}</p>}
     </form>
   );
 }

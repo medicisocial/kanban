@@ -17,6 +17,7 @@ import {
 
 const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
 const CONTENT_REVIEW_RESPONSES_KEY = 'medici-social-content-review-responses';
+const VIDEO_IDEAS_STORAGE_KEY = 'medici-social-video-ideas';
 const EVENTS_STORAGE_KEY = 'medici-social-events';
 const MEETINGS_STORAGE_KEY = 'medici-social-meetings';
 const CLIENTS_STORAGE_KEY = 'medici-social-clients';
@@ -71,10 +72,31 @@ async function applyResponseToSupabase(res, session, type, response) {
   const brand = session.brand;
 
   if (type === 'idea') {
+    const action = response.action;
+
+    if (action === 'create') {
+      if (!response.idea || typeof response.idea !== 'object') {
+        return res.status(400).json({ error: 'Invalid idea payload.' });
+      }
+
+      const id = response.idea.id || `idea-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const idea = {
+        ...response.idea,
+        id,
+        client: brand,
+        status: 'pending',
+        clientComment: (response.idea.clientComment || '').trim(),
+        boardCardId: response.idea.boardCardId || null,
+        createdAt: response.idea.createdAt || Date.now(),
+        reviewedAt: null,
+      };
+      await upsertRecord(VIDEO_IDEAS_TABLE, id, idea);
+      return res.status(200).json({ ok: true, id });
+    }
+
     const ideaId = response.ideaId;
     if (!ideaId) return res.status(400).json({ error: 'Missing ideaId.' });
 
-    const action = response.action;
     const status = action === 'approved' ? 'approved' : action === 'declined' ? 'declined' : null;
     if (!status) return res.status(400).json({ error: 'Unknown idea action.' });
 
@@ -306,12 +328,34 @@ export default async function handler(req, res) {
   workspace.data = workspace.data || {};
 
   if (type === 'idea') {
-    const next = appendResponse(
-      workspace.data[CLIENT_RESPONSES_STORAGE_KEY],
-      { ...response, client: session.brand, timestamp: response.timestamp || Date.now() },
-      'ideaId',
-    );
-    workspace.data[CLIENT_RESPONSES_STORAGE_KEY] = next;
+    if (response.action === 'create') {
+      if (!response.idea || typeof response.idea !== 'object') {
+        return res.status(400).json({ error: 'Invalid idea payload.' });
+      }
+
+      const ideas = Array.isArray(workspace.data[VIDEO_IDEAS_STORAGE_KEY])
+        ? [...workspace.data[VIDEO_IDEAS_STORAGE_KEY]]
+        : [];
+      const id = response.idea.id || `idea-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      ideas.push({
+        ...response.idea,
+        id,
+        client: session.brand,
+        status: 'pending',
+        clientComment: (response.idea.clientComment || '').trim(),
+        boardCardId: response.idea.boardCardId || null,
+        createdAt: response.idea.createdAt || Date.now(),
+        reviewedAt: null,
+      });
+      workspace.data[VIDEO_IDEAS_STORAGE_KEY] = ideas;
+    } else {
+      const next = appendResponse(
+        workspace.data[CLIENT_RESPONSES_STORAGE_KEY],
+        { ...response, client: session.brand, timestamp: response.timestamp || Date.now() },
+        'ideaId',
+      );
+      workspace.data[CLIENT_RESPONSES_STORAGE_KEY] = next;
+    }
   } else if (type === 'content') {
     const next = appendResponse(
       workspace.data[CONTENT_REVIEW_RESPONSES_KEY],

@@ -211,44 +211,56 @@ export function useKanban() {
 
   const createCardFromIdea = useCallback((idea) => {
     notifyMutation();
-    const cardId = crypto.randomUUID();
-    const notes = [
-      idea.description,
-      idea.clientComment ? `Client feedback: ${idea.clientComment}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n\n');
+    let resolvedId = idea.boardCardId || `from-idea-${idea.id}`;
 
-    const card = {
-      id: cardId,
-      client: idea.client,
-      contentType: idea.contentType || 'Reel',
-      platform: PLATFORM,
-      title: idea.title,
-      dueDate: '',
-      dueTime: '',
-      shootDate: '',
-      shootTime: '',
-      shootEndTime: '',
-      shootDuration: 45,
-      shootModels: '',
-      shootNeeds: '',
-      shootScript: '',
-      contentCreator: getDefaultAssigneeForRole('Content Creator'),
-      assignedTo: getDefaultAssigneeForRole('Editor'),
-      notes,
-      referenceMusic: '',
-      referenceVideo: idea.referenceVideo || '',
-      dropboxLink: '',
-      clientComment: '',
-      sourceIdeaId: idea.id,
-      status: getStatusForColumn('shoot'),
-      columnId: 'shoot',
-      createdAt: Date.now(),
-    };
+    setCards((prev) => {
+      const existing =
+        prev.find((card) => card.sourceIdeaId === idea.id) ||
+        prev.find((card) => card.id === resolvedId);
+      if (existing) {
+        resolvedId = existing.id;
+        return prev;
+      }
 
-    setCards((prev) => [...prev, card]);
-    return cardId;
+      const notes = [
+        idea.description,
+        idea.clientComment ? `Client feedback: ${idea.clientComment}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+
+      const card = {
+        id: resolvedId,
+        client: idea.client,
+        contentType: idea.contentType || 'Reel',
+        platform: PLATFORM,
+        title: idea.title,
+        dueDate: '',
+        dueTime: '',
+        shootDate: '',
+        shootTime: '',
+        shootEndTime: '',
+        shootDuration: 45,
+        shootModels: '',
+        shootNeeds: '',
+        shootScript: '',
+        contentCreator: getDefaultAssigneeForRole('Content Creator'),
+        assignedTo: getDefaultAssigneeForRole('Editor'),
+        notes,
+        referenceMusic: '',
+        referenceVideo: idea.referenceVideo || '',
+        dropboxLink: '',
+        clientComment: '',
+        sourceIdeaId: idea.id,
+        status: getStatusForColumn('shoot'),
+        columnId: 'shoot',
+        createdAt: Date.now(),
+      };
+
+      return [...prev, card];
+    });
+
+    return resolvedId;
   }, []);
 
   const updateCard = useCallback((id, updates) => {
