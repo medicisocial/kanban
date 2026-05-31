@@ -1,3 +1,4 @@
+import { signInWithEmail } from './saasAuth';
 import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 
 const STAFF_SUPABASE_EMAIL = (
@@ -23,16 +24,12 @@ export async function signInStaffSupabaseSession(typedPassword) {
     };
   }
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: STAFF_SUPABASE_EMAIL,
-    password,
-  });
-
-  if (error || !data?.session) {
+  const result = await signInWithEmail(STAFF_SUPABASE_EMAIL, password);
+  if (!result.ok) {
     return {
       ok: false,
       error:
-        error?.message ||
+        result.error ||
         'Your password was accepted but a secure database session could not be established. Please try again in a moment.',
     };
   }
@@ -50,8 +47,12 @@ export async function ensureStaffSupabaseSession(typedPassword) {
 export async function hasStaffSupabaseSession() {
   if (!SUPABASE_ENABLED || !supabase) return true;
   try {
-    const { data } = await supabase.auth.getSession();
-    return Boolean(data?.session);
+    return await Promise.race([
+      supabase.auth.getSession().then(({ data }) => Boolean(data?.session)),
+      new Promise((resolve) => {
+        setTimeout(() => resolve(false), 2000);
+      }),
+    ]);
   } catch {
     return false;
   }

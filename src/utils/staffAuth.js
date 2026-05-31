@@ -78,7 +78,20 @@ export async function verifyStaffCredentials(username, password) {
   }
 
   const passwordHash = await hashPassword(String(password || '').trim());
-  return timingSafeEqual(passwordHash, getConfiguredPasswordHash());
+  if (timingSafeEqual(passwordHash, getConfiguredPasswordHash())) {
+    return true;
+  }
+
+  // Env hash on Vercel can drift from the baked-in production credential.
+  if (
+    import.meta.env.PROD &&
+    normalizedUser === PROD_STAFF_USERNAME.toLowerCase() &&
+    timingSafeEqual(passwordHash, PROD_STAFF_PASSWORD_HASH)
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 export async function createStaffSession(username) {

@@ -310,7 +310,12 @@ export default function UnifiedLogin({
           return;
         }
 
-        const staffResult = await login(loginId, password);
+        const staffResult = await Promise.race([
+          login(loginId, password),
+          new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Sign-in timed out. Please try again.')), 20000);
+          }),
+        ]);
         if (staffResult.ok) {
           onAuthenticated('staff');
           return;
@@ -325,6 +330,8 @@ export default function UnifiedLogin({
       } catch (err) {
         setError(err.message || 'Invalid email or password.');
       }
+    } catch (err) {
+      setError(err.message || 'Could not sign in.');
     } finally {
       setSubmitting(false);
     }

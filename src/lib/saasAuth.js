@@ -3,6 +3,67 @@ import { normalizePlanType } from '../constants/plans';
 
 export { isValidPortalEmail as looksLikeEmail } from '../utils/portalLogin';
 
+const SUPABASE_AUTH_TIMEOUT_MS = 15000;
+
+async function applySupabaseSession(accessToken, refreshToken) {
+  if (!supabase || !accessToken || !refreshToken) return;
+  await Promise.race([
+    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }),
+    new Promise((resolve) => {
+      setTimeout(resolve, 3000);
+    }),
+  ]).catch(() => {});
+}
+
+/** Password grant via REST — avoids supabase-js auth client deadlocks during login. */
+async function signInWithPasswordRest(email, password) {
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) {
+    return { ok: false, error: 'Cloud login is not configured.' };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), SUPABASE_AUTH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: {
+        apikey: anonKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: email.trim(),
+        password: String(password || '').trim(),
+      }),
+      signal: controller.signal,
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message =
+        payload?.error_description || payload?.msg || payload?.message || 'Invalid email or password.';
+      return { ok: false, error: message };
+    }
+
+    const { access_token: accessToken, refresh_token: refreshToken, user } = payload;
+    if (!accessToken || !user) {
+      return { ok: false, error: 'Invalid email or password.' };
+    }
+
+    await applySupabaseSession(accessToken, refreshToken);
+    return { ok: true, user, session: payload };
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      return { ok: false, error: 'Sign-in timed out. Check your connection and try again.' };
+    }
+    return { ok: false, error: error?.message || 'Could not sign in.' };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function signUpWorkspace({ email, password, orgName, planType = 'starter' }) {
   if (!SUPABASE_ENABLED || !supabase) {
     return {
@@ -42,19 +103,7 @@ export async function signInWithEmail(email, password) {
     };
   }
 
-  // Clear any in-flight session refresh so sign-in does not deadlock behind getSession().
-  await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email.trim(),
-    password: String(password || '').trim(),
-  });
-
-  if (error || !data?.session) {
-    return { ok: false, error: error?.message || 'Invalid email or password.' };
-  }
-
-  return { ok: true, user: data.user, session: data.session };
+  return signInWithPasswordRest(email, password);
 }
 
 export async function fetchUserOrganization(userId) {

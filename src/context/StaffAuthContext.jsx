@@ -25,7 +25,6 @@ import {
   resetPasswordForEmail,
   signInWithEmail,
   signOutSupabaseAuth,
-  signOutSupabaseAuthAsync,
   signUpWorkspace,
   updateUserPassword,
 } from '../lib/saasAuth';
@@ -208,8 +207,11 @@ export function StaffAuthProvider({ children }) {
       }
     }
 
+    if (isOpsLogin) {
+      return { ok: false, error: 'Invalid email or password.' };
+    }
+
     if (isValidPortalEmail(loginId)) {
-      await signOutSupabaseAuthAsync();
       const saasResult = await signInWithEmail(loginId, trimmedPassword);
       if (saasResult.ok) {
         const ok = await withTimeout(resolveSaasOrg(saasResult.user), AUTH_BOOTSTRAP_TIMEOUT_MS, false);
