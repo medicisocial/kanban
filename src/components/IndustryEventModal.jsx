@@ -23,9 +23,12 @@ export default function IndustryEventModal({
   onSave,
   onDelete,
   readOnly = false,
+  clientMode = false,
 }) {
   const { clients, getClientColor, getClientBusinessType } = useClientsContext();
   const isEdit = Boolean(event?.id);
+  const preferViewMode = !readOnly && !clientMode && isEdit && event?.status === 'submitted';
+  const [viewingDetails, setViewingDetails] = useState(preferViewMode);
 
   const [client, setClient] = useState(event?.client || lockedClient || defaultClient || clients[0] || '');
   const [date, setDate] = useState(event?.date || defaultDate || toDateKey(new Date()));
@@ -84,6 +87,10 @@ export default function IndustryEventModal({
   }, [onClose]);
 
   useEffect(() => {
+    setViewingDetails(preferViewMode);
+  }, [event?.id, preferViewMode]);
+
+  useEffect(() => {
     if (isEdit || lockedClient) return;
     const nextType = getClientBusinessType(client);
     const nextSchema = getSchemaForBusinessType(nextType);
@@ -134,6 +141,7 @@ export default function IndustryEventModal({
   };
 
   const statusLabel = event?.status === 'draft' ? 'Draft' : 'Submitted';
+  const showReadOnly = readOnly || viewingDetails;
 
   return (
     <div
@@ -148,7 +156,7 @@ export default function IndustryEventModal({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-lg font-semibold text-white">
-                {readOnly ? 'Event details' : isEdit ? 'Edit event' : 'Log event'}
+                {showReadOnly ? 'Event details' : isEdit ? 'Edit event' : 'Log event'}
               </h2>
               {isEdit && (
                 <span className={statusBadgeClass(event?.status === 'draft' ? 'pending' : 'approved')}>
@@ -166,7 +174,7 @@ export default function IndustryEventModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          {readOnly ? (
+          {showReadOnly ? (
             <div className="space-y-4 text-sm">
               <div>
                 <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">Client</p>
@@ -290,7 +298,7 @@ export default function IndustryEventModal({
         </div>
 
         <div className="flex shrink-0 flex-wrap gap-2 border-t border-white/10 px-5 py-4">
-          {isEdit && onDelete && !readOnly && (
+          {isEdit && onDelete && !showReadOnly && (
             <button
               type="button"
               onClick={() => {
@@ -308,7 +316,7 @@ export default function IndustryEventModal({
             <button type="button" onClick={onClose} className={btnSecondaryClass}>
               Cancel
             </button>
-            {!readOnly && (
+            {!showReadOnly && (
               <>
                 <button
                   type="button"
@@ -322,10 +330,21 @@ export default function IndustryEventModal({
                 </button>
               </>
             )}
-            {readOnly && (
-              <button type="button" onClick={onClose} className={btnSecondaryClass}>
-                Close
-              </button>
+            {showReadOnly && (
+              <>
+                {preferViewMode && (
+                  <button
+                    type="button"
+                    onClick={() => setViewingDetails(false)}
+                    className={btnPrimaryClass}
+                  >
+                    Edit event
+                  </button>
+                )}
+                <button type="button" onClick={onClose} className={btnSecondaryClass}>
+                  Close
+                </button>
+              </>
             )}
           </div>
         </div>

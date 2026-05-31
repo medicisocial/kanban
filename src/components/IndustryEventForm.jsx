@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { btnPrimaryClass, btnSecondaryClass, inputClass, selectClass } from './clientPortal/clientPortalUi';
+import { btnSecondaryClass, inputClass, selectClass } from './clientPortal/clientPortalUi';
 import FilePreviewActions from './clientPortal/FilePreviewActions';
 import { isFieldVisible, getDisplayEventType } from '../utils/eventFormSchemas';
 import {
@@ -68,7 +68,7 @@ function menuHasContent(textContent, pdf) {
   return Boolean(String(textContent || '').trim() || eventPdfHasAttachment(pdf));
 }
 
-function PdfAttachmentField({ pdf, onChange, disabled, label = 'Recipe PDF', embedded = false }) {
+function PdfAttachmentField({ pdf, onChange, disabled, label = 'Upload PDF', embedded = false }) {
   const fileInputRef = useRef(null);
   const [error, setError] = useState('');
   const attachment = normalizeEventPdfAttachment(pdf);
@@ -87,12 +87,12 @@ function PdfAttachmentField({ pdf, onChange, disabled, label = 'Recipe PDF', emb
   };
 
   return (
-    <div className={embedded ? 'border-t border-white/10 px-2.5 py-2.5' : ''}>
+    <div className={embedded ? 'border-t border-white/10 pt-3' : ''}>
       {label && (
-        <p className="text-[10px] font-medium uppercase tracking-wider text-white/45">{label}</p>
+        <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-white/45">{label}</p>
       )}
       {attachment ? (
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <span className="min-w-0 truncate text-xs text-white/75">{attachment.name}</span>
           <FilePreviewActions
             title={attachment.name}
@@ -123,7 +123,7 @@ function PdfAttachmentField({ pdf, onChange, disabled, label = 'Recipe PDF', emb
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className={`${btnSecondaryClass} mt-2 w-full justify-center py-1.5 text-[10px]`}
+            className={`${btnSecondaryClass} w-full justify-center py-2.5 text-xs`}
           >
             Upload PDF
           </button>
@@ -142,261 +142,112 @@ function PdfAttachmentField({ pdf, onChange, disabled, label = 'Recipe PDF', emb
   );
 }
 
-function MenuPanel({
-  title,
-  content,
-  pdf,
-  placeholder,
-  pdfLabel,
-  onChange,
-  onPdfChange,
-  onSave,
-  onCancel,
-  disabled,
-}) {
-  return (
-    <div className="border border-white/10 bg-white/[0.02]">
-      <div className="border-b border-white/10 px-2.5 py-1.5">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-white/65">{title}</span>
-      </div>
-      <textarea
-        value={content}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={4}
-        disabled={disabled}
-        className={`${inputClass} resize-y border-0 bg-transparent px-2.5 py-2 text-sm focus:border-0`}
-      />
-      <PdfAttachmentField pdf={pdf} onChange={onPdfChange} disabled={disabled} label={pdfLabel} />
-      {!disabled && (
-        <div className="flex justify-end gap-2 border-t border-white/10 px-2.5 py-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="text-[10px] font-medium uppercase tracking-wider text-white/45 transition-colors hover:text-white/70"
-          >
-            Cancel
-          </button>
-          <button type="button" onClick={onSave} className={`${btnPrimaryClass} py-1.5 text-[10px]`}>
-            Save menu
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SavedMenuSummary({ title, content, pdf, onEdit, onRemove, disabled }) {
-  const [expanded, setExpanded] = useState(false);
-  const lines = content.trim().split('\n').filter(Boolean);
-  const preview = lines[0] || 'No items added yet';
-  const attachment = normalizeEventPdfAttachment(pdf);
-
-  return (
-    <div className="border border-white/10 bg-white/[0.02]">
-      <div className="flex items-center gap-2 px-2.5 py-2">
-        <button
-          type="button"
-          onClick={() => setExpanded((open) => !open)}
-          className="flex min-w-0 flex-1 items-start gap-2 text-left transition hover:opacity-90"
-        >
-          <span className="mt-0.5 shrink-0 text-[10px] text-white/35">{expanded ? '▾' : '▸'}</span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-white/65">{title}</p>
-            {!expanded && (
-              <p className="truncate text-xs text-white/45">
-                {lines.length > 0
-                  ? `${lines.length} item${lines.length !== 1 ? 's' : ''} · ${preview}`
-                  : attachment
-                    ? `PDF · ${attachment.name}`
-                    : preview}
-              </p>
-            )}
-          </div>
-        </button>
-        {!disabled && (
-          <div className="flex shrink-0 gap-2">
-            <button
-              type="button"
-              onClick={onEdit}
-              className="text-[10px] font-medium uppercase tracking-wider text-white/50 transition-colors hover:text-white"
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              onClick={onRemove}
-              className="text-[10px] font-medium uppercase tracking-wider text-white/40 transition-colors hover:text-rose-300"
-            >
-              Remove
-            </button>
-          </div>
-        )}
-      </div>
-      {expanded && (
-        <div className="border-t border-white/10 px-2.5 py-2">
-          {lines.length > 0 ? (
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-white/75">{content.trim()}</p>
-          ) : (
-            !attachment && <p className="text-sm leading-relaxed text-white/75">No items added yet.</p>
-          )}
-          {attachment && (
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <span className="text-xs text-white/75">{attachment.name}</span>
-              <FilePreviewActions
-                title={attachment.name}
-                dataUrl={attachment.dataUrl}
-                fileName={attachment.name}
-              />
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function MenuGroupField({ field, values, onChange, disabled }) {
-  const drinkEnabled = Boolean(values[field.drinkEnableField]);
-  const foodEnabled = Boolean(values[field.foodEnableField]);
   const drinkContent = values[field.drinkContentField] ?? '';
   const foodContent = values[field.foodContentField] ?? '';
   const drinkPdf = values[field.drinkPdfField] ?? null;
   const foodPdf = values[field.foodPdfField] ?? null;
+  const [showDrinkText, setShowDrinkText] = useState(() => Boolean(String(drinkContent).trim()));
+  const [showFoodText, setShowFoodText] = useState(() => Boolean(String(foodContent).trim()));
 
-  const [editingDrink, setEditingDrink] = useState(false);
-  const [editingFood, setEditingFood] = useState(false);
-
-  const drinkSaved = drinkEnabled && !editingDrink;
-  const foodSaved = foodEnabled && !editingFood;
-
-  const startDrink = () => {
-    onChange(field.drinkEnableField, true);
-    setEditingDrink(true);
+  const syncDrinkEnabled = (content, pdf) => {
+    onChange(field.drinkEnableField, menuHasContent(content, pdf));
   };
 
-  const startFood = () => {
-    onChange(field.foodEnableField, true);
-    setEditingFood(true);
+  const syncFoodEnabled = (content, pdf) => {
+    onChange(field.foodEnableField, menuHasContent(content, pdf));
   };
 
-  const saveDrink = () => setEditingDrink(false);
-  const saveFood = () => setEditingFood(false);
-
-  const cancelDrink = () => {
-    if (!menuHasContent(drinkContent, drinkPdf)) {
-      onChange(field.drinkEnableField, false);
-      onChange(field.drinkContentField, '');
-      onChange(field.drinkPdfField, null);
-    }
-    setEditingDrink(false);
+  const handleDrinkPdf = (pdf) => {
+    onChange(field.drinkPdfField, pdf);
+    syncDrinkEnabled(drinkContent, pdf);
   };
 
-  const cancelFood = () => {
-    if (!menuHasContent(foodContent, foodPdf)) {
-      onChange(field.foodEnableField, false);
-      onChange(field.foodContentField, '');
-      onChange(field.foodPdfField, null);
-    }
-    setEditingFood(false);
+  const handleFoodPdf = (pdf) => {
+    onChange(field.foodPdfField, pdf);
+    syncFoodEnabled(foodContent, pdf);
   };
 
-  const removeDrink = () => {
-    onChange(field.drinkEnableField, false);
-    onChange(field.drinkContentField, '');
-    onChange(field.drinkPdfField, null);
-    setEditingDrink(false);
+  const handleDrinkContent = (content) => {
+    onChange(field.drinkContentField, content);
+    syncDrinkEnabled(content, drinkPdf);
   };
 
-  const removeFood = () => {
-    onChange(field.foodEnableField, false);
-    onChange(field.foodContentField, '');
-    onChange(field.foodPdfField, null);
-    setEditingFood(false);
+  const handleFoodContent = (content) => {
+    onChange(field.foodContentField, content);
+    syncFoodEnabled(content, foodPdf);
   };
-
-  const showDrinkAdd = !drinkEnabled && !editingDrink;
-  const showFoodAdd = !foodEnabled && !editingFood;
 
   return (
     <div>
-      <FieldLabel>Menus</FieldLabel>
-      <div className="space-y-2">
-        {drinkSaved && (
-          <SavedMenuSummary
-            title="Drink menu"
-            content={drinkContent}
-            pdf={drinkPdf}
-            onEdit={() => setEditingDrink(true)}
-            onRemove={removeDrink}
-            disabled={disabled}
-          />
+      <FieldLabel>Menus & PDFs</FieldLabel>
+      <p className="mb-2 text-xs leading-relaxed text-white/40">
+        Upload drink or food menu PDFs below. You can also type menu details if needed.
+      </p>
+      <div className="space-y-4 border border-white/10 bg-white/[0.02] p-3">
+        <PdfAttachmentField
+          label="Drink menu PDF"
+          pdf={drinkPdf}
+          onChange={handleDrinkPdf}
+          disabled={disabled}
+        />
+        {(showDrinkText || String(drinkContent).trim()) ? (
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-white/40">
+              Drink menu details (optional)
+            </span>
+            <textarea
+              value={drinkContent}
+              onChange={(e) => handleDrinkContent(e.target.value)}
+              placeholder="Cocktails, spirits, prices, descriptions…"
+              rows={3}
+              disabled={disabled}
+              className={`${inputClass} resize-y text-sm`}
+            />
+          </label>
+        ) : (
+          !disabled && (
+            <button
+              type="button"
+              onClick={() => setShowDrinkText(true)}
+              className="text-[10px] font-medium uppercase tracking-wider text-white/45 transition-colors hover:text-white/70"
+            >
+              + Type drink menu details
+            </button>
+          )
         )}
 
-        {foodSaved && (
-          <SavedMenuSummary
-            title="Food menu"
-            content={foodContent}
-            pdf={foodPdf}
-            onEdit={() => setEditingFood(true)}
-            onRemove={removeFood}
-            disabled={disabled}
-          />
-        )}
-
-        {editingDrink && (
-          <MenuPanel
-            title="Drink menu"
-            content={drinkContent}
-            pdf={drinkPdf}
-            placeholder="Cocktails, spirits, prices, descriptions…"
-            pdfLabel="Drink recipe PDF"
-            disabled={disabled}
-            onChange={(value) => onChange(field.drinkContentField, value)}
-            onPdfChange={(value) => onChange(field.drinkPdfField, value)}
-            onSave={saveDrink}
-            onCancel={cancelDrink}
-          />
-        )}
-
-        {editingFood && (
-          <MenuPanel
-            title="Food menu"
-            content={foodContent}
-            pdf={foodPdf}
-            placeholder="Dishes, dietary notes, prices…"
-            pdfLabel="Food recipe PDF"
-            disabled={disabled}
-            onChange={(value) => onChange(field.foodContentField, value)}
-            onPdfChange={(value) => onChange(field.foodPdfField, value)}
-            onSave={saveFood}
-            onCancel={cancelFood}
-          />
-        )}
-
-        {(showDrinkAdd || showFoodAdd) && (
-          <div className={`grid gap-2 ${showDrinkAdd && showFoodAdd ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            {showDrinkAdd && (
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={startDrink}
-                className={`${btnSecondaryClass} justify-center py-2 text-[10px]`}
-              >
-                + Drink menu
-              </button>
-            )}
-            {showFoodAdd && (
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={startFood}
-                className={`${btnSecondaryClass} justify-center py-2 text-[10px]`}
-              >
-                + Food menu
-              </button>
-            )}
-          </div>
+        <PdfAttachmentField
+          label="Food menu PDF"
+          pdf={foodPdf}
+          onChange={handleFoodPdf}
+          disabled={disabled}
+          embedded
+        />
+        {(showFoodText || String(foodContent).trim()) ? (
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-white/40">
+              Food menu details (optional)
+            </span>
+            <textarea
+              value={foodContent}
+              onChange={(e) => handleFoodContent(e.target.value)}
+              placeholder="Dishes, dietary notes, prices…"
+              rows={3}
+              disabled={disabled}
+              className={`${inputClass} resize-y text-sm`}
+            />
+          </label>
+        ) : (
+          !disabled && (
+            <button
+              type="button"
+              onClick={() => setShowFoodText(true)}
+              className="text-[10px] font-medium uppercase tracking-wider text-white/45 transition-colors hover:text-white/70"
+            >
+              + Type food menu details
+            </button>
+          )
         )}
       </div>
     </div>
@@ -437,13 +288,12 @@ export default function IndustryEventForm({ schema, values, onChange, disabled =
               {field.description && (
                 <p className="mb-2 text-xs leading-relaxed text-white/40">{field.description}</p>
               )}
-              <div className="border border-white/10 bg-white/[0.02] px-2.5 py-2.5">
+              <div className="border border-white/10 bg-white/[0.02] p-3">
                 <PdfAttachmentField
                   pdf={values[field.id]}
                   onChange={(value) => onChange(field.id, value)}
                   disabled={disabled}
-                  label=""
-                  embedded={false}
+                  label="Upload PDF"
                 />
               </div>
             </div>
@@ -563,10 +413,11 @@ export function IndustryEventDetails({ event, schema, attendanceLabel = 'Estimat
           const attachment = normalizeEventPdfAttachment(value);
           if (!attachment) return null;
           return (
-            <div key={field.id}>
+            <div key={field.id} className="rounded border border-white/10 bg-white/[0.02] px-3 py-2.5">
               <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">{field.label}</p>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
-                <span className="text-sm text-white/75">{attachment.name}</span>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
+                <span className="text-white/55">PDF:</span>
+                <span className="text-white/80">{attachment.name}</span>
                 <FilePreviewActions
                   title={attachment.name}
                   dataUrl={attachment.dataUrl}
@@ -590,16 +441,17 @@ export function IndustryEventDetails({ event, schema, attendanceLabel = 'Estimat
       })}
 
       {(String(drinkMenu || '').trim() || drinkPdf) && (
-        <div>
+        <div className="rounded border border-white/10 bg-white/[0.02] px-3 py-2.5">
           <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">Drink menu</p>
           {String(drinkMenu || '').trim() && (
             <p className="mt-1 whitespace-pre-wrap text-white/80">{drinkMenu}</p>
           )}
           {drinkPdf && (
             <div
-              className={`${String(drinkMenu || '').trim() ? 'mt-2' : 'mt-1'} flex flex-wrap items-center gap-x-3 gap-y-2`}
+              className={`${String(drinkMenu || '').trim() ? 'mt-2' : 'mt-1'} flex flex-wrap items-center gap-x-3 gap-y-2 text-xs`}
             >
-              <span className="text-sm text-white/75">{drinkPdf.name}</span>
+              <span className="text-white/55">PDF:</span>
+              <span className="text-white/80">{drinkPdf.name}</span>
               <FilePreviewActions
                 title={drinkPdf.name}
                 dataUrl={drinkPdf.dataUrl}
@@ -611,16 +463,17 @@ export function IndustryEventDetails({ event, schema, attendanceLabel = 'Estimat
       )}
 
       {(String(foodMenu || '').trim() || foodPdf) && (
-        <div>
+        <div className="rounded border border-white/10 bg-white/[0.02] px-3 py-2.5">
           <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">Food menu</p>
           {String(foodMenu || '').trim() && (
             <p className="mt-1 whitespace-pre-wrap text-white/80">{foodMenu}</p>
           )}
           {foodPdf && (
             <div
-              className={`${String(foodMenu || '').trim() ? 'mt-2' : 'mt-1'} flex flex-wrap items-center gap-x-3 gap-y-2`}
+              className={`${String(foodMenu || '').trim() ? 'mt-2' : 'mt-1'} flex flex-wrap items-center gap-x-3 gap-y-2 text-xs`}
             >
-              <span className="text-sm text-white/75">{foodPdf.name}</span>
+              <span className="text-white/55">PDF:</span>
+              <span className="text-white/80">{foodPdf.name}</span>
               <FilePreviewActions
                 title={foodPdf.name}
                 dataUrl={foodPdf.dataUrl}

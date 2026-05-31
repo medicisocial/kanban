@@ -6,6 +6,7 @@ import {
 } from '../utils/calendar';
 import { filterEvents, groupEventsByDate, getUpcomingEvents } from '../utils/eventsCalendar';
 import { getDisplayEventType } from '../utils/eventFormSchemas';
+import { getEventAttachmentChipLabel } from '../utils/eventPdfUpload';
 import { formatTime } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import EventsMonthView from './EventsMonthView';
@@ -107,7 +108,16 @@ export default function EventsCalendar({
             <h3 className="text-xs font-semibold uppercase tracking-wider text-white/70">Upcoming</h3>
           </div>
           <ul className="divide-y divide-white/[0.06]">
-            {upcoming.map((event) => (
+            {upcoming.map((event) => {
+              const attachmentLabel = getEventAttachmentChipLabel(event);
+              const attachmentDetail = attachmentLabel
+                ? attachmentLabel
+                    .split(' · ')
+                    .map((part) => (part === 'PDF' ? 'PDF attached' : `${part} menu`))
+                    .join(' · ')
+                : '';
+
+              return (
               <li key={event.id}>
                 <button
                   type="button"
@@ -126,6 +136,7 @@ export default function EventsCalendar({
                         showAllClients && event.client,
                         event.businessType,
                         getDisplayEventType(event.fields),
+                        attachmentDetail,
                       ]
                         .filter(Boolean)
                         .join(' · ')}
@@ -142,7 +153,7 @@ export default function EventsCalendar({
                   </div>
                 </button>
               </li>
-            ))}
+            );})}
           </ul>
         </div>
       )}
@@ -186,6 +197,7 @@ export default function EventsCalendar({
           lockedClient={lockedClient}
           businessType={businessType}
           defaultDate={modal.defaultDate}
+          clientMode={clientMode}
           onClose={() => setModal(null)}
           onSave={handleSave}
           onDelete={onDeleteEvent}

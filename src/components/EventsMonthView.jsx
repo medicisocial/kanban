@@ -6,6 +6,7 @@ import {
 } from '../utils/calendar';
 import { formatTime } from '../utils';
 import { useClientsContext } from '../context/ClientsContext';
+import { getEventAttachmentChipLabel } from '../utils/eventPdfUpload';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -70,7 +71,10 @@ export default function EventsMonthView({
                   </div>
 
                   <div className="space-y-0.5">
-                    {dayEvents.slice(0, 3).map((event) => (
+                    {dayEvents.slice(0, 3).map((event) => {
+                      const attachmentLabel = getEventAttachmentChipLabel(event);
+
+                      return (
                       <button
                         key={event.id}
                         type="button"
@@ -84,7 +88,7 @@ export default function EventsMonthView({
                           backgroundColor: `${getClientColor(event.client)}18`,
                           color: getClientColor(event.client),
                         }}
-                        title={`${event.client ? `${event.client} · ` : ''}${event.title}${event.status === 'draft' ? ' (Draft)' : ''}`}
+                        title={`${event.client ? `${event.client} · ` : ''}${event.title}${event.status === 'draft' ? ' (Draft)' : ''}${attachmentLabel ? ` · ${attachmentLabel}` : ''}`}
                       >
                         {event.status === 'draft' && (
                           <span className="mr-0.5 opacity-70">◦</span>
@@ -92,8 +96,11 @@ export default function EventsMonthView({
                         {event.time ? `${formatTime(event.time)} ` : ''}
                         {showClientName && event.client ? `${event.client}: ` : ''}
                         {event.title}
+                        {attachmentLabel && (
+                          <span className="ml-1 opacity-75">· {attachmentLabel}</span>
+                        )}
                       </button>
-                    ))}
+                    );})}
                     {dayEvents.length > 3 && (
                       <p className="px-1 text-[10px] text-white/35">+{dayEvents.length - 3} more</p>
                     )}

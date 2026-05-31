@@ -29,6 +29,12 @@ export const EVENT_FORM_SCHEMAS = {
       options: ['Class Launch', 'Open House', 'Competition', 'Member Appreciation', 'Demo', 'Other'],
     },
     {
+      id: 'eventDocument',
+      label: 'Event PDF',
+      type: 'pdf',
+      description: 'Upload a PDF — schedule, flyer, registration info, etc.',
+    },
+    {
       id: 'eventTypeOther',
       label: 'What type of event is it?',
       type: 'text',
@@ -45,12 +51,6 @@ export const EVENT_FORM_SCHEMAS = {
     },
     { id: 'trainerFeatured', label: 'Trainer or instructor featured?', type: 'text' },
     { id: 'registrationRequired', label: 'Registration required?', type: 'toggle' },
-    {
-      id: 'eventDocument',
-      label: 'Event document',
-      type: 'pdf',
-      description: 'Upload a PDF with more details about the event — schedule, flyer, registration info, etc.',
-    },
   ],
   Hospitality: [
     { id: 'eventName', label: 'Event name', type: 'text', required: true, mapsToTitle: true },
@@ -62,14 +62,6 @@ export const EVENT_FORM_SCHEMAS = {
       required: true,
       options: ['Special Event', 'General Holiday Promotion', 'Watch Party / Game Day'],
     },
-    { id: 'gameFeatured', label: 'Game or sporting event featured', type: 'text' },
-    {
-      id: 'watchPartySpecials',
-      label: 'Watch party specials',
-      type: 'textarea',
-      rows: 2,
-      placeholder: 'Food and drink deals…',
-    },
     {
       id: 'menus',
       type: 'menuGroup',
@@ -79,6 +71,14 @@ export const EVENT_FORM_SCHEMAS = {
       foodEnableField: 'hasFoodMenu',
       foodContentField: 'foodMenuDetails',
       foodPdfField: 'foodMenuPdf',
+    },
+    { id: 'gameFeatured', label: 'Game or sporting event featured', type: 'text' },
+    {
+      id: 'watchPartySpecials',
+      label: 'Watch party specials',
+      type: 'textarea',
+      rows: 2,
+      placeholder: 'Food and drink deals…',
     },
     {
       id: 'specialOfferings',
@@ -95,6 +95,12 @@ export const EVENT_FORM_SCHEMAS = {
       type: 'select',
       required: true,
       options: ['Promotion', 'New Service Launch', 'Open House', 'Seasonal Offer'],
+    },
+    {
+      id: 'eventDocument',
+      label: 'Event PDF',
+      type: 'pdf',
+      description: 'Upload a PDF — promotion flyer, service menu, pricing sheet, etc.',
     },
     { id: 'servicesHighlight', label: 'Services or treatments to highlight', type: 'textarea' },
     { id: 'beforeAfterAvailable', label: 'Any before/after content available?', type: 'toggle' },
@@ -115,6 +121,12 @@ export const EVENT_FORM_SCHEMAS = {
         'Meeting',
         'Business Highlight',
       ],
+    },
+    {
+      id: 'eventDocument',
+      label: 'Event PDF',
+      type: 'pdf',
+      description: 'Upload a PDF — agenda, speaker bios, sponsorship details, registration info, etc.',
     },
     {
       id: 'highlightBusinessName',
