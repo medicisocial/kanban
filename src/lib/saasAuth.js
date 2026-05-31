@@ -6,13 +6,18 @@ export { isValidPortalEmail as looksLikeEmail } from '../utils/portalLogin';
 const SUPABASE_AUTH_TIMEOUT_MS = 15000;
 
 async function applySupabaseSession(accessToken, refreshToken) {
-  if (!supabase || !accessToken || !refreshToken) return;
-  await Promise.race([
-    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }),
+  if (!supabase || !accessToken || !refreshToken) return false;
+
+  const setSessionPromise = supabase.auth
+    .setSession({ access_token: accessToken, refresh_token: refreshToken })
+    .then(({ error }) => !error);
+
+  return Promise.race([
+    setSessionPromise,
     new Promise((resolve) => {
-      setTimeout(resolve, 3000);
+      setTimeout(() => resolve(false), 8000);
     }),
-  ]).catch(() => {});
+  ]).catch(() => false);
 }
 
 /** Password grant via REST — avoids supabase-js auth client deadlocks during login. */
@@ -108,6 +113,12 @@ export async function signInWithEmail(email, password) {
 
 export async function fetchUserOrganization(userId) {
   if (!SUPABASE_ENABLED || !supabase || !userId) return null;
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData?.session) {
+    console.warn('[saasAuth] organization lookup skipped — no active session');
+    return null;
+  }
 
   const { data, error } = await supabase
     .from('organization_members')

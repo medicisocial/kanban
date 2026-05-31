@@ -63,35 +63,32 @@ function timingSafeEqual(a, b) {
   return result === 0;
 }
 
+function getEffectivePasswordHash(username) {
+  if (isOpsStaffEmail(username) && import.meta.env.PROD) {
+    return PROD_STAFF_PASSWORD_HASH;
+  }
+  return getConfiguredPasswordHash();
+}
+
+export function isOpsStaffEmail(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return false;
+  const configured = getConfiguredUsername();
+  if (configured && normalized === configured.toLowerCase()) return true;
+  return import.meta.env.PROD && normalized === PROD_STAFF_USERNAME.toLowerCase();
+}
+
 async function createSessionSignature(username, expires) {
-  const secret = getConfiguredPasswordHash();
+  const secret = getEffectivePasswordHash(username);
   return hashPassword(`${username}:${expires}:${secret}`);
 }
 
 export async function verifyStaffCredentials(username, password) {
-  if (!isStaffAuthConfigured()) return false;
-
-  const expectedUser = getConfiguredUsername();
-  const normalizedUser = username.trim().toLowerCase();
-  if (normalizedUser !== expectedUser.toLowerCase()) {
-    return false;
-  }
+  if (!isOpsStaffEmail(username)) return false;
+  if (!isStaffAuthConfigured() && !import.meta.env.PROD) return false;
 
   const passwordHash = await hashPassword(String(password || '').trim());
-  if (timingSafeEqual(passwordHash, getConfiguredPasswordHash())) {
-    return true;
-  }
-
-  // Env hash on Vercel can drift from the baked-in production credential.
-  if (
-    import.meta.env.PROD &&
-    normalizedUser === PROD_STAFF_USERNAME.toLowerCase() &&
-    timingSafeEqual(passwordHash, PROD_STAFF_PASSWORD_HASH)
-  ) {
-    return true;
-  }
-
-  return false;
+  return timingSafeEqual(passwordHash, getEffectivePasswordHash(username));
 }
 
 export async function createStaffSession(username) {

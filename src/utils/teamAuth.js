@@ -1,4 +1,4 @@
-import { getConfiguredStaffUsername } from './staffAuth';
+import { getConfiguredStaffUsername, isOpsStaffEmail } from './staffAuth';
 import { verifyTeamMemberStaffCredentials } from './staffMembers';
 import { normalizePortalLogin } from './portalLogin';
 
@@ -57,7 +57,7 @@ export async function authenticateTeamMemberCredentials(username, password) {
   }
 
   const configuredStaff = getConfiguredStaffUsername();
-  if (configuredStaff && key === configuredStaff.toLowerCase()) {
+  if (isOpsStaffEmail(key) || (configuredStaff && key === configuredStaff.toLowerCase())) {
     return null;
   }
 

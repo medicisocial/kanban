@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import {
   clearStaffSession,
   createStaffSession,
-  getConfiguredStaffUsername,
+  isOpsStaffEmail,
   isStaffAuthConfigured,
   isStaffAuthRequired,
   isStaffSessionValid,
@@ -190,8 +190,15 @@ export function StaffAuthProvider({ children }) {
   const login = useCallback(async (username, password) => {
     const loginId = normalizePortalLogin(username);
     const trimmedPassword = String(password || '').trim();
-    const opsEmail = getConfiguredStaffUsername()?.toLowerCase();
-    const isOpsLogin = Boolean(opsEmail && loginId === opsEmail);
+    const isOpsLogin = isOpsStaffEmail(loginId);
+
+    if (isOpsLogin) {
+      const legacyOk = await verifyStaffCredentials(loginId, trimmedPassword);
+      if (legacyOk) {
+        return establishLegacyStaffSession(loginId, trimmedPassword, applyLegacyOrg, setSession);
+      }
+      return { ok: false, error: 'Invalid email or password.' };
+    }
 
     if (isStaffAuthConfigured()) {
       const legacyOk = await verifyStaffCredentials(loginId, trimmedPassword);
@@ -199,16 +206,10 @@ export function StaffAuthProvider({ children }) {
         return establishLegacyStaffSession(loginId, trimmedPassword, applyLegacyOrg, setSession);
       }
 
-      if (!isOpsLogin) {
-        const teamLogin = await authenticateTeamMemberCredentials(loginId, trimmedPassword);
-        if (teamLogin) {
-          return establishLegacyStaffSession(teamLogin, trimmedPassword, applyLegacyOrg, setSession);
-        }
+      const teamLogin = await authenticateTeamMemberCredentials(loginId, trimmedPassword);
+      if (teamLogin) {
+        return establishLegacyStaffSession(teamLogin, trimmedPassword, applyLegacyOrg, setSession);
       }
-    }
-
-    if (isOpsLogin) {
-      return { ok: false, error: 'Invalid email or password.' };
     }
 
     if (isValidPortalEmail(loginId)) {
