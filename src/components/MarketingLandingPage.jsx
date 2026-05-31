@@ -78,7 +78,7 @@ const FAQ = [
   },
   {
     q: 'How is this different from scheduling and analytics tools?',
-    a: 'Hootsuite, Buffer, Later, and Sprout Social excel at publishing and reporting. Medici Social handles the production layer before post — ideas, approvals, shoots, and client review.',
+    a: 'Hootsuite, Buffer, Later, and Sprout Social excel at publishing and reporting. Medici Social handles the production layer before post — ideas, approvals, shoots, and client review — and keeps your internal team aligned: each person sees what they need to do, and when someone finishes, work hands off to the next teammate automatically.',
   },
 ];
 
@@ -235,7 +235,8 @@ export default function MarketingLandingPage({
             Turn ideas into published content — without the chaos.
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-relaxed text-white/55 md:text-lg">
-            The production workspace for social media agencies and solo creators — pipeline
+            The production workspace for social media agencies and solo creators. Route each step
+            to the right teammate — when one person finishes, it moves to the next — with pipeline
             boards, client approvals, shoot planning, and brand portals in one place.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
