@@ -429,9 +429,6 @@ export default function EnterprisePortalLayout({
     );
 
   const handleNav = (id) => {
-    if (sidebarCompact && sidebarPeek) {
-      setSidebarCollapsed(false);
-    }
     onTabChange(id);
     setNavOpen(false);
     setNotificationsOpen(false);
@@ -524,6 +521,8 @@ export default function EnterprisePortalLayout({
         }}
         onBlur={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget)) {
+            // Keep peek open while the pointer is still over the sidebar (e.g. Ideas autoFocus).
+            if (event.currentTarget.matches(':hover')) return;
             setSidebarPeek(false);
           }
         }}
