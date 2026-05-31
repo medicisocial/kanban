@@ -2,9 +2,10 @@ import { Fragment, useMemo, useState } from 'react';
 import { useClientsContext } from '../../context/ClientsContext';
 import { IDEA_STATUSES } from '../../constants';
 import ClientAvatar from '../ClientAvatar';
+import ReferenceVideoLink from './ReferenceVideoLink';
 import {
   btnGhostClass,
-  btnSecondaryClass,
+  btnPrimaryClass,
   formatPortalDate,
   mobileActionRowClass,
   mobileCardClass,
@@ -57,8 +58,9 @@ export default function AdminIdeasTable({
   onEdit,
   onDelete,
   onGoToBoard,
+  onApprove,
 }) {
-  const { getClientColor, getClientAccountManager } = useClientsContext();
+  const { getClientColor } = useClientsContext();
   const [sort, setSort] = useState({ key: 'createdAt', dir: 'desc' });
   const [expandedId, setExpandedId] = useState(null);
 
@@ -90,16 +92,11 @@ export default function AdminIdeasTable({
       if (sort.key === 'createdAt') {
         return ((a.createdAt || 0) - (b.createdAt || 0)) * dir;
       }
-      if (sort.key === 'accountManager') {
-        const av = getClientAccountManager(a.client) || '';
-        const bv = getClientAccountManager(b.client) || '';
-        return av.localeCompare(bv) * dir;
-      }
       const av = (a[sort.key] || '').toString().toLowerCase();
       const bv = (b[sort.key] || '').toString().toLowerCase();
       return av.localeCompare(bv) * dir;
     });
-  }, [ideas, statusFilter, sort, getClientAccountManager]);
+  }, [ideas, statusFilter, sort]);
 
   return (
     <div className={`${surfacePanelClass} overflow-hidden`}>
@@ -173,6 +170,11 @@ export default function AdminIdeasTable({
                 {idea.description && !expanded && (
                   <p className="mt-1 line-clamp-2 text-xs text-white/40">{idea.description}</p>
                 )}
+                {idea.referenceVideo && (
+                  <div className="mt-2">
+                    <ReferenceVideoLink url={idea.referenceVideo} compact />
+                  </div>
+                )}
                 <div className={mobileMetaClass}>
                   <StatusBadge status={idea.status} />
                   {idea.contentType && <span className="uppercase tracking-wider">{idea.contentType}</span>}
@@ -180,6 +182,15 @@ export default function AdminIdeasTable({
                   <span>{formatPortalDate(idea.createdAt)}</span>
                 </div>
                 <div className={mobileActionRowClass}>
+                  {idea.status === 'pending' && onApprove && (
+                    <button
+                      type="button"
+                      onClick={() => onApprove(idea.id, idea.clientComment || '')}
+                      className={`${btnPrimaryClass} min-h-10 flex-1 px-3 py-2 text-[11px]`}
+                    >
+                      Approve
+                    </button>
+                  )}
                   <button type="button" onClick={() => onEdit(idea)} className={`${btnGhostClass} min-h-10 flex-1 text-[11px]`}>
                     Edit
                   </button>
@@ -196,11 +207,8 @@ export default function AdminIdeasTable({
                   <div className="mt-3 border border-white/10 bg-white/[0.02] p-3 text-sm text-white/70">
                     {idea.description && <p>{idea.description}</p>}
                     {idea.referenceVideo && (
-                      <p className="mt-2 text-xs text-white/45">
-                        Reference:{' '}
-                        <a href={idea.referenceVideo} target="_blank" rel="noreferrer" className="text-[#c88] underline-offset-2 hover:underline">
-                          {idea.referenceVideo}
-                        </a>
+                      <p className="mt-2">
+                        <ReferenceVideoLink url={idea.referenceVideo} />
                       </p>
                     )}
                     {idea.clientComment && (
@@ -215,7 +223,7 @@ export default function AdminIdeasTable({
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[980px] border-collapse">
+        <table className="w-full min-w-[940px] border-collapse">
           <thead>
             <tr>
               {selectable && (
@@ -223,13 +231,13 @@ export default function AdminIdeasTable({
                   <span className={tableHeaderClass} />
                 </th>
               )}
-              <th className="w-[28%]"><SortHeader label="Title" sortKey="title" sort={sort} onSort={handleSort} /></th>
-              <th className="w-[11%]"><SortHeader label="Status" sortKey="status" sort={sort} onSort={handleSort} /></th>
-              <th className="w-[9%]"><SortHeader label="Type" sortKey="contentType" sort={sort} onSort={handleSort} /></th>
-              <th className="w-[13%]"><SortHeader label="Client" sortKey="client" sort={sort} onSort={handleSort} /></th>
-              <th className="w-[11%]"><SortHeader label="Assigned AM" sortKey="accountManager" sort={sort} onSort={handleSort} /></th>
-              <th className="w-[10%]"><SortHeader label="Created" sortKey="createdAt" sort={sort} onSort={handleSort} /></th>
-              <th className="w-[14%]"><span className={tableHeaderClass}>Actions</span></th>
+              <th className="w-[24%]"><SortHeader label="Title" sortKey="title" sort={sort} onSort={handleSort} /></th>
+              <th className="w-[12%]"><span className={tableHeaderClass}>Reference</span></th>
+              <th className="w-[10%]"><SortHeader label="Status" sortKey="status" sort={sort} onSort={handleSort} /></th>
+              <th className="w-[8%]"><SortHeader label="Type" sortKey="contentType" sort={sort} onSort={handleSort} /></th>
+              <th className="w-[12%]"><SortHeader label="Client" sortKey="client" sort={sort} onSort={handleSort} /></th>
+              <th className="w-[9%]"><SortHeader label="Created" sortKey="createdAt" sort={sort} onSort={handleSort} /></th>
+              <th className="w-[17%]"><span className={tableHeaderClass}>Actions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -244,8 +252,8 @@ export default function AdminIdeasTable({
             ) : (
               filtered.map((idea) => {
                 const clientColor = getClientColor(idea.client);
-                const accountManager = getClientAccountManager(idea.client);
                 const expanded = expandedId === idea.id;
+                const isPending = idea.status === 'pending';
 
                 return (
                   <Fragment key={idea.id}>
@@ -273,6 +281,9 @@ export default function AdminIdeasTable({
                         )}
                       </td>
                       <td className={tableCellClass}>
+                        <ReferenceVideoLink url={idea.referenceVideo} />
+                      </td>
+                      <td className={tableCellClass}>
                         <StatusBadge status={idea.status} />
                       </td>
                       <td className={`${tableCellClass} text-xs uppercase tracking-wider text-white/55`}>
@@ -284,14 +295,20 @@ export default function AdminIdeasTable({
                           <span className="truncate text-xs text-white/70">{idea.client}</span>
                         </div>
                       </td>
-                      <td className={`${tableCellClass} text-xs text-white/65`}>
-                        {accountManager || '—'}
-                      </td>
                       <td className={`${tableCellClass} text-xs tabular-nums text-white/55`}>
                         {formatPortalDate(idea.createdAt)}
                       </td>
                       <td className={tableCellClass}>
                         <div className="flex flex-wrap items-center gap-1">
+                          {isPending && onApprove && (
+                            <button
+                              type="button"
+                              onClick={() => onApprove(idea.id, idea.clientComment || '')}
+                              className={`${btnPrimaryClass} px-2.5 py-1.5 text-[10px]`}
+                            >
+                              Approve
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => onEdit(idea)}
@@ -324,16 +341,8 @@ export default function AdminIdeasTable({
                           <div className="text-sm text-white/70">
                             {idea.description && <p>{idea.description}</p>}
                             {idea.referenceVideo && (
-                              <p className="mt-2 text-xs text-white/45">
-                                Reference:{' '}
-                                <a
-                                  href={idea.referenceVideo}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-[#c88] underline-offset-2 hover:underline"
-                                >
-                                  {idea.referenceVideo}
-                                </a>
+                              <p className="mt-2">
+                                <ReferenceVideoLink url={idea.referenceVideo} />
                               </p>
                             )}
                             {idea.clientComment && (

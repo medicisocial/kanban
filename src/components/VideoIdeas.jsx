@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import VideoIdeaModal from './VideoIdeaModal';
+import VideoIdeaQuickAdd from './VideoIdeaQuickAdd';
 import ClientSharePanel from './ClientSharePanel';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import AdminIdeasTable from './clientPortal/AdminIdeasTable';
-import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import { btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 export default function VideoIdeas({
   ideas,
@@ -16,7 +17,7 @@ export default function VideoIdeas({
   onUpdateIdea,
   onGoToBoard,
 }) {
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('pending');
   const [ideaModal, setIdeaModal] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
 
@@ -77,9 +78,6 @@ export default function VideoIdeas({
       <ClientPortalSectionHeader
         title="Video Ideas"
         description="Share video concepts with clients for approval. Approved ideas automatically move to the production board."
-        actionLabel="+ Add idea"
-        onAction={() => setIdeaModal('add')}
-        action={btnPrimaryClass}
       >
         {pendingCount > 0 && (
           <span className="border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-amber-200/90">
@@ -89,6 +87,12 @@ export default function VideoIdeas({
       </ClientPortalSectionHeader>
 
       <ClientSharePanel ideas={ideas} clientFilter={clientFilter} />
+
+      <VideoIdeaQuickAdd
+        clientFilter={clientFilter}
+        onAdd={onAddIdea}
+        onAdded={() => setStatusFilter('pending')}
+      />
 
       {isBulkDeleteView && filteredIdeas.length > 0 && selectedCount > 0 && (
         <div className={`${surfacePanelClass} mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3`}>
@@ -103,45 +107,27 @@ export default function VideoIdeas({
         </div>
       )}
 
-      {filteredByClient.length === 0 ? (
-        <div className={`${surfacePanelClass} px-6 py-16 text-center`}>
-          <p className="text-sm text-white/45">No video ideas for this client filter.</p>
-          <button
-            type="button"
-            onClick={() => setIdeaModal('add')}
-            className={`${btnPrimaryClass} mt-4`}
-          >
-            Add your first idea
-          </button>
-        </div>
-      ) : (
-        <AdminIdeasTable
-          ideas={filteredByClient}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-          selectable={isBulkDeleteView}
-          selectedIds={selectedIds}
-          onToggleSelect={toggleSelected}
-          onSelectAll={handleSelectAll}
-          allSelected={allVisibleSelected}
-          onEdit={setIdeaModal}
-          onDelete={onDeleteIdea}
-          onGoToBoard={onGoToBoard}
-        />
-      )}
+      <AdminIdeasTable
+        ideas={filteredByClient}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        selectable={isBulkDeleteView}
+        selectedIds={selectedIds}
+        onToggleSelect={toggleSelected}
+        onSelectAll={handleSelectAll}
+        allSelected={allVisibleSelected}
+        onEdit={setIdeaModal}
+        onDelete={onDeleteIdea}
+        onGoToBoard={onGoToBoard}
+        onApprove={onApprove}
+      />
 
       {ideaModal && (
         <VideoIdeaModal
-          idea={ideaModal === 'add' ? null : ideaModal}
+          idea={ideaModal}
           defaultClient={clientFilter !== 'all' ? clientFilter : undefined}
           onClose={() => setIdeaModal(null)}
-          onSave={(data) => {
-            if (ideaModal === 'add') {
-              onAddIdea(data);
-            } else {
-              onUpdateIdea(ideaModal.id, data);
-            }
-          }}
+          onSave={(data) => onUpdateIdea(ideaModal.id, data)}
         />
       )}
     </section>

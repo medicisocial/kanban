@@ -6,7 +6,6 @@ import {
   buildImportUrl,
   queueClientResponse,
 } from '../utils/clientShare';
-import VideoIdeaCard from './VideoIdeaCard';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import ClientIdeasTable from './clientPortal/ClientIdeasTable';
 import SharePortalShell from './clientPortal/SharePortalShell';
@@ -192,23 +191,6 @@ export default function ClientReviewPortal({
           </p>
         )}
 
-        {pendingCount > 0 && (
-          <div className="mb-8 space-y-4">
-            <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">
-              Awaiting your decision
-            </p>
-            {pendingIdeas.map((idea) => (
-              <VideoIdeaCard
-                key={idea.id}
-                idea={idea}
-                reviewMode
-                onApprove={handleApprove}
-                onDecline={handleDecline}
-              />
-            ))}
-          </div>
-        )}
-
         {brandIdeas.length === 0 ? (
           <div className={`${surfacePanelClass} px-6 py-16 text-center`}>
             <h3 className="text-base font-semibold text-white">No ideas yet</h3>
@@ -217,22 +199,15 @@ export default function ClientReviewPortal({
             </p>
           </div>
         ) : (
-          <>
-            {pendingCount > 0 && (
-              <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">
-                All ideas
-              </p>
-            )}
-            <ClientIdeasTable
-              ideas={brandIdeas}
-              client={client}
-              clientColor={clientColor}
-              clientLogo={clientLogo}
-              onApprove={handleApprove}
-              onDecline={handleDecline}
-              busyIds={busyIds}
-            />
-          </>
+          <ClientIdeasTable
+            ideas={brandIdeas}
+            client={client}
+            clientColor={clientColor}
+            clientLogo={clientLogo}
+            onApprove={handleApprove}
+            onDecline={handleDecline}
+            busyIds={busyIds}
+          />
         )}
       </section>
     );
@@ -246,17 +221,21 @@ export default function ClientReviewPortal({
             {pendingCount} idea{pendingCount === 1 ? '' : 's'} waiting for your feedback
           </p>
 
-          <div className="space-y-3">
-            {localIdeas.map((idea) => (
-              <VideoIdeaCard
-                key={idea.id}
-                idea={idea}
-                reviewMode
-                onApprove={handleApprove}
-                onDecline={handleDecline}
-              />
-            ))}
-          </div>
+          {actionError && (
+            <p className="mb-4 border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-200/90">
+              {actionError}
+            </p>
+          )}
+
+          <ClientIdeasTable
+            ideas={localIdeas}
+            client={client}
+            clientColor={clientColor}
+            clientLogo={clientLogo}
+            onApprove={handleApprove}
+            onDecline={handleDecline}
+            busyIds={busyIds}
+          />
         </>
       ) : (
         <div className={`${surfacePanelClass} px-6 py-12 text-center`}>

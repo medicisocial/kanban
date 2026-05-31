@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { IDEA_STATUSES } from '../../constants';
 import ClientAvatar from '../ClientAvatar';
+import ReferenceVideoLink from './ReferenceVideoLink';
 import {
   btnGhostClass,
   btnPrimaryClass,
@@ -62,7 +63,7 @@ export default function ClientIdeasTable({
   onDecline,
   busyIds = new Set(),
 }) {
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('pending');
   const [sort, setSort] = useState({ key: 'createdAt', dir: 'desc' });
   const [expandedId, setExpandedId] = useState(null);
   const [declineId, setDeclineId] = useState(null);
@@ -111,10 +112,10 @@ export default function ClientIdeasTable({
             onChange={(e) => setStatusFilter(e.target.value)}
             className={`${selectClass} min-w-[140px]`}
           >
-            <option value="all">All statuses</option>
             <option value="pending">Pending review</option>
             <option value="approved">Approved</option>
             <option value="declined">Declined</option>
+            <option value="all">All statuses</option>
           </select>
           <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-white/35">
             ▾
@@ -143,6 +144,11 @@ export default function ClientIdeasTable({
                 </button>
                 {idea.description && !expanded && (
                   <p className="mt-1 line-clamp-2 text-xs text-white/40">{idea.description}</p>
+                )}
+                {idea.referenceVideo && (
+                  <div className="mt-2">
+                    <ReferenceVideoLink url={idea.referenceVideo} compact />
+                  </div>
                 )}
                 <div className={mobileMetaClass}>
                   <StatusBadge status={idea.status} />
@@ -178,11 +184,8 @@ export default function ClientIdeasTable({
                       <p className="text-sm leading-relaxed text-white/70">{idea.description}</p>
                     )}
                     {idea.referenceVideo && (
-                      <p className="text-xs text-white/45">
-                        Reference:{' '}
-                        <a href={idea.referenceVideo} target="_blank" rel="noreferrer" className="text-[#c88] underline-offset-2 hover:underline">
-                          {idea.referenceVideo}
-                        </a>
+                      <p className="mt-2">
+                        <ReferenceVideoLink url={idea.referenceVideo} />
                       </p>
                     )}
                     {declining && (
@@ -224,21 +227,22 @@ export default function ClientIdeasTable({
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[920px] border-collapse">
+        <table className="w-full min-w-[940px] border-collapse">
           <thead>
             <tr>
-              <th className="w-[34%]"><SortHeader label="Title" sortKey={SORT_KEYS.title} sort={sort} onSort={handleSort} /></th>
-              <th className="w-[12%]"><SortHeader label="Status" sortKey={SORT_KEYS.status} sort={sort} onSort={handleSort} /></th>
-              <th className="w-[10%]"><SortHeader label="Type" sortKey={SORT_KEYS.contentType} sort={sort} onSort={handleSort} /></th>
+              <th className="w-[26%]"><SortHeader label="Title" sortKey={SORT_KEYS.title} sort={sort} onSort={handleSort} /></th>
+              <th className="w-[12%]"><span className={tableHeaderClass}>Reference</span></th>
+              <th className="w-[10%]"><SortHeader label="Status" sortKey={SORT_KEYS.status} sort={sort} onSort={handleSort} /></th>
+              <th className="w-[8%]"><SortHeader label="Type" sortKey={SORT_KEYS.contentType} sort={sort} onSort={handleSort} /></th>
               <th className="w-[12%]"><span className={tableHeaderClass}>Client</span></th>
-              <th className="w-[14%]"><SortHeader label="Created" sortKey={SORT_KEYS.createdAt} sort={sort} onSort={handleSort} /></th>
-              <th className="w-[12%]"><span className={tableHeaderClass}>Actions</span></th>
+              <th className="w-[10%]"><SortHeader label="Created" sortKey={SORT_KEYS.createdAt} sort={sort} onSort={handleSort} /></th>
+              <th className="w-[14%]"><span className={tableHeaderClass}>Actions</span></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-16 text-center text-sm text-white/40">
+                <td colSpan={7} className="px-4 py-16 text-center text-sm text-white/40">
                   No ideas match your filters.
                 </td>
               </tr>
@@ -263,6 +267,9 @@ export default function ClientIdeasTable({
                         {idea.description && (
                           <p className="mt-0.5 line-clamp-1 text-xs text-white/40">{idea.description}</p>
                         )}
+                      </td>
+                      <td className={tableCellClass}>
+                        <ReferenceVideoLink url={idea.referenceVideo} />
                       </td>
                       <td className={tableCellClass}>
                         <StatusBadge status={idea.status} />
@@ -315,23 +322,15 @@ export default function ClientIdeasTable({
                     </tr>
                     {(expanded || declining) && (
                       <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                        <td colSpan={6} className="px-4 py-4">
+                        <td colSpan={7} className="px-4 py-4">
                           <div className="grid gap-4 md:grid-cols-[1fr_auto]">
                             <div>
                               {idea.description && (
                                 <p className="text-sm leading-relaxed text-white/70">{idea.description}</p>
                               )}
                               {idea.referenceVideo && (
-                                <p className="mt-2 text-xs text-white/45">
-                                  Reference:{' '}
-                                  <a
-                                    href={idea.referenceVideo}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-[#c88] underline-offset-2 hover:underline"
-                                  >
-                                    {idea.referenceVideo}
-                                  </a>
+                                <p className="mt-2">
+                                  <ReferenceVideoLink url={idea.referenceVideo} />
                                 </p>
                               )}
                               {idea.clientComment && (
