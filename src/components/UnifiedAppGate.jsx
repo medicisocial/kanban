@@ -46,6 +46,24 @@ function parseGateView() {
   return { view: 'landing', plan: null, clientLogin: false, clientResetToken: '', agencyRecovery: false };
 }
 
+function gateToUrl({
+  view,
+  plan = 'starter',
+  clientLogin = false,
+  clientResetToken = '',
+  agencyRecovery = false,
+}) {
+  const path = window.location.pathname;
+  if (view === 'landing') return path;
+  if (view === 'pricing') return `${path}?pricing=1`;
+  if (view === 'signup') return `${path}?signup=1&plan=${plan}`;
+  const params = new URLSearchParams({ login: '1' });
+  if (clientLogin) params.set('client', '1');
+  if (clientResetToken) params.set('client-reset', clientResetToken);
+  if (agencyRecovery) params.set('recovery', '1');
+  return `${path}?${params.toString()}`;
+}
+
 function StaffConsoleApp({ onSignOut }) {
   return (
     <WorkspaceSyncProvider>
@@ -68,14 +86,40 @@ function UnifiedAppGateInner() {
   const [clientResetToken, setClientResetToken] = useState(initialGate.clientResetToken);
   const [agencyRecovery, setAgencyRecovery] = useState(initialGate.agencyRecovery);
 
+  const applyGate = useCallback((gate) => {
+    setGateView(gate.view);
+    setSelectedPlan(gate.plan || 'starter');
+    setClientLogin(gate.clientLogin);
+    setClientResetToken(gate.clientResetToken);
+    setAgencyRecovery(gate.agencyRecovery);
+    if (gate.view === 'signup' || gate.view === 'login') {
+      setMode('login');
+    }
+  }, []);
+
+  const pushGateHistory = useCallback((gate) => {
+    applyGate(gate);
+    window.history.pushState(gate, '', gateToUrl(gate));
+  }, [applyGate]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has('portal')) {
       params.delete('portal');
       const qs = params.toString();
-      window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+      window.history.replaceState(parseGateView(), '', window.location.pathname + (qs ? `?${qs}` : ''));
+    } else {
+      window.history.replaceState(initialGate, '', gateToUrl(initialGate));
     }
-  }, []);
+  }, [initialGate]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      applyGate(parseGateView());
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [applyGate]);
 
   useEffect(() => {
     if (!ready) return;
@@ -97,76 +141,78 @@ function UnifiedAppGateInner() {
   const handleSignOut = useCallback(() => {
     clearClientSession();
     setMode('login');
-    setGateView('landing');
-    setClientLogin(false);
-    window.history.replaceState({}, '', window.location.pathname);
-  }, []);
+    const gate = {
+      view: 'landing',
+      plan: null,
+      clientLogin: false,
+      clientResetToken: '',
+      agencyRecovery: false,
+    };
+    applyGate(gate);
+    window.history.replaceState(gate, '', gateToUrl(gate));
+  }, [applyGate]);
 
   const openLanding = useCallback(() => {
-    setGateView('landing');
-    setClientLogin(false);
-    window.history.replaceState({}, '', window.location.pathname);
-  }, []);
+    pushGateHistory({
+      view: 'landing',
+      plan: null,
+      clientLogin: false,
+      clientResetToken: '',
+      agencyRecovery: false,
+    });
+  }, [pushGateHistory]);
 
   const openPricing = useCallback(() => {
-    setGateView('pricing');
-    setClientLogin(false);
-    window.history.replaceState({}, '', `${window.location.pathname}?pricing=1`);
-  }, []);
+    pushGateHistory({
+      view: 'pricing',
+      plan: null,
+      clientLogin: false,
+      clientResetToken: '',
+      agencyRecovery: false,
+    });
+  }, [pushGateHistory]);
 
-  const openSignup = useCallback((planId) => {
-    const plan = normalizePlanType(planId);
-    setSelectedPlan(plan);
-    setGateView('signup');
-    setMode('login');
-    setClientLogin(false);
-    window.history.replaceState({}, '', `${window.location.pathname}?signup=1&plan=${plan}`);
-  }, []);
+  const openSignup = useCallback(
+    (planId) => {
+      const plan = normalizePlanType(planId);
+      pushGateHistory({
+        view: 'signup',
+        plan,
+        clientLogin: false,
+        clientResetToken: '',
+        agencyRecovery: false,
+      });
+    },
+    [pushGateHistory],
+  );
 
-  const openSignIn = useCallback((asClient = false) => {
-    setGateView('login');
-    setClientLogin(asClient);
-    setMode('login');
-    const params = new URLSearchParams({ login: '1' });
-    if (asClient) params.set('client', '1');
-    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
-  }, []);
+  const openSignIn = useCallback(
+    (asClient = false) => {
+      pushGateHistory({
+        view: 'login',
+        plan: null,
+        clientLogin: asClient,
+        clientResetToken: '',
+        agencyRecovery: false,
+      });
+    },
+    [pushGateHistory],
+  );
 
   const openGetStarted = useCallback(() => {
     openSignup('starter');
   }, [openSignup]);
 
-  if (!ready) {
-    if (gateView === 'landing') {
-      return (
-        <Suspense fallback={<GateLoading />}>
-          <MarketingLandingPage
-            onGetStarted={openGetStarted}
-            onSignIn={() => openSignIn(false)}
-            onPricing={openPricing}
-            onSelectPlan={openSignup}
-            onClientPortal={() => openSignIn(true)}
-          />
-        </Suspense>
-      );
-    }
-    return <UnifiedLogin onAuthenticated={setMode} checking />;
+  if (ready && mode === 'staff') {
+    return <StaffConsoleApp onSignOut={handleSignOut} />;
   }
 
-  if (mode === 'loading') {
-    return <UnifiedLogin onAuthenticated={setMode} checking />;
-  }
-
-  if (mode === 'client') {
+  if (ready && mode === 'client') {
     return (
       <Suspense fallback={<GateLoading />}>
         <ClientPortalApp onSignOut={handleSignOut} />
       </Suspense>
     );
-  }
-
-  if (mode === 'staff') {
-    return <StaffConsoleApp onSignOut={handleSignOut} />;
   }
 
   if (gateView === 'landing') {
@@ -200,7 +246,7 @@ function UnifiedAppGateInner() {
   return (
     <UnifiedLogin
       onAuthenticated={setMode}
-      checking={false}
+      checking={!ready || mode === 'loading'}
       signupMode={gateView === 'signup'}
       selectedPlan={selectedPlan}
       onOpenPricing={openPricing}

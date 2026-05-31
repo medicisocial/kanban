@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   createClientPortalUserId,
   getClientUsersFromStore,
@@ -60,19 +60,23 @@ export default function ClientPortalUsersEditor({
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [inviteDetails, setInviteDetails] = useState(null);
+  const dirtyRef = useRef(false);
 
   useEffect(() => {
+    dirtyRef.current = false;
     setUsers(buildDraftUsers(client, getClientUsers, getClientContacts));
     setMessage('');
     setError('');
     setInviteDetails(null);
-  }, [client, getClientUsers, getClientContacts]);
+  }, [client]);
 
   const updateUser = (userId, patch) => {
+    dirtyRef.current = true;
     setUsers((prev) => prev.map((user) => (user.id === userId ? { ...user, ...patch } : user)));
   };
 
   const addUser = () => {
+    dirtyRef.current = true;
     setUsers((prev) => [
       ...prev,
       {
@@ -87,6 +91,7 @@ export default function ClientPortalUsersEditor({
   };
 
   const removeUser = (userId) => {
+    dirtyRef.current = true;
     setUsers((prev) => {
       const nextUsers = prev.filter((user) => user.id !== userId);
       return nextUsers.length > 0
@@ -185,6 +190,7 @@ export default function ClientPortalUsersEditor({
       }
 
       setUsers(buildDraftUsers(client, () => savedUsers, getClientContacts));
+      dirtyRef.current = false;
       setTimeout(() => setMessage(''), 8000);
     } catch (err) {
       setError(err.message || 'Could not save portal access.');
@@ -194,13 +200,10 @@ export default function ClientPortalUsersEditor({
   };
 
   const activeCount = users.filter(userHasLogin).length;
-  const headerCopy = useMemo(
-    () => ({
-      title: 'Portal access',
-      subtitle: 'Each person signs in with the work email and password they were given.',
-    }),
-    [],
-  );
+  const headerCopy = {
+    title: 'Portal access',
+    subtitle: 'Each person signs in with the work email and password they were given.',
+  };
 
   return (
     <div className="space-y-4">

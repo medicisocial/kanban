@@ -428,7 +428,7 @@ export default function UnifiedLogin({
 
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || checking}
                 className="inline-flex w-full items-center justify-center rounded-sm bg-white px-5 py-3.5 text-[11px] font-medium uppercase tracking-[0.22em] text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {submitting ? 'Sending…' : 'Send reset link'}
@@ -492,7 +492,7 @@ export default function UnifiedLogin({
                     autoComplete="organization"
                     placeholder="Northwind Creative"
                     className={inputClass}
-                    disabled={checking || submitting}
+                    disabled={submitting}
                     required
                   />
                 </label>
@@ -510,10 +510,16 @@ export default function UnifiedLogin({
                   placeholder={agencyMode ? 'you@agency.com' : 'you@brand.com'}
                   className={inputClass}
                   autoFocus={!checking}
-                  disabled={checking || submitting}
+                  disabled={submitting}
                   required
                 />
               </label>
+
+              {checking ? (
+                <p className="text-xs text-white/35" role="status">
+                  Finishing setup…
+                </p>
+              ) : null}
 
               <div>
                 <PasswordField
