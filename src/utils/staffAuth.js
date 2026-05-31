@@ -116,14 +116,14 @@ export function getConfiguredStaffUsername() {
 
 /** Shared Medici Social ops login — company-wide view, not personal queue. */
 export function isSharedOperationsLogin(session) {
-  if (!session?.username) return false;
-  const configured = getConfiguredUsername();
-  if (!configured) return false;
-  return session.username.trim().toLowerCase() === configured.toLowerCase();
+  if (!session) return false;
+  if (session.type === 'saas' && isOpsStaffEmail(session.email)) return true;
+  if (session.username && isOpsStaffEmail(session.username)) return true;
+  return false;
 }
 
 export function usesPersonalWorkspaceView(session) {
-  if (!session?.username) return false;
+  if (!session?.username && !session?.email) return false;
   return !isSharedOperationsLogin(session);
 }
 

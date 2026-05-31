@@ -105,6 +105,17 @@ export function useCollectionSync({
         }
 
         if (rows.length === 0) {
+          if (loadLocal && isLegacyOrg) {
+            const local = loadLocal();
+            if (local.length) {
+              applyingRemoteRef.current = true;
+              syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
+              loadedRef.current = true;
+              setItems(local);
+              return;
+            }
+          }
+
           applyingRemoteRef.current = true;
           syncedRef.current = new Map();
           loadedRef.current = true;

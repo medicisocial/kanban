@@ -722,14 +722,13 @@ export default function AppShell({ onSignOut }) {
   }, []);
 
   const syncTotal = responseCount + contentReviewResponseCount + shootResponseCount;
+  const agencyOps = isSharedOperationsLogin(session);
   const staffDisplayName = resolveStaffDisplayName(session, teamMembers, org?.name);
-  const staffName = isSharedOperationsLogin(session)
-    ? ''
-    : resolveStaffMemberName(session, teamMembers);
+  const staffName = agencyOps ? '' : resolveStaffMemberName(session, teamMembers);
   const staffAvatar = resolveStaffMemberAvatar(session, teamMembers);
-  const myWorkOnly = usesPersonalWorkspaceView(session);
-  const companyWideView = !myWorkOnly || staffHasLeadershipWorkspaceAccess(session, teamMembers);
-  const showAccountManagerQueue = !myWorkOnly
+  const myWorkOnly = agencyOps ? false : usesPersonalWorkspaceView(session);
+  const companyWideView = agencyOps || !myWorkOnly || staffHasLeadershipWorkspaceAccess(session, teamMembers);
+  const showAccountManagerQueue = agencyOps || !myWorkOnly
     ? true
     : staffHasAccountManagerQueueAccess(session, teamMembers) || companyWideView;
   const workspaceAlerts = useMemo(
