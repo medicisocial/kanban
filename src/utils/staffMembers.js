@@ -1,5 +1,7 @@
 import { memberMatchesRole, loadTeamMembersFromStorage } from './teamMembers';
 
+import { isSharedOperationsLogin } from './staffAuth';
+
 export function resolveStaffMember(session, teamMembers) {
   if (!session?.username || !Array.isArray(teamMembers)) return null;
 
@@ -16,6 +18,16 @@ export function resolveStaffMember(session, teamMembers) {
 export function resolveStaffMemberName(session, teamMembers) {
   const member = resolveStaffMember(session, teamMembers);
   return member?.name || session?.username?.trim() || '';
+}
+
+/** Agency ops login shows the workspace name, not the shared email address. */
+export function resolveStaffDisplayName(session, teamMembers, orgName = 'Medici Social') {
+  if (isSharedOperationsLogin(session)) {
+    return orgName || 'Medici Social';
+  }
+  const name = resolveStaffMemberName(session, teamMembers);
+  if (!name || name.includes('@')) return '';
+  return name;
 }
 
 export function resolveStaffMemberAvatar(session, teamMembers) {

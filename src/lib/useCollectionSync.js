@@ -4,6 +4,17 @@ import { createCollectionStore } from './supabaseSync';
 import { hasStaffSupabaseSession } from './staffSupabaseAuth';
 import { useStaffAuth } from '../context/StaffAuthContext';
 
+const FETCH_TIMEOUT_MS = 12000;
+
+async function fetchRowsWithTimeout(store) {
+  return Promise.race([
+    store.fetchAll(),
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Supabase fetch timed out')), FETCH_TIMEOUT_MS);
+    }),
+  ]);
+}
+
 /**
  * Mirrors an array of records to a Supabase table with per-record writes and
  * live updates — without changing any of the hook's existing mutation logic.
@@ -64,7 +75,7 @@ export function useCollectionSync({
 
     const applyRemote = async () => {
       try {
-        const rows = await store.fetchAll();
+        const rows = await fetchRowsWithTimeout(store);
         if (!active) return;
 
         const mapRow = (row) => (normalize ? normalize(row.data ?? row) : row.data ?? row);
@@ -76,9 +87,12 @@ export function useCollectionSync({
             const canWrite = await hasStaffSupabaseSession();
             if (!canWrite) {
               console.warn(
-                `[supabase:${table}] skipped seed — no authenticated session (log in again)`,
+                `[supabase:${table}] using local data — cloud write session not ready yet`,
               );
+              applyingRemoteRef.current = true;
+              syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
               loadedRef.current = true;
+              setItems(local);
               return;
             }
             await store.upsertRecords(local.map((r) => ({ id: getId(r), data: r })));

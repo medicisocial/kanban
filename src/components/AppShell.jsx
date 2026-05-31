@@ -52,7 +52,8 @@ import CardModal from "./CardModal";
 import { useStaffAuth } from "../context/StaffAuthContext";
 import { useClientsContext } from "../context/ClientsContext";
 import { getDefaultWorkspaceView } from "../utils/getDefaultWorkspaceView";
-import { resolveStaffMemberName, resolveStaffMemberAvatar, staffHasAccountManagerQueueAccess, staffHasLeadershipWorkspaceAccess } from "../utils/staffMembers";
+import { resolveStaffMemberName, resolveStaffMemberAvatar, resolveStaffDisplayName, staffHasAccountManagerQueueAccess, staffHasLeadershipWorkspaceAccess } from "../utils/staffMembers";
+import { isSharedOperationsLogin } from "../utils/staffAuth";
 import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
 import { buildWorkspaceHomeSummary, buildNavBadgeCounts } from "../utils/workspaceHome";
 import { usesPersonalWorkspaceView } from "../utils/staffAuth";
@@ -83,7 +84,7 @@ export default function AppShell({ onSignOut }) {
   } = useAdminTasks();
   const { events, replaceEvents, addEvent, updateEvent, deleteEvent } = useEvents();
   const { meetings, replaceMeetings, addMeeting, updateMeeting, deleteMeeting } = useMeetings();
-  const { authRequired, ready, logout, session } = useStaffAuth();
+  const { authRequired, ready, logout, session, org } = useStaffAuth();
   const { teamMembers, clientAccountManagers } = useClientsContext();
 
   const { canUndo, undo } = useUndoHistory({
@@ -721,7 +722,10 @@ export default function AppShell({ onSignOut }) {
   }, []);
 
   const syncTotal = responseCount + contentReviewResponseCount + shootResponseCount;
-  const staffName = resolveStaffMemberName(session, teamMembers);
+  const staffDisplayName = resolveStaffDisplayName(session, teamMembers, org?.name);
+  const staffName = isSharedOperationsLogin(session)
+    ? ''
+    : resolveStaffMemberName(session, teamMembers);
   const staffAvatar = resolveStaffMemberAvatar(session, teamMembers);
   const myWorkOnly = usesPersonalWorkspaceView(session);
   const companyWideView = !myWorkOnly || staffHasLeadershipWorkspaceAccess(session, teamMembers);
@@ -868,7 +872,7 @@ export default function AppShell({ onSignOut }) {
           onNavigate={handleNotificationNavigate}
         />
       }
-      profileLabel={staffName || session?.username || 'Staff'}
+      profileLabel={staffDisplayName || 'Staff'}
       profileLogo={staffAvatar}
       onSignOut={onSignOut ? handleSignOut : undefined}
       clientFilter={clientFilter}

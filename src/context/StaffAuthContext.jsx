@@ -75,7 +75,10 @@ async function establishLegacyStaffSession(loginId, password, applyLegacyOrg, se
   saveStaffSession(nextSession);
   setSession(nextSession);
   applyLegacyOrg();
-  ensureStaffSupabaseSession(password).catch(() => {});
+  // Defer Supabase auth so the first data fetch is not blocked by auth client lock.
+  window.setTimeout(() => {
+    ensureStaffSupabaseSession(password).catch(() => {});
+  }, 2500);
   return { ok: true };
 }
 

@@ -159,7 +159,10 @@ export default function WorkspaceHomePage({
     shootsTodayCount: todayTimeline.shootDayCount ?? todayTimeline.shootCount,
   };
 
-  const firstName = staffName.trim().split(/\s+/)[0] || '';
+  const firstName =
+    staffName.trim().split(/\s+/)[0] && !staffName.includes('@')
+      ? staffName.trim().split(/\s+/)[0]
+      : '';
 
   const personalGreeting = myWorkOnly ? buildMyWorkGreeting(firstName, summaryWithToday) : null;
 
