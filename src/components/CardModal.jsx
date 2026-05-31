@@ -122,7 +122,6 @@ export default function CardModal({
                 ? 'cursor-pointer border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.06]'
                 : 'cursor-default border-white/10 bg-white/[0.02]'
           }`}
-          style={isCurrent ? { borderLeftWidth: 3, borderLeftColor: entryStyle.border } : undefined}
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">

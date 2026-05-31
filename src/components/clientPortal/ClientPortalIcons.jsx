@@ -69,6 +69,15 @@ export function IconEvents({ className = 'h-4 w-4' }) {
   );
 }
 
+export function IconFiles({ className = 'h-4 w-4' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+      <path d="M4 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" strokeLinejoin="round" />
+      <path d="M9 13h6M9 17h4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconClients({ className = 'h-4 w-4' }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>

@@ -45,6 +45,12 @@ export const EVENT_FORM_SCHEMAS = {
     },
     { id: 'trainerFeatured', label: 'Trainer or instructor featured?', type: 'text' },
     { id: 'registrationRequired', label: 'Registration required?', type: 'toggle' },
+    {
+      id: 'eventDocument',
+      label: 'Event document',
+      type: 'pdf',
+      description: 'Upload a PDF with more details about the event — schedule, flyer, registration info, etc.',
+    },
   ],
   Hospitality: [
     { id: 'eventName', label: 'Event name', type: 'text', required: true, mapsToTitle: true },
@@ -69,8 +75,10 @@ export const EVENT_FORM_SCHEMAS = {
       type: 'menuGroup',
       drinkEnableField: 'hasDrinkMenu',
       drinkContentField: 'drinkMenuDetails',
+      drinkPdfField: 'drinkMenuPdf',
       foodEnableField: 'hasFoodMenu',
       foodContentField: 'foodMenuDetails',
+      foodPdfField: 'foodMenuPdf',
     },
     {
       id: 'specialOfferings',
@@ -206,9 +214,12 @@ export function getDefaultFieldValues(schema) {
     else if (field.type === 'menuGroup') {
       values[field.drinkEnableField] = false;
       values[field.drinkContentField] = '';
+      values[field.drinkPdfField] = null;
       values[field.foodEnableField] = false;
       values[field.foodContentField] = '';
+      values[field.foodPdfField] = null;
     } else if (field.type === 'choice' && field.options?.length) values[field.id] = field.options[0];
+    else if (field.type === 'pdf') values[field.id] = null;
     else values[field.id] = '';
   }
   return values;
@@ -228,6 +239,12 @@ export function validateEventFields(schema, values) {
     if (!field.required || !isFieldVisible(field, values)) continue;
     const value = values[field.id];
     if (field.type === 'toggle') continue;
+    if (field.type === 'pdf') {
+      if (field.required && !values[field.id]?.dataUrl) {
+        return { ok: false, error: `${field.label} is required.` };
+      }
+      continue;
+    }
     if (value === undefined || value === null || String(value).trim() === '') {
       return { ok: false, error: `${field.label} is required.` };
     }
@@ -265,14 +282,24 @@ export function buildEventPayload({
       if (values[field.drinkEnableField]) {
         visibleFields[field.drinkEnableField] = true;
         visibleFields[field.drinkContentField] = values[field.drinkContentField] || '';
+        if (values[field.drinkPdfField]?.dataUrl) {
+          visibleFields[field.drinkPdfField] = values[field.drinkPdfField];
+        }
       }
       if (values[field.foodEnableField]) {
         visibleFields[field.foodEnableField] = true;
         visibleFields[field.foodContentField] = values[field.foodContentField] || '';
+        if (values[field.foodPdfField]?.dataUrl) {
+          visibleFields[field.foodPdfField] = values[field.foodPdfField];
+        }
       }
       continue;
     }
     if (field.type === 'addSection') continue;
+    if (field.type === 'pdf') {
+      if (values[field.id]?.dataUrl) visibleFields[field.id] = values[field.id];
+      continue;
+    }
     if (!isFieldVisible(field, values)) continue;
     visibleFields[field.id] = values[field.id];
   }
@@ -294,6 +321,7 @@ export function buildEventPayload({
 
 export function formatFieldValue(field, value) {
   if (field.type === 'toggle') return value ? 'Yes' : 'No';
+  if (field.type === 'pdf') return value?.name || '—';
   if (value === undefined || value === null || value === '') return '—';
   return String(value);
 }

@@ -62,7 +62,6 @@ export default function CalendarEvent({
         className="group/event relative mb-1 w-full cursor-pointer rounded px-1.5 py-1 text-left transition hover:brightness-125"
         style={{
           backgroundColor: clientColor + '33',
-          borderLeft: `2px solid ${clientColor}`,
         }}
         title={`${card.client} shoot${sessionTimeLabel ? ` · ${sessionTimeLabel}` : ''}`}
       >
@@ -111,7 +110,6 @@ export default function CalendarEvent({
         }`}
         style={{
           backgroundColor: typeStyle.border + (isPosted ? "22" : "33"),
-          borderLeft: `2px solid ${typeStyle.border}`,
           opacity: isPosted ? 0.72 : 1,
         }}
         title={eventTitle}
@@ -164,8 +162,6 @@ export default function CalendarEvent({
       className="group/event relative w-full rounded-lg border border-white/8 text-left transition hover:brightness-110"
       style={{
         backgroundColor: typeStyle.bg,
-        borderLeftColor: typeStyle.border,
-        borderLeftWidth: "3px",
         opacity: isPosted ? 0.78 : 1,
       }}
     >

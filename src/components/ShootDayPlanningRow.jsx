@@ -47,8 +47,6 @@ export default function ShootDayPlanningRow({
       className="rounded-lg border border-white/8 p-3"
       style={{
         backgroundColor: typeStyle.bg,
-        borderLeftColor: typeStyle.border,
-        borderLeftWidth: "3px",
       }}
     >
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">

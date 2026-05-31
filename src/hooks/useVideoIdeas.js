@@ -4,6 +4,7 @@ import {
   VIDEO_IDEAS_STORAGE_KEY,
 } from "../constants";
 import { loadClientResponses, clearClientResponses } from "../utils/clientShare";
+import { stripDemoVideoIdeas } from "../utils/demoVideoIdeas";
 import { notifyMutation } from "../utils/undoHistory";
 import { useReloadFromStorage } from "./useReloadFromStorage";
 import { SUPABASE_ENABLED } from "../lib/supabaseClient";
@@ -28,45 +29,12 @@ function createIdea(overrides = {}) {
   };
 }
 
-function getSampleIdeas() {
-  return [
-    createIdea({
-      client: "Plume",
-      title: "GRWM morning routine reel",
-      referenceVideo: "https://www.instagram.com/reel/example1",
-      description: "Soft aesthetic, focus on skincare products. Trending audio style.",
-      contentType: "Reel",
-    }),
-    createIdea({
-      client: "Plume",
-      title: "Behind the scenes at the studio",
-      referenceVideo: "https://www.instagram.com/reel/example2",
-      description: "Raw, candid vibe. Show team culture.",
-      contentType: "Reel",
-    }),
-    createIdea({
-      client: "Arco Fit",
-      title: "30-second workout challenge",
-      referenceVideo: "https://www.tiktok.com/@example/video/123",
-      description: "High energy, quick cuts. Coach demonstrating moves.",
-      contentType: "Reel",
-    }),
-    createIdea({
-      client: "The Locker Room",
-      title: "Product unboxing carousel concept",
-      referenceVideo: "https://www.instagram.com/reel/example3",
-      description: "New jersey drop. Slide-by-slide breakdown.",
-      contentType: "Carousel",
-    }),
-  ];
-}
-
 function loadIdeas() {
   try {
     const stored = localStorage.getItem(VIDEO_IDEAS_STORAGE_KEY);
     if (stored !== null) {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) return stripDemoVideoIdeas(parsed);
     }
   } catch {
     /* fall through */
@@ -89,6 +57,7 @@ export function useVideoIdeas() {
     setItems: setIdeas,
     getId: getIdeaId,
     loadLocal: loadIdeas,
+    filterItems: stripDemoVideoIdeas,
   });
 
   useEffect(() => {
@@ -96,7 +65,7 @@ export function useVideoIdeas() {
   }, [ideas]);
 
   const replaceIdeas = useCallback((next) => {
-    setIdeas(next);
+    setIdeas(stripDemoVideoIdeas(next));
   }, []);
 
   const addIdea = useCallback((ideaData) => {

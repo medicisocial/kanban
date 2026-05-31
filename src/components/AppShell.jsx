@@ -42,6 +42,7 @@ import ClientShootDayPortal from "./ClientShootDayPortal";
 import WorkspaceNotificationsPanel from "./WorkspaceNotificationsPanel";
 import HandoffModal from "./HandoffModal";
 import ClientManagementPage from "./ClientManagementPage";
+import ClientFilesWorkspacePage from "./ClientFilesWorkspacePage";
 import TeamManagementPage from "./TeamManagementPage";
 import PlanPostDateModal from "./PlanPostDateModal";
 import PlanShootDateModal from "./PlanShootDateModal";
@@ -759,6 +760,12 @@ export default function AppShell({ onSignOut }) {
     showAccountManagerQueue,
   ]);
 
+  useEffect(() => {
+    if (clientFilter === "all" && activeView === "client-files") {
+      setActiveView("home");
+    }
+  }, [clientFilter, activeView]);
+
   if (authRequired && !ready) {
     return (
       <div
@@ -991,6 +998,10 @@ export default function AppShell({ onSignOut }) {
           onRemoveClientShoot={handleRemoveClientShoot}
           embedded
         />
+      )}
+
+      {activeView === "client-files" && clientFilter !== "all" && (
+        <ClientFilesWorkspacePage client={clientFilter} />
       )}
 
       {activeView === "clients" && (

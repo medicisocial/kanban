@@ -191,6 +191,7 @@ export default function EnterprisePortalLayout({
       return false;
     }
   });
+  const [sidebarPeek, setSidebarPeek] = useState(false);
   const [internalNotificationsOpen, setInternalNotificationsOpen] = useState(false);
   const [profileMenuStyle, setProfileMenuStyle] = useState(null);
   const [notificationMenuStyle, setNotificationMenuStyle] = useState(null);
@@ -202,6 +203,11 @@ export default function EnterprisePortalLayout({
   const resolvedProfileLogo = profileLogo ?? profileImageUrl;
   const normalizedProfileLogo = normalizeClientLogo(resolvedProfileLogo);
   const sidebarCompact = sidebarCollapsed && !navOpen;
+  const sidebarVisualCompact = sidebarCompact && !sidebarPeek;
+
+  useEffect(() => {
+    if (!sidebarCollapsed) setSidebarPeek(false);
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     try {
@@ -446,21 +452,21 @@ export default function EnterprisePortalLayout({
         sidebarLogoMessageIsError={sidebarLogoMessageIsError}
         onCloseNav={() => setNavOpen(false)}
         showClose={navOpen}
-        collapsed={sidebarCompact}
+        collapsed={sidebarVisualCompact}
       />
 
       <PortalSidebarNav
         sections={sections}
         activeTab={activeTab}
         navBadges={navBadges}
-        sidebarCompact={sidebarCompact}
+        sidebarCompact={sidebarVisualCompact}
         navOpen={navOpen}
         onNavigate={handleNav}
       />
 
-      <div className={`shrink-0 space-y-1 border-t border-white/[0.04] py-3 ${sidebarCompact ? 'px-2' : 'px-3 lg:px-5'}`}>
+      <div className={`shrink-0 space-y-1 border-t border-white/[0.04] py-3 ${sidebarVisualCompact ? 'px-2' : 'px-3 lg:px-5'}`}>
         {sidebarFooter && (
-          <div className={sidebarCompact ? '[&_.portal-sidebar-footer-label]:hidden' : ''}>
+          <div className={sidebarVisualCompact ? '[&_.portal-sidebar-footer-label]:hidden' : ''}>
             {sidebarFooter}
           </div>
         )}
@@ -473,7 +479,7 @@ export default function EnterprisePortalLayout({
           title={sidebarCompact ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           <IconChevronLeft className="h-4 w-4" />
-          {!sidebarCompact && (
+          {!sidebarVisualCompact && (
             <span className="text-xs font-medium text-white/45">Collapse</span>
           )}
         </button>
@@ -496,12 +502,41 @@ export default function EnterprisePortalLayout({
         />
       )}
 
+      {sidebarCompact && (
+        <div
+          className="hidden shrink-0 lg:block"
+          style={{ width: SIDEBAR_WIDTH_COLLAPSED }}
+          aria-hidden="true"
+        />
+      )}
+
       <aside
-        className={`portal-sidebar fixed inset-y-0 left-0 z-50 flex flex-col backdrop-blur-xl lg:relative lg:z-auto lg:shrink-0 lg:translate-x-0 ${
-          navOpen
-            ? `w-[min(${SIDEBAR_WIDTH_EXPANDED}px,88vw)] translate-x-0`
-            : `-translate-x-full ${sidebarCompact ? `lg:w-[${SIDEBAR_WIDTH_COLLAPSED}px]` : `lg:w-[${SIDEBAR_WIDTH_EXPANDED}px]`}`
-        }`}
+        onMouseEnter={() => {
+          if (sidebarCompact) setSidebarPeek(true);
+        }}
+        onMouseLeave={() => setSidebarPeek(false)}
+        onFocus={() => {
+          if (sidebarCompact) setSidebarPeek(true);
+        }}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) {
+            setSidebarPeek(false);
+          }
+        }}
+        style={{
+          width: navOpen
+            ? `min(${SIDEBAR_WIDTH_EXPANDED}px, 88vw)`
+            : sidebarVisualCompact
+              ? SIDEBAR_WIDTH_COLLAPSED
+              : SIDEBAR_WIDTH_EXPANDED,
+        }}
+        className={`portal-sidebar fixed inset-y-0 left-0 z-50 flex flex-col backdrop-blur-xl lg:translate-x-0 ${
+          navOpen ? 'translate-x-0' : '-translate-x-full'
+        } ${
+          sidebarCompact
+            ? 'lg:fixed lg:z-[55]'
+            : 'lg:relative lg:z-auto lg:shrink-0'
+        } ${sidebarCompact && sidebarPeek ? 'portal-sidebar-peek' : ''}`}
       >
         {sidebarContent}
       </aside>

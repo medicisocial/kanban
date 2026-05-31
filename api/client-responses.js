@@ -6,6 +6,8 @@ import {
   normalizeBrandUsers,
 } from './_lib/clientPortalAuth.mjs';
 import { normalizeClientContacts, mergeClientSocialLogins } from './_lib/clientProfile.mjs';
+import { normalizeClientCompanyFiles } from './_lib/clientCompanyFiles.mjs';
+import { normalizeClientSpecialMenus } from './_lib/clientSpecialMenus.mjs';
 import {
   isSupabaseConfigured,
   fetchRecord,
@@ -215,6 +217,8 @@ async function applyResponseToSupabase(res, session, type, response) {
       logos: { ...(store.logos || {}) },
       contacts: { ...(store.contacts || {}) },
       socialLogins: { ...(store.socialLogins || {}) },
+      companyFiles: { ...(store.companyFiles || {}) },
+      specialMenus: { ...(store.specialMenus || {}) },
     };
 
     if (hasOwn(response, 'logo')) {
@@ -229,6 +233,16 @@ async function applyResponseToSupabase(res, session, type, response) {
         nextStore.socialLogins[brand],
         response.socialLogins,
       );
+    }
+    if (hasOwn(response, 'companyFiles')) {
+      const businessType = nextStore.businessTypes?.[brand] || '';
+      nextStore.companyFiles[brand] = normalizeClientCompanyFiles(
+        response.companyFiles,
+        businessType,
+      );
+    }
+    if (hasOwn(response, 'specialMenus')) {
+      nextStore.specialMenus[brand] = normalizeClientSpecialMenus(response.specialMenus);
     }
 
     await upsertRecord(CLIENTS_TABLE, CLIENTS_RECORD_ID, nextStore);
@@ -396,6 +410,8 @@ export default async function handler(req, res) {
       accountManagers: { ...(clientStore.accountManagers || {}) },
       contacts: { ...(clientStore.contacts || {}) },
       socialLogins: { ...(clientStore.socialLogins || {}) },
+      companyFiles: { ...(clientStore.companyFiles || {}) },
+      specialMenus: { ...(clientStore.specialMenus || {}) },
     };
 
     if (Object.prototype.hasOwnProperty.call(response, 'logo')) {
@@ -415,6 +431,17 @@ export default async function handler(req, res) {
         nextStore.socialLogins[brand],
         response.socialLogins,
       );
+    }
+
+    if (Object.prototype.hasOwnProperty.call(response, 'companyFiles')) {
+      nextStore.companyFiles[brand] = normalizeClientCompanyFiles(
+        response.companyFiles,
+        nextStore.businessTypes[brand] || '',
+      );
+    }
+
+    if (Object.prototype.hasOwnProperty.call(response, 'specialMenus')) {
+      nextStore.specialMenus[brand] = normalizeClientSpecialMenus(response.specialMenus);
     }
 
     workspace.data[CLIENTS_STORAGE_KEY] = nextStore;

@@ -10,6 +10,8 @@ import {
   normalizeClientSocialLogins,
   mergeClientSocialLogins,
 } from './_lib/clientProfile.mjs';
+import { normalizeClientCompanyFiles } from './_lib/clientCompanyFiles.mjs';
+import { normalizeClientSpecialMenus } from './_lib/clientSpecialMenus.mjs';
 import { isSupabaseConfigured, fetchCollection, fetchCollectionMap } from './_lib/supabase.mjs';
 
 const STORAGE_KEY = 'medici-social-kanban';
@@ -118,6 +120,8 @@ export default async function handler(req, res) {
   const businessTypes = clientStore.businessTypes || {};
   const contacts = clientStore.contacts || {};
   const socialLogins = clientStore.socialLogins || {};
+  const companyFiles = clientStore.companyFiles || {};
+  const specialMenus = clientStore.specialMenus || {};
   const authMap = getClientPortalAuthMap(workspace);
   const brandUsers = normalizeBrandUsers(authMap[brand]);
   const sessionUsername = session.username.trim().toLowerCase();
@@ -132,6 +136,11 @@ export default async function handler(req, res) {
     businessType: normalizeBusinessType(businessTypes[brand] || '') || null,
     contacts: normalizeClientContacts(contacts[brand]),
     socialLogins: normalizeClientSocialLogins(socialLogins[brand]),
+    companyFiles: normalizeClientCompanyFiles(
+      companyFiles[brand],
+      normalizeBusinessType(businessTypes[brand] || ''),
+    ),
+    specialMenus: normalizeClientSpecialMenus(specialMenus[brand]),
     userAvatar: currentUser?.avatar || null,
     userDisplayName: currentUser?.displayName || session.username,
     cards: filterForBrand(data[STORAGE_KEY], brand).map(stripInternalCardFields),

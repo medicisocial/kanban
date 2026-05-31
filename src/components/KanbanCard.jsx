@@ -34,11 +34,10 @@ export default function KanbanCard({ card, onClick, onDelete }) {
       role="button"
       tabIndex={0}
       style={{
-        borderLeftColor: typeStyle.border,
         backgroundColor: typeStyle.bg,
         touchAction: 'none',
       }}
-      className={`group relative cursor-grab rounded-xl border border-white/8 border-l-[4px] p-3 pr-8 text-left shadow-md outline-none transition-shadow active:cursor-grabbing focus-visible:ring-1 focus-visible:ring-[#810100]/50 ${
+      className={`group relative cursor-grab rounded-xl border border-white/8 p-3 pr-8 text-left shadow-md outline-none transition-shadow active:cursor-grabbing focus-visible:ring-1 focus-visible:ring-[#810100]/50 ${
         isDragging ? 'opacity-40' : 'hover:shadow-lg hover:shadow-black/20'
       }`}
     >

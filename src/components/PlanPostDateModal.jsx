@@ -215,7 +215,6 @@ export default function PlanPostDateModal({ card, cards, onClose, onSave, onOpen
                   {selectedDate && (
                     <div
                       className="rounded-lg border border-dashed border-violet-400/40 bg-violet-500/10 p-3"
-                      style={{ borderLeftWidth: 3, borderLeftColor: typeStyle.border }}
                     >
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-300">
                         This card

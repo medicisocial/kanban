@@ -130,7 +130,6 @@ function ClientShootSection({
   return (
     <section
       className="overflow-hidden rounded-xl border border-white/5 bg-[#111111]"
-      style={{ borderLeftColor: color, borderLeftWidth: "4px" }}
     >
       <header className="border-b border-white/5 px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-start justify-between gap-3">

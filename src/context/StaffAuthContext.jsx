@@ -2,8 +2,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import {
   clearStaffSession,
   createStaffSession,
-  isPublicClientPortal,
-  isSharedOperationsLogin,
   isStaffAuthConfigured,
   isStaffAuthRequired,
   isStaffSessionValid,
@@ -11,10 +9,10 @@ import {
   saveStaffSession,
   verifyStaffCredentials,
 } from '../utils/staffAuth';
+import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { authenticateTeamMemberCredentials } from '../utils/teamAuth';
 import {
-  hasStaffSupabaseSession,
-  signInStaffSupabaseSession,
+  ensureStaffSupabaseSession,
   signOutStaffSupabaseSession,
 } from '../lib/staffSupabaseAuth';
 
@@ -27,6 +25,9 @@ export function StaffAuthProvider({ children }) {
 
   useEffect(() => {
     if (!authRequired) {
+      if (SUPABASE_ENABLED) {
+        ensureStaffSupabaseSession().catch(() => {});
+      }
       setReady(true);
       return;
     }
@@ -36,16 +37,9 @@ export function StaffAuthProvider({ children }) {
     (async () => {
       const stored = loadStaffSession();
       if (stored && (await isStaffSessionValid(stored))) {
-        let supabaseOk = true;
-        if (isSharedOperationsLogin(stored)) {
-          supabaseOk = await hasStaffSupabaseSession();
-        }
-        if (supabaseOk) {
-          if (!cancelled) setSession(stored);
-        } else {
-          clearStaffSession();
-          signOutStaffSupabaseSession();
-        }
+        if (!cancelled) setSession(stored);
+        // Best-effort — never sign the user out if the DB session is missing.
+        ensureStaffSupabaseSession().catch(() => {});
       } else {
         clearStaffSession();
       }
@@ -67,13 +61,11 @@ export function StaffAuthProvider({ children }) {
 
     const ok = await verifyStaffCredentials(username, password);
     if (ok) {
-      const supabaseLogin = await signInStaffSupabaseSession(password);
-      if (!supabaseLogin.ok) {
-        return { ok: false, error: supabaseLogin.error };
-      }
       const nextSession = await createStaffSession(username);
       saveStaffSession(nextSession);
       setSession(nextSession);
+      // Database session is best-effort — staff login must not depend on it.
+      ensureStaffSupabaseSession(password).catch(() => {});
       return { ok: true };
     }
 
@@ -82,6 +74,7 @@ export function StaffAuthProvider({ children }) {
       const nextSession = await createStaffSession(teamLoginName);
       saveStaffSession(nextSession);
       setSession(nextSession);
+      ensureStaffSupabaseSession(password).catch(() => {});
       return { ok: true };
     }
 

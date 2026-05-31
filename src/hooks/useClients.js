@@ -13,6 +13,8 @@ import {
   normalizeClientContacts,
   normalizeClientSocialLogins,
 } from '../utils/clientProfile';
+import { normalizeClientCompanyFiles } from '../utils/clientCompanyFiles';
+import { normalizeClientSpecialMenus } from '../utils/clientSpecialMenus';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useSingletonSync } from '../lib/useSingletonSync';
@@ -25,41 +27,44 @@ function normalizeBusinessTypesMap(types = {}) {
   return normalized;
 }
 
+function normalizeClientsState(data) {
+  const source = data && typeof data === 'object' ? data : {};
+  const names = Array.isArray(source.names) && source.names.length > 0
+    ? mergeDefaultClients(source.names, DEFAULT_CLIENTS)
+    : [...DEFAULT_CLIENTS];
+
+  return {
+    names,
+    colors: { ...DEFAULT_CLIENT_COLORS, ...(source.colors || {}) },
+    logos: { ...(source.logos || {}) },
+    accountManagers: {
+      ...DEFAULT_CLIENT_ACCOUNT_MANAGERS,
+      ...(source.accountManagers || {}),
+    },
+    businessTypes: normalizeBusinessTypesMap({
+      ...DEFAULT_CLIENT_BUSINESS_TYPES,
+      ...(source.businessTypes || {}),
+    }),
+    contacts: source.contacts || {},
+    socialLogins: source.socialLogins || {},
+    companyFiles: source.companyFiles || {},
+    specialMenus: source.specialMenus || {},
+  };
+}
+
 function loadClients() {
   try {
     const stored = localStorage.getItem(CLIENTS_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed.names) && parsed.names.length > 0) {
-        return {
-          names: mergeDefaultClients(parsed.names, DEFAULT_CLIENTS),
-          colors: { ...DEFAULT_CLIENT_COLORS, ...(parsed.colors || {}) },
-          logos: { ...(parsed.logos || {}) },
-          accountManagers: {
-            ...DEFAULT_CLIENT_ACCOUNT_MANAGERS,
-            ...(parsed.accountManagers || {}),
-          },
-          businessTypes: normalizeBusinessTypesMap({
-            ...DEFAULT_CLIENT_BUSINESS_TYPES,
-            ...(parsed.businessTypes || {}),
-          }),
-          contacts: parsed.contacts || {},
-          socialLogins: parsed.socialLogins || {},
-        };
+        return normalizeClientsState(parsed);
       }
     }
   } catch {
     /* fall through */
   }
-  return {
-    names: [...DEFAULT_CLIENTS],
-    colors: { ...DEFAULT_CLIENT_COLORS },
-    logos: {},
-    accountManagers: { ...DEFAULT_CLIENT_ACCOUNT_MANAGERS },
-    businessTypes: { ...DEFAULT_CLIENT_BUSINESS_TYPES },
-    contacts: {},
-    socialLogins: {},
-  };
+  return normalizeClientsState(null);
 }
 
 export function useClients() {
@@ -74,7 +79,7 @@ export function useClients() {
   useSingletonSync({
     table: 'clients',
     value: state,
-    setValue: setState,
+    setValue: (next) => setState(normalizeClientsState(next)),
     loadLocal: loadClients,
     recordId: 'workspace',
   });
@@ -103,8 +108,10 @@ export function useClients() {
         logos: logo ? { ...prev.logos, [trimmed]: logo } : { ...prev.logos },
         accountManagers: { ...prev.accountManagers },
         businessTypes: nextBusinessTypes,
-        contacts: { ...prev.contacts },
-        socialLogins: { ...prev.socialLogins },
+        contacts: { ...(prev.contacts || {}) },
+        socialLogins: { ...(prev.socialLogins || {}) },
+        companyFiles: { ...(prev.companyFiles || {}) },
+        specialMenus: { ...(prev.specialMenus || {}) },
       };
     });
 
@@ -208,6 +215,45 @@ export function useClients() {
     }));
   }, []);
 
+  const getClientCompanyFiles = useCallback(
+    (client) =>
+      normalizeClientCompanyFiles(
+        state.companyFiles?.[client],
+        normalizeBusinessType(state.businessTypes?.[client] || ''),
+      ),
+    [state.companyFiles, state.businessTypes],
+  );
+
+  const setClientCompanyFiles = useCallback((client, files) => {
+    if (!client) return;
+    setState((prev) => ({
+      ...prev,
+      companyFiles: {
+        ...(prev.companyFiles || {}),
+        [client]: normalizeClientCompanyFiles(
+          files,
+          normalizeBusinessType(prev.businessTypes?.[client] || ''),
+        ),
+      },
+    }));
+  }, []);
+
+  const getClientSpecialMenus = useCallback(
+    (client) => normalizeClientSpecialMenus(state.specialMenus?.[client]),
+    [state.specialMenus],
+  );
+
+  const setClientSpecialMenus = useCallback((client, menus) => {
+    if (!client) return;
+    setState((prev) => ({
+      ...prev,
+      specialMenus: {
+        ...(prev.specialMenus || {}),
+        [client]: normalizeClientSpecialMenus(menus),
+      },
+    }));
+  }, []);
+
   return {
     clients: state.names,
     clientColors: state.colors,
@@ -228,5 +274,9 @@ export function useClients() {
     setClientContacts,
     getClientSocialLogins,
     setClientSocialLogins,
+    getClientCompanyFiles,
+    setClientCompanyFiles,
+    getClientSpecialMenus,
+    setClientSpecialMenus,
   };
 }

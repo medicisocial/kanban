@@ -21,6 +21,7 @@ import PortalNavPicker, { PortalNavPickerItem } from './clientPortal/PortalNavPi
 import ClientPortalUsersEditor from './clientPortal/ClientPortalUsersEditor';
 import ClientContactsEditor from './clientPortal/ClientContactsEditor';
 import ClientSocialLoginsEditor from './clientPortal/ClientSocialLoginsEditor';
+import ClientCompanyFilesPage from './ClientCompanyFilesPage';
 import ClientSharePanel from './ClientSharePanel';
 import CalendarSharePanel from './CalendarSharePanel';
 import ContentReviewSharePanel from './ContentReviewSharePanel';
@@ -29,6 +30,7 @@ import { btnPrimaryClass, btnSecondaryClass, selectClass, glassSegmentClass, gla
 
 const TABS = [
   { id: 'profile', label: 'Profile' },
+  { id: 'files', label: 'Brand assets' },
   { id: 'contacts', label: 'Contacts' },
   { id: 'social', label: 'Social logins' },
   { id: 'share', label: 'Client links' },
@@ -51,6 +53,10 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
     setClientContacts,
     getClientSocialLogins,
     setClientSocialLogins,
+    getClientCompanyFiles,
+    setClientCompanyFiles,
+    getClientSpecialMenus,
+    setClientSpecialMenus,
   } = useClientsContext();
   const { session } = useStaffAuth();
   const profileClients = getClientPortalBrands(clients, INTERNAL_TEAM_CLIENT);
@@ -360,6 +366,19 @@ export default function ClientManagementPage({ initialTab = 'profile', onClientA
               >
                 {savingProfile ? 'Saving…' : 'Save profile'}
               </button>
+            </div>
+          )}
+
+          {activeTab === 'files' && (
+            <div key={`files-${selectedClient}`} className="portal-content-fade max-w-3xl">
+              <ClientCompanyFilesPage
+                client={selectedClient}
+                businessType={getClientBusinessType(selectedClient)}
+                companyFiles={getClientCompanyFiles(selectedClient)}
+                specialMenus={getClientSpecialMenus(selectedClient)}
+                onSaveCompanyFiles={(files) => setClientCompanyFiles(selectedClient, files)}
+                onSaveSpecialMenus={(menus) => setClientSpecialMenus(selectedClient, menus)}
+              />
             </div>
           )}
 

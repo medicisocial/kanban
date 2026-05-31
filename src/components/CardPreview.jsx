@@ -9,8 +9,8 @@ export default function CardPreview({ card }) {
 
   return (
     <div
-      className="w-[280px] rounded-xl border border-white/8 border-l-[4px] p-3 shadow-xl shadow-black/40 sm:w-[300px]"
-      style={{ borderLeftColor: typeStyle.border, backgroundColor: typeStyle.bg }}
+      className="w-[280px] rounded-xl border border-white/8 p-3 shadow-xl shadow-black/40 sm:w-[300px]"
+      style={{ backgroundColor: typeStyle.bg }}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <span className="text-xs font-medium text-gray-400">{card.client}</span>

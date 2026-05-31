@@ -131,7 +131,6 @@ export default function ShootDayTimeline({
                       height: `${LANE_HEIGHT - 16}px`,
                       backgroundColor: typeStyle.bg,
                       borderColor: typeStyle.border,
-                      borderLeftWidth: "4px",
                     }}
                     title={isLongSlot ? "End time looks unusually late — check this card's end time" : undefined}
                   >
@@ -193,7 +192,7 @@ export default function ShootDayTimeline({
                 className={`flex flex-wrap items-start gap-4 rounded-lg border border-white/8 px-4 py-3 text-left transition ${
                   onCardClick ? "cursor-pointer hover:bg-white/[0.03]" : ""
                 }`}
-                style={{ borderLeftColor: typeStyle.border, borderLeftWidth: "4px" }}
+                style={{ backgroundColor: typeStyle.bg }}
               >
                 <div className="w-32 shrink-0">
                   <p className="text-sm font-semibold text-white">{entry.startLabel}</p>

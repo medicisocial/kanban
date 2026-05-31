@@ -47,6 +47,8 @@ export default function IndustryEventModal({
       }
       if (String(fields.drinkMenuDetails || '').trim()) fields.hasDrinkMenu = true;
       if (String(fields.foodMenuDetails || '').trim()) fields.hasFoodMenu = true;
+      if (fields.drinkMenuPdf?.dataUrl) fields.hasDrinkMenu = true;
+      if (fields.foodMenuPdf?.dataUrl) fields.hasFoodMenu = true;
       return fields;
     }
     const initialClient = event?.client || lockedClient || defaultClient || '';

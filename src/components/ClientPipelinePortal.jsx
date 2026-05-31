@@ -55,7 +55,6 @@ export default function ClientPipelinePortal({ cards, clientColor, embedded = fa
                       <article
                         key={card.id}
                         className={`${glassInsetClass} mb-2 p-3 transition-colors last:mb-0 hover:border-white/12`}
-                        style={{ borderLeftColor: typeStyle.border, borderLeftWidth: '2px' }}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <p

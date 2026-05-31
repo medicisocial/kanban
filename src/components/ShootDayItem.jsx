@@ -15,8 +15,6 @@ export default function ShootDayItem({ card, onClick }) {
       className="w-full rounded-lg border border-white/8 p-3 text-left transition hover:brightness-110"
       style={{
         backgroundColor: typeStyle.bg,
-        borderLeftColor: typeStyle.border,
-        borderLeftWidth: "3px",
       }}
     >
       <div className="mb-1.5 flex flex-wrap items-center gap-2">

@@ -17,6 +17,7 @@
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lz-string": "^1.5.0",
+    "pdfjs-dist": "^6.0.227",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

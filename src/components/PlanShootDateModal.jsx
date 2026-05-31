@@ -343,7 +343,6 @@ export default function PlanShootDateModal({ card, cards, plans, getPlan, onClos
                   {selectedDate && (
                     <div
                       className="rounded-lg border border-dashed border-[#810100]/40 bg-[#a00000]/10 p-3"
-                      style={{ borderLeftWidth: 3, borderLeftColor: typeStyle.border }}
                     >
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-[#fca5a5]">
                         This card

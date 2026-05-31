@@ -1,6 +1,7 @@
 import {
   IconBoard,
   IconCalendar,
+  IconFiles,
   IconHome,
   IconIdeas,
   IconShoots,
@@ -22,6 +23,10 @@ const NAV_SECTIONS = [
       { id: 'review', label: 'Content review', Icon: IconTasks },
       { id: 'shoots', label: 'Shoot Schedule', Icon: IconShoots },
     ],
+  },
+  {
+    label: 'Resources',
+    items: [{ id: 'files', label: 'Brand assets', Icon: IconFiles }],
   },
   {
     label: 'Planning',

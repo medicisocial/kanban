@@ -3,6 +3,7 @@ import {
   IconBoard,
   IconCalendar,
   IconClients,
+  IconFiles,
   IconHome,
   IconIdeas,
   IconSettings,
@@ -40,12 +41,21 @@ const NAV_SECTIONS_BASE = [
   },
 ];
 
-function buildNavSections(homeLabel) {
+function buildNavSections(homeLabel, clientFilter) {
+  const clientName = clientFilter && clientFilter !== 'all' ? clientFilter : null;
+  const clientSection = clientName
+    ? {
+        label: clientName,
+        items: [{ id: 'client-files', label: 'Brand assets', Icon: IconFiles }],
+      }
+    : null;
+
   return [
     {
       label: 'Overview',
       items: [{ id: 'home', label: homeLabel, Icon: IconHome }],
     },
+    ...(clientSection ? [clientSection] : []),
     ...NAV_SECTIONS_BASE,
   ];
 }
@@ -69,7 +79,7 @@ export default function AdminConsoleLayout({
   children,
 }) {
   const admin = useWorkspaceAdmin({ clientFilter, onClientChange });
-  const navSections = buildNavSections(homeNavLabel);
+  const navSections = buildNavSections(homeNavLabel, clientFilter);
   const { getClientColor, getClientLogo, setClientLogo } = useClientsContext();
   const teamColor = getClientColor(INTERNAL_TEAM_CLIENT);
   const teamLogo = getClientLogo(INTERNAL_TEAM_CLIENT);

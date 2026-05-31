@@ -6,6 +6,7 @@ import ClientContentReviewPortal from './ClientContentReviewPortal';
 import ClientPipelinePortal from './ClientPipelinePortal';
 import ClientShootSchedulePortal from './ClientShootSchedulePortal';
 import ClientProfilePortal from './ClientProfilePortal';
+import ClientCompanyFilesPage from './ClientCompanyFilesPage';
 import ClientPortalHome from './ClientPortalHome';
 import ClientUnifiedCalendarsPortal from './ClientUnifiedCalendarsPortal';
 import ClientPortalLayout from './clientPortal/ClientPortalLayout';
@@ -43,6 +44,8 @@ export default function ClientHubPortal({ onSignOut }) {
   const businessType = portalData?.businessType || '';
   const profileContacts = portalData?.contacts || [];
   const profileSocialLogins = portalData?.socialLogins || {};
+  const profileCompanyFiles = portalData?.companyFiles || [];
+  const profileSpecialMenus = portalData?.specialMenus || [];
   const cards = useMemo(
     () => stripInternalCardsForClientPortal(portalData?.cards || []),
     [portalData?.cards],
@@ -133,6 +136,14 @@ export default function ClientHubPortal({ onSignOut }) {
 
   const handleDeleteMeeting = async (id) => {
     await queueCloudResponse('meeting', { action: 'delete', meetingId: id });
+  };
+
+  const handleSaveCompanyFiles = async (files) => {
+    await savePortalProfile({ companyFiles: files });
+  };
+
+  const handleSaveSpecialMenus = async (menus) => {
+    await savePortalProfile({ specialMenus: menus });
   };
 
   const handleSignOut = () => {
@@ -236,6 +247,18 @@ export default function ClientHubPortal({ onSignOut }) {
           cards={cards}
           plans={plans}
           clientColor={clientColor}
+          embedded
+        />
+      )}
+
+      {portalData && activeTab === 'files' && (
+        <ClientCompanyFilesPage
+          client={brand}
+          businessType={businessType}
+          companyFiles={profileCompanyFiles}
+          specialMenus={profileSpecialMenus}
+          onSaveCompanyFiles={handleSaveCompanyFiles}
+          onSaveSpecialMenus={handleSaveSpecialMenus}
           embedded
         />
       )}

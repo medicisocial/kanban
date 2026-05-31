@@ -62,7 +62,6 @@ export default function ClientShootSchedulePortal({
                       <article
                         key={card.id}
                         className="flex items-start gap-4 px-4 py-3 transition-colors hover:bg-white/[0.03]"
-                        style={{ borderLeftColor: typeStyle.border, borderLeftWidth: '2px' }}
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">

@@ -72,6 +72,7 @@ export default function PortalSidebarNav({
         type="button"
         onClick={() => onNavigate(id)}
         title={sidebarCompact ? label : undefined}
+        aria-label={sidebarCompact ? label : undefined}
         aria-current={active ? 'page' : undefined}
         className={`portal-nav-item relative z-[1] flex w-full items-center rounded-lg py-2.5 text-left text-sm ${
           sidebarCompact ? 'justify-center px-2' : 'gap-3 px-3'
