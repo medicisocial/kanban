@@ -183,21 +183,24 @@ export function StaffAuthProvider({ children }) {
     const loginId = normalizePortalLogin(username);
 
     if (isStaffAuthConfigured()) {
-      const teamLogin = await authenticateTeamMemberCredentials(loginId, password);
-      if (teamLogin) {
-        return establishLegacyStaffSession(teamLogin, password, applyLegacyOrg, setSession);
-      }
-
       const legacyOk = await verifyStaffCredentials(loginId, password);
       if (legacyOk) {
         return establishLegacyStaffSession(loginId, password, applyLegacyOrg, setSession);
       }
+
+      const teamLogin = await authenticateTeamMemberCredentials(loginId, password);
+      if (teamLogin) {
+        return establishLegacyStaffSession(teamLogin, password, applyLegacyOrg, setSession);
+      }
     }
 
     if (isValidPortalEmail(loginId)) {
-      const saasResult = await signInWithEmail(loginId, password);
+      const saasResult = await withTimeout(signInWithEmail(loginId, password), AUTH_BOOTSTRAP_TIMEOUT_MS, {
+        ok: false,
+        error: 'Sign-in timed out. Check your connection and try again.',
+      });
       if (saasResult.ok) {
-        const ok = await resolveSaasOrg(saasResult.user);
+        const ok = await withTimeout(resolveSaasOrg(saasResult.user), AUTH_BOOTSTRAP_TIMEOUT_MS, false);
         if (!ok) {
           signOutSupabaseAuth();
           return {

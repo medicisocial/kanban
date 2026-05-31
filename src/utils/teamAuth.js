@@ -1,12 +1,31 @@
+import { getConfiguredStaffUsername } from './staffAuth';
 import { verifyTeamMemberStaffCredentials } from './staffMembers';
 import { normalizePortalLogin } from './portalLogin';
 
+const TEAM_AUTH_REMOTE_TIMEOUT_MS = 8000;
+
 export async function loginTeamMemberRemote(username, password) {
-  const response = await fetch('/api/team-auth', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TEAM_AUTH_REMOTE_TIMEOUT_MS);
+
+  let response;
+  try {
+    response = await fetch('/api/team-auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      const timedOut = new Error('Team login timed out. Try again in a moment.');
+      timedOut.code = 'unavailable';
+      throw timedOut;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const payload = await response.json().catch(() => ({}));
 
@@ -35,6 +54,11 @@ export async function authenticateTeamMemberCredentials(username, password) {
   const local = verifyTeamMemberStaffCredentials(key, password);
   if (local) {
     return normalizePortalLogin(local.email || local.username);
+  }
+
+  const configuredStaff = getConfiguredStaffUsername();
+  if (configuredStaff && key === configuredStaff.toLowerCase()) {
+    return null;
   }
 
   try {

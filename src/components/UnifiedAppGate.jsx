@@ -205,11 +205,11 @@ function UnifiedAppGateInner() {
     openSignup('starter');
   }, [openSignup]);
 
-  if (ready && mode === 'staff') {
+  if (mode === 'staff' && (ready || session)) {
     return <StaffConsoleApp onSignOut={handleSignOut} />;
   }
 
-  if (ready && mode === 'client') {
+  if (mode === 'client' && (ready || loadClientSession()?.brand)) {
     return (
       <Suspense fallback={<GateLoading />}>
         <ClientPortalApp onSignOut={handleSignOut} />
