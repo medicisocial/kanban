@@ -1,14 +1,23 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { normalizePlanType } from '../constants/plans';
 import { clearClientSession, loadClientSession } from '../utils/clientPortalAuth';
 import { StaffAuthProvider, useStaffAuth } from '../context/StaffAuthContext';
 import { ClientsProvider } from '../context/ClientsContext';
 import { WorkspaceSyncProvider } from '../context/WorkspaceSyncContext';
-import ClientPortalApp from '../ClientPortalApp';
 import UnifiedLogin from './UnifiedLogin';
-import PricingPage from './PricingPage';
-import MarketingLandingPage from './MarketingLandingPage';
-import AppShell from './AppShell';
+
+const AppShell = lazy(() => import('./AppShell'));
+const ClientPortalApp = lazy(() => import('../ClientPortalApp'));
+const MarketingLandingPage = lazy(() => import('./MarketingLandingPage'));
+const PricingPage = lazy(() => import('./PricingPage'));
+
+function GateLoading() {
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-black text-white">
+      <p className="text-sm text-white/45">Loading…</p>
+    </div>
+  );
+}
 
 function parseGateView() {
   const params = new URLSearchParams(window.location.search);
@@ -41,7 +50,9 @@ function StaffConsoleApp({ onSignOut }) {
   return (
     <WorkspaceSyncProvider>
       <ClientsProvider>
-        <AppShell onSignOut={onSignOut} />
+        <Suspense fallback={<GateLoading />}>
+          <AppShell onSignOut={onSignOut} />
+        </Suspense>
       </ClientsProvider>
     </WorkspaceSyncProvider>
   );
@@ -128,13 +139,15 @@ function UnifiedAppGateInner() {
   if (!ready) {
     if (gateView === 'landing') {
       return (
-        <MarketingLandingPage
-          onGetStarted={openGetStarted}
-          onSignIn={() => openSignIn(false)}
-          onPricing={openPricing}
-          onSelectPlan={openSignup}
-          onClientPortal={() => openSignIn(true)}
-        />
+        <Suspense fallback={<GateLoading />}>
+          <MarketingLandingPage
+            onGetStarted={openGetStarted}
+            onSignIn={() => openSignIn(false)}
+            onPricing={openPricing}
+            onSelectPlan={openSignup}
+            onClientPortal={() => openSignIn(true)}
+          />
+        </Suspense>
       );
     }
     return <UnifiedLogin onAuthenticated={setMode} checking />;
@@ -145,7 +158,11 @@ function UnifiedAppGateInner() {
   }
 
   if (mode === 'client') {
-    return <ClientPortalApp onSignOut={handleSignOut} />;
+    return (
+      <Suspense fallback={<GateLoading />}>
+        <ClientPortalApp onSignOut={handleSignOut} />
+      </Suspense>
+    );
   }
 
   if (mode === 'staff') {
@@ -154,25 +171,29 @@ function UnifiedAppGateInner() {
 
   if (gateView === 'landing') {
     return (
-      <MarketingLandingPage
-        onGetStarted={openGetStarted}
-        onSignIn={() => openSignIn(false)}
-        onPricing={openPricing}
-        onSelectPlan={openSignup}
-        onClientPortal={() => openSignIn(true)}
-      />
+      <Suspense fallback={<GateLoading />}>
+        <MarketingLandingPage
+          onGetStarted={openGetStarted}
+          onSignIn={() => openSignIn(false)}
+          onPricing={openPricing}
+          onSelectPlan={openSignup}
+          onClientPortal={() => openSignIn(true)}
+        />
+      </Suspense>
     );
   }
 
   if (gateView === 'pricing') {
     return (
-      <PricingPage
-        onSelectPlan={openSignup}
-        onSignIn={() => openSignIn(false)}
-        onBack={openLanding}
-        onHome={openLanding}
-        onGetStarted={openGetStarted}
-      />
+      <Suspense fallback={<GateLoading />}>
+        <PricingPage
+          onSelectPlan={openSignup}
+          onSignIn={() => openSignIn(false)}
+          onBack={openLanding}
+          onHome={openLanding}
+          onGetStarted={openGetStarted}
+        />
+      </Suspense>
     );
   }
 

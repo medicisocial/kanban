@@ -1,9 +1,17 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { formatPlanPrice, getAgencyPlans, getCreatorPlan } from '../constants/plans';
 import PortalAuthAmbient from './clientPortal/PortalAuthAmbient';
 import MarketingSiteHeader, { labelClass } from './MarketingSiteHeader';
-import MarketingProductShowcase, { MarketingWorkspaceShowcase } from './MarketingProductShowcase';
 import { btnPrimaryClass, btnSecondaryClass } from './clientPortal/clientPortalUi';
+
+const MarketingProductShowcase = lazy(() => import('./MarketingProductShowcase'));
+const MarketingWorkspaceShowcase = lazy(() =>
+  import('./MarketingProductShowcase').then((mod) => ({ default: mod.MarketingWorkspaceShowcase })),
+);
+
+function ShowcasePlaceholder({ className = 'min-h-[280px]' }) {
+  return <div className={`${className} animate-pulse rounded-xl bg-white/[0.03]`} aria-hidden />;
+}
 
 const STATS = [
   { value: '140+', label: 'Campaigns launched' },
@@ -95,7 +103,9 @@ const CLIENT_PORTAL_SHOWCASES = [
 function ClientPortalShowcaseCard({ item }) {
   return (
     <article className="marketing-client-portal-card">
-      <MarketingWorkspaceShowcase variant={item.variant} size="compact" />
+      <Suspense fallback={<ShowcasePlaceholder className="min-h-[220px]" />}>
+        <MarketingWorkspaceShowcase variant={item.variant} size="compact" />
+      </Suspense>
       <div className="marketing-client-portal-card-copy">
         <h3 className="text-sm font-semibold text-white">{item.label}</h3>
         <p className="mt-1.5 text-xs leading-relaxed text-white/50">{item.body}</p>
@@ -116,7 +126,9 @@ function FeatureShowcaseRow({ feature, reverse = false }) {
         <p className="mt-4 text-sm leading-relaxed text-white/55 md:text-base">{feature.body}</p>
       </div>
       <div className="marketing-feature-visual">
-        <MarketingWorkspaceShowcase variant={feature.showcase} size="feature" />
+        <Suspense fallback={<ShowcasePlaceholder className="min-h-[320px]" />}>
+          <MarketingWorkspaceShowcase variant={feature.showcase} size="feature" />
+        </Suspense>
       </div>
     </article>
   );
@@ -242,7 +254,9 @@ export default function MarketingLandingPage({
           </p>
         </div>
 
-        <MarketingProductShowcase />
+        <Suspense fallback={<ShowcasePlaceholder className="min-h-[420px]" />}>
+          <MarketingProductShowcase />
+        </Suspense>
 
         <div className="relative z-10 mt-12 grid gap-3 sm:grid-cols-2">
           {STATS.map((stat) => (
@@ -307,7 +321,9 @@ export default function MarketingLandingPage({
           </p>
 
           <div className="mt-8">
-            <MarketingWorkspaceShowcase variant="portal-home" size="feature" />
+            <Suspense fallback={<ShowcasePlaceholder className="min-h-[360px]" />}>
+              <MarketingWorkspaceShowcase variant="portal-home" size="feature" />
+            </Suspense>
           </div>
 
           <div className="marketing-client-portal-showcases">
