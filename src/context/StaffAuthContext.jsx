@@ -52,6 +52,32 @@ function buildSaasOrg(org, userEmail) {
   };
 }
 
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
+
+function withTimeout(promise, ms, fallback) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => {
+      setTimeout(() => resolve(fallback), ms);
+    }),
+  ]);
+}
+
+function friendlyAuthError(message) {
+  if (!message) return 'Invalid email or password.';
+  if (/invalid login credentials/i.test(message)) return 'Invalid email or password.';
+  return message;
+}
+
+async function establishLegacyStaffSession(loginId, password, applyLegacyOrg, setSession) {
+  const nextSession = await createStaffSession(loginId);
+  saveStaffSession(nextSession);
+  setSession(nextSession);
+  applyLegacyOrg();
+  ensureStaffSupabaseSession(password).catch(() => {});
+  return { ok: true };
+}
+
 export function StaffAuthProvider({ children }) {
   const authRequired = isStaffAuthRequired();
   const [session, setSession] = useState(null);
@@ -103,7 +129,11 @@ export function StaffAuthProvider({ children }) {
 
       clearStaffSession();
 
-      const supabaseSession = await getSupabaseAuthSession();
+      const supabaseSession = await withTimeout(
+        getSupabaseAuthSession(),
+        AUTH_BOOTSTRAP_TIMEOUT_MS,
+        null,
+      );
       if (supabaseSession?.user) {
         const ok = await resolveSaasOrg(supabaseSession.user);
         if (!cancelled && ok) {
@@ -152,6 +182,18 @@ export function StaffAuthProvider({ children }) {
   const login = useCallback(async (username, password) => {
     const loginId = normalizePortalLogin(username);
 
+    if (isStaffAuthConfigured()) {
+      const teamLogin = await authenticateTeamMemberCredentials(loginId, password);
+      if (teamLogin) {
+        return establishLegacyStaffSession(teamLogin, password, applyLegacyOrg, setSession);
+      }
+
+      const legacyOk = await verifyStaffCredentials(loginId, password);
+      if (legacyOk) {
+        return establishLegacyStaffSession(loginId, password, applyLegacyOrg, setSession);
+      }
+    }
+
     if (isValidPortalEmail(loginId)) {
       const saasResult = await signInWithEmail(loginId, password);
       if (saasResult.ok) {
@@ -170,30 +212,8 @@ export function StaffAuthProvider({ children }) {
         });
         return { ok: true };
       }
-      if (isStaffAuthConfigured()) {
-        const teamLogin = await authenticateTeamMemberCredentials(loginId, password);
-        if (teamLogin) {
-          const nextSession = await createStaffSession(teamLogin);
-          saveStaffSession(nextSession);
-          setSession(nextSession);
-          applyLegacyOrg();
-          ensureStaffSupabaseSession(password).catch(() => {});
-          return { ok: true };
-        }
 
-        const legacyOk = await verifyStaffCredentials(loginId, password);
-        if (legacyOk) {
-          const nextSession = await createStaffSession(loginId);
-          saveStaffSession(nextSession);
-          setSession(nextSession);
-          applyLegacyOrg();
-          ensureStaffSupabaseSession(password).catch(() => {});
-          return { ok: true };
-        }
-
-        return { ok: false, error: saasResult.error || 'Invalid email or password.' };
-      }
-      return saasResult;
+      return { ok: false, error: friendlyAuthError(saasResult.error) };
     }
 
     if (!isStaffAuthConfigured()) {
@@ -203,17 +223,7 @@ export function StaffAuthProvider({ children }) {
       };
     }
 
-    const ok = await verifyStaffCredentials(loginId, password);
-    if (ok) {
-      const nextSession = await createStaffSession(loginId);
-      saveStaffSession(nextSession);
-      setSession(nextSession);
-      applyLegacyOrg();
-      ensureStaffSupabaseSession(password).catch(() => {});
-      return { ok: true };
-    }
-
-    return { ok: false, error: 'Sign in with your work email and password.' };
+    return { ok: false, error: 'Invalid email or password.' };
   }, [applyLegacyOrg, resolveSaasOrg]);
 
   const signup = useCallback(async ({ email, password, orgName, planType }) => {
