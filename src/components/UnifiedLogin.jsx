@@ -111,6 +111,11 @@ export default function UnifiedLogin({
     } else if (initialClientMode) {
       setAgencyMode(false);
       setSignupMode(false);
+      setAuthView('signin');
+    } else {
+      setAgencyMode(true);
+      setSignupMode(false);
+      setAuthView('signin');
     }
   }, [initialSignupMode, initialClientMode]);
 
@@ -428,7 +433,7 @@ export default function UnifiedLogin({
 
               <button
                 type="submit"
-                disabled={submitting || checking}
+                disabled={submitting}
                 className="inline-flex w-full items-center justify-center rounded-sm bg-white px-5 py-3.5 text-[11px] font-medium uppercase tracking-[0.22em] text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {submitting ? 'Sending…' : 'Send reset link'}
@@ -556,7 +561,7 @@ export default function UnifiedLogin({
 
               <button
                 type="submit"
-                disabled={submitting || checking}
+                disabled={submitting}
                 className="inline-flex w-full items-center justify-center rounded-sm bg-white px-5 py-3.5 text-[11px] font-medium uppercase tracking-[0.22em] text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {submitting

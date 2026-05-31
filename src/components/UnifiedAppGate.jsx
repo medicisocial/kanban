@@ -79,7 +79,9 @@ function StaffConsoleApp({ onSignOut }) {
 function UnifiedAppGateInner() {
   const { ready, session } = useStaffAuth();
   const initialGate = useMemo(() => parseGateView(), []);
-  const [mode, setMode] = useState('loading');
+  const [mode, setMode] = useState(() =>
+    initialGate.view === 'login' || initialGate.view === 'signup' ? 'login' : 'loading',
+  );
   const [gateView, setGateView] = useState(initialGate.view);
   const [selectedPlan, setSelectedPlan] = useState(initialGate.plan || 'starter');
   const [clientLogin, setClientLogin] = useState(initialGate.clientLogin);
@@ -246,7 +248,7 @@ function UnifiedAppGateInner() {
   return (
     <UnifiedLogin
       onAuthenticated={setMode}
-      checking={!ready || mode === 'loading'}
+      checking={!ready}
       signupMode={gateView === 'signup'}
       selectedPlan={selectedPlan}
       onOpenPricing={openPricing}
