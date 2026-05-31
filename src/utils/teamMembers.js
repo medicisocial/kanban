@@ -8,6 +8,7 @@ import {
   TEAM_ROLES,
   TEAM_STORAGE_KEY,
 } from '../constants';
+import { normalizeClientLogo, serializeClientLogo } from './clientLogo';
 import { isValidPortalEmail, normalizePortalLogin } from './portalLogin';
 
 export { TEAM_ROLES, TEAM_LEADERSHIP_ROLES, TEAM_OPERATIONAL_ROLES, TEAM_ROLE_COVERAGE };
