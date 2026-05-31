@@ -42,9 +42,12 @@ export async function signInWithEmail(email, password) {
     };
   }
 
+  // Clear any in-flight session refresh so sign-in does not deadlock behind getSession().
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+
   const { data, error } = await supabase.auth.signInWithPassword({
     email: email.trim(),
-    password,
+    password: String(password || '').trim(),
   });
 
   if (error || !data?.session) {
@@ -94,6 +97,12 @@ export async function getSupabaseAuthSession() {
 export function signOutSupabaseAuth() {
   if (SUPABASE_ENABLED && supabase) {
     supabase.auth.signOut().catch(() => {});
+  }
+}
+
+export async function signOutSupabaseAuthAsync() {
+  if (SUPABASE_ENABLED && supabase) {
+    await supabase.auth.signOut().catch(() => {});
   }
 }
 

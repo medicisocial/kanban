@@ -77,7 +77,7 @@ export async function verifyStaffCredentials(username, password) {
     return false;
   }
 
-  const passwordHash = await hashPassword(password);
+  const passwordHash = await hashPassword(String(password || '').trim());
   return timingSafeEqual(passwordHash, getConfiguredPasswordHash());
 }
 

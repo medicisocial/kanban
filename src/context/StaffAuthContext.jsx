@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import {
   clearStaffSession,
   createStaffSession,
+  getConfiguredStaffUsername,
   isStaffAuthConfigured,
   isStaffAuthRequired,
   isStaffSessionValid,
@@ -24,6 +25,7 @@ import {
   resetPasswordForEmail,
   signInWithEmail,
   signOutSupabaseAuth,
+  signOutSupabaseAuthAsync,
   signUpWorkspace,
   updateUserPassword,
 } from '../lib/saasAuth';
@@ -78,6 +80,11 @@ async function establishLegacyStaffSession(loginId, password, applyLegacyOrg, se
   return { ok: true };
 }
 
+function isAuthGatePage() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('login') === '1' || (params.get('signup') === '1' && params.get('plan'));
+}
+
 export function StaffAuthProvider({ children }) {
   const authRequired = isStaffAuthRequired();
   const [session, setSession] = useState(null);
@@ -129,19 +136,21 @@ export function StaffAuthProvider({ children }) {
 
       clearStaffSession();
 
-      const supabaseSession = await withTimeout(
-        getSupabaseAuthSession(),
-        AUTH_BOOTSTRAP_TIMEOUT_MS,
-        null,
-      );
-      if (supabaseSession?.user) {
-        const ok = await resolveSaasOrg(supabaseSession.user);
-        if (!cancelled && ok) {
-          setSession({
-            type: 'saas',
-            email: supabaseSession.user.email,
-            userId: supabaseSession.user.id,
-          });
+      if (!isAuthGatePage()) {
+        const supabaseSession = await withTimeout(
+          getSupabaseAuthSession(),
+          AUTH_BOOTSTRAP_TIMEOUT_MS,
+          null,
+        );
+        if (supabaseSession?.user) {
+          const ok = await resolveSaasOrg(supabaseSession.user);
+          if (!cancelled && ok) {
+            setSession({
+              type: 'saas',
+              email: supabaseSession.user.email,
+              userId: supabaseSession.user.id,
+            });
+          }
         }
       }
 
@@ -181,24 +190,27 @@ export function StaffAuthProvider({ children }) {
 
   const login = useCallback(async (username, password) => {
     const loginId = normalizePortalLogin(username);
+    const trimmedPassword = String(password || '').trim();
+    const opsEmail = getConfiguredStaffUsername()?.toLowerCase();
+    const isOpsLogin = Boolean(opsEmail && loginId === opsEmail);
 
     if (isStaffAuthConfigured()) {
-      const legacyOk = await verifyStaffCredentials(loginId, password);
+      const legacyOk = await verifyStaffCredentials(loginId, trimmedPassword);
       if (legacyOk) {
-        return establishLegacyStaffSession(loginId, password, applyLegacyOrg, setSession);
+        return establishLegacyStaffSession(loginId, trimmedPassword, applyLegacyOrg, setSession);
       }
 
-      const teamLogin = await authenticateTeamMemberCredentials(loginId, password);
-      if (teamLogin) {
-        return establishLegacyStaffSession(teamLogin, password, applyLegacyOrg, setSession);
+      if (!isOpsLogin) {
+        const teamLogin = await authenticateTeamMemberCredentials(loginId, trimmedPassword);
+        if (teamLogin) {
+          return establishLegacyStaffSession(teamLogin, trimmedPassword, applyLegacyOrg, setSession);
+        }
       }
     }
 
     if (isValidPortalEmail(loginId)) {
-      const saasResult = await withTimeout(signInWithEmail(loginId, password), AUTH_BOOTSTRAP_TIMEOUT_MS, {
-        ok: false,
-        error: 'Sign-in timed out. Check your connection and try again.',
-      });
+      await signOutSupabaseAuthAsync();
+      const saasResult = await signInWithEmail(loginId, trimmedPassword);
       if (saasResult.ok) {
         const ok = await withTimeout(resolveSaasOrg(saasResult.user), AUTH_BOOTSTRAP_TIMEOUT_MS, false);
         if (!ok) {

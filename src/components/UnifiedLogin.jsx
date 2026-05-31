@@ -146,6 +146,8 @@ export default function UnifiedLogin({
     setAuthView('signin');
     setError('');
     setInfo('');
+    const params = isAgency ? 'login=1' : 'login=1&client=1';
+    window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
   };
 
   const openSignup = () => {
