@@ -5,6 +5,7 @@ export default function PortalSidebarNav({
   activeTab,
   navBadges = {},
   sidebarCompact = false,
+  sidebarPeeking = false,
   navOpen = false,
   onNavigate,
 }) {
@@ -36,15 +37,23 @@ export default function PortalSidebarNav({
     setNavIndicator({
       sectionKey: listEl.dataset.sectionKey,
       top: activeRect.top - listRect.top,
-      left: activeRect.left - listRect.left,
-      width: activeRect.width,
+      left: sidebarPeeking ? 0 : activeRect.left - listRect.left,
+      width: sidebarPeeking ? listEl.clientWidth : activeRect.width,
       height: activeRect.height,
     });
-  }, [activeTab, sidebarCompact]);
+  }, [activeTab, sidebarCompact, sidebarPeeking]);
 
   useLayoutEffect(() => {
     updateNavIndicator();
-  }, [updateNavIndicator, sections, navOpen]);
+    if (!sidebarPeeking) return undefined;
+
+    const frame = requestAnimationFrame(updateNavIndicator);
+    const afterTransition = window.setTimeout(updateNavIndicator, 400);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(afterTransition);
+    };
+  }, [updateNavIndicator, sections, navOpen, sidebarPeeking]);
 
   useEffect(() => {
     const nav = navRef.current;

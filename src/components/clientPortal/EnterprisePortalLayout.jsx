@@ -429,6 +429,9 @@ export default function EnterprisePortalLayout({
     );
 
   const handleNav = (id) => {
+    if (sidebarCompact && sidebarPeek) {
+      setSidebarCollapsed(false);
+    }
     onTabChange(id);
     setNavOpen(false);
     setNotificationsOpen(false);
@@ -460,6 +463,7 @@ export default function EnterprisePortalLayout({
         activeTab={activeTab}
         navBadges={navBadges}
         sidebarCompact={sidebarVisualCompact}
+        sidebarPeeking={sidebarCompact && sidebarPeek}
         navOpen={navOpen}
         onNavigate={handleNav}
       />
