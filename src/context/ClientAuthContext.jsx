@@ -42,8 +42,25 @@ export function ClientAuthProvider({ children }) {
   useEffect(() => {
     if (!session) return;
     refreshPortalData(session);
-    const interval = setInterval(() => refreshPortalData(session, { silent: true }), 30000);
+    const interval = setInterval(() => refreshPortalData(session, { silent: true }), 15000);
     return () => clearInterval(interval);
+  }, [session, refreshPortalData]);
+
+  useEffect(() => {
+    if (!session) return undefined;
+
+    const refresh = () => {
+      if (document.visibilityState === 'visible') {
+        refreshPortalData(session, { silent: true });
+      }
+    };
+
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
   }, [session, refreshPortalData]);
 
   const login = useCallback(async (username, password) => {

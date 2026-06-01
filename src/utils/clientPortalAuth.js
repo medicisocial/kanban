@@ -108,8 +108,12 @@ export async function completeClientPasswordReset(token, password) {
 }
 
 export async function fetchClientPortalData(session) {
-  const response = await fetchClientApi('/api/client-portal', {
-    headers: authHeaders(session),
+  const response = await fetchClientApi(`/api/client-portal?_=${Date.now()}`, {
+    headers: {
+      ...authHeaders(session),
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+    },
   });
 
   if (response.status === 401) {

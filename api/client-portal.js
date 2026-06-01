@@ -1,4 +1,3 @@
-import { getRedis, loadWorkspace } from './_lib/redis.mjs';
 import {
   getClientSessionFromRequest,
   getClientPortalAuthMap,
@@ -8,62 +7,18 @@ import {
 import {
   normalizeClientContacts,
   normalizeClientSocialLogins,
-  mergeClientSocialLogins,
 } from './_lib/clientProfile.mjs';
 import { normalizeClientCompanyFiles } from './_lib/clientCompanyFiles.mjs';
 import { normalizeClientSpecialMenus } from './_lib/clientSpecialMenus.mjs';
-import { isSupabaseConfigured, fetchCollection, fetchCollectionMap } from './_lib/supabase.mjs';
-
-const STORAGE_KEY = 'medici-social-kanban';
-const VIDEO_IDEAS_STORAGE_KEY = 'medici-social-video-ideas';
-const SHOOT_PLANS_STORAGE_KEY = 'medici-social-shoot-plans';
-const EVENTS_STORAGE_KEY = 'medici-social-events';
-const MEETINGS_STORAGE_KEY = 'medici-social-meetings';
-const CLIENTS_STORAGE_KEY = 'medici-social-clients';
-const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
-const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
-
-/**
- * Supabase is the source of truth. Assemble the per-table rows into the same
- * workspace shape the rest of this handler already expects. Fall back to the
- * Upstash KV blob only if Supabase isn't configured or a request fails.
- */
-async function loadPortalWorkspace() {
-  if (isSupabaseConfigured()) {
-    try {
-      const [cards, ideas, events, meetings, plans, clientsRows, authMap] = await Promise.all([
-        fetchCollection('cards'),
-        fetchCollection('video_ideas'),
-        fetchCollection('events'),
-        fetchCollection('meetings'),
-        fetchCollectionMap('shoot_plans'),
-        fetchCollection('clients'),
-        fetchCollectionMap('client_portal_credentials'),
-      ]);
-
-      if (cards && ideas && events && meetings && plans && clientsRows && authMap) {
-        return {
-          exportedAt: new Date().toISOString(),
-          data: {
-            [STORAGE_KEY]: cards,
-            [VIDEO_IDEAS_STORAGE_KEY]: ideas,
-            [EVENTS_STORAGE_KEY]: events,
-            [MEETINGS_STORAGE_KEY]: meetings,
-            [SHOOT_PLANS_STORAGE_KEY]: plans,
-            [CLIENTS_STORAGE_KEY]: clientsRows[0] || {},
-            [CLIENT_PORTAL_AUTH_KEY]: authMap,
-          },
-        };
-      }
-    } catch (error) {
-      console.error('[client-portal] Supabase fetch failed, falling back to KV:', error?.message || error);
-    }
-  }
-
-  const redis = getRedis();
-  if (!redis) return null;
-  return loadWorkspace(redis);
-}
+import {
+  CLIENTS_STORAGE_KEY,
+  EVENTS_STORAGE_KEY,
+  MEETINGS_STORAGE_KEY,
+  SHOOT_PLANS_STORAGE_KEY,
+  STORAGE_KEY,
+  VIDEO_IDEAS_STORAGE_KEY,
+  loadPortalWorkspace,
+} from './_lib/portalWorkspace.mjs';
 
 function unauthorized(res) {
   return res.status(401).json({ error: 'Unauthorized' });
@@ -128,6 +83,7 @@ export default async function handler(req, res) {
   const currentUser =
     brandUsers.find((user) => user.username.toLowerCase() === sessionUsername) || null;
 
+  res.setHeader('Cache-Control', 'private, no-store, max-age=0');
   return res.status(200).json({
     brand,
     exportedAt: workspace?.exportedAt || null,

@@ -1,5 +1,6 @@
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
 import { deleteRecords, isSupabaseConfigured, upsertRecords } from './_lib/supabase.mjs';
+import { patchRedisWorkspaceCards } from './_lib/redisWorkspace.mjs';
 
 const ALLOWED_TABLES = new Set([
   'cards',
@@ -95,6 +96,11 @@ export default async function handler(req, res) {
         upserts.map((row) => ({ id: row.id, data: row.data })),
         resolvedOrgId,
       );
+      if (table === 'cards') {
+        await patchRedisWorkspaceCards(upserts, deleteIds);
+      }
+    } else if (Array.isArray(deleteIds) && deleteIds.length && table === 'cards') {
+      await patchRedisWorkspaceCards([], deleteIds);
     }
     return res.status(200).json({ ok: true });
   } catch (error) {

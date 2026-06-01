@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useClientAuth } from '../context/ClientAuthContext';
 import { useClientsContext } from '../context/ClientsContext';
 import ClientReviewPortal from './ClientReviewPortal';
@@ -17,7 +17,7 @@ import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import { buildClientPortalTasks } from '../utils/clientPortalTasks';
 
 export default function ClientHubPortal({ onSignOut }) {
-  const { brand, portalData, loadingData, dataError, logout, queueCloudResponse, refreshPortalData, savePortalProfile } =
+  const { brand, session, portalData, loadingData, dataError, logout, queueCloudResponse, refreshPortalData, savePortalProfile } =
     useClientAuth();
   const { getClientColor, getClientLogo } = useClientsContext();
   const [activeTab, setActiveTab] = useState('home');
@@ -38,6 +38,13 @@ export default function ClientHubPortal({ onSignOut }) {
     setActiveTab(tab);
     setNotificationsOpen(false);
   };
+
+  useEffect(() => {
+    if (!session || activeTab !== 'calendar') return undefined;
+    refreshPortalData(session, { silent: true });
+    const interval = setInterval(() => refreshPortalData(session, { silent: true }), 10000);
+    return () => clearInterval(interval);
+  }, [activeTab, session, refreshPortalData]);
 
   const clientColor = portalData?.clientColor || getClientColor(brand);
   const clientLogo = portalData?.clientLogo || getClientLogo(brand);

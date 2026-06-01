@@ -119,20 +119,17 @@ function ClientCalendarDetail({ card, onClose }) {
 
 export default function ClientCalendarPortal({ client, cards, embedded = false, hideSectionHeader = false }) {
   const { getClientColor } = useClientsContext();
-  const [localCards, setLocalCards] = useState([]);
   const [focusDate, setFocusDate] = useState(() => getDefaultCalendarDate());
   const [viewMode, setViewMode] = useState('month');
   const [selectedCard, setSelectedCard] = useState(null);
 
-  useEffect(() => {
+  const visibleCards = useMemo(() => {
     const snapshot = parseCalendarShareHash();
     const calendarCards = stripInternalCardsForClientPortal(getContentCalendarCards(cards));
-    const merged = mergePortalCalendarCards(calendarCards, client, snapshot);
-    setLocalCards(merged.filter((c) => c.client === client));
+    return mergePortalCalendarCards(calendarCards, client, snapshot).filter((c) => c.client === client);
   }, [cards, client]);
 
   const clientColor = getClientColor(client);
-  const visibleCards = localCards;
   const totalOnCalendar = visibleCards.length;
 
   const cardsByDate = useMemo(() => {
