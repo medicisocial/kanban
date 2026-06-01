@@ -275,6 +275,7 @@ export function createCard(overrides = {}) {
     status: 'To Create',
     columnId: 'shoot',
     createdAt: Date.now(),
+    updatedAt: Date.now(),
     ...overrides,
   };
 }

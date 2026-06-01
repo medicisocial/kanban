@@ -12,7 +12,7 @@ async function fetchAllViaRest(table, orgId) {
   const timeoutId = setTimeout(() => controller.abort(), REST_FETCH_TIMEOUT_MS);
 
   try {
-    const endpoint = `${url}/rest/v1/${table}?select=id,data&org_id=eq.${encodeURIComponent(orgId)}`;
+    const endpoint = `${url}/rest/v1/${table}?select=id,data,updated_at&org_id=eq.${encodeURIComponent(orgId)}`;
     const response = await fetch(endpoint, {
       headers: {
         apikey: anonKey,
@@ -48,7 +48,7 @@ export function createCollectionStore(table) {
 
       const { data, error } = await supabase
         .from(table)
-        .select('id, data')
+        .select('id, data, updated_at')
         .eq('org_id', orgId);
       if (error) throw error;
       return data || [];

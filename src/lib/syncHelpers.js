@@ -56,6 +56,11 @@ export function singletonMatchesSnapshot(value, syncedStr) {
   return syncedStr === JSON.stringify(value);
 }
 
+function recordRevision(record) {
+  if (!record || typeof record !== 'object') return 0;
+  return record.updatedAt || record.createdAt || 0;
+}
+
 /** Three-way merge for a single record — unsynced local edits always win. */
 export function mergeRemoteRecordWithLocal({ remote, local, syncedStr }) {
   if (local == null) return remote;
@@ -66,9 +71,27 @@ export function mergeRemoteRecordWithLocal({ remote, local, syncedStr }) {
   if (localStr === remoteStr) return remote;
 
   if (syncedStr === undefined) return local;
+
+  // Local edits not yet reflected in our sync snapshot always win.
   if (localStr !== syncedStr) return local;
-  if (remoteStr !== syncedStr) return remote;
-  return remote;
+
+  // Local matches the last sync snapshot. Only accept remote if it is clearly newer.
+  if (remoteStr !== syncedStr) {
+    let syncedRecord = null;
+    try {
+      syncedRecord = JSON.parse(syncedStr);
+    } catch {
+      syncedRecord = null;
+    }
+
+    const remoteTs = recordRevision(remote);
+    const localTs = recordRevision(local);
+    const syncedTs = recordRevision(syncedRecord);
+    if (remoteTs > syncedTs && remoteTs > localTs) return remote;
+    return local;
+  }
+
+  return local;
 }
 
 /** Keep unsynced local edits when a realtime pull returns stale cloud data. */

@@ -12,6 +12,14 @@ import {
   savePendingRemoved,
 } from './syncHelpers';
 
+function attachRowUpdatedAt(record, rowUpdatedAt) {
+  if (!rowUpdatedAt) return record;
+  const rowTs = new Date(rowUpdatedAt).getTime();
+  const dataTs = record?.updatedAt || record?.createdAt || 0;
+  if (rowTs <= dataTs) return record;
+  return { ...record, updatedAt: rowTs };
+}
+
 function excludePendingRemoved(items, getId, pendingRemoved) {
   if (!pendingRemoved.size) return items;
   return items.filter((record) => !pendingRemoved.has(String(getId(record))));
@@ -85,7 +93,10 @@ export function useCollectionSync({
         const rows = await fetchRowsWithTimeout(store);
         if (!active) return;
 
-        const mapRow = (row) => (normalize ? normalize(row.data ?? row) : row.data ?? row);
+        const mapRow = (row) => {
+          const base = normalize ? normalize(row.data ?? row) : row.data ?? row;
+          return attachRowUpdatedAt(base, row.updated_at);
+        };
 
         // First run with an empty table: seed from local data for the legacy org only.
         if (rows.length === 0 && loadLocal && isLegacyOrg) {

@@ -81,6 +81,7 @@ function normalizeCard(card) {
     sourceIdeaId: card.sourceIdeaId || null,
     dueDate,
     isOneOffProject,
+    updatedAt: card.updatedAt || card.createdAt || 0,
   };
 }
 
@@ -282,13 +283,14 @@ export function useKanban() {
           synced.dueDate !== undefined ? synced.dueDate : card.dueDate,
           { isOneOffProject: isOneOff, contentType: synced.contentType ?? card.contentType },
         );
-        persisted = {
+        persisted = normalizeCard({
           ...card,
           ...synced,
           dueDate: nextDueDate,
           isOneOffProject: isOneOff,
           platform: PLATFORM,
-        };
+          updatedAt: Date.now(),
+        });
         return persisted;
       }),
     );
@@ -302,12 +304,13 @@ export function useKanban() {
 
   const moveCard = useCallback((cardId, targetColumnId) => {
     notifyMutation();
+    let persisted = null;
     const status = getStatusForColumn(targetColumnId);
     setCards((prev) =>
       prev.map((card) => {
         if (card.id !== cardId) return card;
         if (!canMoveCardToColumn(card, targetColumnId)) return card;
-        return {
+        persisted = normalizeCard({
           ...card,
           columnId: targetColumnId,
           status,
@@ -315,13 +318,17 @@ export function useKanban() {
             isOneOffProject: card.isOneOffProject,
             contentType: card.contentType,
           }),
-        };
+          updatedAt: Date.now(),
+        });
+        return persisted;
       }),
     );
+    if (persisted) persistCardRecord(persisted);
   }, []);
 
   const markAsPosted = useCallback((cardId, occurrenceDate) => {
     notifyMutation();
+    let persisted = null;
     setCards((prev) =>
       prev.map((card) => {
         if (card.id !== cardId) return card;
@@ -338,15 +345,15 @@ export function useKanban() {
             updates.postedAt = Date.now();
           }
 
-          return { ...card, ...updates };
+          persisted = normalizeCard({ ...card, ...updates, updatedAt: Date.now() });
+          return persisted;
         }
 
-        return {
-          ...card,
-          postedAt: Date.now(),
-        };
+        persisted = normalizeCard({ ...card, postedAt: Date.now(), updatedAt: Date.now() });
+        return persisted;
       }),
     );
+    if (persisted) persistCardRecord(persisted);
   }, []);
 
   const addCardWithDetails = useCallback((overrides = {}) => {
