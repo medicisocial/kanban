@@ -53,7 +53,7 @@ export default function ClientSocialLoginsEditor({
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaving(true);
     setMessage('');
     setError('');
@@ -70,7 +70,11 @@ export default function ClientSocialLoginsEditor({
       );
 
       const merged = mergeClientSocialLogins(getClientSocialLogins(client), payload);
-      onSaveClientSocialLogins(client, payload);
+      const result = await onSaveClientSocialLogins(client, payload);
+      if (result?.ok === false) {
+        setError(result.error || 'Could not save social logins.');
+        return;
+      }
       dirtyRef.current = false;
       setLogins(
         Object.fromEntries(

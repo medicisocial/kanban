@@ -75,6 +75,18 @@ function loadClients() {
   return normalizeClientsState(loadClientsRaw());
 }
 
+async function syncClientsWorkspace(nextState) {
+  if (!SUPABASE_ENABLED) return { ok: true };
+  const ok = await pushStaffSyncSingleton('clients', 'workspace', nextState);
+  if (!ok) {
+    return {
+      ok: false,
+      error: 'Saved locally but could not sync to the cloud. Log out and back in, then try again.',
+    };
+  }
+  return { ok: true };
+}
+
 export function useClients() {
   const { isLegacyOrg, planType, orgId } = useStaffAuth();
   const includeDefaults = isLegacyOrg;
@@ -242,17 +254,7 @@ export function useClients() {
       return nextState;
     });
 
-    if (SUPABASE_ENABLED) {
-      const ok = await pushStaffSyncSingleton('clients', 'workspace', nextState);
-      if (!ok) {
-        return {
-          ok: false,
-          error: 'Contacts saved locally but could not sync to the cloud. Log out and back in, then try again.',
-        };
-      }
-    }
-
-    return { ok: true };
+    return syncClientsWorkspace(nextState);
   }, []);
 
   const getClientSocialLogins = useCallback(
@@ -260,15 +262,22 @@ export function useClients() {
     [state.socialLogins],
   );
 
-  const setClientSocialLogins = useCallback((client, logins) => {
-    if (!client) return;
-    setState((prev) => ({
-      ...prev,
-      socialLogins: {
-        ...prev.socialLogins,
-        [client]: mergeClientSocialLogins(prev.socialLogins[client], logins),
-      },
-    }));
+  const setClientSocialLogins = useCallback(async (client, logins) => {
+    if (!client) return { ok: false, error: 'Missing client.' };
+
+    let nextState = null;
+    setState((prev) => {
+      nextState = {
+        ...prev,
+        socialLogins: {
+          ...prev.socialLogins,
+          [client]: mergeClientSocialLogins(prev.socialLogins[client], logins),
+        },
+      };
+      return nextState;
+    });
+
+    return syncClientsWorkspace(nextState);
   }, []);
 
   const getClientCompanyFiles = useCallback(
