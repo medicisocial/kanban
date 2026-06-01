@@ -274,6 +274,20 @@ export default function AppShell({ onSignOut }) {
     deleteCard(cardId);
   };
 
+  const handleMoveCalendarPost = (cardId, dueDate) => {
+    const card = cards.find((entry) => entry.id === cardId);
+    if (!card || !dueDate || card.dueDate === dueDate) return;
+    beginBatch();
+    try {
+      updateCard(cardId, { dueDate });
+      setSelectedCard((prev) =>
+        prev?.id === cardId ? { ...prev, dueDate } : prev,
+      );
+    } finally {
+      endBatch();
+    }
+  };
+
   const handleRemoveFromCalendar = (card) => {
     if (card.contentType === "Story") {
       const recurring = card.storyRecurrenceDays?.length > 0;
@@ -955,6 +969,7 @@ export default function AppShell({ onSignOut }) {
           }
           onAddCalendarPost={handleAddCalendarPost}
           onRemoveFromCalendar={handleRemoveFromCalendar}
+          onMoveCalendarPost={handleMoveCalendarPost}
           onAddEvent={addEvent}
           onUpdateEvent={updateEvent}
           onDeleteEvent={deleteEvent}

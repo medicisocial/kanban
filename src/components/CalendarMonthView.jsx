@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   getMonthWeeks,
   toDateKey,
@@ -16,6 +17,7 @@ export default function CalendarMonthView({
   onSelectDate,
   selectedDateKey = '',
   onRemoveFromCalendar,
+  onMoveCalendarPost,
   overviewLabel = "overview",
   hideClient = false,
   expanded = false,
@@ -24,6 +26,17 @@ export default function CalendarMonthView({
   const year = focusDate.getFullYear();
   const month = focusDate.getMonth();
   const weeks = getMonthWeeks(year, month);
+  const [dragOverKey, setDragOverKey] = useState("");
+
+  const handleDrop = (dateKey, event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const cardId = event.dataTransfer.getData("text/plain");
+    if (cardId && onMoveCalendarPost) {
+      onMoveCalendarPost(cardId, dateKey);
+    }
+    setDragOverKey("");
+  };
 
   return (
     <div className="flex flex-col">
@@ -62,13 +75,21 @@ export default function CalendarMonthView({
                       onDayClick?.(day);
                     }
                   }}
+                  onDragOver={(event) => {
+                    if (!onMoveCalendarPost) return;
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = 'move';
+                    setDragOverKey(key);
+                  }}
+                  onDragLeave={() => setDragOverKey("")}
+                  onDrop={(event) => handleDrop(key, event)}
                   className={`calendar-grid-cell p-1.5 sm:min-h-[140px] sm:p-2 ${
                     expanded ? 'min-h-[180px] align-top sm:min-h-[220px]' : 'min-h-[120px]'
                   } ${
                     !inMonth ? "bg-black/20 opacity-50" : ""
                   } ${today ? 'calendar-cell-today' : ''} ${
                     selected ? "bg-violet-500/15 ring-2 ring-inset ring-violet-400/60" : ""
-                  }`}
+                  } ${dragOverKey === key ? 'ring-2 ring-inset ring-[#810100]/60' : ''}`}
                   aria-current={today ? 'date' : undefined}
                 >
                   <div className="mb-1 flex items-center justify-between">
@@ -105,6 +126,7 @@ export default function CalendarMonthView({
                           onCardClick?.(c);
                         }}
                         onRemove={onRemoveFromCalendar}
+                        onMove={onMoveCalendarPost}
                         compact
                         hideClient={hideClient}
                         fullTitle={expanded}

@@ -1,10 +1,78 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
-import { hasStaffSupabaseSession } from './staffSupabaseAuth';
+import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
+import { pushStaffSync } from './staffSyncApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
 
 const FETCH_TIMEOUT_MS = 12000;
+
+function pendingRemovedKey(orgId, table) {
+  return `medici-pending-removed:${orgId}:${table}`;
+}
+
+function loadPendingRemoved(orgId, table) {
+  try {
+    const raw = sessionStorage.getItem(pendingRemovedKey(orgId, table));
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function savePendingRemoved(orgId, table, ids) {
+  const key = pendingRemovedKey(orgId, table);
+  if (!ids.size) {
+    sessionStorage.removeItem(key);
+    return;
+  }
+  sessionStorage.setItem(key, JSON.stringify([...ids]));
+}
+
+function excludePendingRemoved(items, getId, pendingRemoved) {
+  if (!pendingRemoved.size) return items;
+  return items.filter((record) => !pendingRemoved.has(String(getId(record))));
+}
+
+/** Keep unsynced local edits when a realtime pull returns stale cloud data. */
+function mergeRemoteWithLocalPending({
+  remoteItems,
+  getId,
+  syncedSnapshot,
+  localItems,
+  pendingRemoved,
+}) {
+  const synced = syncedSnapshot || new Map();
+  const localById = new Map(localItems.map((record) => [String(getId(record)), record]));
+  const remoteIds = new Set();
+
+  const merged = remoteItems.map((remote) => {
+    const id = String(getId(remote));
+    remoteIds.add(id);
+    const local = localById.get(id);
+    if (!local) return remote;
+
+    const localStr = JSON.stringify(local);
+    const remoteStr = JSON.stringify(remote);
+    if (localStr === remoteStr) return remote;
+
+    const syncedStr = synced.get(id);
+    if (syncedStr === undefined || (syncedStr !== localStr && localStr !== remoteStr)) {
+      return local;
+    }
+    return remote;
+  });
+
+  for (const local of localItems) {
+    const id = String(getId(local));
+    if (pendingRemoved.has(id) || remoteIds.has(id)) continue;
+    merged.push(local);
+  }
+
+  return merged;
+}
 
 async function fetchRowsWithTimeout(store) {
   return Promise.race([
@@ -42,7 +110,11 @@ export function useCollectionSync({
   const applyingRemoteRef = useRef(false);
   const loadedRef = useRef(!SUPABASE_ENABLED);
   const pendingWriteRef = useRef(false);
+  const pendingRemovedRef = useRef(new Set());
+  const localItemsRef = useRef(items);
   const [writeNonce, setWriteNonce] = useState(0);
+
+  localItemsRef.current = items;
 
   if (SUPABASE_ENABLED && orgReady && orgId) {
     storeRef.current = createCollectionStore(table);
@@ -69,6 +141,7 @@ export function useCollectionSync({
     syncedRef.current = null;
     applyingRemoteRef.current = false;
     loadedRef.current = false;
+    pendingRemovedRef.current = loadPendingRemoved(orgId, table);
 
     const store = storeRef.current;
     let active = true;
@@ -124,9 +197,15 @@ export function useCollectionSync({
         }
 
         const allItems = rows.map(mapRow);
-        const keptItems = filterItems ? filterItems(allItems) : allItems;
+        const filteredItems = filterItems ? filterItems(allItems) : allItems;
+        const keptItems = excludePendingRemoved(
+          filteredItems,
+          getId,
+          pendingRemovedRef.current,
+        );
+
         const keptIds = new Set(keptItems.map((record) => String(getId(record))));
-        const droppedIds = allItems
+        const droppedIds = filteredItems
           .map((record) => String(getId(record)))
           .filter((id) => !keptIds.has(id));
 
@@ -138,15 +217,24 @@ export function useCollectionSync({
         }
 
         applyingRemoteRef.current = true;
+        const previousSynced = syncedRef.current || new Map();
         syncedRef.current = new Map(
           keptItems.map((record) => [String(getId(record)), JSON.stringify(record)]),
         );
         loadedRef.current = true;
-        setItems(keptItems);
+        setItems(
+          mergeRemoteWithLocalPending({
+            remoteItems: keptItems,
+            getId,
+            syncedSnapshot: previousSynced,
+            localItems: localItemsRef.current,
+            pendingRemoved: pendingRemovedRef.current,
+          }),
+        );
       } catch (err) {
         console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
         if (loadLocal) {
-          const local = loadLocal();
+          const local = excludePendingRemoved(loadLocal(), getId, pendingRemovedRef.current);
           if (local.length) {
             applyingRemoteRef.current = true;
             syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
@@ -173,22 +261,12 @@ export function useCollectionSync({
     // This change came from a remote pull — don't echo it back to the server.
     if (applyingRemoteRef.current) {
       applyingRemoteRef.current = false;
-      syncedRef.current = new Map(items.map((r) => [String(getId(r)), JSON.stringify(r)]));
       return;
     }
 
     let cancelled = false;
 
     const pushChanges = async () => {
-      const canWrite = await hasStaffSupabaseSession();
-      if (!canWrite) {
-        pendingWriteRef.current = true;
-        console.warn(
-          `[supabase:${table}] skipped write — no authenticated database session. Log out and log in again.`,
-        );
-        return;
-      }
-
       const prev = syncedRef.current || new Map();
       const next = new Map(items.map((r) => [String(getId(r)), JSON.stringify(r)]));
 
@@ -202,22 +280,49 @@ export function useCollectionSync({
         if (!next.has(id)) removed.push(id);
       }
 
+      if (removed.length) {
+        for (const id of removed) pendingRemovedRef.current.add(id);
+        savePendingRemoved(orgId, table, pendingRemovedRef.current);
+      }
+
       if (!changed.length && !removed.length) return;
 
       const store = storeRef.current;
+
+      let canWrite = await hasStaffSupabaseSession();
+      if (!canWrite) {
+        await ensureStaffSupabaseSession();
+        canWrite = await hasStaffSupabaseSession();
+      }
+
       try {
-        if (changed.length) {
-          await store.upsertRecords(changed.map((r) => ({ id: getId(r), data: r })));
+        if (canWrite) {
+          if (changed.length) {
+            await store.upsertRecords(changed.map((r) => ({ id: getId(r), data: r })));
+          }
+          if (removed.length) {
+            await store.deleteRecords(removed);
+          }
+        } else {
+          const ok = await pushStaffSync({ table, changed, removed });
+          if (!ok) {
+            pendingWriteRef.current = true;
+            console.warn(
+              `[supabase:${table}] skipped write — no database session. Log out and log in again.`,
+            );
+            return;
+          }
         }
-        if (removed.length) {
-          await store.deleteRecords(removed);
-        }
+
         if (!cancelled) {
+          for (const id of removed) pendingRemovedRef.current.delete(id);
+          savePendingRemoved(orgId, table, pendingRemovedRef.current);
           syncedRef.current = next;
           pendingWriteRef.current = false;
         }
       } catch (err) {
         console.error(`[supabase:${table}] sync failed:`, err?.message || err, err);
+        pendingWriteRef.current = true;
       }
     };
 
@@ -227,5 +332,5 @@ export function useCollectionSync({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, writeNonce]);
+  }, [items, writeNonce, orgId, table]);
 }

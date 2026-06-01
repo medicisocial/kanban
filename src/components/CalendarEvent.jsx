@@ -8,6 +8,7 @@ export default function CalendarEvent({
   card,
   onClick,
   onRemove,
+  onMove,
   compact = false,
   hideClient = false,
   fullTitle = false,
@@ -41,6 +42,27 @@ export default function CalendarEvent({
   const eventTitle = hideClient
     ? card.title
     : `${card.client}: ${card.title}${scheduleSummary ? ` (${scheduleSummary})` : ""}`;
+
+  const canDrag =
+    Boolean(onMove) &&
+    !isShootSession &&
+    !hasStoryRecurrence(card) &&
+    !hasStoryDailyRange(card) &&
+    card.id;
+
+  const handleDragStart = (ev) => {
+    if (!canDrag) return;
+    ev.stopPropagation();
+    ev.dataTransfer.setData('text/plain', card.id);
+    ev.dataTransfer.effectAllowed = 'move';
+  };
+
+  const dragProps = canDrag
+    ? {
+        draggable: true,
+        onDragStart: handleDragStart,
+      }
+    : {};
 
   const handleClick = (ev) => {
     ev.stopPropagation();
@@ -95,6 +117,7 @@ export default function CalendarEvent({
       <div
         role="button"
         tabIndex={0}
+        {...dragProps}
         onClick={(ev) => {
           ev.stopPropagation();
           onClick?.(card);
@@ -105,9 +128,9 @@ export default function CalendarEvent({
             onClick?.(card);
           }
         }}
-        className={`group/event relative mb-1 w-full cursor-pointer rounded px-1.5 py-1 text-left transition hover:brightness-125 ${
+        className={`group/event relative mb-1 w-full rounded px-1.5 py-1 text-left transition hover:brightness-125 ${
           highlighted ? 'ring-1 ring-white/30' : ''
-        }`}
+        } ${canDrag ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
         style={{
           backgroundColor: typeStyle.border + (isPosted ? "22" : "33"),
           opacity: isPosted ? 0.72 : 1,
@@ -159,7 +182,10 @@ export default function CalendarEvent({
 
   return (
     <div
-      className="group/event relative w-full rounded-lg border border-white/8 text-left transition hover:brightness-110"
+      {...dragProps}
+      className={`group/event relative w-full rounded-lg border border-white/8 text-left transition hover:brightness-110 ${
+        canDrag ? 'cursor-grab active:cursor-grabbing' : ''
+      }`}
       style={{
         backgroundColor: typeStyle.bg,
         opacity: isPosted ? 0.78 : 1,

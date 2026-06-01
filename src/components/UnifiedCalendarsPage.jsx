@@ -19,6 +19,7 @@ export default function UnifiedCalendarsPage({
   onShootSessionClick,
   onAddCalendarPost,
   onRemoveFromCalendar,
+  onMoveCalendarPost,
   onAddEvent,
   onUpdateEvent,
   onDeleteEvent,
@@ -81,6 +82,7 @@ export default function UnifiedCalendarsPage({
           onShootSessionClick={onShootSessionClick}
           onAddCalendarPost={onAddCalendarPost}
           onRemoveFromCalendar={onRemoveFromCalendar}
+          onMoveCalendarPost={onMoveCalendarPost}
           embedded
         />
       )}

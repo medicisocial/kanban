@@ -141,10 +141,19 @@ export async function upsertRecord(table, id, data) {
 
 /** Deletes a single record by id. */
 export async function deleteRecord(table, id) {
+  await deleteRecords(table, [id]);
+}
+
+/** Deletes multiple records by id. */
+export async function deleteRecords(table, ids) {
+  const list = [...new Set((ids || []).map(String).filter(Boolean))];
+  if (!list.length) return;
+
   const { url, key, orgId } = getConfig();
   if (!url || !key) throw new Error('Supabase is not configured.');
 
-  const endpoint = `${url}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}&org_id=eq.${encodeURIComponent(orgId)}`;
+  const idFilter = list.map((id) => encodeURIComponent(id)).join(',');
+  const endpoint = `${url}/rest/v1/${table}?org_id=eq.${encodeURIComponent(orgId)}&id=in.(${idFilter})`;
   const response = await fetch(endpoint, {
     method: 'DELETE',
     headers: { apikey: key, Authorization: `Bearer ${key}`, Prefer: 'return=minimal' },
@@ -152,5 +161,37 @@ export async function deleteRecord(table, id) {
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
     throw new Error(`Supabase ${table} delete failed: ${response.status} ${detail}`.trim());
+  }
+}
+
+/** Inserts or updates multiple records. */
+export async function upsertRecords(table, records) {
+  const rows = (records || []).filter((record) => record?.id);
+  if (!rows.length) return;
+
+  const { url, key, orgId } = getConfig();
+  if (!url || !key) throw new Error('Supabase is not configured.');
+
+  const payload = rows.map(({ id, data }) => ({
+    id: String(id),
+    org_id: orgId,
+    data,
+    updated_at: new Date().toISOString(),
+  }));
+
+  const endpoint = `${url}/rest/v1/${table}`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Supabase ${table} upsert failed: ${response.status} ${detail}`.trim());
   }
 }

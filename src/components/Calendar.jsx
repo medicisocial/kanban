@@ -25,6 +25,7 @@ export default function Calendar({
   onShootSessionClick,
   onAddCalendarPost,
   onRemoveFromCalendar,
+  onMoveCalendarPost,
   embedded = false,
 }) {
   const [focusDate, setFocusDate] = useState(() => getDefaultCalendarDate());
@@ -168,6 +169,7 @@ export default function Calendar({
             onCardClick={handleCalendarClick}
             onAddPost={openAddModal}
             onRemoveFromCalendar={onRemoveFromCalendar}
+            onMoveCalendarPost={onMoveCalendarPost}
             overviewLabel={overviewLabel}
           />
         ) : (
@@ -177,6 +179,7 @@ export default function Calendar({
             onCardClick={handleCalendarClick}
             onDayClick={handleDayClick}
             onRemoveFromCalendar={onRemoveFromCalendar}
+            onMoveCalendarPost={onMoveCalendarPost}
             overviewLabel={overviewLabel}
           />
         )}

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { getWeekDays, toDateKey, isToday, formatWeekRange, startOfWeek } from "../utils/calendar";
 import CalendarEvent from "./CalendarEvent";
 
@@ -9,11 +10,23 @@ export default function CalendarWeekView({
   onCardClick,
   onAddPost,
   onRemoveFromCalendar,
+  onMoveCalendarPost,
   overviewLabel,
   hideClient = false,
 }) {
   const weekStart = startOfWeek(focusDate);
   const days = getWeekDays(weekStart);
+  const [dragOverKey, setDragOverKey] = useState("");
+
+  const handleDrop = (dateKey, event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const cardId = event.dataTransfer.getData("text/plain");
+    if (cardId && onMoveCalendarPost) {
+      onMoveCalendarPost(cardId, dateKey);
+    }
+    setDragOverKey("");
+  };
 
   return (
     <div className="flex flex-col">
@@ -32,8 +45,16 @@ export default function CalendarWeekView({
               key={key}
               className={`flex w-[160px] shrink-0 flex-col rounded-xl sm:w-[200px] ${
                 today ? 'calendar-cell-today' : 'calendar-week-column'
-              }`}
+              } ${dragOverKey === key ? 'ring-2 ring-[#810100]/60' : ''}`}
               aria-current={today ? 'date' : undefined}
+              onDragOver={(event) => {
+                if (!onMoveCalendarPost) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                setDragOverKey(key);
+              }}
+              onDragLeave={() => setDragOverKey("")}
+              onDrop={(event) => handleDrop(key, event)}
             >
               <div className="relative z-[1] border-b border-white/5 px-3 py-2.5 text-gray-300">
                 <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -73,6 +94,7 @@ export default function CalendarWeekView({
                         card={card}
                         onClick={onCardClick}
                         onRemove={onRemoveFromCalendar}
+                        onMove={onMoveCalendarPost}
                         hideClient={hideClient}
                       />
                     ))}
