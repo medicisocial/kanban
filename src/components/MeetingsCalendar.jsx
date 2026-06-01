@@ -23,7 +23,7 @@ import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader'
 import MeetingsMonthView from './MeetingsMonthView';
 import MeetingModal from './MeetingModal';
 import MeetingVideoLink from './MeetingVideoLink';
-import { getMeetingLinkShortLabel, getMeetingVideoLink } from '../utils/meetingLinks';
+import { getMeetingVideoLink } from '../utils/meetingLinks';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 export default function MeetingsCalendar({
@@ -191,7 +191,6 @@ export default function MeetingsCalendar({
                       {[
                         showAllClients && getMeetingContactLabel(meeting),
                         meeting.location && !getMeetingVideoLink(meeting) ? meeting.location : '',
-                        getMeetingLinkShortLabel(getMeetingVideoLink(meeting)),
                       ]
                         .filter(Boolean)
                         .join(' · ')}

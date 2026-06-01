@@ -7,6 +7,8 @@ import { buildTodayTimeline, buildTodayHeadline } from '../utils/todayTimeline';
 import { useClientsContext } from '../context/ClientsContext';
 import { btnSecondaryClass } from './clientPortal/clientPortalUi';
 import { formatTime } from '../utils';
+import MeetingVideoLink from './MeetingVideoLink';
+import { getMeetingVideoLink } from '../utils/meetingLinks';
 
 const panelActionBtnClass =
   'inline-flex shrink-0 items-center justify-center rounded-sm bg-white px-3 py-1.5 text-[10px] font-medium normal-case tracking-normal text-black transition-opacity duration-300 hover:opacity-75';
@@ -53,6 +55,15 @@ function TodayTimelineItem({ item, onOpenMeeting, onOpenShoot }) {
           </span>
         </div>
         {item.subtitle && <p className="mt-0.5 text-xs text-white/45">{item.subtitle}</p>}
+        {item.kind === 'meeting' && getMeetingVideoLink(item.meeting) && (
+          <p className="mt-1">
+            <MeetingVideoLink
+              meeting={item.meeting}
+              compact
+              linkClassName="text-xs font-medium text-violet-300"
+            />
+          </p>
+        )}
       </div>
     </button>
   );

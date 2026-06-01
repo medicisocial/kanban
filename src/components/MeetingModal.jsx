@@ -20,7 +20,7 @@ import {
   isOccurrenceRescheduled,
   isRecurringMeeting,
 } from '../utils/meetingsCalendar';
-import { getMeetingLinkShortLabel, getMeetingVideoLink } from '../utils/meetingLinks';
+import { getMeetingVideoLink } from '../utils/meetingLinks';
 import MeetingsMonthView from './MeetingsMonthView';
 import TimeInput from './TimeInput';
 import DateInput from './DateInput';
@@ -60,7 +60,6 @@ function segmentBtnClass(active) {
 function MeetingSidebarChip({ meeting, onClick, draft = false }) {
   const contact = getMeetingContactLabel(meeting);
   const recurring = isRecurringMeeting(meeting);
-  const videoLabel = getMeetingLinkShortLabel(getMeetingVideoLink(meeting));
 
   return (
     <button
@@ -81,8 +80,16 @@ function MeetingSidebarChip({ meeting, onClick, draft = false }) {
         {meeting.time ? formatTime(meeting.time) : 'No start time'}
         {meeting.endTime ? ` – ${formatTime(meeting.endTime)}` : ''}
         {recurring ? ' · Recurring' : ''}
-        {videoLabel ? ` · ${videoLabel}` : ''}
       </p>
+      {getMeetingVideoLink(meeting) && (
+        <p className="mt-1">
+          <MeetingVideoLink
+            meeting={meeting}
+            compact
+            linkClassName="text-xs font-medium text-violet-300"
+          />
+        </p>
+      )}
     </button>
   );
 }
@@ -647,6 +654,8 @@ export default function MeetingModal({
                         client: contactType === 'client' ? client : '',
                         prospectName: contactType === 'prospect' ? prospectName.trim() : '',
                         recurrence,
+                        videoLink,
+                        location,
                       }}
                     />
                   )}

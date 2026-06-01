@@ -25,7 +25,7 @@ export default function MeetingVideoLink({
       href={trimmed}
       target="_blank"
       rel="noopener noreferrer"
-      className={`${linkClassName} ${className}`.trim()}
+      className={`underline underline-offset-2 hover:text-violet-200 ${linkClassName} ${className}`.trim()}
       onClick={(event) => event.stopPropagation()}
     >
       {label}

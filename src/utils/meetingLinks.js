@@ -2,12 +2,35 @@ export function isHttpUrl(value) {
   return /^https?:\/\//i.test(String(value || '').trim());
 }
 
+function looksLikeMeetingUrl(value) {
+  const lower = String(value || '').trim().toLowerCase();
+  if (!lower) return false;
+  return (
+    lower.includes('zoom.us')
+    || lower.includes('zoom.com')
+    || lower.includes('meet.google.com')
+    || lower.includes('google.com/meet')
+    || lower.includes('teams.microsoft.com')
+    || lower.includes('teams.live.com')
+  );
+}
+
+export function normalizeMeetingUrl(value) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return '';
+  if (isHttpUrl(trimmed)) return trimmed;
+  if (looksLikeMeetingUrl(trimmed) || /^[\w.-]+\.[a-z]{2,}\//i.test(trimmed)) {
+    return `https://${trimmed.replace(/^\/+/, '')}`;
+  }
+  return trimmed;
+}
+
 /** Zoom, Google Meet, Teams, or any https link saved on the meeting. */
 export function getMeetingVideoLink(meeting) {
-  const video = String(meeting?.videoLink || '').trim();
-  if (video) return video;
+  const video = normalizeMeetingUrl(meeting?.videoLink);
+  if (video && isHttpUrl(video)) return video;
 
-  const location = String(meeting?.location || '').trim();
+  const location = normalizeMeetingUrl(meeting?.location);
   if (isHttpUrl(location)) return location;
 
   return '';
