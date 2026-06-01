@@ -58,6 +58,32 @@ export function getBoardCards(cards) {
   });
 }
 
+/** Chronological sort key for pipeline cards — matches editor/account-manager task lists. */
+export function getPipelineCardSortKey(card) {
+  if (card.columnId === 'shoot') {
+    const date = card.shootDate || card.dueDate || '';
+    if (!date) return '9999-99-99T99:99';
+    const time = card.shootTime || card.dueTime || '99:99';
+    return `${date}T${time}`;
+  }
+
+  const date = card.dueDate || card.shootDate || '';
+  if (!date) return '9999-99-99T99:99';
+  const time = card.dueTime || card.shootTime || '99:99';
+  return `${date}T${time}`;
+}
+
+export function comparePipelineCards(a, b) {
+  const keyA = getPipelineCardSortKey(a);
+  const keyB = getPipelineCardSortKey(b);
+  if (keyA !== keyB) return keyA.localeCompare(keyB);
+  return (a.title || '').localeCompare(b.title || '');
+}
+
+export function sortPipelineCards(cards) {
+  return [...cards].sort(comparePipelineCards);
+}
+
 import { cardIsAssignedToStaff } from './utils/staffMembers';
 
 export function filterCards(cards, { client, assigneeFilter = false, staffName = '', clientAccountManagers = {} }) {

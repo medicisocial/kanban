@@ -12,7 +12,7 @@ import {
   rectIntersection,
 } from '@dnd-kit/core';
 import { COLUMNS, BOARD_COLUMN_GROUPS } from '../constants';
-import { filterCards, getBoardCards } from '../utils';
+import { filterCards, getBoardCards, sortPipelineCards } from '../utils';
 import KanbanColumn from './KanbanColumn';
 import CardPreview from './CardPreview';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
@@ -89,14 +89,16 @@ export default function KanbanBoard({
   const cardsByColumn = useMemo(() => {
     const map = {};
     COLUMNS.forEach((col) => {
-      map[col.id] = boardCards.filter((c) => {
-        if (c.columnId !== col.id) return false;
-        if (col.id === 'finished') return c.isOneOffProject;
-        if (c.isOneOffProject) {
-          return ['shoot', 'editing', 'in-review', 'approved'].includes(col.id);
-        }
-        return true;
-      });
+      map[col.id] = sortPipelineCards(
+        boardCards.filter((c) => {
+          if (c.columnId !== col.id) return false;
+          if (col.id === 'finished') return c.isOneOffProject;
+          if (c.isOneOffProject) {
+            return ['shoot', 'editing', 'in-review', 'approved'].includes(col.id);
+          }
+          return true;
+        }),
+      );
     });
     return map;
   }, [boardCards]);

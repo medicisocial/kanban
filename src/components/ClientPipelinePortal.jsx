@@ -5,7 +5,7 @@ import {
   getClientPipelineDisplayColumn,
   stripInternalCardsForClientPortal,
 } from '../utils/clientPortalAuth';
-import { formatScheduledDateTime } from '../utils';
+import { formatScheduledDateTime, sortPipelineCards } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import {
   statusBadgeClass,
@@ -28,8 +28,10 @@ export default function ClientPipelinePortal({ cards, clientColor, embedded = fa
     <div className="flex w-full justify-center overflow-x-auto pb-2">
       <div className="flex w-max gap-3 px-1">
       {CLIENT_PIPELINE_COLUMNS.map((column) => {
-        const columnCards = filteredCards.filter(
-          (card) => getClientPipelineDisplayColumn(card) === column.id,
+        const columnCards = sortPipelineCards(
+          filteredCards.filter(
+            (card) => getClientPipelineDisplayColumn(card) === column.id,
+          ),
         );
         const tone = COLUMN_TONES[column.id] || 'default';
 
