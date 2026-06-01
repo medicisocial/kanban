@@ -423,11 +423,6 @@ export default function MeetingModal({
                       Rescheduled from {formatDate(scheduledDate)}
                     </p>
                   )}
-                  {draftVideoLink && (
-                    <p className="mt-2">
-                      <MeetingVideoLink url={draftVideoLink} linkClassName="text-sm font-medium text-violet-300 underline-offset-2 hover:underline" />
-                    </p>
-                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -606,6 +601,14 @@ export default function MeetingModal({
                   className={inputClass}
                   placeholder="https://zoom.us/j/… or https://meet.google.com/…"
                 />
+                {draftVideoLink && (
+                  <p className="mt-2">
+                    <MeetingVideoLink
+                      url={draftVideoLink}
+                      linkClassName="text-sm font-medium text-violet-300"
+                    />
+                  </p>
+                )}
                 <p className="mt-1 text-[11px] text-white/35">
                   {recurrence !== 'none'
                     ? 'This Zoom or Google Meet link is used for every recurring occurrence.'
