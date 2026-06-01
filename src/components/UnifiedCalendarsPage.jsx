@@ -15,6 +15,7 @@ export default function UnifiedCalendarsPage({
   openMeetingRequest,
   onOpenMeetingRequestHandled,
   onNavigate,
+  onTabChange,
   onCardClick,
   onShootSessionClick,
   onAddCalendarPost,
@@ -33,11 +34,17 @@ export default function UnifiedCalendarsPage({
     setTab(initialTab);
   }, [initialTab]);
 
+  const selectTab = (id) => {
+    setTab(id);
+    onTabChange?.(id);
+  };
+
   useEffect(() => {
     if (openMeetingRequest?.meeting) {
       setTab('meetings');
+      onTabChange?.('meetings');
     }
-  }, [openMeetingRequest]);
+  }, [openMeetingRequest, onTabChange]);
 
   const tabClass = (id) =>
     `px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition ${
@@ -62,13 +69,13 @@ export default function UnifiedCalendarsPage({
       </ClientPortalSectionHeader>
 
       <div className={`${glassSegmentClass} mb-6 flex w-fit p-0.5`}>
-        <button type="button" onClick={() => setTab('content')} className={tabClass('content')}>
+        <button type="button" onClick={() => selectTab('content')} className={tabClass('content')}>
           Content
         </button>
-        <button type="button" onClick={() => setTab('events')} className={tabClass('events')}>
+        <button type="button" onClick={() => selectTab('events')} className={tabClass('events')}>
           Events
         </button>
-        <button type="button" onClick={() => setTab('meetings')} className={tabClass('meetings')}>
+        <button type="button" onClick={() => selectTab('meetings')} className={tabClass('meetings')}>
           Meetings
         </button>
       </div>

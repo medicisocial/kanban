@@ -12,6 +12,7 @@ export default function CompanyTasks({
   clientFilter,
   embedded = false,
   initialRole = 'creator',
+  onRoleChange,
   onAddOneOffTask,
   onDeleteOneOffTask,
   onAddAdminTask,
@@ -35,6 +36,11 @@ export default function CompanyTasks({
     setActiveRole(initialRole);
   }, [initialRole]);
 
+  const selectRole = (role) => {
+    setActiveRole(role);
+    onRoleChange?.(role);
+  };
+
   const tabClass = (role) =>
     embedded
       ? `px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition ${
@@ -51,16 +57,16 @@ export default function CompanyTasks({
           embedded ? '' : 'mx-auto mb-6 justify-center'
         }`}
       >
-        <button type="button" onClick={() => setActiveRole('creator')} className={tabClass('creator')}>
+        <button type="button" onClick={() => selectRole('creator')} className={tabClass('creator')}>
           Content creators
         </button>
-        <button type="button" onClick={() => setActiveRole('editor')} className={tabClass('editor')}>
+        <button type="button" onClick={() => selectRole('editor')} className={tabClass('editor')}>
           Editors
         </button>
-        <button type="button" onClick={() => setActiveRole('account')} className={tabClass('account')}>
+        <button type="button" onClick={() => selectRole('account')} className={tabClass('account')}>
           Account managers
         </button>
-        <button type="button" onClick={() => setActiveRole('admin')} className={tabClass('admin')}>
+        <button type="button" onClick={() => selectRole('admin')} className={tabClass('admin')}>
           Administrative
         </button>
       </div>

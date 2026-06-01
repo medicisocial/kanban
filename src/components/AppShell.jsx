@@ -52,6 +52,11 @@ import CardModal from "./CardModal";
 import { useStaffAuth } from "../context/StaffAuthContext";
 import { useClientsContext } from "../context/ClientsContext";
 import { getDefaultWorkspaceView } from "../utils/getDefaultWorkspaceView";
+import {
+  readViewTabFromUrl,
+  readWorkspaceViewFromUrl,
+  syncWorkspaceViewUrl,
+} from "../utils/workspaceViewUrl";
 import { resolveStaffMemberName, resolveStaffMemberAvatar, resolveStaffDisplayName, staffHasAccountManagerQueueAccess, staffHasLeadershipWorkspaceAccess } from "../utils/staffMembers";
 import { isSharedOperationsLogin } from "../utils/staffAuth";
 import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
@@ -104,11 +109,12 @@ export default function AppShell({ onSignOut }) {
 
   const [selectedCard, setSelectedCard] = useState(null);
   const [clientFilter, setClientFilter] = useState("all");
-  const [activeView, setActiveView] = useState("home");
+  const [activeView, setActiveView] = useState(() => readWorkspaceViewFromUrl() || "home");
   const [viewInitialized, setViewInitialized] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [tasksRole, setTasksRole] = useState('creator');
-  const [calendarsTab, setCalendarsTab] = useState('content');
+  const [tasksRole, setTasksRole] = useState(() => readViewTabFromUrl('todo') || 'creator');
+  const [calendarsTab, setCalendarsTab] = useState(() => readViewTabFromUrl('calendars') || 'content');
+  const [clientsTab, setClientsTab] = useState(() => readViewTabFromUrl('clients') || 'profile');
   const [shootFocus, setShootFocus] = useState(null);
   const [openMeetingRequest, setOpenMeetingRequest] = useState(null);
   const [handoffCard, setHandoffCard] = useState(null);
@@ -165,11 +171,25 @@ export default function AppShell({ onSignOut }) {
 
   useEffect(() => {
     if (!ready || viewInitialized) return;
-    if (session) {
+    const fromUrl = readWorkspaceViewFromUrl();
+    if (!fromUrl && session) {
       setActiveView(getDefaultWorkspaceView(session, teamMembers));
     }
     setViewInitialized(true);
   }, [ready, session, teamMembers, viewInitialized]);
+
+  useEffect(() => {
+    if (!viewInitialized) return;
+    const tab =
+      activeView === 'calendars'
+        ? calendarsTab
+        : activeView === 'todo'
+          ? tasksRole
+          : activeView === 'clients'
+            ? clientsTab
+            : null;
+    syncWorkspaceViewUrl(activeView, { tab });
+  }, [activeView, calendarsTab, tasksRole, clientsTab, viewInitialized]);
 
   useEffect(() => {
     if (!selectedCard) return;
@@ -960,6 +980,7 @@ export default function AppShell({ onSignOut }) {
           openMeetingRequest={openMeetingRequest}
           onOpenMeetingRequestHandled={() => setOpenMeetingRequest(null)}
           onNavigate={handleNavigate}
+          onTabChange={setCalendarsTab}
           onCardClick={handleCardClick}
           onShootSessionClick={(session) =>
             handleNavigate('shoot', {
@@ -986,6 +1007,7 @@ export default function AppShell({ onSignOut }) {
           clientFilter={clientFilter}
           embedded
           initialRole={tasksRole}
+          onRoleChange={setTasksRole}
           onAddOneOffTask={addOneOffProject}
           onDeleteOneOffTask={handleDeleteOneOffProject}
           onAddAdminTask={addAdminTask}
@@ -1032,7 +1054,12 @@ export default function AppShell({ onSignOut }) {
       )}
 
       {activeView === "clients" && (
-        <ClientManagementPage cards={cards} ideas={ideas} />
+        <ClientManagementPage
+          cards={cards}
+          ideas={ideas}
+          initialTab={clientsTab}
+          onTabChange={setClientsTab}
+        />
       )}
 
       {activeView === "team" && (
