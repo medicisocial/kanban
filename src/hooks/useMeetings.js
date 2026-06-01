@@ -5,6 +5,9 @@ import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
+import { markPendingRemoved } from '../lib/syncHelpers';
+import { getOrgId } from '../lib/orgSession';
+import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
 function persistMeetingUpsert(meeting) {
   if (!SUPABASE_ENABLED || !meeting) return;
@@ -13,6 +16,7 @@ function persistMeetingUpsert(meeting) {
 
 function persistMeetingDelete(id) {
   if (!SUPABASE_ENABLED || !id) return;
+  markPendingRemoved(getOrgId(), 'meetings', [id]);
   void pushStaffSync({ table: 'meetings', changed: [], removed: [id] });
 }
 
@@ -20,11 +24,8 @@ const getMeetingId = (meeting) => meeting.id;
 
 function loadMeetings() {
   try {
-    const stored = localStorage.getItem(MEETINGS_STORAGE_KEY);
-    if (stored !== null) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) return parsed;
-    }
+    const parsed = readOrgScopedJson(MEETINGS_STORAGE_KEY, null);
+    if (Array.isArray(parsed)) return parsed;
   } catch {
     /* fall through */
   }
@@ -49,7 +50,7 @@ export function useMeetings() {
   });
 
   useEffect(() => {
-    localStorage.setItem(MEETINGS_STORAGE_KEY, JSON.stringify(meetings));
+    writeOrgScopedJson(MEETINGS_STORAGE_KEY, meetings);
   }, [meetings]);
 
   const replaceMeetings = useCallback((next) => {

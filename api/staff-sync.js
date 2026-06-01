@@ -1,6 +1,7 @@
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
 import { deleteRecords, isSupabaseConfigured, upsertRecords } from './_lib/supabase.mjs';
 import { patchRedisWorkspaceCards } from './_lib/redisWorkspace.mjs';
+import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
 
 const ALLOWED_TABLES = new Set([
   'cards',
@@ -84,7 +85,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid table.' });
   }
 
-  const resolvedOrgId = typeof orgId === 'string' && orgId.trim() ? orgId.trim() : undefined;
+  const orgCheck = await assertAuthorizedOrgId(req, orgId);
+  if (!orgCheck.ok) {
+    return res.status(403).json({ error: orgCheck.error || 'Forbidden org scope.' });
+  }
+  const resolvedOrgId = orgCheck.orgId;
 
   try {
     if (Array.isArray(deleteIds) && deleteIds.length) {

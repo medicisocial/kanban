@@ -22,6 +22,7 @@ import { useSingletonSync } from '../lib/useSingletonSync';
 import { pushStaffSyncSingleton } from '../lib/staffSyncApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
+import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
 function normalizeBusinessTypesMap(types = {}) {
   const normalized = {};
@@ -58,12 +59,9 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
 
 function loadClientsRaw() {
   try {
-    const stored = localStorage.getItem(CLIENTS_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed.names) && parsed.names.length > 0) {
-        return parsed;
-      }
+    const parsed = readOrgScopedJson(CLIENTS_STORAGE_KEY, null);
+    if (parsed && Array.isArray(parsed.names) && parsed.names.length > 0) {
+      return parsed;
     }
   } catch {
     /* fall through */
@@ -124,7 +122,7 @@ export function useClients() {
   });
 
   useEffect(() => {
-    localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(state));
+    writeOrgScopedJson(CLIENTS_STORAGE_KEY, state);
   }, [state]);
 
   const addClient = useCallback(async (name, color, logo = null, businessType = '') => {
@@ -155,6 +153,7 @@ export function useClients() {
     }
 
     let added = false;
+    let nextState = null;
     setState((prev) => {
       if (prev.names.some((client) => clientNamesConflict(client, trimmed))) {
         return prev;
@@ -163,7 +162,7 @@ export function useClients() {
       added = true;
       const nextBusinessTypes = { ...prev.businessTypes };
       if (businessType) nextBusinessTypes[trimmed] = businessType;
-      return {
+      nextState = {
         names: [...prev.names, trimmed],
         colors: { ...prev.colors, [trimmed]: nextColor },
         logos: logo ? { ...prev.logos, [trimmed]: logo } : { ...prev.logos },
@@ -174,11 +173,17 @@ export function useClients() {
         companyFiles: { ...(prev.companyFiles || {}) },
         specialMenus: { ...(prev.specialMenus || {}) },
       };
+      return nextState;
     });
 
     if (!added) {
       await releaseClientBrandName(trimmed, orgId);
       return { ok: false, error: 'A client with that name already exists in your workspace.' };
+    }
+
+    const syncResult = await syncClientsWorkspace(nextState);
+    if (!syncResult.ok) {
+      return { ok: false, error: syncResult.error, name: trimmed };
     }
     return { ok: true, name: trimmed };
   }, [orgId, planType, state.names]);

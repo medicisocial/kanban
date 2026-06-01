@@ -6,6 +6,9 @@ import { useReloadFromStorage } from "./useReloadFromStorage";
 import { SUPABASE_ENABLED } from "../lib/supabaseClient";
 import { useMapSync } from "../lib/useMapSync";
 import { pushStaffSyncRows } from "../lib/staffSyncApi";
+import { markPendingRemoved } from "../lib/syncHelpers";
+import { getOrgId } from "../lib/orgSession";
+import { readOrgScopedJson, writeOrgScopedJson } from "../lib/orgStorage";
 
 function persistShootPlan(key, plan) {
   if (!SUPABASE_ENABLED || !key || !plan) return;
@@ -14,13 +17,14 @@ function persistShootPlan(key, plan) {
 
 function persistShootPlanDelete(key) {
   if (!SUPABASE_ENABLED || !key) return;
+  markPendingRemoved(getOrgId(), "shoot_plans", [key]);
   void pushStaffSyncRows("shoot_plans", [], [key]);
 }
 
 function loadPlans() {
   try {
-    const raw = localStorage.getItem(SHOOT_PLANS_STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    const raw = readOrgScopedJson(SHOOT_PLANS_STORAGE_KEY, null);
+    if (raw && typeof raw === "object") return raw;
   } catch {
     /* ignore */
   }
@@ -61,7 +65,7 @@ export function useShootPlans() {
   });
 
   useEffect(() => {
-    localStorage.setItem(SHOOT_PLANS_STORAGE_KEY, JSON.stringify(plans));
+    writeOrgScopedJson(SHOOT_PLANS_STORAGE_KEY, plans);
   }, [plans]);
 
   const getPlan = useCallback(

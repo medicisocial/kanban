@@ -646,7 +646,7 @@ export default function AppShell({ onSignOut }) {
           applyContentReviewResponses(cards, contentResponses, { updateCard });
         }
 
-        const ideaResponses = loadClientResponses();
+        const ideaResponses = SUPABASE_ENABLED ? [] : loadClientResponses();
         if (ideaResponses.length) {
           applyClientResponses(ideas, ideaResponses, {
             markApproved,

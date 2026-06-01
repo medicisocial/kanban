@@ -7,6 +7,7 @@ import { useStaffAuth } from '../context/StaffAuthContext';
 import {
   fetchRowsWithTimeout,
   loadPendingRemoved,
+  markPendingRemoved,
   mapMatchesSnapshot,
   mergeRemoteMapWithLocalPending,
   savePendingRemoved,
@@ -90,7 +91,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
         }
 
         if (rows.length === 0) {
-          if (localKeys.length) {
+          if (localKeys.length && isLegacyOrg) {
             applyingRemoteRef.current = true;
             syncedRef.current = new Map(localKeys.map((key) => [key, JSON.stringify(local[key])]));
             loadedRef.current = true;
@@ -133,7 +134,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
         }
       } catch (err) {
         console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
-        if (loadLocal) {
+        if (loadLocal && isLegacyOrg) {
           const local = loadLocal() || {};
           const keys = Object.keys(local);
           if (keys.length) {
@@ -185,6 +186,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
       }
 
       if (removed.length) {
+        markPendingRemoved(orgId, table, removed);
         for (const id of removed) pendingRemovedRef.current.add(id);
         savePendingRemoved(orgId, table, pendingRemovedRef.current);
       }

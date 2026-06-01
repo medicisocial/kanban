@@ -6,6 +6,9 @@ import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
+import { markPendingRemoved } from '../lib/syncHelpers';
+import { getOrgId } from '../lib/orgSession';
+import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
 function persistAdminTaskUpsert(task) {
   if (!SUPABASE_ENABLED || !task) return;
@@ -14,6 +17,7 @@ function persistAdminTaskUpsert(task) {
 
 function persistAdminTaskDelete(id) {
   if (!SUPABASE_ENABLED || !id) return;
+  markPendingRemoved(getOrgId(), 'admin_tasks', [id]);
   void pushStaffSync({ table: 'admin_tasks', changed: [], removed: [id] });
 }
 
@@ -36,11 +40,8 @@ function createAdminTask(overrides = {}) {
 
 function loadAdminTasks() {
   try {
-    const stored = localStorage.getItem(ADMIN_TASKS_STORAGE_KEY);
-    if (stored !== null) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) return parsed;
-    }
+    const parsed = readOrgScopedJson(ADMIN_TASKS_STORAGE_KEY, null);
+    if (Array.isArray(parsed)) return parsed;
   } catch {
     /* fall through */
   }
@@ -65,7 +66,7 @@ export function useAdminTasks() {
   });
 
   useEffect(() => {
-    localStorage.setItem(ADMIN_TASKS_STORAGE_KEY, JSON.stringify(adminTasks));
+    writeOrgScopedJson(ADMIN_TASKS_STORAGE_KEY, adminTasks);
   }, [adminTasks]);
 
   const replaceAdminTasks = useCallback((next) => {

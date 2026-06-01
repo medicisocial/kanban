@@ -12,6 +12,7 @@ import { useCollectionSync } from "../lib/useCollectionSync";
 import { pushStaffSync, pushStaffSyncRecords } from "../lib/staffSyncApi";
 import { markPendingRemoved } from "../lib/syncHelpers";
 import { getOrgId } from "../lib/orgSession";
+import { readOrgScopedJson, writeOrgScopedJson } from "../lib/orgStorage";
 
 function tombstoneIdeas(ids) {
   if (!SUPABASE_ENABLED || !ids?.length) return;
@@ -54,11 +55,8 @@ function createIdea(overrides = {}) {
 
 function loadIdeas() {
   try {
-    const stored = localStorage.getItem(VIDEO_IDEAS_STORAGE_KEY);
-    if (stored !== null) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) return stripDemoVideoIdeas(parsed);
-    }
+    const parsed = readOrgScopedJson(VIDEO_IDEAS_STORAGE_KEY, null);
+    if (Array.isArray(parsed)) return stripDemoVideoIdeas(parsed);
   } catch {
     /* fall through */
   }
@@ -84,7 +82,7 @@ export function useVideoIdeas() {
   });
 
   useEffect(() => {
-    localStorage.setItem(VIDEO_IDEAS_STORAGE_KEY, JSON.stringify(ideas));
+    writeOrgScopedJson(VIDEO_IDEAS_STORAGE_KEY, ideas);
   }, [ideas]);
 
   const replaceIdeas = useCallback((next) => {

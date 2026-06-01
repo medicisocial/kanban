@@ -11,14 +11,14 @@ import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useMapSync } from '../lib/useMapSync';
 import { pushStaffSyncRows } from '../lib/staffSyncApi';
+import { markPendingRemoved } from '../lib/syncHelpers';
+import { getOrgId } from '../lib/orgSession';
+import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
 function loadCredentials() {
   try {
-    const raw = localStorage.getItem(CLIENT_PORTAL_AUTH_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') return parsed;
-    }
+    const parsed = readOrgScopedJson(CLIENT_PORTAL_AUTH_STORAGE_KEY, null);
+    if (parsed && typeof parsed === 'object') return parsed;
   } catch {
     /* ignore */
   }
@@ -58,7 +58,7 @@ export function useClientPortalCredentials() {
   // Keep localStorage as a write-through cache even when Supabase is enabled,
   // because the mutation helpers below read existing users via loadCredentials().
   useEffect(() => {
-    localStorage.setItem(CLIENT_PORTAL_AUTH_STORAGE_KEY, JSON.stringify(credentials));
+    writeOrgScopedJson(CLIENT_PORTAL_AUTH_STORAGE_KEY, credentials);
   }, [credentials]);
 
   const getClientUsers = useCallback(
@@ -82,7 +82,7 @@ export function useClientPortalCredentials() {
 
     setCredentials((prev) => {
       const next = { ...prev, [client]: activeUsers };
-      localStorage.setItem(CLIENT_PORTAL_AUTH_STORAGE_KEY, JSON.stringify(next));
+      writeOrgScopedJson(CLIENT_PORTAL_AUTH_STORAGE_KEY, next);
       return next;
     });
 
@@ -113,13 +113,17 @@ export function useClientPortalCredentials() {
     ]);
   }, [setClientPortalUsers]);
 
-  const clearClientPortalCredential = useCallback((client) => {
+  const clearClientPortalCredential = useCallback(async (client) => {
+    markPendingRemoved(getOrgId(), 'client_portal_credentials', [client]);
     setCredentials((prev) => {
       const next = { ...prev };
       delete next[client];
-      localStorage.setItem(CLIENT_PORTAL_AUTH_STORAGE_KEY, JSON.stringify(next));
+      writeOrgScopedJson(CLIENT_PORTAL_AUTH_STORAGE_KEY, next);
       return next;
     });
+    if (SUPABASE_ENABLED) {
+      await pushStaffSyncRows('client_portal_credentials', [], [client]);
+    }
   }, []);
 
   return {

@@ -113,7 +113,7 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
           return;
         }
 
-        if (local) {
+        if (local && isLegacyOrg) {
           applyingRemoteRef.current = true;
           syncedRef.current = JSON.stringify(local);
           loadedRef.current = true;
@@ -124,12 +124,12 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
         }
 
         applyingRemoteRef.current = true;
-        syncedRef.current = JSON.stringify(local);
+        syncedRef.current = JSON.stringify(local ?? null);
         loadedRef.current = true;
-        if (loadLocal) setValue(local);
+        if (loadLocal) setValue(local ?? loadLocal());
       } catch (err) {
         console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
-        if (loadLocal) {
+        if (loadLocal && isLegacyOrg) {
           const local = loadLocal();
           if (local) {
             applyingRemoteRef.current = true;

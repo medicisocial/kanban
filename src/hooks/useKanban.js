@@ -4,11 +4,20 @@ import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
-import { pushStaffSyncRecords } from '../lib/staffSyncApi';
+import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
+import { markPendingRemoved } from '../lib/syncHelpers';
+import { getOrgId } from '../lib/orgSession';
+import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
 function persistCardRecord(card) {
   if (!SUPABASE_ENABLED || !card) return;
   void pushStaffSyncRecords('cards', [card]);
+}
+
+function persistCardDelete(id) {
+  if (!SUPABASE_ENABLED || !id) return;
+  markPendingRemoved(getOrgId(), 'cards', [id]);
+  void pushStaffSync({ table: 'cards', changed: [], removed: [id] });
 }
 
 const getCardId = (card) => card.id;
@@ -122,12 +131,9 @@ function migrateLegacyOneOffTasks(cards) {
 
 function loadCards() {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored !== null) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        return migrateLegacyOneOffTasks(parsed.map(normalizeCard));
-      }
+    const parsed = readOrgScopedJson(STORAGE_KEY, null);
+    if (Array.isArray(parsed)) {
+      return migrateLegacyOneOffTasks(parsed.map(normalizeCard));
     }
   } catch {
     /* fall through */
@@ -172,7 +178,7 @@ export function useKanban() {
   });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+    writeOrgScopedJson(STORAGE_KEY, cards);
   }, [cards]);
 
   const replaceCards = useCallback((next) => {
@@ -182,42 +188,42 @@ export function useKanban() {
   const addCard = useCallback((columnId) => {
     notifyMutation();
     const status = getStatusForColumn(columnId);
-    setCards((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        client: 'Plume',
-        contentType: 'Reel',
-        platform: PLATFORM,
-        title: 'New task',
-        dueDate: withColumnDate(columnId, '', { contentType: 'Reel' }),
-        dueTime: '',
-        shootDate: '',
-        shootTime: '',
-        shootEndTime: '',
-        shootDuration: 45,
-        shootModels: '',
-        shootNeeds: '',
-        shootScript: '',
-        contentCreator:
-          columnId === 'shoot' ? getDefaultAssigneeForRole('Content Creator') : '',
-        assignedTo: getDefaultAssigneeForRole('Editor'),
-        notes: '',
-        referenceMusic: '',
-        referenceVideo: '',
-        dropboxLink: '',
-        clientComment: '',
-        sourceIdeaId: null,
-        status,
-        columnId,
-        createdAt: Date.now(),
-      },
-    ]);
+    const card = normalizeCard({
+      id: crypto.randomUUID(),
+      client: 'Plume',
+      contentType: 'Reel',
+      platform: PLATFORM,
+      title: 'New task',
+      dueDate: withColumnDate(columnId, '', { contentType: 'Reel' }),
+      dueTime: '',
+      shootDate: '',
+      shootTime: '',
+      shootEndTime: '',
+      shootDuration: 45,
+      shootModels: '',
+      shootNeeds: '',
+      shootScript: '',
+      contentCreator:
+        columnId === 'shoot' ? getDefaultAssigneeForRole('Content Creator') : '',
+      assignedTo: getDefaultAssigneeForRole('Editor'),
+      notes: '',
+      referenceMusic: '',
+      referenceVideo: '',
+      dropboxLink: '',
+      clientComment: '',
+      sourceIdeaId: null,
+      status,
+      columnId,
+      createdAt: Date.now(),
+    });
+    setCards((prev) => [...prev, card]);
+    persistCardRecord(card);
   }, []);
 
   const createCardFromIdea = useCallback((idea) => {
     notifyMutation();
     let resolvedId = idea.boardCardId || `from-idea-${idea.id}`;
+    let persisted = null;
 
     setCards((prev) => {
       const existing =
@@ -235,7 +241,7 @@ export function useKanban() {
         .filter(Boolean)
         .join('\n\n');
 
-      const card = {
+      persisted = normalizeCard({
         id: resolvedId,
         client: idea.client,
         contentType: idea.contentType || 'Reel',
@@ -261,11 +267,12 @@ export function useKanban() {
         status: getStatusForColumn('shoot'),
         columnId: 'shoot',
         createdAt: Date.now(),
-      };
+      });
 
-      return [...prev, card];
+      return [...prev, persisted];
     });
 
+    if (persisted) persistCardRecord(persisted);
     return resolvedId;
   }, []);
 
@@ -299,6 +306,7 @@ export function useKanban() {
 
   const deleteCard = useCallback((id) => {
     notifyMutation();
+    persistCardDelete(id);
     setCards((prev) => prev.filter((card) => card.id !== id));
   }, []);
 
@@ -360,7 +368,7 @@ export function useKanban() {
     notifyMutation();
     const columnId = overrides.columnId || 'shoot';
     const isOneOff = Boolean(overrides.isOneOffProject);
-    const card = createCard({
+    const card = normalizeCard(createCard({
       ...overrides,
       columnId,
       status: overrides.status || getStatusForColumn(columnId),
@@ -368,8 +376,9 @@ export function useKanban() {
         isOneOffProject: isOneOff,
         contentType: overrides.contentType || 'Reel',
       }),
-    });
+    }));
     setCards((prev) => [...prev, card]);
+    persistCardRecord(card);
     return card.id;
   }, []);
 

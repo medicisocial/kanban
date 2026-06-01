@@ -5,6 +5,9 @@ import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
+import { markPendingRemoved } from '../lib/syncHelpers';
+import { getOrgId } from '../lib/orgSession';
+import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
 function persistEventUpsert(event) {
   if (!SUPABASE_ENABLED || !event) return;
@@ -13,6 +16,7 @@ function persistEventUpsert(event) {
 
 function persistEventDelete(id) {
   if (!SUPABASE_ENABLED || !id) return;
+  markPendingRemoved(getOrgId(), 'events', [id]);
   void pushStaffSync({ table: 'events', changed: [], removed: [id] });
 }
 
@@ -20,11 +24,8 @@ const getEventId = (event) => event.id;
 
 function loadEvents() {
   try {
-    const stored = localStorage.getItem(EVENTS_STORAGE_KEY);
-    if (stored !== null) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) return parsed;
-    }
+    const parsed = readOrgScopedJson(EVENTS_STORAGE_KEY, null);
+    if (Array.isArray(parsed)) return parsed;
   } catch {
     /* fall through */
   }
@@ -49,7 +50,7 @@ export function useEvents() {
   });
 
   useEffect(() => {
-    localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
+    writeOrgScopedJson(EVENTS_STORAGE_KEY, events);
   }, [events]);
 
   const replaceEvents = useCallback((next) => {

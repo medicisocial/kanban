@@ -1,9 +1,12 @@
 import { supabase } from './supabaseClient';
-import { getOrgId } from './orgSession';
+import { getOrgId, LEGACY_ORG_ID } from './orgSession';
 
 const REST_FETCH_TIMEOUT_MS = 12000;
 
 async function fetchAllViaRest(table, orgId) {
+  // Anon REST only works for the legacy org where RLS allows unauthenticated reads.
+  if (orgId !== LEGACY_ORG_ID) return null;
+
   const url = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
   if (!url || !anonKey) return null;

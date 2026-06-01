@@ -5,7 +5,7 @@ import {
   mergeClientPortalAuth,
   normalizeBrandUsers,
 } from './clientPortalAuth.mjs';
-import { fetchCollectionMap, isSupabaseConfigured, upsertRecord } from './supabase.mjs';
+import { fetchCollectionMap, isSupabaseConfigured, upsertRecord, deleteRecord } from './supabase.mjs';
 
 const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
 
@@ -30,7 +30,10 @@ export async function saveClientAuthMap(authMap) {
     for (const [brand, entry] of Object.entries(authMap)) {
       if (brand.startsWith('__')) continue;
       const users = normalizeBrandUsers(entry);
-      if (!users.length) continue;
+      if (!users.length) {
+        await deleteRecord('client_portal_credentials', brand);
+        continue;
+      }
       await upsertRecord('client_portal_credentials', brand, users);
     }
     return;

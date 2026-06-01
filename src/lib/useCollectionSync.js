@@ -131,7 +131,7 @@ export function useCollectionSync({
 
         if (rows.length === 0) {
           const local = loadLocal ? loadLocal() : [];
-          if (local.length) {
+          if (local.length && isLegacyOrg) {
             applyingRemoteRef.current = true;
             syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
             loadedRef.current = true;
@@ -214,7 +214,7 @@ export function useCollectionSync({
         }
       } catch (err) {
         console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
-        if (loadLocal) {
+        if (loadLocal && isLegacyOrg) {
           const local = excludePendingRemoved(loadLocal(), getId, pendingRemovedRef.current);
           if (local.length) {
             applyingRemoteRef.current = true;

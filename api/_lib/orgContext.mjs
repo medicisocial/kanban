@@ -1,0 +1,93 @@
+import { getSessionFromRequest, isStaffSessionValid } from './staffAuth.mjs';
+
+const LEGACY_ORG_ID = (process.env.ORG_ID || process.env.VITE_ORG_ID || 'medici').trim();
+
+function getSupabaseUrl() {
+  return (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '')
+    .trim()
+    .replace(/\/$/, '');
+}
+
+function getServerKey() {
+  return (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    ''
+  ).trim();
+}
+
+async function getUserIdFromJwt(token) {
+  const url = getSupabaseUrl();
+  const key = getServerKey();
+  if (!url || !key || !token) return null;
+
+  const response = await fetch(`${url}/auth/v1/user`, {
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) return null;
+  const user = await response.json();
+  return user?.id ?? null;
+}
+
+async function fetchMemberOrgId(userId) {
+  const url = getSupabaseUrl();
+  const key = getServerKey();
+  if (!url || !key || !userId) return null;
+
+  const endpoint = `${url}/rest/v1/organization_members?select=org_id&user_id=eq.${encodeURIComponent(userId)}&limit=1`;
+  const response = await fetch(endpoint, {
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+    },
+  });
+
+  if (!response.ok) return null;
+  const rows = await response.json();
+  return rows?.[0]?.org_id ?? null;
+}
+
+export function getDefaultOrgId() {
+  return LEGACY_ORG_ID;
+}
+
+/** Resolve the org this request is allowed to read/write. */
+export async function resolveAuthorizedOrgId(req) {
+  const staffSession = getSessionFromRequest(req);
+  if (isStaffSessionValid(staffSession)) {
+    return LEGACY_ORG_ID;
+  }
+
+  const auth = req.headers.authorization || '';
+  if (auth.startsWith('Bearer ')) {
+    const token = auth.slice(7).trim();
+    if (token.split('.').length === 3) {
+      const userId = await getUserIdFromJwt(token);
+      if (userId) {
+        const orgId = await fetchMemberOrgId(userId);
+        if (orgId) return orgId;
+      }
+    }
+  }
+
+  return LEGACY_ORG_ID;
+}
+
+export async function assertAuthorizedOrgId(req, requestedOrgId) {
+  const authorized = await resolveAuthorizedOrgId(req);
+  const target =
+    typeof requestedOrgId === 'string' && requestedOrgId.trim()
+      ? requestedOrgId.trim()
+      : authorized;
+
+  if (target !== authorized) {
+    return { ok: false, orgId: authorized, error: 'Forbidden org scope.' };
+  }
+
+  return { ok: true, orgId: target };
+}
