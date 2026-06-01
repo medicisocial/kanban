@@ -40,7 +40,7 @@ export default function ClientHubPortal({ onSignOut }) {
   };
 
   useEffect(() => {
-    if (!session || activeTab !== 'calendar') return undefined;
+    if (!session || activeTab !== 'calendar' || SUPABASE_ENABLED) return undefined;
     refreshPortalData(session, { silent: true });
     const interval = setInterval(() => refreshPortalData(session, { silent: true }), 10000);
     return () => clearInterval(interval);

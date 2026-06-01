@@ -8,6 +8,10 @@ import {
   submitClientPortalProfile,
   submitClientPortalResponse,
 } from '../utils/clientPortalAuth';
+import { SUPABASE_ENABLED } from '../lib/supabaseClient';
+import { subscribeClientPortalChanges } from '../lib/clientPortalRealtime';
+
+const PORTAL_POLL_MS = SUPABASE_ENABLED ? 45000 : 15000;
 
 const ClientAuthContext = createContext(null);
 
@@ -42,8 +46,15 @@ export function ClientAuthProvider({ children }) {
   useEffect(() => {
     if (!session) return;
     refreshPortalData(session);
-    const interval = setInterval(() => refreshPortalData(session, { silent: true }), 15000);
+    const interval = setInterval(() => refreshPortalData(session, { silent: true }), PORTAL_POLL_MS);
     return () => clearInterval(interval);
+  }, [session, refreshPortalData]);
+
+  useEffect(() => {
+    if (!session || !SUPABASE_ENABLED) return undefined;
+    return subscribeClientPortalChanges(() => {
+      refreshPortalData(session, { silent: true });
+    });
   }, [session, refreshPortalData]);
 
   useEffect(() => {

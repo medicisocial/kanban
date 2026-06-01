@@ -85,7 +85,7 @@ export function createCollectionStore(table) {
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table, filter: `org_id=eq.${orgId}` },
-          onChange,
+          (payload) => onChange(payload),
         )
         .subscribe();
       return () => {

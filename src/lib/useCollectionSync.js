@@ -9,9 +9,12 @@ import {
   loadPendingRemoved,
   markPendingRemoved,
   mergeRemoteListWithLocalPending,
+  mergeRemoteRecordWithLocal,
   recordsMatchSnapshot,
   savePendingRemoved,
 } from './syncHelpers';
+
+const REALTIME_REFETCH_DEBOUNCE_MS = 350;
 
 function attachRowUpdatedAt(record, rowUpdatedAt) {
   if (!rowUpdatedAt) return record;
@@ -88,6 +91,7 @@ export function useCollectionSync({
 
     const store = storeRef.current;
     let active = true;
+    let refetchTimer = null;
 
     const applyRemote = async () => {
       try {
@@ -211,10 +215,104 @@ export function useCollectionSync({
       }
     };
 
+    const scheduleApplyRemote = () => {
+      clearTimeout(refetchTimer);
+      refetchTimer = setTimeout(() => {
+        if (active) applyRemote();
+      }, REALTIME_REFETCH_DEBOUNCE_MS);
+    };
+
+    const applyRealtimePayload = (payload) => {
+      if (!active || !loadedRef.current || !payload?.eventType) {
+        scheduleApplyRemote();
+        return;
+      }
+
+      const rowOrg = payload.new?.org_id ?? payload.old?.org_id;
+      if (rowOrg && rowOrg !== orgId) return;
+
+      pendingRemovedRef.current = loadPendingRemoved(orgId, table);
+
+      const mapRow = (row) => {
+        const base = normalize ? normalize(row.data ?? row) : row.data ?? row;
+        return attachRowUpdatedAt(base, row.updated_at);
+      };
+
+      if (payload.eventType === 'DELETE') {
+        const id = String(payload.old?.id || '');
+        if (!id || pendingRemovedRef.current.has(id)) return;
+
+        applyingRemoteRef.current = true;
+        const snapshot = syncedRef.current || new Map();
+        snapshot.delete(id);
+        syncedRef.current = snapshot;
+        setItems((prev) => prev.filter((record) => String(getId(record)) !== id));
+        return;
+      }
+
+      if (payload.eventType !== 'INSERT' && payload.eventType !== 'UPDATE') {
+        scheduleApplyRemote();
+        return;
+      }
+
+      const row = payload.new;
+      if (!row?.data) {
+        scheduleApplyRemote();
+        return;
+      }
+
+      let remote = mapRow(row);
+      if (filterItems) {
+        const filtered = filterItems([remote]);
+        if (!filtered.length) {
+          if (payload.eventType === 'UPDATE') {
+            const id = String(getId(remote));
+            applyingRemoteRef.current = true;
+            setItems((prev) => prev.filter((record) => String(getId(record)) !== id));
+          }
+          return;
+        }
+        remote = filtered[0];
+      }
+
+      const id = String(getId(remote));
+      if (pendingRemovedRef.current.has(id)) return;
+
+      applyingRemoteRef.current = true;
+      setItems((prev) => {
+        const local = prev.find((record) => String(getId(record)) === id);
+        const previousSynced = syncedRef.current || new Map();
+
+        if (!local) {
+          if (previousSynced.has(id)) return prev;
+          const next = [...prev, remote];
+          syncedRef.current = new Map(previousSynced);
+          syncedRef.current.set(id, JSON.stringify(remote));
+          return next;
+        }
+
+        const merged = mergeRemoteRecordWithLocal({
+          remote,
+          local,
+          syncedStr: previousSynced.get(id),
+        });
+        syncedRef.current = new Map(previousSynced);
+        syncedRef.current.set(id, JSON.stringify(merged));
+        return prev.map((record) => (String(getId(record)) === id ? merged : record));
+      });
+    };
+
     applyRemote();
-    const unsubscribe = store.subscribe(() => applyRemote());
+    const unsubscribe = store.subscribe((payload) => {
+      if (payload && typeof payload === 'object' && payload.eventType) {
+        applyRealtimePayload(payload);
+        return;
+      }
+      scheduleApplyRemote();
+    });
     return () => {
       active = false;
+      clearTimeout(refetchTimer);
       unsubscribe?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
