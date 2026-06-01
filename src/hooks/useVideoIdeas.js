@@ -10,6 +10,13 @@ import { useReloadFromStorage } from "./useReloadFromStorage";
 import { SUPABASE_ENABLED } from "../lib/supabaseClient";
 import { useCollectionSync } from "../lib/useCollectionSync";
 import { pushStaffSync, pushStaffSyncRecords } from "../lib/staffSyncApi";
+import { markPendingRemoved } from "../lib/syncHelpers";
+import { getOrgId } from "../lib/orgSession";
+
+function tombstoneIdeas(ids) {
+  if (!SUPABASE_ENABLED || !ids?.length) return;
+  markPendingRemoved(getOrgId(), "video_ideas", ids);
+}
 
 function persistIdeaUpsert(idea) {
   if (!SUPABASE_ENABLED || !idea) return;
@@ -106,12 +113,14 @@ export function useVideoIdeas() {
 
   const deleteIdea = useCallback((id) => {
     notifyMutation();
+    tombstoneIdeas([id]);
     setIdeas((prev) => prev.filter((i) => i.id !== id));
     persistIdeaDelete(id);
   }, []);
 
   const deleteIdeas = useCallback((ids) => {
     notifyMutation();
+    tombstoneIdeas(ids);
     const idSet = new Set(ids);
     setIdeas((prev) => prev.filter((i) => !idSet.has(i.id)));
     persistIdeaDeletes(ids);

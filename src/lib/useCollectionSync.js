@@ -7,6 +7,7 @@ import { useStaffAuth } from '../context/StaffAuthContext';
 import {
   fetchRowsWithTimeout,
   loadPendingRemoved,
+  markPendingRemoved,
   mergeRemoteListWithLocalPending,
   recordsMatchSnapshot,
   savePendingRemoved,
@@ -90,6 +91,8 @@ export function useCollectionSync({
 
     const applyRemote = async () => {
       try {
+        pendingRemovedRef.current = loadPendingRemoved(orgId, table);
+
         const rows = await fetchRowsWithTimeout(store);
         if (!active) return;
 
@@ -150,6 +153,13 @@ export function useCollectionSync({
         );
 
         const keptIds = new Set(keptItems.map((record) => String(getId(record))));
+        for (const id of [...pendingRemovedRef.current]) {
+          if (!keptIds.has(id)) {
+            pendingRemovedRef.current.delete(id);
+          }
+        }
+        savePendingRemoved(orgId, table, pendingRemovedRef.current);
+
         const droppedIds = filteredItems
           .map((record) => String(getId(record)))
           .filter((id) => !keptIds.has(id));
@@ -240,8 +250,8 @@ export function useCollectionSync({
       }
 
       if (removed.length) {
-        for (const id of removed) pendingRemovedRef.current.add(id);
-        savePendingRemoved(orgId, table, pendingRemovedRef.current);
+        markPendingRemoved(orgId, table, removed);
+        for (const id of removed) pendingRemovedRef.current.add(String(id));
       }
 
       if (!changed.length && !removed.length) return;
@@ -274,8 +284,6 @@ export function useCollectionSync({
         }
 
         if (!cancelled) {
-          for (const id of removed) pendingRemovedRef.current.delete(id);
-          savePendingRemoved(orgId, table, pendingRemovedRef.current);
           syncedRef.current = next;
           pendingWriteRef.current = false;
         }

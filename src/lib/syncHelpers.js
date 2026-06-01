@@ -24,6 +24,15 @@ export function savePendingRemoved(orgId, table, ids) {
   sessionStorage.setItem(key, JSON.stringify([...ids]));
 }
 
+/** Tombstone deletes immediately so realtime pulls cannot resurrect them before push runs. */
+export function markPendingRemoved(orgId, table, ids) {
+  if (!orgId || !table || !ids?.length) return new Set();
+  const pending = loadPendingRemoved(orgId, table);
+  for (const id of ids) pending.add(String(id));
+  savePendingRemoved(orgId, table, pending);
+  return pending;
+}
+
 export async function fetchRowsWithTimeout(store) {
   return Promise.race([
     store.fetchAll(),
@@ -106,18 +115,26 @@ export function mergeRemoteListWithLocalPending({
   const localById = new Map(localItems.map((record) => [String(getId(record)), record]));
   const remoteIds = new Set();
 
-  const merged = remoteItems.map((remote) => {
-    const id = String(getId(remote));
-    remoteIds.add(id);
-    const local = localById.get(id);
-    if (!local) return remote;
+  const merged = remoteItems
+    .map((remote) => {
+      const id = String(getId(remote));
+      remoteIds.add(id);
+      if (pendingRemoved.has(id)) return null;
 
-    return mergeRemoteRecordWithLocal({
-      remote,
-      local,
-      syncedStr: synced.get(id),
-    });
-  });
+      const local = localById.get(id);
+      if (!local) {
+        // Was synced locally before but removed — don't resurrect from stale cloud pulls.
+        if (synced.has(id)) return null;
+        return remote;
+      }
+
+      return mergeRemoteRecordWithLocal({
+        remote,
+        local,
+        syncedStr: synced.get(id),
+      });
+    })
+    .filter(Boolean);
 
   for (const local of localItems) {
     const id = String(getId(local));
@@ -146,6 +163,7 @@ export function mergeRemoteMapWithLocalPending({
 
     const localValue = local[key];
     if (localValue === undefined) {
+      if (pendingRemoved.has(key) || synced.has(key)) continue;
       merged[key] = remoteValue;
       continue;
     }
