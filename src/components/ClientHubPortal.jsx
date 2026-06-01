@@ -15,6 +15,7 @@ import { filterEvents } from '../utils/eventsCalendar';
 import { createEvent, createMeeting } from '../constants';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import { buildClientPortalTasks } from '../utils/clientPortalTasks';
+import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 
 export default function ClientHubPortal({ onSignOut }) {
   const { brand, session, portalData, loadingData, dataError, logout, queueCloudResponse, refreshPortalData, savePortalProfile } =
