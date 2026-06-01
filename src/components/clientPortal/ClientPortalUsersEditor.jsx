@@ -14,6 +14,7 @@ import PasswordField from './PasswordField';
 import ProfilePhotoEditor from './ProfilePhotoEditor';
 import PortalInviteTemplate from './PortalInviteTemplate';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
+import { SUPABASE_ENABLED } from '../../lib/supabaseClient';
 
 function buildDraftUsers(client, getClientUsers, getClientContacts) {
   const users = getClientUsers(client);
@@ -155,7 +156,7 @@ export default function ClientPortalUsersEditor({
         return;
       }
 
-      const savedUsers = await onSaveClientUsers(
+      const saveResult = await onSaveClientUsers(
         client,
         users.map((user) => ({
           id: user.id,
@@ -166,10 +167,17 @@ export default function ClientPortalUsersEditor({
         })),
       );
 
+      if (saveResult?.ok === false) {
+        setError(saveResult.error || 'Could not save portal access.');
+        return;
+      }
+
+      const savedUsers = saveResult?.users ?? saveResult;
+
       updatePortalPasswordVault(client, users, savedUsers);
       credentials[client] = savedUsers;
 
-      if (onSyncToCloud) {
+      if (onSyncToCloud && !SUPABASE_ENABLED) {
         const result = await onSyncToCloud(credentials);
         const savedCount = result?.userCount || result?.brands?.length || 0;
         setMessage(
@@ -177,6 +185,8 @@ export default function ClientPortalUsersEditor({
             ? `${savedCount} portal login${savedCount === 1 ? '' : 's'} saved and synced.`
             : 'Saved locally — cloud sync returned no active logins. Check your connection and try again.',
         );
+      } else if (SUPABASE_ENABLED) {
+        setMessage('Portal access saved.');
       } else {
         setMessage('Portal access saved locally.');
       }

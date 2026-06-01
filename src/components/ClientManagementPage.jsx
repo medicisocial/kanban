@@ -50,9 +50,7 @@ export default function ClientManagementPage({
     getClientColor,
     getClientLogo,
     getClientBusinessType,
-    setClientColor,
-    setClientLogo,
-    setClientBusinessType,
+    saveClientProfile,
     getClientUsers,
     setClientPortalUsers,
     getClientContacts,
@@ -149,12 +147,24 @@ export default function ClientManagementPage({
     setProfileMessage('');
 
     try {
-      setClientColor(selectedClient, color);
-      setClientBusinessType(selectedClient, businessType);
-      if (pendingLogo !== undefined) {
-        const logoToSave =
-          pendingLogo === null ? null : await bakeLogoCrop(pendingLogo);
-        setClientLogo(selectedClient, logoToSave);
+      const logoToSave =
+        pendingLogo !== undefined
+          ? pendingLogo === null
+            ? null
+            : await bakeLogoCrop(pendingLogo)
+          : undefined;
+
+      const result = await saveClientProfile(selectedClient, {
+        color,
+        businessType,
+        logo: logoToSave,
+      });
+      if (result?.ok === false) {
+        setProfileError(result.error || 'Could not save profile.');
+        return;
+      }
+
+      if (logoToSave !== undefined) {
         if (logoToSave) {
           setPreviewSrc(logoToSave.src);
           setLogoCrop({ zoom: 1, x: 50, y: 50 });
@@ -387,8 +397,14 @@ export default function ClientManagementPage({
                 businessType={getClientBusinessType(selectedClient)}
                 companyFiles={getClientCompanyFiles(selectedClient)}
                 specialMenus={getClientSpecialMenus(selectedClient)}
-                onSaveCompanyFiles={(files) => setClientCompanyFiles(selectedClient, files)}
-                onSaveSpecialMenus={(menus) => setClientSpecialMenus(selectedClient, menus)}
+                onSaveCompanyFiles={async (files) => {
+                  const result = await setClientCompanyFiles(selectedClient, files);
+                  if (result?.ok === false) throw new Error(result.error);
+                }}
+                onSaveSpecialMenus={async (menus) => {
+                  const result = await setClientSpecialMenus(selectedClient, menus);
+                  if (result?.ok === false) throw new Error(result.error);
+                }}
               />
             </div>
           )}

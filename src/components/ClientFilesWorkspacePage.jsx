@@ -24,8 +24,14 @@ export default function ClientFilesWorkspacePage({ client }) {
       businessType={businessType}
       companyFiles={getClientCompanyFiles(client)}
       specialMenus={getClientSpecialMenus(client)}
-      onSaveCompanyFiles={(files) => setClientCompanyFiles(client, files)}
-      onSaveSpecialMenus={(menus) => setClientSpecialMenus(client, menus)}
+      onSaveCompanyFiles={async (files) => {
+        const result = await setClientCompanyFiles(client, files);
+        if (result?.ok === false) throw new Error(result.error);
+      }}
+      onSaveSpecialMenus={async (menus) => {
+        const result = await setClientSpecialMenus(client, menus);
+        if (result?.ok === false) throw new Error(result.error);
+      }}
     />
   );
 }

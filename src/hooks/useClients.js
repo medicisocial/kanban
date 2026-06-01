@@ -87,6 +87,18 @@ async function syncClientsWorkspace(nextState) {
   return { ok: true };
 }
 
+function applyClientsWorkspaceUpdate(setState, updater) {
+  let nextState = null;
+  setState((prev) => {
+    nextState = updater(prev);
+    return nextState;
+  });
+  if (!nextState) {
+    return Promise.resolve({ ok: false, error: 'Could not update client data.' });
+  }
+  return syncClientsWorkspace(nextState);
+}
+
 export function useClients() {
   const { isLegacyOrg, planType, orgId } = useStaffAuth();
   const includeDefaults = isLegacyOrg;
@@ -191,8 +203,9 @@ export function useClients() {
     [state.businessTypes],
   );
 
-  const setClientAccountManager = useCallback((client, accountManager) => {
-    setState((prev) => ({
+  const setClientAccountManager = useCallback(async (client, accountManager) => {
+    if (!client) return { ok: false, error: 'Missing client.' };
+    return applyClientsWorkspaceUpdate(setState, (prev) => ({
       ...prev,
       accountManagers: {
         ...prev.accountManagers,
@@ -201,17 +214,17 @@ export function useClients() {
     }));
   }, []);
 
-  const setClientColor = useCallback((client, color) => {
-    if (!client || !color) return;
-    setState((prev) => ({
+  const setClientColor = useCallback(async (client, color) => {
+    if (!client || !color) return { ok: false, error: 'Missing client or color.' };
+    return applyClientsWorkspaceUpdate(setState, (prev) => ({
       ...prev,
       colors: { ...prev.colors, [client]: color },
     }));
   }, []);
 
-  const setClientLogo = useCallback((client, logo) => {
-    if (!client) return;
-    setState((prev) => {
+  const setClientLogo = useCallback(async (client, logo) => {
+    if (!client) return { ok: false, error: 'Missing client.' };
+    return applyClientsWorkspaceUpdate(setState, (prev) => {
       const nextLogos = { ...prev.logos };
       if (logo) {
         nextLogos[client] = logo;
@@ -222,15 +235,40 @@ export function useClients() {
     });
   }, []);
 
-  const setClientBusinessType = useCallback((client, businessType) => {
-    if (!client) return;
-    setState((prev) => ({
+  const setClientBusinessType = useCallback(async (client, businessType) => {
+    if (!client) return { ok: false, error: 'Missing client.' };
+    return applyClientsWorkspaceUpdate(setState, (prev) => ({
       ...prev,
       businessTypes: {
         ...prev.businessTypes,
         [client]: normalizeBusinessType(businessType),
       },
     }));
+  }, []);
+
+  const saveClientProfile = useCallback(async (client, patch = {}) => {
+    if (!client) return { ok: false, error: 'Missing client.' };
+
+    const { color, businessType, logo } = patch;
+    return applyClientsWorkspaceUpdate(setState, (prev) => {
+      const next = { ...prev };
+      if (color) {
+        next.colors = { ...prev.colors, [client]: color };
+      }
+      if (businessType !== undefined) {
+        next.businessTypes = {
+          ...prev.businessTypes,
+          [client]: normalizeBusinessType(businessType),
+        };
+      }
+      if (logo !== undefined) {
+        const nextLogos = { ...prev.logos };
+        if (logo) nextLogos[client] = logo;
+        else delete nextLogos[client];
+        next.logos = nextLogos;
+      }
+      return next;
+    });
   }, []);
 
   const getClientContacts = useCallback(
@@ -242,19 +280,13 @@ export function useClients() {
     if (!client) return { ok: false, error: 'Missing client.' };
 
     const normalized = normalizeClientContacts(contacts);
-    let nextState = null;
-    setState((prev) => {
-      nextState = {
-        ...prev,
-        contacts: {
-          ...prev.contacts,
-          [client]: normalized,
-        },
-      };
-      return nextState;
-    });
-
-    return syncClientsWorkspace(nextState);
+    return applyClientsWorkspaceUpdate(setState, (prev) => ({
+      ...prev,
+      contacts: {
+        ...prev.contacts,
+        [client]: normalized,
+      },
+    }));
   }, []);
 
   const getClientSocialLogins = useCallback(
@@ -265,19 +297,13 @@ export function useClients() {
   const setClientSocialLogins = useCallback(async (client, logins) => {
     if (!client) return { ok: false, error: 'Missing client.' };
 
-    let nextState = null;
-    setState((prev) => {
-      nextState = {
-        ...prev,
-        socialLogins: {
-          ...prev.socialLogins,
-          [client]: mergeClientSocialLogins(prev.socialLogins[client], logins),
-        },
-      };
-      return nextState;
-    });
-
-    return syncClientsWorkspace(nextState);
+    return applyClientsWorkspaceUpdate(setState, (prev) => ({
+      ...prev,
+      socialLogins: {
+        ...prev.socialLogins,
+        [client]: mergeClientSocialLogins(prev.socialLogins[client], logins),
+      },
+    }));
   }, []);
 
   const getClientCompanyFiles = useCallback(
@@ -289,9 +315,9 @@ export function useClients() {
     [state.companyFiles, state.businessTypes],
   );
 
-  const setClientCompanyFiles = useCallback((client, files) => {
-    if (!client) return;
-    setState((prev) => ({
+  const setClientCompanyFiles = useCallback(async (client, files) => {
+    if (!client) return { ok: false, error: 'Missing client.' };
+    return applyClientsWorkspaceUpdate(setState, (prev) => ({
       ...prev,
       companyFiles: {
         ...(prev.companyFiles || {}),
@@ -308,9 +334,9 @@ export function useClients() {
     [state.specialMenus],
   );
 
-  const setClientSpecialMenus = useCallback((client, menus) => {
-    if (!client) return;
-    setState((prev) => ({
+  const setClientSpecialMenus = useCallback(async (client, menus) => {
+    if (!client) return { ok: false, error: 'Missing client.' };
+    return applyClientsWorkspaceUpdate(setState, (prev) => ({
       ...prev,
       specialMenus: {
         ...(prev.specialMenus || {}),
@@ -335,6 +361,7 @@ export function useClients() {
     setClientColor,
     setClientLogo,
     setClientBusinessType,
+    saveClientProfile,
     getClientContacts,
     setClientContacts,
     getClientSocialLogins,

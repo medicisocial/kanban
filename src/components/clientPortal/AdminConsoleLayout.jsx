@@ -97,7 +97,11 @@ export default function AdminConsoleLayout({
   };
 
   const handleLogoSave = async (logo) => {
-    setClientLogo(INTERNAL_TEAM_CLIENT, logo);
+    const result = await setClientLogo(INTERNAL_TEAM_CLIENT, logo);
+    if (result?.ok === false) {
+      showLogoMessage(result.error || 'Could not save logo.', true);
+      return;
+    }
     showLogoMessage(logo ? 'Logo updated.' : 'Logo removed.');
   };
 

@@ -13,9 +13,7 @@ export default function ClientProfileModal({ onClose }) {
     getClientColor,
     getClientLogo,
     getClientBusinessType,
-    setClientColor,
-    setClientLogo,
-    setClientBusinessType,
+    saveClientProfile,
   } = useClientsContext();
   const profileClients = getClientPortalBrands(clients, INTERNAL_TEAM_CLIENT);
   const [selectedClient, setSelectedClient] = useState(profileClients[0] || '');
@@ -74,16 +72,18 @@ export default function ClientProfileModal({ onClose }) {
     setPendingLogo(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedClient) return;
     setSaving(true);
     setError('');
 
     try {
-      setClientColor(selectedClient, color);
-      setClientBusinessType(selectedClient, businessType);
-      if (pendingLogo !== undefined) {
-        setClientLogo(selectedClient, pendingLogo);
+      const patch = { color, businessType };
+      if (pendingLogo !== undefined) patch.logo = pendingLogo;
+      const result = await saveClientProfile(selectedClient, patch);
+      if (result?.ok === false) {
+        setError(result.error || 'Could not save profile.');
+        return;
       }
       onClose();
     } catch (err) {

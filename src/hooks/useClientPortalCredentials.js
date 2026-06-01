@@ -10,6 +10,7 @@ import { hashPassword } from '../utils/staffAuth';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useMapSync } from '../lib/useMapSync';
+import { pushStaffSyncRows } from '../lib/staffSyncApi';
 
 function loadCredentials() {
   try {
@@ -25,6 +26,18 @@ function loadCredentials() {
 }
 
 export { loadCredentials };
+
+async function syncPortalCredentialsRow(client, activeUsers) {
+  if (!SUPABASE_ENABLED) return { ok: true };
+  const ok = await pushStaffSyncRows('client_portal_credentials', [{ id: client, data: activeUsers }]);
+  if (!ok) {
+    return {
+      ok: false,
+      error: 'Saved locally but could not sync to the cloud. Log out and back in, then try again.',
+    };
+  }
+  return { ok: true };
+}
 
 export function useClientPortalCredentials() {
   const [credentials, setCredentials] = useState(loadCredentials);
@@ -73,7 +86,12 @@ export function useClientPortalCredentials() {
       return next;
     });
 
-    return activeUsers;
+    const syncResult = await syncPortalCredentialsRow(client, activeUsers);
+    if (!syncResult.ok) {
+      return { ok: false, error: syncResult.error, users: activeUsers };
+    }
+
+    return { ok: true, users: activeUsers };
   }, []);
 
   const setClientPortalCredential = useCallback(async (client, username, password) => {

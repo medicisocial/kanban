@@ -1,8 +1,8 @@
-import { getRedis, loadWorkspace, saveWorkspace } from './_lib/redis.mjs';
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
-import { mergeClientPortalAuth, normalizeBrandUsers } from './_lib/clientPortalAuth.mjs';
-
-const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
+import { saveClientAuthMap } from './_lib/clientCredentialsStore.mjs';
+import { isSupabaseConfigured } from './_lib/supabase.mjs';
+import { getRedis } from './_lib/redis.mjs';
+import { normalizeBrandUsers } from './_lib/clientPortalAuth.mjs';
 
 function unauthorized(res) {
   return res.status(401).json({ error: 'Unauthorized' });
@@ -10,7 +10,7 @@ function unauthorized(res) {
 
 function unavailable(res) {
   return res.status(503).json({
-    error: 'Cloud sync is not configured. Add Upstash Redis in Vercel, then redeploy.',
+    error: 'Cloud sync is not configured. Add Supabase or Upstash Redis, then redeploy.',
   });
 }
 
@@ -25,29 +25,23 @@ export default async function handler(req, res) {
     return unauthorized(res);
   }
 
-  const redis = getRedis();
-  if (!redis) return unavailable(res);
-
   const { credentials } = req.body || {};
   if (!credentials || typeof credentials !== 'object') {
     return res.status(400).json({ error: 'Invalid credentials payload.' });
   }
 
-  const workspace = (await loadWorkspace(redis)) || {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    app: 'medici-social-kanban',
-    data: {},
-  };
-  workspace.data = workspace.data || {};
-  workspace.data[CLIENT_PORTAL_AUTH_KEY] = mergeClientPortalAuth(
-    workspace.data[CLIENT_PORTAL_AUTH_KEY] || {},
-    credentials,
-  );
-  workspace.exportedAt = new Date().toISOString();
+  if (!isSupabaseConfigured() && !getRedis()) {
+    return unavailable(res);
+  }
 
-  await saveWorkspace(redis, workspace);
-  const savedAuth = workspace.data[CLIENT_PORTAL_AUTH_KEY];
+  try {
+    await saveClientAuthMap(credentials);
+  } catch (error) {
+    console.error('[client-credentials] save failed:', error?.message || error);
+    return res.status(500).json({ error: error.message || 'Could not save client logins to cloud.' });
+  }
+
+  const savedAuth = credentials;
   const brandsWithPasswords = Object.entries(savedAuth)
     .filter(([, entry]) => normalizeBrandUsers(entry).some((user) => user.passwordHash))
     .map(([brand]) => brand);
