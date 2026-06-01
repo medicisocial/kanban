@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useClientAuth } from '../context/ClientAuthContext';
 import { useClientsContext } from '../context/ClientsContext';
 import ClientReviewPortal from './ClientReviewPortal';
@@ -15,7 +15,6 @@ import { filterEvents } from '../utils/eventsCalendar';
 import { createEvent, createMeeting } from '../constants';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import { buildClientPortalTasks } from '../utils/clientPortalTasks';
-import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 
 export default function ClientHubPortal({ onSignOut }) {
   const { brand, session, portalData, loadingData, dataError, logout, queueCloudResponse, refreshPortalData, savePortalProfile } =
@@ -39,13 +38,6 @@ export default function ClientHubPortal({ onSignOut }) {
     setActiveTab(tab);
     setNotificationsOpen(false);
   };
-
-  useEffect(() => {
-    if (!session || activeTab !== 'calendar' || SUPABASE_ENABLED) return undefined;
-    refreshPortalData(session, { silent: true });
-    const interval = setInterval(() => refreshPortalData(session, { silent: true }), 10000);
-    return () => clearInterval(interval);
-  }, [activeTab, session, refreshPortalData]);
 
   const clientColor = portalData?.clientColor || getClientColor(brand);
   const clientLogo = portalData?.clientLogo || getClientLogo(brand);
