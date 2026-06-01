@@ -1,6 +1,9 @@
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import { PortalRoleSummary, PortalTaskSection } from './clientPortal/PortalOverviewPanels';
+import OverviewTodayPanel from './clientPortal/OverviewTodayPanel';
 import { buildClientPortalTasks } from '../utils/clientPortalTasks';
+import { buildTodayTimeline } from '../utils/todayTimeline';
+import { getShootPlanKey } from '../utils/shootDay';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 const taskActionBtnClass =
@@ -12,11 +15,15 @@ export default function ClientPortalHome({
   brand,
   ideas,
   cards,
+  meetings = [],
+  plans = {},
   contacts,
   socialLogins,
   clientLogo,
   clientColor,
   onNavigate,
+  onOpenMeeting,
+  onOpenShoot,
 }) {
   const summary = buildClientPortalTasks({
     brand,
@@ -26,6 +33,20 @@ export default function ClientPortalHome({
     socialLogins,
     clientLogo,
   });
+
+  const getPlan = (client, dateKey) => plans[getShootPlanKey(client, dateKey)] || {};
+
+  const todayTimeline = buildTodayTimeline({
+    meetings,
+    cards,
+    plans,
+    getPlan,
+    clientFilter: brand,
+    clientOrder: [brand],
+    includePlanOnlyDays: true,
+  });
+
+  const showTodayPanel = todayTimeline.items.length > 0;
 
   const glanceCards = [
     {
@@ -85,6 +106,16 @@ export default function ClientPortalHome({
           />
         ))}
       </div>
+
+      {showTodayPanel && (
+        <OverviewTodayPanel
+          timeline={todayTimeline}
+          onOpenMeeting={onOpenMeeting}
+          onOpenShoot={onOpenShoot}
+          onNavigateMeetings={() => onNavigate('meetings')}
+          onNavigateShoots={() => onNavigate('shoots')}
+        />
+      )}
 
       {summary.totalOpen === 0 ? (
         <div className={`${surfacePanelClass} px-6 py-16 text-center`}>

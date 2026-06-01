@@ -60,18 +60,14 @@ function segmentBtnClass(active) {
 function MeetingSidebarChip({ meeting, onClick, draft = false }) {
   const contact = getMeetingContactLabel(meeting);
   const recurring = isRecurringMeeting(meeting);
+  const shellClass = `block w-full rounded-lg border px-3 py-2.5 text-left transition ${
+    draft
+      ? 'cursor-default border-dashed border-violet-400/40 bg-violet-500/10'
+      : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06]'
+  }`;
 
-  return (
-    <button
-      type="button"
-      onClick={() => onClick?.(meeting)}
-      disabled={draft}
-      className={`block w-full rounded-lg border px-3 py-2.5 text-left transition ${
-        draft
-          ? 'cursor-default border-dashed border-violet-400/40 bg-violet-500/10'
-          : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06]'
-      }`}
-    >
+  const body = (
+    <>
       <p className={`text-[10px] font-semibold uppercase tracking-wide ${draft ? 'text-violet-300' : 'text-white/40'}`}>
         {draft ? 'This meeting' : contact}
       </p>
@@ -81,6 +77,31 @@ function MeetingSidebarChip({ meeting, onClick, draft = false }) {
         {meeting.endTime ? ` – ${formatTime(meeting.endTime)}` : ''}
         {recurring ? ' · Recurring' : ''}
       </p>
+    </>
+  );
+
+  if (draft) {
+    return (
+      <div className={shellClass}>
+        {body}
+        {getMeetingVideoLink(meeting) && (
+          <p className="mt-1">
+            <MeetingVideoLink
+              meeting={meeting}
+              compact
+              linkClassName="text-xs font-medium text-violet-300"
+            />
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className={shellClass}>
+      <button type="button" onClick={() => onClick?.(meeting)} className="block w-full text-left">
+        {body}
+      </button>
       {getMeetingVideoLink(meeting) && (
         <p className="mt-1">
           <MeetingVideoLink
@@ -90,7 +111,7 @@ function MeetingSidebarChip({ meeting, onClick, draft = false }) {
           />
         </p>
       )}
-    </button>
+    </div>
   );
 }
 

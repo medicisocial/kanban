@@ -192,11 +192,15 @@ export default function ClientHubPortal({ onSignOut }) {
           brand={brand}
           ideas={ideas}
           cards={cards}
+          meetings={meetings}
+          plans={plans}
           contacts={profileContacts}
           socialLogins={profileSocialLogins}
           clientLogo={clientLogo}
           clientColor={clientColor}
-          onNavigate={setActiveTab}
+          onNavigate={handleTabChange}
+          onOpenMeeting={() => handleTabChange('meetings')}
+          onOpenShoot={() => setActiveTab('shoots')}
         />
       )}
 

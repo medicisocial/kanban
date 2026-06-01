@@ -167,45 +167,54 @@ export default function MeetingsCalendar({
           </div>
           <ul className="divide-y divide-white/[0.06]">
             {upcoming.map((meeting) => (
-              <li key={meeting.occurrenceKey || meeting.id}>
-                <button
-                  type="button"
-                  onClick={() => openEdit(meeting)}
-                  className="flex w-full items-start justify-between gap-4 px-4 py-3 text-left transition hover:bg-white/[0.03]"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-medium text-white">{meeting.title}</p>
-                      {isRecurringMeeting(meeting) && (
-                        <span className="text-[10px] font-medium uppercase tracking-wider text-white/35">
-                          Recurring
-                        </span>
-                      )}
-                      {isOccurrenceRescheduled(meeting) && (
-                        <span className="text-[10px] font-medium uppercase tracking-wider text-amber-300/80">
-                          Rescheduled
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-0.5 text-xs text-white/45">
-                      {[
-                        showAllClients && getMeetingContactLabel(meeting),
-                        meeting.location && !getMeetingVideoLink(meeting) ? meeting.location : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
+              <li
+                key={meeting.occurrenceKey || meeting.id}
+                className="px-4 py-3 transition hover:bg-white/[0.03]"
+              >
+                <div className="flex w-full items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(meeting)}
+                      className="block w-full text-left"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-medium text-white">{meeting.title}</p>
+                        {isRecurringMeeting(meeting) && (
+                          <span className="text-[10px] font-medium uppercase tracking-wider text-white/35">
+                            Recurring
+                          </span>
+                        )}
+                        {isOccurrenceRescheduled(meeting) && (
+                          <span className="text-[10px] font-medium uppercase tracking-wider text-amber-300/80">
+                            Rescheduled
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-xs text-white/45">
+                        {[
+                          showAllClients && getMeetingContactLabel(meeting),
+                          meeting.location && !getMeetingVideoLink(meeting) ? meeting.location : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                    </button>
                     {getMeetingVideoLink(meeting) && (
                       <p className="mt-1">
                         <MeetingVideoLink
                           meeting={meeting}
                           compact
-                          linkClassName="text-xs font-medium text-violet-300 underline-offset-2 hover:underline"
+                          linkClassName="text-xs font-medium text-violet-300"
                         />
                       </p>
                     )}
                   </div>
-                  <div className="shrink-0 text-right text-xs tabular-nums text-white/50">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(meeting)}
+                    className="shrink-0 text-right text-xs tabular-nums text-white/50"
+                  >
                     <p>
                       {new Date(`${meeting.occurrenceDate || meeting.date}T12:00:00`).toLocaleDateString('en-US', {
                         month: 'short',
@@ -218,8 +227,8 @@ export default function MeetingsCalendar({
                         {meeting.endTime ? ` – ${formatTime(meeting.endTime)}` : ''}
                       </p>
                     )}
-                  </div>
-                </button>
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
