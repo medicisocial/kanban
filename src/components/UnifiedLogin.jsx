@@ -16,6 +16,8 @@ import { btnPrimaryClass, glassSegmentClass } from './clientPortal/clientPortalU
 const labelClass =
   'mb-2 block text-[10px] font-medium uppercase tracking-[0.28em] text-white/45';
 
+const CLIENT_LOGIN_TIMEOUT_MS = 20000;
+
 const inputClass =
   'w-full rounded-sm border border-white/10 bg-white/[0.04] px-4 py-3 text-base text-white outline-none transition-[border-color,background-color] duration-300 placeholder:text-white/25 focus:border-white/30 focus:bg-white/[0.06]';
 
@@ -327,7 +329,15 @@ export default function UnifiedLogin({
       }
 
       try {
-        await loginClientPortal(loginId, password);
+        await Promise.race([
+          loginClientPortal(loginId, password),
+          new Promise((_, reject) => {
+            setTimeout(
+              () => reject(new Error('Sign-in timed out. Please try again.')),
+              CLIENT_LOGIN_TIMEOUT_MS,
+            );
+          }),
+        ]);
         onAuthenticated('client');
       } catch (err) {
         setError(err.message || 'Invalid username or password.');

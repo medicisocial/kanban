@@ -12,9 +12,9 @@ import {
 const ClientAuthContext = createContext(null);
 
 export function ClientAuthProvider({ children }) {
-  const [session, setSession] = useState(null);
-  const [brand, setBrand] = useState('');
-  const [ready, setReady] = useState(false);
+  const [session, setSession] = useState(() => loadClientSession());
+  const [brand, setBrand] = useState(() => loadClientSession()?.brand || '');
+  const [ready, setReady] = useState(true);
   const [portalData, setPortalData] = useState(null);
   const [loadingData, setLoadingData] = useState(false);
   const [dataError, setDataError] = useState('');
@@ -38,15 +38,6 @@ export function ClientAuthProvider({ children }) {
       setLoadingData(false);
     }
   }, [session]);
-
-  useEffect(() => {
-    const stored = loadClientSession();
-    if (stored) {
-      setSession(stored);
-      setBrand(stored.brand || '');
-    }
-    setReady(true);
-  }, []);
 
   useEffect(() => {
     if (!session) return;

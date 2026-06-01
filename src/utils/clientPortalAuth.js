@@ -1,4 +1,21 @@
 export const CLIENT_SESSION_KEY = 'medici-client-portal-session';
+const CLIENT_API_TIMEOUT_MS = 15000;
+
+async function fetchClientApi(url, options = {}, timeoutMs = CLIENT_API_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error('Request timed out. Please try again.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 export function isClientHubPortal() {
   const params = new URLSearchParams(window.location.search);
@@ -43,7 +60,7 @@ export function clearClientSession() {
 }
 
 export async function loginClientPortal(username, password) {
-  const response = await fetch('/api/client-auth', {
+  const response = await fetchClientApi('/api/client-auth', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
@@ -54,12 +71,16 @@ export async function loginClientPortal(username, password) {
     throw new Error(payload.error || 'Login failed.');
   }
 
+  if (!payload?.session?.brand) {
+    throw new Error('Login succeeded but the session was invalid. Please try again.');
+  }
+
   saveClientSession(payload.session);
   return payload;
 }
 
 export async function requestClientPasswordReset(username) {
-  const response = await fetch('/api/client-password-reset', {
+  const response = await fetchClientApi('/api/client-password-reset', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'request', username }),
@@ -73,7 +94,7 @@ export async function requestClientPasswordReset(username) {
 }
 
 export async function completeClientPasswordReset(token, password) {
-  const response = await fetch('/api/client-password-reset', {
+  const response = await fetchClientApi('/api/client-password-reset', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'reset', token, password }),
@@ -87,7 +108,7 @@ export async function completeClientPasswordReset(token, password) {
 }
 
 export async function fetchClientPortalData(session) {
-  const response = await fetch('/api/client-portal', {
+  const response = await fetchClientApi('/api/client-portal', {
     headers: authHeaders(session),
   });
 
@@ -105,7 +126,7 @@ export async function fetchClientPortalData(session) {
 }
 
 export async function submitClientPortalResponse(session, type, response) {
-  const res = await fetch('/api/client-responses', {
+  const res = await fetchClientApi('/api/client-responses', {
     method: 'POST',
     headers: authHeaders(session),
     body: JSON.stringify({ type, response }),

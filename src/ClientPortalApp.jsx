@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { ClientsProvider } from './context/ClientsContext';
 import { ClientAuthProvider, useClientAuth } from './context/ClientAuthContext';
+import { loadClientSession } from './utils/clientPortalAuth';
 import ClientHubPortal from './components/ClientHubPortal';
 
 function ClientPortalShell({ onSignOut }) {
   const { ready, isAuthenticated } = useClientAuth();
 
   useEffect(() => {
-    if (ready && !isAuthenticated) {
+    if (ready && !isAuthenticated && !loadClientSession()) {
       onSignOut?.();
     }
   }, [ready, isAuthenticated, onSignOut]);

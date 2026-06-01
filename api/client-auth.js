@@ -20,7 +20,14 @@ function unavailable(res) {
  * isn't configured or the request fails.
  */
 async function loadClientAuthMap() {
-  if (isSupabaseConfigured()) {
+  let supabaseConfigured = false;
+  try {
+    supabaseConfigured = isSupabaseConfigured();
+  } catch (error) {
+    console.error('[client-auth] Supabase config error, falling back to KV:', error?.message || error);
+  }
+
+  if (supabaseConfigured) {
     try {
       const map = await fetchCollectionMap('client_portal_credentials');
       if (map) return map;

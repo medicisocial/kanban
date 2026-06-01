@@ -207,7 +207,7 @@ function UnifiedAppGateInner() {
     return <StaffConsoleApp onSignOut={handleSignOut} />;
   }
 
-  if (mode === 'client' && (ready || loadClientSession()?.brand)) {
+  if (mode === 'client') {
     return (
       <Suspense fallback={<GateLoading />}>
         <ClientPortalApp onSignOut={handleSignOut} />

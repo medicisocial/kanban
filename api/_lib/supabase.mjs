@@ -64,12 +64,30 @@ export function isSupabaseConfigured() {
   return Boolean(anon);
 }
 
+const SERVER_FETCH_TIMEOUT_MS = 10000;
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = SERVER_FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error(`Supabase request timed out after ${timeoutMs}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function fetchRows(table) {
   const { url, key, orgId } = getConfig();
   if (!url || !key) return null;
 
   const endpoint = `${url}/rest/v1/${table}?select=id,data&org_id=eq.${encodeURIComponent(orgId)}`;
-  const response = await fetch(endpoint, {
+  const response = await fetchWithTimeout(endpoint, {
     headers: {
       apikey: key,
       Authorization: `Bearer ${key}`,
@@ -106,7 +124,7 @@ export async function fetchRecord(table, id) {
   if (!url || !key) return null;
 
   const endpoint = `${url}/rest/v1/${table}?select=data&id=eq.${encodeURIComponent(id)}&org_id=eq.${encodeURIComponent(orgId)}`;
-  const response = await fetch(endpoint, {
+  const response = await fetchWithTimeout(endpoint, {
     headers: { apikey: key, Authorization: `Bearer ${key}` },
   });
   if (!response.ok) {
