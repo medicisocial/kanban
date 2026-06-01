@@ -156,9 +156,10 @@ export function useCollectionSync({
           pendingRemovedRef.current,
         );
 
-        const keptIds = new Set(keptItems.map((record) => String(getId(record))));
+        const remoteIds = new Set(filteredItems.map((record) => String(getId(record))));
+        // Clear tombstones only once the row is gone from the cloud — not when we filtered it out.
         for (const id of [...pendingRemovedRef.current]) {
-          if (!keptIds.has(id)) {
+          if (!remoteIds.has(id)) {
             pendingRemovedRef.current.delete(id);
           }
         }
@@ -166,12 +167,22 @@ export function useCollectionSync({
 
         const droppedIds = filteredItems
           .map((record) => String(getId(record)))
-          .filter((id) => !keptIds.has(id));
+          .filter((id) => pendingRemovedRef.current.has(id));
 
         if (droppedIds.length) {
-          const canWrite = await hasStaffSupabaseSession();
-          if (canWrite) {
-            await store.deleteRecords(droppedIds);
+          let canWrite = await hasStaffSupabaseSession();
+          if (!canWrite) {
+            await ensureStaffSupabaseSession();
+            canWrite = await hasStaffSupabaseSession();
+          }
+          try {
+            if (canWrite) {
+              await store.deleteRecords(droppedIds);
+            } else {
+              await pushStaffSync({ table, changed: [], removed: droppedIds, orgId });
+            }
+          } catch (err) {
+            console.warn(`[supabase:${table}] retry delete failed:`, err?.message || err);
           }
         }
 
@@ -382,6 +393,8 @@ export function useCollectionSync({
         }
 
         if (!cancelled) {
+          for (const id of removed) pendingRemovedRef.current.delete(String(id));
+          savePendingRemoved(orgId, table, pendingRemovedRef.current);
           syncedRef.current = next;
           pendingWriteRef.current = false;
         }

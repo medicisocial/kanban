@@ -4,27 +4,32 @@ export function pendingRemovedKey(orgId, table) {
   return `medici-pending-removed:${orgId}:${table}`;
 }
 
-export function loadPendingRemoved(orgId, table) {
+function readPendingRemovedStorage(key) {
   try {
-    const raw = sessionStorage.getItem(pendingRemovedKey(orgId, table));
-    if (!raw) return new Set();
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
   } catch {
-    return new Set();
+    return [];
   }
+}
+
+export function loadPendingRemoved(orgId, table) {
+  const key = pendingRemovedKey(orgId, table);
+  return new Set(readPendingRemovedStorage(key));
 }
 
 export function savePendingRemoved(orgId, table, ids) {
   const key = pendingRemovedKey(orgId, table);
   if (!ids.size) {
-    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
     return;
   }
-  sessionStorage.setItem(key, JSON.stringify([...ids]));
+  localStorage.setItem(key, JSON.stringify([...ids]));
 }
 
-/** Tombstone deletes immediately so realtime pulls cannot resurrect them before push runs. */
+/** Tombstone deletes immediately so cloud pulls cannot resurrect them before push runs. */
 export function markPendingRemoved(orgId, table, ids) {
   if (!orgId || !table || !ids?.length) return new Set();
   const pending = loadPendingRemoved(orgId, table);
@@ -139,6 +144,8 @@ export function mergeRemoteListWithLocalPending({
   for (const local of localItems) {
     const id = String(getId(local));
     if (pendingRemoved.has(id) || remoteIds.has(id)) continue;
+    // Was synced before but gone from cloud — drop stale localStorage copy.
+    if (synced.has(id)) continue;
     merged.push(local);
   }
 
