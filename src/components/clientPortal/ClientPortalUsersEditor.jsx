@@ -4,9 +4,9 @@ import {
   getClientUsersFromStore,
 } from '../../utils/clientPortalCredentials';
 import {
-  isValidPortalEmail,
+  isValidPortalUsername,
   normalizePortalLogin,
-  suggestPortalEmailFromContacts,
+  suggestPortalUsername,
 } from '../../utils/portalLogin';
 import { updatePortalPasswordVault, getPortalPasswordForUser } from '../../utils/clientPortalPasswordVault';
 import { loadCredentials } from '../../hooks/useClientPortalCredentials';
@@ -28,13 +28,13 @@ function buildDraftUsers(client, getClientUsers, getClientContacts) {
     }));
   }
 
-  const suggestedEmail = suggestPortalEmailFromContacts(getClientContacts?.(client) || []);
+  const suggestedUsername = suggestPortalUsername(client, getClientContacts?.(client) || []);
 
   return [
     {
       id: createClientPortalUserId(),
       displayName: '',
-      username: suggestedEmail,
+      username: suggestedUsername,
       password: '',
       avatar: null,
       pendingAvatar: undefined,
@@ -51,7 +51,7 @@ export default function ClientPortalUsersEditor({
   onSyncToCloud,
   labelPlaceholder = 'e.g. Owner, Marketing lead',
   saveLabel = 'Save portal access',
-  loginFieldLabel = 'Work email',
+  loginFieldLabel = 'Username',
 }) {
   const [users, setUsers] = useState(() =>
     buildDraftUsers(client, getClientUsers, getClientContacts),
@@ -82,7 +82,7 @@ export default function ClientPortalUsersEditor({
       {
         id: createClientPortalUserId(),
         displayName: '',
-        username: suggestPortalEmailFromContacts(getClientContacts?.(client) || []),
+        username: suggestPortalUsername(client, getClientContacts?.(client) || []),
         password: '',
         avatar: null,
         pendingAvatar: undefined,
@@ -131,11 +131,11 @@ export default function ClientPortalUsersEditor({
         const raw = user.username.trim();
         const username = normalizePortalLogin(raw);
         if (!username) {
-          setError('Enter a work email for every portal user.');
+          setError('Enter a username for every portal user.');
           return;
         }
-        if (!isValidPortalEmail(username)) {
-          setError(`"${raw}" is not a valid email address.`);
+        if (!isValidPortalUsername(username)) {
+          setError(`"${raw}" is not a valid username. Use letters, numbers, dots, hyphens, or an email.`);
           return;
         }
         if (seen.has(username)) {
@@ -184,7 +184,7 @@ export default function ClientPortalUsersEditor({
       const primarySaved = savableUsers[0];
       if (primarySaved?.username) {
         setInviteDetails({
-          email: normalizePortalLogin(primarySaved.username),
+          username: normalizePortalLogin(primarySaved.username),
           password: primarySaved.password || '',
         });
       }
@@ -202,7 +202,7 @@ export default function ClientPortalUsersEditor({
   const activeCount = users.filter(userHasLogin).length;
   const headerCopy = {
     title: 'Portal access',
-    subtitle: 'Each person signs in with the work email and password they were given.',
+    subtitle: 'Each person signs in with the username and password you assign here.',
   };
 
   return (
@@ -266,12 +266,12 @@ export default function ClientPortalUsersEditor({
                     {loginFieldLabel}
                   </span>
                   <input
-                    type="email"
+                    type="text"
                     value={user.username}
                     onChange={(e) => updateUser(user.id, { username: e.target.value })}
-                    placeholder="owner@yourbrand.com"
+                    placeholder="e.g. plumehtx"
                     className={inputClass}
-                    autoComplete="email"
+                    autoComplete="username"
                   />
                 </label>
                 <div className="sm:col-span-1">
@@ -293,7 +293,11 @@ export default function ClientPortalUsersEditor({
       {message && <p className="text-sm text-emerald-300">{message}</p>}
 
       {inviteDetails && (
-        <PortalInviteTemplate brand={client} email={inviteDetails.email} password={inviteDetails.password} />
+        <PortalInviteTemplate
+          brand={client}
+          username={inviteDetails.username}
+          password={inviteDetails.password}
+        />
       )}
 
       <button

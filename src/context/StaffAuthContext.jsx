@@ -240,7 +240,7 @@ export function StaffAuthProvider({ children }) {
     if (!isStaffAuthConfigured()) {
       return {
         ok: false,
-        error: 'Sign in with the work email you used to create your account.',
+        error: 'Sign in with the email you used to create your account.',
       };
     }
 
@@ -279,7 +279,7 @@ export function StaffAuthProvider({ children }) {
     if (!looksLikeEmail(normalized)) {
       return {
         ok: false,
-        error: 'Enter the work email for your workspace account.',
+        error: 'Enter the email for your workspace account.',
       };
     }
 

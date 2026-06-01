@@ -25,12 +25,12 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    label: 'Resources',
-    items: [{ id: 'files', label: 'Brand assets', Icon: IconFiles }],
-  },
-  {
     label: 'Planning',
     items: [{ id: 'calendar', label: 'Calendar', Icon: IconCalendar }],
+  },
+  {
+    label: 'Resources',
+    items: [{ id: 'files', label: 'Brand assets', Icon: IconFiles }],
   },
 ];
 

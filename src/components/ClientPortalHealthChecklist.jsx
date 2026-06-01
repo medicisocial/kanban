@@ -21,9 +21,9 @@ export default function ClientPortalHealthChecklist({
   const checks = [
     {
       id: 'users',
-      label: 'Portal login (email)',
+      label: 'Portal login',
       ok: users.length > 0,
-      hint: 'Add a work email and password under Portal users.',
+      hint: 'Add a username and password under Portal access.',
       tab: 'users',
     },
     {

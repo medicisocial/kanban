@@ -36,11 +36,7 @@ export default async function handler(req, res) {
       .trim()
       .toLowerCase();
     if (!username) {
-      return res.status(400).json({ error: 'Email is required.' });
-    }
-
-    if (!EMAIL_PATTERN.test(username)) {
-      return res.status(400).json({ error: 'Enter the email address for your portal account.' });
+      return res.status(400).json({ error: 'Username is required.' });
     }
 
     const authMap = await loadClientAuthMap();
@@ -55,6 +51,18 @@ export default async function handler(req, res) {
       return res.status(200).json(genericSuccess());
     }
 
+    const resetEmail = EMAIL_PATTERN.test(login.user.username)
+      ? login.user.username
+      : EMAIL_PATTERN.test(username)
+        ? username
+        : null;
+
+    if (!resetEmail) {
+      return res.status(400).json({
+        error: 'This account uses a username sign-in. Contact your agency to reset your password.',
+      });
+    }
+
     if (!isEmailConfigured()) {
       return res.status(503).json({
         error:
@@ -67,14 +75,14 @@ export default async function handler(req, res) {
       brand: login.brand,
       userId: login.user.id,
       username: login.user.username,
-      email: username,
+      email: resetEmail,
     });
 
     const resetUrl = `${getPortalOrigin(req)}/?login=1&client=1&client-reset=${encodeURIComponent(token)}`;
 
     try {
       await sendClientPasswordResetEmail({
-        to: username,
+        to: resetEmail,
         brand: login.brand,
         resetUrl,
       });

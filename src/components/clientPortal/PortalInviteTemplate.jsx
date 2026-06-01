@@ -2,17 +2,18 @@ import { useState } from 'react';
 import { buildPortalInviteMessage } from '../../utils/portalLogin';
 import { btnSecondaryClass, glassInsetClass } from './clientPortalUi';
 
-export default function PortalInviteTemplate({ brand, email, password }) {
+export default function PortalInviteTemplate({ brand, email, username, password }) {
   const [copied, setCopied] = useState(false);
+  const login = (username || email || '').trim();
 
-  if (!email?.trim()) return null;
+  if (!login) return null;
 
   const portalUrl =
     typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : 'https://portal.medicisocial.com';
 
   const message = buildPortalInviteMessage({
     brand,
-    email: email.trim(),
+    username: login,
     portalUrl,
     temporaryPassword: password?.trim() || '',
   });
@@ -33,7 +34,7 @@ export default function PortalInviteTemplate({ brand, email, password }) {
         <div>
           <p className="text-sm font-medium text-white">Client welcome message</p>
           <p className="mt-0.5 text-xs text-white/45">
-            Copy and send to {email.trim()} — ready for email or Slack.
+            Copy and send to {login} — ready for email or Slack.
           </p>
         </div>
         <button type="button" onClick={handleCopy} className={`${btnSecondaryClass} py-1.5 text-[10px]`}>

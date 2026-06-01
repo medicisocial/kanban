@@ -44,7 +44,7 @@ export default async function handler(req, res) {
   const username = req.body?.username?.trim().toLowerCase();
   const password = req.body?.password || '';
   if (!username || !password) {
-    return res.status(400).json({ error: 'Email and password are required.' });
+    return res.status(400).json({ error: 'Username and password are required.' });
   }
 
   const authMap = await loadClientAuthMap();
@@ -58,11 +58,11 @@ export default async function handler(req, res) {
 
   const login = findClientLogin(authMap, username);
   if (!login) {
-    return res.status(401).json({ error: 'Invalid email or password.' });
+    return res.status(401).json({ error: 'Invalid username or password.' });
   }
 
   if (!verifyClientPassword(login.user, password)) {
-    return res.status(401).json({ error: 'Invalid email or password.' });
+    return res.status(401).json({ error: 'Invalid username or password.' });
   }
 
   const session = createClientSession(login.brand, login.user.username || username);

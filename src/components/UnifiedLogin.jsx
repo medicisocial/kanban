@@ -182,7 +182,7 @@ export default function UnifiedLogin({
     try {
       if (agencyMode) {
         if (!looksLikeEmail(loginId)) {
-          setError('Enter the work email for your workspace account.');
+          setError('Enter the email for your workspace account.');
           return;
         }
         if (!saasSignupEnabled) {
@@ -199,7 +199,9 @@ export default function UnifiedLogin({
       }
 
       if (!isValidPortalEmail(loginId)) {
-        setError('Enter the email address for your portal account.');
+        setError(
+          'Password reset requires an email on file. Contact your agency if you sign in with a username.',
+        );
         return;
       }
 
@@ -275,7 +277,7 @@ export default function UnifiedLogin({
             return;
           }
           if (!looksLikeEmail(loginId)) {
-            setError('Enter a valid work email.');
+            setError('Enter a valid email.');
             return;
           }
 
@@ -306,7 +308,7 @@ export default function UnifiedLogin({
         }
 
         if (!looksLikeEmail(loginId)) {
-          setError('Enter the work email for your account.');
+          setError('Enter the email for your account.');
           return;
         }
 
@@ -328,7 +330,7 @@ export default function UnifiedLogin({
         await loginClientPortal(loginId, password);
         onAuthenticated('client');
       } catch (err) {
-        setError(err.message || 'Invalid email or password.');
+        setError(err.message || 'Invalid username or password.');
       }
     } catch (err) {
       setError(err.message || 'Could not sign in.');
@@ -349,8 +351,8 @@ export default function UnifiedLogin({
     if (isSignup) return null;
     if (isForgot) {
       return agencyMode
-        ? 'Enter your work email and we will send a reset link.'
-        : 'Enter your portal email and we will send a reset link.';
+        ? 'Enter your email and we will send a reset link.'
+        : 'Enter your portal username or email and we will send a reset link when email is on file.';
     }
     if (isAgencyReset || isClientReset) return 'Enter a new password for your account.';
     if (authView !== 'signin') return null;
@@ -415,13 +417,12 @@ export default function UnifiedLogin({
           {isForgot ? (
             <form onSubmit={handleForgotSubmit} className="mt-8 space-y-5">
               <label className="block">
-                <span className={labelClass}>{agencyMode ? 'Work email' : 'Portal email'}</span>
+                <span className={labelClass}>{agencyMode ? 'Email' : 'Username'}</span>
                 <input
-                  type="email"
+                  type={agencyMode ? 'email' : 'text'}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="email"
-                  placeholder={agencyMode ? 'you@agency.com' : 'you@brand.com'}
+                  autoComplete={agencyMode ? 'email' : 'username'}
                   className={inputClass}
                   autoFocus
                   disabled={submitting}
@@ -514,14 +515,13 @@ export default function UnifiedLogin({
 
               <label className="block">
                 <span className={labelClass}>
-                  {agencyMode ? 'Work email' : 'Portal email'}
+                  {agencyMode ? 'Email' : 'Username'}
                 </span>
                 <input
-                  type="email"
+                  type={agencyMode ? 'email' : 'text'}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="email"
-                  placeholder={agencyMode ? 'you@agency.com' : 'you@brand.com'}
+                  autoComplete={agencyMode ? 'email' : 'username'}
                   className={inputClass}
                   autoFocus={!checking}
                   disabled={submitting}
