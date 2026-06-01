@@ -14,6 +14,7 @@ import {
   TEAM_STORAGE_KEY,
   VIDEO_IDEAS_STORAGE_KEY,
 } from '../constants';
+import { orgScopedKey } from '../lib/orgStorage';
 
 export const BACKUP_VERSION = 1;
 
@@ -49,7 +50,7 @@ export const WORKSPACE_SYNC_META_KEY = 'medici-workspace-sync-meta';
 function readWorkspaceData() {
   const data = {};
   for (const key of ALL_SYNC_STORAGE_KEYS) {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(orgScopedKey(key));
     if (raw !== null) {
       try {
         data[key] = JSON.parse(raw);
@@ -115,7 +116,7 @@ export function applyBackupPayload(payload) {
   if (!payload?.data || typeof payload.data !== 'object') return false;
 
   for (const key of Object.keys(payload.data)) {
-    localStorage.setItem(key, JSON.stringify(payload.data[key]));
+    localStorage.setItem(orgScopedKey(key), JSON.stringify(payload.data[key]));
   }
 
   if (payload.exportedAt) {
@@ -178,7 +179,7 @@ export function importBackupFile(file) {
           return;
         }
         for (const key of keys) {
-          localStorage.setItem(key, JSON.stringify(payload.data[key]));
+          localStorage.setItem(orgScopedKey(key), JSON.stringify(payload.data[key]));
         }
         if (payload.exportedAt) {
           setLocalSyncMeta(payload.exportedAt, JSON.stringify(payload.data));

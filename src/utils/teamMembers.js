@@ -10,6 +10,7 @@ import {
 } from '../constants';
 import { normalizeClientLogo, serializeClientLogo } from './clientLogo';
 import { isValidPortalEmail, normalizePortalLogin } from './portalLogin';
+import { readOrgScopedJson } from '../lib/orgStorage';
 
 export { TEAM_ROLES, TEAM_LEADERSHIP_ROLES, TEAM_OPERATIONAL_ROLES, TEAM_ROLE_COVERAGE };
 
@@ -96,12 +97,9 @@ export function mergeTeamMemberUpdates(member, updates) {
 
 export function loadTeamMembersFromStorage() {
   try {
-    const raw = localStorage.getItem(TEAM_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((member) => normalizeTeamMember(member)).filter(Boolean);
-      }
+    const parsed = readOrgScopedJson(TEAM_STORAGE_KEY, null);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.map((member) => normalizeTeamMember(member)).filter(Boolean);
     }
   } catch {
     /* fall through */

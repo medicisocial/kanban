@@ -82,8 +82,8 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = SERVER_FETCH_TIME
   }
 }
 
-async function fetchRows(table) {
-  const { url, key, orgId } = getConfig();
+async function fetchRows(table, orgIdOverride) {
+  const { url, key, orgId } = getConfig(orgIdOverride);
   if (!url || !key) return null;
 
   const endpoint = `${url}/rest/v1/${table}?select=id,data&org_id=eq.${encodeURIComponent(orgId)}`;
@@ -103,24 +103,47 @@ async function fetchRows(table) {
 }
 
 /** Returns an array of each row's `data` payload (or null if not configured). */
-export async function fetchCollection(table) {
-  const rows = await fetchRows(table);
+export async function fetchCollection(table, orgIdOverride) {
+  const rows = await fetchRows(table, orgIdOverride);
   if (!rows) return null;
   return rows.map((row) => row.data);
 }
 
 /** Returns an object map of { [row.id]: row.data } (or null if not configured). */
-export async function fetchCollectionMap(table) {
-  const rows = await fetchRows(table);
+export async function fetchCollectionMap(table, orgIdOverride) {
+  const rows = await fetchRows(table, orgIdOverride);
   if (!rows) return null;
   const map = {};
   for (const row of rows) map[row.id] = row.data;
   return map;
 }
 
+/**
+ * Returns every row across all orgs as { id, org_id, data } (or null if not
+ * configured). Used by cross-tenant lookups such as client-portal login, where
+ * the org owning a brand is not known until the credentials are matched.
+ */
+export async function fetchRowsAcrossOrgs(table) {
+  const url = getSupabaseUrl();
+  const key = resolveServerKey();
+  if (!url || !key) return null;
+
+  const endpoint = `${url}/rest/v1/${table}?select=id,org_id,data`;
+  const response = await fetchWithTimeout(endpoint, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Supabase ${table} cross-org fetch failed: ${response.status} ${detail}`.trim());
+  }
+
+  return response.json();
+}
+
 /** Returns a single record's `data` payload (or null if missing / not configured). */
-export async function fetchRecord(table, id) {
-  const { url, key, orgId } = getConfig();
+export async function fetchRecord(table, id, orgIdOverride) {
+  const { url, key, orgId } = getConfig(orgIdOverride);
   if (!url || !key) return null;
 
   const endpoint = `${url}/rest/v1/${table}?select=data&id=eq.${encodeURIComponent(id)}&org_id=eq.${encodeURIComponent(orgId)}`;
@@ -158,8 +181,8 @@ export async function upsertRecord(table, id, data, orgIdOverride) {
 }
 
 /** Deletes a single record by id. */
-export async function deleteRecord(table, id) {
-  await deleteRecords(table, [id]);
+export async function deleteRecord(table, id, orgIdOverride) {
+  await deleteRecords(table, [id], orgIdOverride);
 }
 
 /** Deletes multiple records by id. */

@@ -70,6 +70,7 @@ function buildContentReviewDenyUpdates(card, comment, timestamp = Date.now()) {
  */
 async function applyResponseToSupabase(res, session, type, response) {
   const brand = session.brand;
+  const orgId = session.orgId;
 
   if (type === 'idea') {
     const action = response.action;
@@ -90,7 +91,7 @@ async function applyResponseToSupabase(res, session, type, response) {
         createdAt: response.idea.createdAt || Date.now(),
         reviewedAt: null,
       };
-      await upsertRecord(VIDEO_IDEAS_TABLE, id, idea);
+      await upsertRecord(VIDEO_IDEAS_TABLE, id, idea, orgId);
       return res.status(200).json({ ok: true, id });
     }
 
@@ -100,7 +101,7 @@ async function applyResponseToSupabase(res, session, type, response) {
     const status = action === 'approved' ? 'approved' : action === 'declined' ? 'declined' : null;
     if (!status) return res.status(400).json({ error: 'Unknown idea action.' });
 
-    const existing = await fetchRecord(VIDEO_IDEAS_TABLE, ideaId);
+    const existing = await fetchRecord(VIDEO_IDEAS_TABLE, ideaId, orgId);
     const base = existing || (response.idea ? { ...response.idea, id: ideaId } : null);
     if (!base) return res.status(404).json({ error: 'Idea not found.' });
     if (base.client && base.client !== brand) return res.status(403).json({ error: 'Forbidden.' });
@@ -114,7 +115,7 @@ async function applyResponseToSupabase(res, session, type, response) {
       clientComment: (response.comment || '').trim(),
       reviewedAt: Date.now(),
     };
-    await upsertRecord(VIDEO_IDEAS_TABLE, ideaId, next);
+    await upsertRecord(VIDEO_IDEAS_TABLE, ideaId, next, orgId);
     return res.status(200).json({ ok: true });
   }
 
@@ -122,7 +123,7 @@ async function applyResponseToSupabase(res, session, type, response) {
     const cardId = response.cardId;
     if (!cardId) return res.status(400).json({ error: 'Missing cardId.' });
 
-    const card = await fetchRecord(CARDS_TABLE, cardId);
+    const card = await fetchRecord(CARDS_TABLE, cardId, orgId);
     if (!card || card.columnId !== 'in-review') {
       return res.status(200).json({ ok: true, skipped: true });
     }
@@ -138,7 +139,7 @@ async function applyResponseToSupabase(res, session, type, response) {
       return res.status(400).json({ error: 'Unknown content action.' });
     }
 
-    await upsertRecord(CARDS_TABLE, cardId, { ...card, ...updates });
+    await upsertRecord(CARDS_TABLE, cardId, { ...card, ...updates }, orgId);
     return res.status(200).json({ ok: true });
   }
 
@@ -157,26 +158,26 @@ async function applyResponseToSupabase(res, session, type, response) {
         createdAt: response.event.createdAt || Date.now(),
         updatedAt: Date.now(),
       };
-      await upsertRecord(EVENTS_TABLE, id, event);
+      await upsertRecord(EVENTS_TABLE, id, event, orgId);
       return res.status(200).json({ ok: true, id });
     }
 
     if (action === 'update') {
       const id = response.event?.id;
       if (!id) return res.status(400).json({ error: 'Invalid event payload.' });
-      const existing = await fetchRecord(EVENTS_TABLE, id);
+      const existing = await fetchRecord(EVENTS_TABLE, id, orgId);
       if (!existing || existing.client !== brand) return res.status(403).json({ error: 'Forbidden.' });
       const event = { ...existing, ...response.event, client: brand, updatedAt: Date.now() };
-      await upsertRecord(EVENTS_TABLE, id, event);
+      await upsertRecord(EVENTS_TABLE, id, event, orgId);
       return res.status(200).json({ ok: true });
     }
 
     if (action === 'delete') {
       const id = response.eventId;
       if (!id) return res.status(400).json({ error: 'Invalid event payload.' });
-      const existing = await fetchRecord(EVENTS_TABLE, id);
+      const existing = await fetchRecord(EVENTS_TABLE, id, orgId);
       if (!existing || existing.client !== brand) return res.status(403).json({ error: 'Forbidden.' });
-      await deleteRecord(EVENTS_TABLE, id);
+      await deleteRecord(EVENTS_TABLE, id, orgId);
       return res.status(200).json({ ok: true });
     }
 
@@ -199,14 +200,14 @@ async function applyResponseToSupabase(res, session, type, response) {
         createdAt: response.meeting.createdAt || Date.now(),
         updatedAt: Date.now(),
       };
-      await upsertRecord(MEETINGS_TABLE, id, meeting);
+      await upsertRecord(MEETINGS_TABLE, id, meeting, orgId);
       return res.status(200).json({ ok: true, id });
     }
 
     if (action === 'update') {
       const id = response.meeting?.id;
       if (!id) return res.status(400).json({ error: 'Invalid meeting payload.' });
-      const existing = await fetchRecord(MEETINGS_TABLE, id);
+      const existing = await fetchRecord(MEETINGS_TABLE, id, orgId);
       if (!existing || existing.client !== brand) return res.status(403).json({ error: 'Forbidden.' });
       const meeting = {
         ...existing,
@@ -215,16 +216,16 @@ async function applyResponseToSupabase(res, session, type, response) {
         prospectName: '',
         updatedAt: Date.now(),
       };
-      await upsertRecord(MEETINGS_TABLE, id, meeting);
+      await upsertRecord(MEETINGS_TABLE, id, meeting, orgId);
       return res.status(200).json({ ok: true });
     }
 
     if (action === 'delete') {
       const id = response.meetingId;
       if (!id) return res.status(400).json({ error: 'Invalid meeting payload.' });
-      const existing = await fetchRecord(MEETINGS_TABLE, id);
+      const existing = await fetchRecord(MEETINGS_TABLE, id, orgId);
       if (!existing || existing.client !== brand) return res.status(403).json({ error: 'Forbidden.' });
-      await deleteRecord(MEETINGS_TABLE, id);
+      await deleteRecord(MEETINGS_TABLE, id, orgId);
       return res.status(200).json({ ok: true });
     }
 
@@ -232,7 +233,7 @@ async function applyResponseToSupabase(res, session, type, response) {
   }
 
   if (type === 'profile') {
-    const store = (await fetchRecord(CLIENTS_TABLE, CLIENTS_RECORD_ID)) || {};
+    const store = (await fetchRecord(CLIENTS_TABLE, CLIENTS_RECORD_ID, orgId)) || {};
     // Spread the full store first so client names/colors/etc. are never clobbered.
     const nextStore = {
       ...store,
@@ -267,10 +268,10 @@ async function applyResponseToSupabase(res, session, type, response) {
       nextStore.specialMenus[brand] = normalizeClientSpecialMenus(response.specialMenus);
     }
 
-    await upsertRecord(CLIENTS_TABLE, CLIENTS_RECORD_ID, nextStore);
+    await upsertRecord(CLIENTS_TABLE, CLIENTS_RECORD_ID, nextStore, orgId);
 
     if (hasOwn(response, 'userAvatar')) {
-      const brandUsers = normalizeBrandUsers(await fetchRecord(CREDENTIALS_TABLE, brand));
+      const brandUsers = normalizeBrandUsers(await fetchRecord(CREDENTIALS_TABLE, brand, orgId));
       const sessionUsername = session.username.trim().toLowerCase();
       const updatedUsers = brandUsers.map((user) => {
         if (user.username.toLowerCase() !== sessionUsername) return user;
@@ -280,7 +281,7 @@ async function applyResponseToSupabase(res, session, type, response) {
         }
         return { ...user, avatar: response.userAvatar };
       });
-      await upsertRecord(CREDENTIALS_TABLE, brand, updatedUsers);
+      await upsertRecord(CREDENTIALS_TABLE, brand, updatedUsers, orgId);
     }
 
     return res.status(200).json({ ok: true });

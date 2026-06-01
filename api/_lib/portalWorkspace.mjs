@@ -39,7 +39,7 @@ function pickSection(result, kvData, key, fallback) {
  * available — never from stale Redis alone — because staff writes go to Supabase
  * while the legacy KV blob is no longer updated on every edit.
  */
-export async function loadPortalWorkspace() {
+export async function loadPortalWorkspace(orgId) {
   let supabaseConfigured = false;
   try {
     supabaseConfigured = isSupabaseConfigured();
@@ -60,13 +60,13 @@ export async function loadPortalWorkspace() {
     clientsResult,
     authResult,
   ] = await Promise.all([
-    fetchPortalSection(() => fetchCollection('cards'), 'cards'),
-    fetchPortalSection(() => fetchCollection('video_ideas'), 'video_ideas'),
-    fetchPortalSection(() => fetchCollection('events'), 'events'),
-    fetchPortalSection(() => fetchCollection('meetings'), 'meetings'),
-    fetchPortalSection(() => fetchCollectionMap('shoot_plans'), 'shoot_plans'),
-    fetchPortalSection(() => fetchCollection('clients'), 'clients'),
-    fetchPortalSection(() => fetchCollectionMap('client_portal_credentials'), 'client_portal_credentials'),
+    fetchPortalSection(() => fetchCollection('cards', orgId), 'cards'),
+    fetchPortalSection(() => fetchCollection('video_ideas', orgId), 'video_ideas'),
+    fetchPortalSection(() => fetchCollection('events', orgId), 'events'),
+    fetchPortalSection(() => fetchCollection('meetings', orgId), 'meetings'),
+    fetchPortalSection(() => fetchCollectionMap('shoot_plans', orgId), 'shoot_plans'),
+    fetchPortalSection(() => fetchCollection('clients', orgId), 'clients'),
+    fetchPortalSection(() => fetchCollectionMap('client_portal_credentials', orgId), 'client_portal_credentials'),
   ]);
 
   if (cardsResult.ok && Array.isArray(cardsResult.value)) {

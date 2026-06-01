@@ -64,7 +64,7 @@ export default async function handler(req, res) {
   const session = getClientSessionFromRequest(req);
   if (!isClientSessionValid(session)) return unauthorized(res);
 
-  const workspace = await loadPortalWorkspace();
+  const workspace = await loadPortalWorkspace(session.orgId);
   if (!workspace) return unavailable(res);
 
   const data = workspace?.data || {};
@@ -86,6 +86,7 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'private, no-store, max-age=0');
   return res.status(200).json({
     brand,
+    orgId: session.orgId || null,
     exportedAt: workspace?.exportedAt || null,
     clientColor: colors[brand] || null,
     clientLogo: logos[brand] || null,

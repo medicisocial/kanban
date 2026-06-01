@@ -137,22 +137,55 @@ export function findBrandByUsername(authMap, username) {
   return findClientLogin(authMap, username)?.brand || null;
 }
 
+/**
+ * Cross-tenant login lookup. `rows` is an array of { id: brand, org_id, data }
+ * fetched without an org filter. Returns { brand, org_id, user } for the first
+ * match so the client session can be scoped to the owning org.
+ */
+export function findClientLoginAcrossOrgs(rows, username) {
+  const normalized = username.trim().toLowerCase();
+  const emailLocal = normalized.includes('@') ? normalized.split('@')[0] : null;
+
+  for (const row of rows || []) {
+    const brand = row?.id;
+    if (!brand || brand.startsWith('__')) continue;
+    for (const user of normalizeBrandUsers(row.data)) {
+      const stored = user.username.toLowerCase();
+      if (stored === normalized || (emailLocal && stored === emailLocal)) {
+        return { brand, org_id: row.org_id, user };
+      }
+    }
+  }
+  return null;
+}
+
 export function verifyClientPassword(entry, password) {
   if (!entry?.passwordHash) return false;
   const hash = hashValue(password);
   return timingSafeEqual(hash, entry.passwordHash.trim().toLowerCase());
 }
 
-export function createClientSession(brand, username) {
+/**
+ * orgId is included in the signature only when present, so legacy sessions
+ * created before multi-tenant support remain valid until they expire.
+ */
+function clientSessionSignature(brand, username, expires, orgId) {
+  const orgSegment = orgId ? `:${orgId}` : '';
+  return hashValue(`client:${brand}:${username}:${expires}${orgSegment}:${getSessionSecret()}`);
+}
+
+export function createClientSession(brand, username, orgId) {
   const expires = Date.now() + SESSION_TTL_MS;
-  const signature = hashValue(`client:${brand}:${username}:${expires}:${getSessionSecret()}`);
-  return {
+  const trimmedUsername = username.trim();
+  const session = {
     type: 'client',
     brand,
-    username: username.trim(),
+    username: trimmedUsername,
     expires,
-    signature,
+    signature: clientSessionSignature(brand, trimmedUsername, expires, orgId),
   };
+  if (orgId) session.orgId = orgId;
+  return session;
 }
 
 export function isClientSessionValid(session) {
@@ -160,8 +193,11 @@ export function isClientSessionValid(session) {
   if (!session.brand || !session.username || !session.expires || !session.signature) return false;
   if (Date.now() > session.expires) return false;
 
-  const expected = hashValue(
-    `client:${session.brand}:${session.username}:${session.expires}:${getSessionSecret()}`,
+  const expected = clientSessionSignature(
+    session.brand,
+    session.username,
+    session.expires,
+    session.orgId,
   );
   return timingSafeEqual(session.signature, expected);
 }

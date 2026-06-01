@@ -52,10 +52,11 @@ export function ClientAuthProvider({ children }) {
 
   useEffect(() => {
     if (!session || !SUPABASE_ENABLED) return undefined;
+    const portalOrgId = portalData?.orgId || session.orgId;
     return subscribeClientPortalChanges(() => {
       refreshPortalData(session, { silent: true });
-    });
-  }, [session, refreshPortalData]);
+    }, portalOrgId);
+  }, [session, portalData?.orgId, refreshPortalData]);
 
   useEffect(() => {
     if (!session) return undefined;
