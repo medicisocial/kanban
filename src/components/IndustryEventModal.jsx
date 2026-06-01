@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { toDateKey } from '../utils/calendar';
-import { formatTime } from '../utils';
+import { formatTimeRange } from '../utils';
 import {
   getSchemaForBusinessType,
   getDefaultFieldValues,
@@ -11,6 +11,7 @@ import {
   getEstimatedAttendancePlaceholder,
 } from '../utils/eventFormSchemas';
 import IndustryEventForm, { IndustryEventDetails } from './IndustryEventForm';
+import TimeInput from './TimeInput';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, selectClass, statusBadgeClass } from './clientPortal/clientPortalUi';
 
 export default function IndustryEventModal({
@@ -33,6 +34,7 @@ export default function IndustryEventModal({
   const [client, setClient] = useState(event?.client || lockedClient || defaultClient || clients[0] || '');
   const [date, setDate] = useState(event?.date || defaultDate || toDateKey(new Date()));
   const [time, setTime] = useState(event?.time || '');
+  const [endTime, setEndTime] = useState(event?.endTime || '');
   const [estimatedCovers, setEstimatedCovers] = useState(event?.estimatedCovers || '');
   const [fieldValues, setFieldValues] = useState(() => {
     if (event?.fields && Object.keys(event.fields).length > 0) {
@@ -115,6 +117,10 @@ export default function IndustryEventModal({
       setError('Assign a business type to this client before creating events.');
       return;
     }
+    if (endTime && time && endTime <= time) {
+      setError('End time must be after start time.');
+      return;
+    }
 
     const result = buildEventPayload({
       schema,
@@ -123,6 +129,7 @@ export default function IndustryEventModal({
       businessType,
       date,
       time,
+      endTime,
       status,
       estimatedCovers,
     });
@@ -185,10 +192,10 @@ export default function IndustryEventModal({
                   <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">Date</p>
                   <p className="mt-1 text-white/80">{date}</p>
                 </div>
-                {time && (
+                {(time || endTime) && (
                   <div>
                     <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">Time</p>
-                    <p className="mt-1 text-white/80">{formatTime(time)}</p>
+                    <p className="mt-1 text-white/80">{formatTimeRange(time, endTime) || '—'}</p>
                   </div>
                 )}
                 {estimatedCovers && (
@@ -260,13 +267,34 @@ export default function IndustryEventModal({
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-white/45">
-                    Time
+                    Start time
                   </span>
-                  <input
-                    type="time"
+                  <TimeInput
                     value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className={inputClass}
+                    onChange={(e) => {
+                      const nextTime = e.target.value;
+                      setTime(nextTime);
+                      if (!nextTime) setEndTime('');
+                      else if (endTime && endTime <= nextTime) setEndTime('');
+                      setError('');
+                    }}
+                    placeholder="Start time"
+                    inputClassName={inputClass}
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-white/45">
+                    End time
+                  </span>
+                  <TimeInput
+                    value={endTime}
+                    onChange={(e) => {
+                      setEndTime(e.target.value);
+                      setError('');
+                    }}
+                    min={time || undefined}
+                    placeholder="End time (optional)"
+                    inputClassName={inputClass}
                   />
                 </label>
                 <label className="block">

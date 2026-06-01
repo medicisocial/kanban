@@ -274,6 +274,7 @@ export function buildEventPayload({
   businessType,
   date,
   time,
+  endTime = '',
   status,
   estimatedCovers = '',
 }) {
@@ -323,6 +324,7 @@ export function buildEventPayload({
       client,
       date: date || '',
       time: time?.trim() || '',
+      endTime: endTime?.trim() || '',
       estimatedCovers: String(estimatedCovers || '').trim(),
       status,
       businessType,

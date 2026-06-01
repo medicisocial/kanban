@@ -4,7 +4,7 @@ import {
   isToday,
   formatMonthYear,
 } from '../utils/calendar';
-import { formatTime } from '../utils';
+import { formatTimeRange } from '../utils';
 import { useClientsContext } from '../context/ClientsContext';
 import { getEventAttachmentChipLabel } from '../utils/eventPdfUpload';
 
@@ -93,7 +93,7 @@ export default function EventsMonthView({
                         {event.status === 'draft' && (
                           <span className="mr-0.5 opacity-70">◦</span>
                         )}
-                        {event.time ? `${formatTime(event.time)} ` : ''}
+                        {event.time || event.endTime ? `${formatTimeRange(event.time, event.endTime)} ` : ''}
                         {showClientName && event.client ? `${event.client}: ` : ''}
                         {event.title}
                         {attachmentLabel && (

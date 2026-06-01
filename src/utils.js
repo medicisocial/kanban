@@ -15,6 +15,12 @@ export function formatTime(timeStr) {
   return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
+export function formatTimeRange(timeStr, endTimeStr) {
+  if (!timeStr) return endTimeStr ? formatTime(endTimeStr) : '';
+  if (endTimeStr) return `${formatTime(timeStr)} – ${formatTime(endTimeStr)}`;
+  return formatTime(timeStr);
+}
+
 export function formatScheduledDateTime(dateStr, timeStr) {
   if (!dateStr) return '';
   const datePart = formatDate(dateStr);

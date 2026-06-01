@@ -203,6 +203,7 @@ export function createEvent(overrides = {}) {
     title: '',
     date: '',
     time: '',
+    endTime: '',
     estimatedCovers: '',
     status: 'submitted',
     businessType: '',

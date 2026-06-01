@@ -7,7 +7,7 @@ import {
 import { filterEvents, groupEventsByDate, getUpcomingEvents } from '../utils/eventsCalendar';
 import { getDisplayEventType } from '../utils/eventFormSchemas';
 import { getEventAttachmentChipLabel } from '../utils/eventPdfUpload';
-import { formatTime } from '../utils';
+import { formatTimeRange } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import EventsMonthView from './EventsMonthView';
 import IndustryEventModal from './IndustryEventModal';
@@ -149,7 +149,9 @@ export default function EventsCalendar({
                         day: 'numeric',
                       })}
                     </p>
-                    {event.time && <p>{formatTime(event.time)}</p>}
+                    {(event.time || event.endTime) && (
+                      <p>{formatTimeRange(event.time, event.endTime)}</p>
+                    )}
                   </div>
                 </button>
               </li>
