@@ -74,6 +74,15 @@ function mergeRemoteWithLocalPending({
   return merged;
 }
 
+function recordsMatchSnapshot(items, snapshot, getId) {
+  const next = new Map(items.map((record) => [String(getId(record)), JSON.stringify(record)]));
+  if (snapshot.size !== next.size) return false;
+  for (const [id, value] of next.entries()) {
+    if (snapshot.get(id) !== value) return false;
+  }
+  return true;
+}
+
 async function fetchRowsWithTimeout(store) {
   return Promise.race([
     store.fetchAll(),
@@ -216,21 +225,32 @@ export function useCollectionSync({
           }
         }
 
-        applyingRemoteRef.current = true;
         const previousSynced = syncedRef.current || new Map();
         syncedRef.current = new Map(
           keptItems.map((record) => [String(getId(record)), JSON.stringify(record)]),
         );
-        loadedRef.current = true;
-        setItems(
-          mergeRemoteWithLocalPending({
-            remoteItems: keptItems,
-            getId,
-            syncedSnapshot: previousSynced,
-            localItems: localItemsRef.current,
-            pendingRemoved: pendingRemovedRef.current,
-          }),
+
+        const mergedItems = mergeRemoteWithLocalPending({
+          remoteItems: keptItems,
+          getId,
+          syncedSnapshot: previousSynced,
+          localItems: localItemsRef.current,
+          pendingRemoved: pendingRemovedRef.current,
+        });
+        const hasUnsyncedLocalChanges = !recordsMatchSnapshot(
+          mergedItems,
+          syncedRef.current,
+          getId,
         );
+
+        applyingRemoteRef.current = true;
+        loadedRef.current = true;
+        setItems(mergedItems);
+
+        if (hasUnsyncedLocalChanges) {
+          pendingWriteRef.current = true;
+          queueMicrotask(() => setWriteNonce((current) => current + 1));
+        }
       } catch (err) {
         console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
         if (loadLocal) {
@@ -258,10 +278,13 @@ export function useCollectionSync({
     if (!SUPABASE_ENABLED) return;
     if (!loadedRef.current) return;
 
-    // This change came from a remote pull — don't echo it back to the server.
+    // This change came from a remote pull — skip only when state matches the cloud snapshot.
     if (applyingRemoteRef.current) {
       applyingRemoteRef.current = false;
-      return;
+      const snapshot = syncedRef.current || new Map();
+      if (recordsMatchSnapshot(items, snapshot, getId)) {
+        return;
+      }
     }
 
     let cancelled = false;

@@ -21,14 +21,56 @@ function unavailable(res) {
   return res.status(503).json({ error: 'Cloud sync is not configured.' });
 }
 
+function isLikelyJwt(token) {
+  return typeof token === 'string' && token.split('.').length === 3;
+}
+
+async function verifySupabaseAccessToken(token) {
+  const url = (
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    ''
+  )
+    .trim()
+    .replace(/\/$/, '');
+  const anonKey = (
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    ''
+  ).trim();
+
+  if (!url || !anonKey || !token) return false;
+
+  const response = await fetch(`${url}/auth/v1/user`, {
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return response.ok;
+}
+
+async function isAuthorized(req) {
+  const staffSession = getSessionFromRequest(req);
+  if (isStaffSessionValid(staffSession)) return true;
+
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return false;
+
+  const token = auth.slice(7).trim();
+  if (!isLikelyJwt(token)) return false;
+
+  return verifySupabaseAccessToken(token);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const session = getSessionFromRequest(req);
-  if (!isStaffSessionValid(session)) {
+  if (!(await isAuthorized(req))) {
     return unauthorized(res);
   }
 

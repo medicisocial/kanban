@@ -165,7 +165,6 @@ export function useKanban() {
   });
 
   useEffect(() => {
-    if (SUPABASE_ENABLED) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
   }, [cards]);
 

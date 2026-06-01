@@ -1,6 +1,7 @@
+import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { loadStaffSession } from '../utils/staffAuth';
 
-function staffAuthHeaders() {
+function staffSessionHeaders() {
   const session = loadStaffSession();
   if (!session?.username || !session?.signature) return null;
   return {
@@ -9,11 +10,31 @@ function staffAuthHeaders() {
   };
 }
 
-/** Server-side Supabase writes when the browser has staff login but no Supabase JWT. */
+async function supabaseSessionHeaders() {
+  if (!SUPABASE_ENABLED || !supabase) return null;
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) return null;
+    return {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function buildAuthHeaders() {
+  return staffSessionHeaders() || (await supabaseSessionHeaders());
+}
+
+/** Server-side Supabase writes when the browser cannot write directly with RLS. */
 export async function pushStaffSync({ table, changed = [], removed = [] }) {
-  const headers = staffAuthHeaders();
-  if (!headers) return false;
   if (!changed.length && !removed.length) return true;
+
+  const headers = await buildAuthHeaders();
+  if (!headers) return false;
 
   const response = await fetch('/api/staff-sync', {
     method: 'POST',
@@ -26,4 +47,10 @@ export async function pushStaffSync({ table, changed = [], removed = [] }) {
   });
 
   return response.ok;
+}
+
+/** Persist one or more records immediately (e.g. after rescheduling on the calendar). */
+export async function pushStaffSyncRecords(table, records) {
+  if (!records?.length) return true;
+  return pushStaffSync({ table, changed: records, removed: [] });
 }
