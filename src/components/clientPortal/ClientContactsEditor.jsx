@@ -104,7 +104,11 @@ export default function ClientContactsEditor({
 
     try {
       const normalized = await prepareClientContactsForSave(contacts);
-      onSaveClientContacts(client, normalized);
+      const result = await onSaveClientContacts(client, normalized);
+      if (result?.ok === false) {
+        setError(result.error || 'Could not save contacts.');
+        return;
+      }
       dirtyRef.current = false;
       setContacts(
         normalized.length > 0

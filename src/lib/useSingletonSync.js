@@ -6,6 +6,7 @@ import { pushStaffSyncSingleton } from './staffSyncApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import {
   fetchRowsWithTimeout,
+  mergeClientsWorkspaceState,
   mergeRemoteSingletonWithLocal,
   singletonMatchesSnapshot,
 } from './syncHelpers';
@@ -65,12 +66,19 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
 
         if (row) {
           const previousSynced = syncedRef.current;
+          const merged =
+            table === 'clients'
+              ? mergeClientsWorkspaceState({
+                  remote: row.data,
+                  syncedStr: previousSynced,
+                  local: localValueRef.current,
+                })
+              : mergeRemoteSingletonWithLocal({
+                  remote: row.data,
+                  syncedStr: previousSynced,
+                  local: localValueRef.current,
+                });
           syncedRef.current = JSON.stringify(row.data);
-          const merged = mergeRemoteSingletonWithLocal({
-            remote: row.data,
-            syncedStr: previousSynced,
-            local: localValueRef.current,
-          });
           const hasUnsyncedLocalChanges = !singletonMatchesSnapshot(merged, syncedRef.current);
 
           applyingRemoteRef.current = true;

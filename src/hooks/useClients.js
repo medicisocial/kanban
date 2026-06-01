@@ -19,6 +19,7 @@ import { normalizeClientSpecialMenus } from '../utils/clientSpecialMenus';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useSingletonSync } from '../lib/useSingletonSync';
+import { pushStaffSyncSingleton } from '../lib/staffSyncApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
 
@@ -225,15 +226,33 @@ export function useClients() {
     [state.contacts],
   );
 
-  const setClientContacts = useCallback((client, contacts) => {
-    if (!client) return;
-    setState((prev) => ({
-      ...prev,
-      contacts: {
-        ...prev.contacts,
-        [client]: normalizeClientContacts(contacts),
-      },
-    }));
+  const setClientContacts = useCallback(async (client, contacts) => {
+    if (!client) return { ok: false, error: 'Missing client.' };
+
+    const normalized = normalizeClientContacts(contacts);
+    let nextState = null;
+    setState((prev) => {
+      nextState = {
+        ...prev,
+        contacts: {
+          ...prev.contacts,
+          [client]: normalized,
+        },
+      };
+      return nextState;
+    });
+
+    if (SUPABASE_ENABLED) {
+      const ok = await pushStaffSyncSingleton('clients', 'workspace', nextState);
+      if (!ok) {
+        return {
+          ok: false,
+          error: 'Contacts saved locally but could not sync to the cloud. Log out and back in, then try again.',
+        };
+      }
+    }
+
+    return { ok: true };
   }, []);
 
   const getClientSocialLogins = useCallback(

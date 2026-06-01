@@ -200,3 +200,53 @@ export function mergeRemoteMapWithLocalPending({
 export function mergeRemoteSingletonWithLocal({ remote, syncedStr, local }) {
   return mergeRemoteRecordWithLocal({ remote, local, syncedStr });
 }
+
+const CLIENTS_WORKSPACE_KEYS = [
+  'names',
+  'colors',
+  'logos',
+  'accountManagers',
+  'businessTypes',
+  'contacts',
+  'socialLogins',
+  'companyFiles',
+  'specialMenus',
+];
+
+/** Field-level three-way merge for the clients workspace blob (contacts, logos, etc.). */
+export function mergeClientsWorkspaceState({ remote, local, syncedStr }) {
+  if (local == null) return remote;
+  if (remote == null) return local;
+
+  let synced = null;
+  if (syncedStr != null) {
+    try {
+      synced = JSON.parse(syncedStr);
+    } catch {
+      synced = null;
+    }
+  }
+
+  const merged = { ...remote };
+  for (const key of CLIENTS_WORKSPACE_KEYS) {
+    if (local[key] === undefined) continue;
+
+    const localStr = JSON.stringify(local[key]);
+    const syncedKeyStr =
+      synced && synced[key] !== undefined ? JSON.stringify(synced[key]) : undefined;
+
+    if (syncedKeyStr === undefined || localStr !== syncedKeyStr) {
+      merged[key] = local[key];
+      continue;
+    }
+
+    const remoteStr = JSON.stringify(remote[key]);
+    if (remoteStr !== syncedKeyStr) {
+      merged[key] = remote[key] !== undefined ? remote[key] : local[key];
+    } else {
+      merged[key] = local[key];
+    }
+  }
+
+  return merged;
+}
