@@ -87,6 +87,14 @@ function isAuthGatePage() {
   return params.get('login') === '1' || (params.get('signup') === '1' && params.get('plan'));
 }
 
+/** Bare marketing URLs — skip slow remote auth bootstrap before first paint. */
+function isPublicMarketingPage() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('login') === '1') return false;
+  if (params.get('signup') === '1' && params.get('plan')) return false;
+  return true;
+}
+
 export function StaffAuthProvider({ children }) {
   const authRequired = isStaffAuthRequired();
   const [session, setSession] = useState(null);
@@ -137,6 +145,27 @@ export function StaffAuthProvider({ children }) {
       }
 
       clearStaffSession();
+
+      if (isPublicMarketingPage()) {
+        if (!cancelled) setReady(true);
+        (async () => {
+          const supabaseSession = await withTimeout(
+            getSupabaseAuthSession(),
+            3000,
+            null,
+          );
+          if (cancelled || !supabaseSession?.user) return;
+          const ok = await resolveSaasOrg(supabaseSession.user);
+          if (!cancelled && ok) {
+            setSession({
+              type: 'saas',
+              email: supabaseSession.user.email,
+              userId: supabaseSession.user.id,
+            });
+          }
+        })();
+        return;
+      }
 
       if (!isAuthGatePage()) {
         const supabaseSession = await withTimeout(

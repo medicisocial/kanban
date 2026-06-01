@@ -5,17 +5,15 @@ import { StaffAuthProvider, useStaffAuth } from '../context/StaffAuthContext';
 import { ClientsProvider } from '../context/ClientsContext';
 import { WorkspaceSyncProvider } from '../context/WorkspaceSyncContext';
 import UnifiedLogin from './UnifiedLogin';
+import MarketingLandingPage from './MarketingLandingPage';
+import PricingPage from './PricingPage';
 
 const AppShell = lazy(() => import('./AppShell'));
 const ClientPortalApp = lazy(() => import('../ClientPortalApp'));
-const MarketingLandingPage = lazy(() => import('./MarketingLandingPage'));
-const PricingPage = lazy(() => import('./PricingPage'));
 
 function GateLoading() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-black text-white">
-      <p className="text-sm text-white/45">Loading…</p>
-    </div>
+    <div className="min-h-[100dvh] bg-black" aria-hidden />
   );
 }
 
@@ -219,29 +217,25 @@ function UnifiedAppGateInner() {
 
   if (gateView === 'landing') {
     return (
-      <Suspense fallback={<GateLoading />}>
-        <MarketingLandingPage
-          onGetStarted={openGetStarted}
-          onSignIn={() => openSignIn(false)}
-          onPricing={openPricing}
-          onSelectPlan={openSignup}
-          onClientPortal={() => openSignIn(true)}
-        />
-      </Suspense>
+      <MarketingLandingPage
+        onGetStarted={openGetStarted}
+        onSignIn={() => openSignIn(false)}
+        onPricing={openPricing}
+        onSelectPlan={openSignup}
+        onClientPortal={() => openSignIn(true)}
+      />
     );
   }
 
   if (gateView === 'pricing') {
     return (
-      <Suspense fallback={<GateLoading />}>
-        <PricingPage
-          onSelectPlan={openSignup}
-          onSignIn={() => openSignIn(false)}
-          onBack={openLanding}
-          onHome={openLanding}
-          onGetStarted={openGetStarted}
-        />
-      </Suspense>
+      <PricingPage
+        onSelectPlan={openSignup}
+        onSignIn={() => openSignIn(false)}
+        onBack={openLanding}
+        onHome={openLanding}
+        onGetStarted={openGetStarted}
+      />
     );
   }
 
