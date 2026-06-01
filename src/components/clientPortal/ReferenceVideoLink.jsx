@@ -26,6 +26,7 @@ export default function ReferenceVideoLink({ url, compact = false }) {
       target="_blank"
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       className={`inline-flex max-w-full items-center gap-1 text-[#c88] underline-offset-2 transition hover:text-[#eaa] hover:underline ${
         compact ? 'text-[11px]' : 'text-xs'
       }`}

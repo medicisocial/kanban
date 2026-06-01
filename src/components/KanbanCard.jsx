@@ -6,6 +6,7 @@ import {
 } from '../constants';
 import { formatDate, formatScheduledDateTime, isOverdue } from '../utils';
 import CardTitleLink from './CardTitleLink';
+import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
 
 export default function KanbanCard({ card, onClick, onDelete }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -84,6 +85,12 @@ export default function KanbanCard({ card, onClick, onDelete }) {
           <span className="text-gray-500">{card.contentCreator}</span>
         )}
       </div>
+
+      {card.referenceVideo?.trim() && (
+        <div className="mt-2">
+          <ReferenceVideoLink url={card.referenceVideo} compact />
+        </div>
+      )}
 
       {card.columnId === 'not-approved' && card.clientComment && (
         <p className="mt-2 line-clamp-1 text-xs text-red-300/90" title={card.clientComment}>

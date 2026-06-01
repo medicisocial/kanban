@@ -19,6 +19,7 @@ import TimeInput from './TimeInput';
 import DateInput from './DateInput';
 import ClientNameInput from './ClientNameInput';
 import { btnPrimaryClass } from './clientPortal/clientPortalUi';
+import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
 
 const CARD_TABS = [
   { id: 'details', label: 'Details' },
@@ -811,6 +812,11 @@ export default function CardModal({
                 placeholder="Paste Instagram, TikTok, or YouTube link..."
                 className={inputClass}
               />
+              {card.referenceVideo?.trim() && (
+                <div className="mt-2">
+                  <ReferenceVideoLink url={card.referenceVideo} />
+                </div>
+              )}
             </Field>
             </div>
           )}

@@ -4,6 +4,7 @@ import {
 } from "../constants";
 import { formatTimeInput } from "../utils/shootDay";
 import CardTitleLink from "./CardTitleLink";
+import ReferenceVideoLink from "./clientPortal/ReferenceVideoLink";
 
 export default function ShootDayItem({ card, onClick }) {
   const typeStyle = getContentTypeStyle(card.contentType);
@@ -45,7 +46,9 @@ export default function ShootDayItem({ card, onClick }) {
         {card.contentCreator && <span>🎥 {card.contentCreator}</span>}
         {card.assignedTo && <span>{PLATFORM_ICON} {card.assignedTo}</span>}
         {card.referenceMusic && <span>🎵 Music ref</span>}
-        {card.referenceVideo && <span>🎬 Video ref</span>}
+        {card.referenceVideo && (
+          <ReferenceVideoLink url={card.referenceVideo} compact />
+        )}
         {card.dropboxLink && <span>📦 Dropbox</span>}
       </div>
     </button>
