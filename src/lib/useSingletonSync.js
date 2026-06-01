@@ -1,7 +1,14 @@
-import { useEffect, useRef } from 'react';
-import { SUPABASE_ENABLED } from './supabaseClient';
+import { useEffect, useRef, useState } from 'react';
+import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
+import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
+import { pushStaffSyncSingleton } from './staffSyncApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import {
+  fetchRowsWithTimeout,
+  mergeRemoteSingletonWithLocal,
+  singletonMatchesSnapshot,
+} from './syncHelpers';
 
 /**
  * Like useCollectionSync, but for a single composite object stored as one row
@@ -17,6 +24,25 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
   const syncedRef = useRef(null); // JSON string of last-synced value
   const applyingRemoteRef = useRef(false);
   const loadedRef = useRef(!SUPABASE_ENABLED);
+  const pendingWriteRef = useRef(false);
+  const localValueRef = useRef(value);
+  const [writeNonce, setWriteNonce] = useState(0);
+
+  localValueRef.current = value;
+
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !supabase) return undefined;
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session && pendingWriteRef.current) {
+        setWriteNonce((current) => current + 1);
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!SUPABASE_ENABLED || !orgReady || !orgId) return undefined;
@@ -31,21 +57,46 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
 
     const applyRemote = async () => {
       try {
-        const rows = await store.fetchAll();
+        const rows = await fetchRowsWithTimeout(store);
         if (!active) return;
 
-        const row = rows.find((r) => String(r.id) === recordId) || rows[0];
+        const row = rows.find((entry) => String(entry.id) === recordId) || rows[0];
+        const local = loadLocal ? loadLocal() : value;
+
         if (row) {
-          applyingRemoteRef.current = true;
+          const previousSynced = syncedRef.current;
           syncedRef.current = JSON.stringify(row.data);
+          const merged = mergeRemoteSingletonWithLocal({
+            remote: row.data,
+            syncedStr: previousSynced,
+            local: localValueRef.current,
+          });
+          const hasUnsyncedLocalChanges = !singletonMatchesSnapshot(merged, syncedRef.current);
+
+          applyingRemoteRef.current = true;
           loadedRef.current = true;
-          setValue(row.data);
+          setValue(merged);
+
+          if (hasUnsyncedLocalChanges) {
+            pendingWriteRef.current = true;
+            queueMicrotask(() => setWriteNonce((current) => current + 1));
+          }
           return;
         }
 
         // First run with an empty table: seed from local data for the legacy org only.
-        const local = loadLocal ? loadLocal() : value;
-        if (!row && local && isLegacyOrg) {
+        if (local && isLegacyOrg) {
+          const canWrite = await hasStaffSupabaseSession();
+          if (!canWrite) {
+            console.warn(
+              `[supabase:${table}] using local data — cloud write session not ready yet`,
+            );
+            applyingRemoteRef.current = true;
+            syncedRef.current = JSON.stringify(local);
+            loadedRef.current = true;
+            setValue(local);
+            return;
+          }
           await store.upsertRecords([{ id: recordId, data: local }]);
           applyingRemoteRef.current = true;
           syncedRef.current = JSON.stringify(local);
@@ -54,16 +105,30 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
           return;
         }
 
-        if (!row) {
+        if (local) {
           applyingRemoteRef.current = true;
-          const empty = loadLocal ? loadLocal() : value;
-          syncedRef.current = JSON.stringify(empty);
+          syncedRef.current = JSON.stringify(local);
           loadedRef.current = true;
-          if (loadLocal) setValue(empty);
+          setValue(local);
+          pendingWriteRef.current = true;
+          queueMicrotask(() => setWriteNonce((current) => current + 1));
           return;
         }
+
+        applyingRemoteRef.current = true;
+        syncedRef.current = JSON.stringify(local);
+        loadedRef.current = true;
+        if (loadLocal) setValue(local);
       } catch (err) {
         console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
+        if (loadLocal) {
+          const local = loadLocal();
+          if (local) {
+            applyingRemoteRef.current = true;
+            syncedRef.current = JSON.stringify(local);
+            setValue(local);
+          }
+        }
         loadedRef.current = true;
       }
     };
@@ -83,18 +148,55 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
 
     const json = JSON.stringify(value);
 
-    // This change came from a remote pull — don't echo it back to the server.
     if (applyingRemoteRef.current) {
       applyingRemoteRef.current = false;
-      syncedRef.current = json;
-      return;
+      if (singletonMatchesSnapshot(value, syncedRef.current)) {
+        return;
+      }
     }
 
     if (syncedRef.current === json) return;
-    syncedRef.current = json;
-    storeRef.current
-      .upsertRecords([{ id: recordId, data: value }])
-      .catch((err) => console.error(`[supabase:${table}] upsert failed:`, err?.message || err, err));
+
+    let cancelled = false;
+
+    const pushChanges = async () => {
+      const store = storeRef.current;
+
+      let canWrite = await hasStaffSupabaseSession();
+      if (!canWrite) {
+        await ensureStaffSupabaseSession();
+        canWrite = await hasStaffSupabaseSession();
+      }
+
+      try {
+        if (canWrite) {
+          await store.upsertRecords([{ id: recordId, data: value }]);
+        } else {
+          const ok = await pushStaffSyncSingleton(table, recordId, value);
+          if (!ok) {
+            pendingWriteRef.current = true;
+            console.warn(
+              `[supabase:${table}] skipped write — no database session. Log out and log in again.`,
+            );
+            return;
+          }
+        }
+
+        if (!cancelled) {
+          syncedRef.current = json;
+          pendingWriteRef.current = false;
+        }
+      } catch (err) {
+        console.error(`[supabase:${table}] sync failed:`, err?.message || err, err);
+        pendingWriteRef.current = true;
+      }
+    };
+
+    pushChanges();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [value, writeNonce, orgId, table, recordId]);
 }

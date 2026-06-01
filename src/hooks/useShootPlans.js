@@ -74,6 +74,9 @@ export function useShootPlans() {
 
   const replacePlans = useCallback((next) => {
     setPlans(next);
+    if (!SUPABASE_ENABLED) return;
+    const rows = Object.entries(next || {}).map(([id, data]) => ({ id, data }));
+    void pushStaffSyncRows("shoot_plans", rows);
   }, []);
 
   const updatePlan = useCallback((client, dateKey, updates) => {

@@ -70,6 +70,8 @@ export function useAdminTasks() {
 
   const replaceAdminTasks = useCallback((next) => {
     setAdminTasks(next);
+    if (!SUPABASE_ENABLED || !next?.length) return;
+    void pushStaffSyncRecords('admin_tasks', next);
   }, []);
 
   const addAdminTask = useCallback((data) => {

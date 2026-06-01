@@ -1,7 +1,16 @@
-import { useEffect, useRef } from 'react';
-import { SUPABASE_ENABLED } from './supabaseClient';
+import { useEffect, useRef, useState } from 'react';
+import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
+import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
+import { pushStaffSyncRows } from './staffSyncApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import {
+  fetchRowsWithTimeout,
+  loadPendingRemoved,
+  mapMatchesSnapshot,
+  mergeRemoteMapWithLocalPending,
+  savePendingRemoved,
+} from './syncHelpers';
 
 /**
  * Like useCollectionSync, but for collections stored as a plain object map
@@ -18,6 +27,26 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
   const syncedRef = useRef(null); // Map<key, JSON string of last-synced value>
   const applyingRemoteRef = useRef(false);
   const loadedRef = useRef(!SUPABASE_ENABLED);
+  const pendingWriteRef = useRef(false);
+  const pendingRemovedRef = useRef(new Set());
+  const localMapRef = useRef(map);
+  const [writeNonce, setWriteNonce] = useState(0);
+
+  localMapRef.current = map;
+
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !supabase) return undefined;
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session && pendingWriteRef.current) {
+        setWriteNonce((current) => current + 1);
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!SUPABASE_ENABLED || !orgReady || !orgId) return undefined;
@@ -26,30 +55,51 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
     syncedRef.current = null;
     applyingRemoteRef.current = false;
     loadedRef.current = false;
+    pendingRemovedRef.current = loadPendingRemoved(orgId, table);
 
     const store = storeRef.current;
     let active = true;
 
     const applyRemote = async () => {
       try {
-        const rows = await store.fetchAll();
+        const rows = await fetchRowsWithTimeout(store);
         if (!active) return;
 
+        const local = loadLocal ? loadLocal() || {} : {};
+        const localKeys = Object.keys(local);
+
         // First run with an empty table: seed from local data for the legacy org only.
-        if (rows.length === 0 && loadLocal && isLegacyOrg) {
-          const local = loadLocal() || {};
-          const keys = Object.keys(local);
-          if (keys.length) {
-            await store.upsertRecords(keys.map((key) => ({ id: key, data: local[key] })));
+        if (rows.length === 0 && localKeys.length && isLegacyOrg) {
+          const canWrite = await hasStaffSupabaseSession();
+          if (!canWrite) {
+            console.warn(
+              `[supabase:${table}] using local data — cloud write session not ready yet`,
+            );
             applyingRemoteRef.current = true;
-            syncedRef.current = new Map(keys.map((key) => [key, JSON.stringify(local[key])]));
+            syncedRef.current = new Map(localKeys.map((key) => [key, JSON.stringify(local[key])]));
             loadedRef.current = true;
             setMap(local);
             return;
           }
+          await store.upsertRecords(localKeys.map((key) => ({ id: key, data: local[key] })));
+          applyingRemoteRef.current = true;
+          syncedRef.current = new Map(localKeys.map((key) => [key, JSON.stringify(local[key])]));
+          loadedRef.current = true;
+          setMap(local);
+          return;
         }
 
         if (rows.length === 0) {
+          if (localKeys.length) {
+            applyingRemoteRef.current = true;
+            syncedRef.current = new Map(localKeys.map((key) => [key, JSON.stringify(local[key])]));
+            loadedRef.current = true;
+            setMap(local);
+            pendingWriteRef.current = true;
+            queueMicrotask(() => setWriteNonce((current) => current + 1));
+            return;
+          }
+
           applyingRemoteRef.current = true;
           syncedRef.current = new Map();
           loadedRef.current = true;
@@ -57,14 +107,41 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
           return;
         }
 
-        const obj = {};
-        for (const row of rows) obj[row.id] = row.data;
+        const remoteMap = {};
+        for (const row of rows) remoteMap[row.id] = row.data;
+
+        const previousSynced = syncedRef.current || new Map();
+        syncedRef.current = new Map(
+          Object.entries(remoteMap).map(([key, value]) => [key, JSON.stringify(value)]),
+        );
+
+        const mergedMap = mergeRemoteMapWithLocalPending({
+          remoteMap,
+          syncedSnapshot: previousSynced,
+          localMap: localMapRef.current,
+          pendingRemoved: pendingRemovedRef.current,
+        });
+        const hasUnsyncedLocalChanges = !mapMatchesSnapshot(mergedMap, syncedRef.current);
+
         applyingRemoteRef.current = true;
-        syncedRef.current = new Map(rows.map((row) => [String(row.id), JSON.stringify(row.data)]));
         loadedRef.current = true;
-        setMap(obj);
+        setMap(mergedMap);
+
+        if (hasUnsyncedLocalChanges) {
+          pendingWriteRef.current = true;
+          queueMicrotask(() => setWriteNonce((current) => current + 1));
+        }
       } catch (err) {
         console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
+        if (loadLocal) {
+          const local = loadLocal() || {};
+          const keys = Object.keys(local);
+          if (keys.length) {
+            applyingRemoteRef.current = true;
+            syncedRef.current = new Map(keys.map((key) => [key, JSON.stringify(local[key])]));
+            setMap(local);
+          }
+        }
         loadedRef.current = true;
       }
     };
@@ -84,37 +161,76 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
 
     const entries = Object.entries(map || {});
 
-    // This change came from a remote pull — don't echo it back to the server.
     if (applyingRemoteRef.current) {
       applyingRemoteRef.current = false;
-      syncedRef.current = new Map(entries.map(([key, value]) => [key, JSON.stringify(value)]));
-      return;
+      const snapshot = syncedRef.current || new Map();
+      if (mapMatchesSnapshot(map, snapshot)) {
+        return;
+      }
     }
 
-    const prev = syncedRef.current || new Map();
-    const next = new Map(entries.map(([key, value]) => [key, JSON.stringify(value)]));
+    let cancelled = false;
 
-    const changed = [];
-    for (const [key, value] of entries) {
-      if (prev.get(key) !== next.get(key)) changed.push({ id: key, data: value });
-    }
-    const removed = [];
-    for (const key of prev.keys()) {
-      if (!next.has(key)) removed.push(key);
-    }
+    const pushChanges = async () => {
+      const prev = syncedRef.current || new Map();
+      const next = new Map(entries.map(([key, value]) => [key, JSON.stringify(value)]));
 
-    syncedRef.current = next;
-    const store = storeRef.current;
-    if (changed.length) {
-      store
-        .upsertRecords(changed)
-        .catch((err) => console.error(`[supabase:${table}] upsert failed:`, err?.message || err, err));
-    }
-    if (removed.length) {
-      store
-        .deleteRecords(removed)
-        .catch((err) => console.error(`[supabase:${table}] delete failed:`, err?.message || err, err));
-    }
+      const changed = [];
+      for (const [key, value] of entries) {
+        if (prev.get(key) !== next.get(key)) changed.push({ id: key, data: value });
+      }
+      const removed = [];
+      for (const key of prev.keys()) {
+        if (!next.has(key)) removed.push(key);
+      }
+
+      if (removed.length) {
+        for (const id of removed) pendingRemovedRef.current.add(id);
+        savePendingRemoved(orgId, table, pendingRemovedRef.current);
+      }
+
+      if (!changed.length && !removed.length) return;
+
+      const store = storeRef.current;
+
+      let canWrite = await hasStaffSupabaseSession();
+      if (!canWrite) {
+        await ensureStaffSupabaseSession();
+        canWrite = await hasStaffSupabaseSession();
+      }
+
+      try {
+        if (canWrite) {
+          if (changed.length) await store.upsertRecords(changed);
+          if (removed.length) await store.deleteRecords(removed);
+        } else {
+          const ok = await pushStaffSyncRows(table, changed, removed);
+          if (!ok) {
+            pendingWriteRef.current = true;
+            console.warn(
+              `[supabase:${table}] skipped write — no database session. Log out and log in again.`,
+            );
+            return;
+          }
+        }
+
+        if (!cancelled) {
+          for (const id of removed) pendingRemovedRef.current.delete(id);
+          savePendingRemoved(orgId, table, pendingRemovedRef.current);
+          syncedRef.current = next;
+          pendingWriteRef.current = false;
+        }
+      } catch (err) {
+        console.error(`[supabase:${table}] sync failed:`, err?.message || err, err);
+        pendingWriteRef.current = true;
+      }
+    };
+
+    pushChanges();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map]);
+  }, [map, writeNonce, orgId, table]);
 }

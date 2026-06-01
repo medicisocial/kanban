@@ -21,7 +21,6 @@ import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useSingletonSync } from '../lib/useSingletonSync';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
-import { pushStaffSyncSingleton } from '../lib/staffSyncApi';
 
 function normalizeBusinessTypesMap(types = {}) {
   const normalized = {};
@@ -101,9 +100,6 @@ export function useClients() {
 
   useEffect(() => {
     localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(state));
-    if (SUPABASE_ENABLED) {
-      void pushStaffSyncSingleton('clients', 'workspace', state);
-    }
   }, [state]);
 
   const addClient = useCallback(async (name, color, logo = null, businessType = '') => {

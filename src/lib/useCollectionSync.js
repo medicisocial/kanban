@@ -4,32 +4,12 @@ import { createCollectionStore } from './supabaseSync';
 import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
 import { pushStaffSync } from './staffSyncApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
-
-const FETCH_TIMEOUT_MS = 12000;
-
-function pendingRemovedKey(orgId, table) {
-  return `medici-pending-removed:${orgId}:${table}`;
-}
-
-function loadPendingRemoved(orgId, table) {
-  try {
-    const raw = sessionStorage.getItem(pendingRemovedKey(orgId, table));
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw);
-    return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function savePendingRemoved(orgId, table, ids) {
-  const key = pendingRemovedKey(orgId, table);
-  if (!ids.size) {
-    sessionStorage.removeItem(key);
-    return;
-  }
-  sessionStorage.setItem(key, JSON.stringify([...ids]));
-}
+import {
+  fetchRowsWithTimeout,
+  loadPendingRemoved,
+  recordsMatchSnapshot,
+  savePendingRemoved,
+} from './syncHelpers';
 
 function excludePendingRemoved(items, getId, pendingRemoved) {
   if (!pendingRemoved.size) return items;
@@ -72,24 +52,6 @@ function mergeRemoteWithLocalPending({
   }
 
   return merged;
-}
-
-function recordsMatchSnapshot(items, snapshot, getId) {
-  const next = new Map(items.map((record) => [String(getId(record)), JSON.stringify(record)]));
-  if (snapshot.size !== next.size) return false;
-  for (const [id, value] of next.entries()) {
-    if (snapshot.get(id) !== value) return false;
-  }
-  return true;
-}
-
-async function fetchRowsWithTimeout(store) {
-  return Promise.race([
-    store.fetchAll(),
-    new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Supabase fetch timed out')), FETCH_TIMEOUT_MS);
-    }),
-  ]);
 }
 
 /**
