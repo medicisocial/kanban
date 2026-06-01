@@ -35,10 +35,10 @@ function resolveServerKey() {
   ).trim();
 }
 
-function getConfig() {
+function getConfig(orgIdOverride) {
   const url = getSupabaseUrl();
   const key = resolveServerKey();
-  const orgId = process.env.ORG_ID || process.env.VITE_ORG_ID || 'medici';
+  const orgId = orgIdOverride || process.env.ORG_ID || process.env.VITE_ORG_ID || 'medici';
   return { url, key, orgId };
 }
 
@@ -118,8 +118,8 @@ export async function fetchRecord(table, id) {
 }
 
 /** Inserts or updates a single record (upsert on the (org_id, id) primary key). */
-export async function upsertRecord(table, id, data) {
-  const { url, key, orgId } = getConfig();
+export async function upsertRecord(table, id, data, orgIdOverride) {
+  const { url, key, orgId } = getConfig(orgIdOverride);
   if (!url || !key) throw new Error('Supabase is not configured.');
 
   const endpoint = `${url}/rest/v1/${table}`;
@@ -145,11 +145,11 @@ export async function deleteRecord(table, id) {
 }
 
 /** Deletes multiple records by id. */
-export async function deleteRecords(table, ids) {
+export async function deleteRecords(table, ids, orgIdOverride) {
   const list = [...new Set((ids || []).map(String).filter(Boolean))];
   if (!list.length) return;
 
-  const { url, key, orgId } = getConfig();
+  const { url, key, orgId } = getConfig(orgIdOverride);
   if (!url || !key) throw new Error('Supabase is not configured.');
 
   const idFilter = list.map((id) => encodeURIComponent(id)).join(',');
@@ -165,11 +165,11 @@ export async function deleteRecords(table, ids) {
 }
 
 /** Inserts or updates multiple records. */
-export async function upsertRecords(table, records) {
+export async function upsertRecords(table, records, orgIdOverride) {
   const rows = (records || []).filter((record) => record?.id);
   if (!rows.length) return;
 
-  const { url, key, orgId } = getConfig();
+  const { url, key, orgId } = getConfig(orgIdOverride);
   if (!url || !key) throw new Error('Supabase is not configured.');
 
   const payload = rows.map(({ id, data }) => ({

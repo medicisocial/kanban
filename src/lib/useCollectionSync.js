@@ -7,6 +7,7 @@ import { useStaffAuth } from '../context/StaffAuthContext';
 import {
   fetchRowsWithTimeout,
   loadPendingRemoved,
+  mergeRemoteListWithLocalPending,
   recordsMatchSnapshot,
   savePendingRemoved,
 } from './syncHelpers';
@@ -14,44 +15,6 @@ import {
 function excludePendingRemoved(items, getId, pendingRemoved) {
   if (!pendingRemoved.size) return items;
   return items.filter((record) => !pendingRemoved.has(String(getId(record))));
-}
-
-/** Keep unsynced local edits when a realtime pull returns stale cloud data. */
-function mergeRemoteWithLocalPending({
-  remoteItems,
-  getId,
-  syncedSnapshot,
-  localItems,
-  pendingRemoved,
-}) {
-  const synced = syncedSnapshot || new Map();
-  const localById = new Map(localItems.map((record) => [String(getId(record)), record]));
-  const remoteIds = new Set();
-
-  const merged = remoteItems.map((remote) => {
-    const id = String(getId(remote));
-    remoteIds.add(id);
-    const local = localById.get(id);
-    if (!local) return remote;
-
-    const localStr = JSON.stringify(local);
-    const remoteStr = JSON.stringify(remote);
-    if (localStr === remoteStr) return remote;
-
-    const syncedStr = synced.get(id);
-    if (syncedStr === undefined || (syncedStr !== localStr && localStr !== remoteStr)) {
-      return local;
-    }
-    return remote;
-  });
-
-  for (const local of localItems) {
-    const id = String(getId(local));
-    if (pendingRemoved.has(id) || remoteIds.has(id)) continue;
-    merged.push(local);
-  }
-
-  return merged;
 }
 
 /**
@@ -149,15 +112,15 @@ export function useCollectionSync({
         }
 
         if (rows.length === 0) {
-          if (loadLocal && isLegacyOrg) {
-            const local = loadLocal();
-            if (local.length) {
-              applyingRemoteRef.current = true;
-              syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
-              loadedRef.current = true;
-              setItems(local);
-              return;
-            }
+          const local = loadLocal ? loadLocal() : [];
+          if (local.length) {
+            applyingRemoteRef.current = true;
+            syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
+            loadedRef.current = true;
+            setItems(local);
+            pendingWriteRef.current = true;
+            queueMicrotask(() => setWriteNonce((current) => current + 1));
+            return;
           }
 
           applyingRemoteRef.current = true;
@@ -192,7 +155,7 @@ export function useCollectionSync({
           keptItems.map((record) => [String(getId(record)), JSON.stringify(record)]),
         );
 
-        const mergedItems = mergeRemoteWithLocalPending({
+        const mergedItems = mergeRemoteListWithLocalPending({
           remoteItems: keptItems,
           getId,
           syncedSnapshot: previousSynced,

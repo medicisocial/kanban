@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { SUPABASE_ENABLED } from "../lib/supabaseClient";
-import { pushStaffSyncRecords } from "../lib/staffSyncApi";
 import { useKanban } from "../hooks/useKanban";
 import { useVideoIdeas, applyClientResponses } from "../hooks/useVideoIdeas";
 import { useShootPlans } from "../hooks/useShootPlans";
@@ -58,11 +57,6 @@ import { isSharedOperationsLogin } from "../utils/staffAuth";
 import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
 import { buildWorkspaceHomeSummary, buildNavBadgeCounts } from "../utils/workspaceHome";
 import { usesPersonalWorkspaceView } from "../utils/staffAuth";
-
-function persistCardToCloud(card, updates) {
-  if (!SUPABASE_ENABLED || !card) return;
-  void pushStaffSyncRecords('cards', [{ ...card, ...updates }]);
-}
 
 export default function AppShell({ onSignOut }) {
   const importData = parseImportParam();
@@ -286,7 +280,6 @@ export default function AppShell({ onSignOut }) {
     beginBatch();
     try {
       updateCard(cardId, { dueDate });
-      persistCardToCloud(card, { dueDate });
       setSelectedCard((prev) =>
         prev?.id === cardId ? { ...prev, dueDate } : prev,
       );
@@ -1073,11 +1066,7 @@ export default function AppShell({ onSignOut }) {
           card={planDateCard}
           cards={cards}
           onClose={() => setPlanDateCard(null)}
-          onSave={(cardId, updates) => {
-            const source = cards.find((entry) => entry.id === cardId);
-            updateCard(cardId, updates);
-            if (source) persistCardToCloud(source, updates);
-          }}
+          onSave={(cardId, updates) => updateCard(cardId, updates)}
           onOpenCard={handleCardClick}
         />
       )}

@@ -56,6 +56,55 @@ export function singletonMatchesSnapshot(value, syncedStr) {
   return syncedStr === JSON.stringify(value);
 }
 
+/** Three-way merge for a single record — unsynced local edits always win. */
+export function mergeRemoteRecordWithLocal({ remote, local, syncedStr }) {
+  if (local == null) return remote;
+  if (remote == null) return local;
+
+  const localStr = JSON.stringify(local);
+  const remoteStr = JSON.stringify(remote);
+  if (localStr === remoteStr) return remote;
+
+  if (syncedStr === undefined) return local;
+  if (localStr !== syncedStr) return local;
+  if (remoteStr !== syncedStr) return remote;
+  return remote;
+}
+
+/** Keep unsynced local edits when a realtime pull returns stale cloud data. */
+export function mergeRemoteListWithLocalPending({
+  remoteItems,
+  getId,
+  syncedSnapshot,
+  localItems,
+  pendingRemoved,
+}) {
+  const synced = syncedSnapshot || new Map();
+  const localById = new Map(localItems.map((record) => [String(getId(record)), record]));
+  const remoteIds = new Set();
+
+  const merged = remoteItems.map((remote) => {
+    const id = String(getId(remote));
+    remoteIds.add(id);
+    const local = localById.get(id);
+    if (!local) return remote;
+
+    return mergeRemoteRecordWithLocal({
+      remote,
+      local,
+      syncedStr: synced.get(id),
+    });
+  });
+
+  for (const local of localItems) {
+    const id = String(getId(local));
+    if (pendingRemoved.has(id) || remoteIds.has(id)) continue;
+    merged.push(local);
+  }
+
+  return merged;
+}
+
 /** Keep unsynced local map edits when a realtime pull returns stale cloud data. */
 export function mergeRemoteMapWithLocalPending({
   remoteMap,
@@ -85,12 +134,11 @@ export function mergeRemoteMapWithLocalPending({
       continue;
     }
 
-    const syncedStr = synced.get(key);
-    if (syncedStr === undefined || (syncedStr !== localStr && localStr !== remoteStr)) {
-      merged[key] = localValue;
-    } else {
-      merged[key] = remoteValue;
-    }
+    merged[key] = mergeRemoteRecordWithLocal({
+      remote: remoteValue,
+      local: localValue,
+      syncedStr: synced.get(key),
+    });
   }
 
   for (const [key, localValue] of Object.entries(local)) {
@@ -102,14 +150,5 @@ export function mergeRemoteMapWithLocalPending({
 }
 
 export function mergeRemoteSingletonWithLocal({ remote, syncedStr, local }) {
-  if (remote == null) return local;
-  if (local == null) return remote;
-
-  const localStr = JSON.stringify(local);
-  const remoteStr = JSON.stringify(remote);
-  if (localStr === remoteStr) return remote;
-  if (syncedStr === undefined || (syncedStr !== localStr && localStr !== remoteStr)) {
-    return local;
-  }
-  return remote;
+  return mergeRemoteRecordWithLocal({ remote, local, syncedStr });
 }

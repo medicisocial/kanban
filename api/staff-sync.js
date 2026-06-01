@@ -78,19 +78,22 @@ export default async function handler(req, res) {
     return unavailable(res);
   }
 
-  const { table, upserts, deleteIds } = req.body || {};
+  const { table, upserts, deleteIds, orgId } = req.body || {};
   if (!table || !ALLOWED_TABLES.has(table)) {
     return res.status(400).json({ error: 'Invalid table.' });
   }
 
+  const resolvedOrgId = typeof orgId === 'string' && orgId.trim() ? orgId.trim() : undefined;
+
   try {
     if (Array.isArray(deleteIds) && deleteIds.length) {
-      await deleteRecords(table, deleteIds);
+      await deleteRecords(table, deleteIds, resolvedOrgId);
     }
     if (Array.isArray(upserts) && upserts.length) {
       await upsertRecords(
         table,
         upserts.map((row) => ({ id: row.id, data: row.data })),
+        resolvedOrgId,
       );
     }
     return res.status(200).json({ ok: true });

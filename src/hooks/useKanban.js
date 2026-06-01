@@ -4,6 +4,12 @@ import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
+import { pushStaffSyncRecords } from '../lib/staffSyncApi';
+
+function persistCardRecord(card) {
+  if (!SUPABASE_ENABLED || !card) return;
+  void pushStaffSyncRecords('cards', [card]);
+}
 
 const getCardId = (card) => card.id;
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
@@ -264,6 +270,7 @@ export function useKanban() {
 
   const updateCard = useCallback((id, updates) => {
     notifyMutation();
+    let persisted = null;
     setCards((prev) =>
       prev.map((card) => {
         if (card.id !== id) return card;
@@ -275,15 +282,17 @@ export function useKanban() {
           synced.dueDate !== undefined ? synced.dueDate : card.dueDate,
           { isOneOffProject: isOneOff, contentType: synced.contentType ?? card.contentType },
         );
-        return {
+        persisted = {
           ...card,
           ...synced,
           dueDate: nextDueDate,
           isOneOffProject: isOneOff,
           platform: PLATFORM,
         };
+        return persisted;
       }),
     );
+    if (persisted) persistCardRecord(persisted);
   }, []);
 
   const deleteCard = useCallback((id) => {

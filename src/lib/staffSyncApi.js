@@ -1,5 +1,6 @@
 import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { loadStaffSession } from '../utils/staffAuth';
+import { getOrgId } from './orgSession';
 
 function staffSessionHeaders() {
   const session = loadStaffSession();
@@ -30,7 +31,7 @@ async function buildAuthHeaders() {
 }
 
 /** Server-side Supabase writes when the browser cannot write directly with RLS. */
-export async function pushStaffSync({ table, changed = [], removed = [] }) {
+export async function pushStaffSync({ table, changed = [], removed = [], orgId = getOrgId() }) {
   if (!changed.length && !removed.length) return true;
 
   const headers = await buildAuthHeaders();
@@ -41,6 +42,7 @@ export async function pushStaffSync({ table, changed = [], removed = [] }) {
     headers,
     body: JSON.stringify({
       table,
+      orgId,
       upserts: changed.map((record) => ({ id: record.id, data: record })),
       deleteIds: removed,
     }),
@@ -56,7 +58,7 @@ export async function pushStaffSyncRecords(table, records) {
 }
 
 /** Persist rows with explicit { id, data } shape (singleton blobs, map entries). */
-export async function pushStaffSyncRows(table, rows = [], removed = []) {
+export async function pushStaffSyncRows(table, rows = [], removed = [], orgId = getOrgId()) {
   if (!rows.length && !removed.length) return true;
 
   const headers = await buildAuthHeaders();
@@ -65,7 +67,7 @@ export async function pushStaffSyncRows(table, rows = [], removed = []) {
   const response = await fetch('/api/staff-sync', {
     method: 'POST',
     headers,
-    body: JSON.stringify({ table, upserts: rows, deleteIds: removed }),
+    body: JSON.stringify({ table, orgId, upserts: rows, deleteIds: removed }),
   });
 
   return response.ok;
