@@ -53,6 +53,14 @@ async function verifySupabaseAccessToken(token) {
   return response.ok;
 }
 
+async function safeVerifySupabaseToken(token) {
+  try {
+    return await verifySupabaseAccessToken(token);
+  } catch {
+    return false;
+  }
+}
+
 async function isAuthorized(req) {
   const staffSession = getSessionFromRequest(req);
   if (isStaffSessionValid(staffSession)) return true;
@@ -63,7 +71,7 @@ async function isAuthorized(req) {
   const token = auth.slice(7).trim();
   if (!isLikelyJwt(token)) return false;
 
-  return verifySupabaseAccessToken(token);
+  return safeVerifySupabaseToken(token);
 }
 
 export default async function handler(req, res) {

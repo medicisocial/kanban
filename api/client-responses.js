@@ -124,7 +124,9 @@ async function applyResponseToSupabase(res, session, type, response) {
     if (!cardId) return res.status(400).json({ error: 'Missing cardId.' });
 
     const card = await fetchRecord(CARDS_TABLE, cardId, orgId);
-    if (!card || card.columnId !== 'in-review') {
+    if (!card) return res.status(404).json({ error: 'Card not found.' });
+    if (card.client !== brand) return res.status(403).json({ error: 'Forbidden.' });
+    if (card.columnId !== 'in-review') {
       return res.status(200).json({ ok: true, skipped: true });
     }
 
@@ -309,6 +311,9 @@ export default async function handler(req, res) {
   }
 
   if (isSupabaseConfigured()) {
+    if (!session.orgId) {
+      return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+    }
     try {
       return await applyResponseToSupabase(res, session, type, response);
     } catch (error) {

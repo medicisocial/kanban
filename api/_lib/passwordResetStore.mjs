@@ -26,7 +26,10 @@ export async function storeClientResetToken(token, payload) {
     throw new Error('Password reset storage is not configured.');
   }
 
-  const existing = (await fetchRecord('client_portal_credentials', SYSTEM_TOKEN_ROW_ID)) || { tokens: {} };
+  // Store tokens in an org-scoped row; orgId comes from the payload (set during login).
+  const orgId = payload.orgId;
+  const rowId = `${SYSTEM_TOKEN_ROW_ID}${orgId ? `:${orgId}` : ''}`;
+  const existing = (await fetchRecord('client_portal_credentials', rowId, orgId)) || { tokens: {} };
   const tokens = { ...(existing.tokens || {}) };
   tokens[token] = record;
 
@@ -35,7 +38,7 @@ export async function storeClientResetToken(token, payload) {
     if (!entry?.expires || entry.expires <= now) delete tokens[key];
   }
 
-  await upsertRecord('client_portal_credentials', SYSTEM_TOKEN_ROW_ID, { tokens });
+  await upsertRecord('client_portal_credentials', rowId, { tokens }, orgId);
 }
 
 export async function consumeClientResetToken(token) {
@@ -51,18 +54,28 @@ export async function consumeClientResetToken(token) {
 
   if (!isSupabaseConfigured()) return null;
 
-  const existing = (await fetchRecord('client_portal_credentials', SYSTEM_TOKEN_ROW_ID)) || { tokens: {} };
-  const tokens = { ...(existing.tokens || {}) };
-  const record = tokens[token];
-  if (!record) return null;
+  // To find the token, we must scan across org-scoped token rows.
+  // We use fetchRowsAcrossOrgs so each org's token bucket is checked.
+  const { fetchRowsAcrossOrgs } = await import('./supabase.mjs');
+  const rows = await fetchRowsAcrossOrgs('client_portal_credentials');
+  const tokenRows = (rows || []).filter((r) => String(r.id).startsWith(SYSTEM_TOKEN_ROW_ID));
 
-  delete tokens[token];
-  const now = Date.now();
-  for (const [key, entry] of Object.entries(tokens)) {
-    if (!entry?.expires || entry.expires <= now) delete tokens[key];
+  for (const row of tokenRows) {
+    const tokens = { ...(row.data?.tokens || {}) };
+    if (!tokens[token]) continue;
+
+    const record = tokens[token];
+    delete tokens[token];
+
+    const now = Date.now();
+    for (const [key, entry] of Object.entries(tokens)) {
+      if (!entry?.expires || entry.expires <= now) delete tokens[key];
+    }
+    await upsertRecord('client_portal_credentials', row.id, { tokens }, row.org_id);
+
+    if (!record.expires || record.expires <= Date.now()) return null;
+    return record;
   }
-  await upsertRecord('client_portal_credentials', SYSTEM_TOKEN_ROW_ID, { tokens });
 
-  if (!record.expires || record.expires <= Date.now()) return null;
-  return record;
+  return null;
 }

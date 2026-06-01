@@ -58,23 +58,28 @@ export default async function handler(req, res) {
     return unavailable(res);
   }
 
-  if (req.method === 'GET') {
-    const workspace = await redis.get(WORKSPACE_KEY);
-    return res.status(200).json(workspace || null);
-  }
-
-  if (req.method === 'PUT') {
-    const payload = req.body;
-    if (!payload?.data || typeof payload.data !== 'object') {
-      return res.status(400).json({ error: 'Invalid workspace payload.' });
+  try {
+    if (req.method === 'GET') {
+      const workspace = await redis.get(WORKSPACE_KEY);
+      return res.status(200).json(workspace || null);
     }
 
-    const remote = await redis.get(WORKSPACE_KEY);
-    const merged = mergeWorkspacePayload(remote, payload);
-    await redis.set(WORKSPACE_KEY, merged);
-    return res.status(200).json({ ok: true, exportedAt: merged.exportedAt || null });
-  }
+    if (req.method === 'PUT') {
+      const payload = req.body;
+      if (!payload?.data || typeof payload.data !== 'object') {
+        return res.status(400).json({ error: 'Invalid workspace payload.' });
+      }
 
-  res.setHeader('Allow', 'GET, PUT');
-  return res.status(405).json({ error: 'Method not allowed' });
+      const remote = await redis.get(WORKSPACE_KEY);
+      const merged = mergeWorkspacePayload(remote, payload);
+      await redis.set(WORKSPACE_KEY, merged);
+      return res.status(200).json({ ok: true, exportedAt: merged.exportedAt || null });
+    }
+
+    res.setHeader('Allow', 'GET, PUT');
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch (error) {
+    console.error('[workspace] handler error:', error?.message || error);
+    return res.status(502).json({ error: 'Workspace sync temporarily unavailable.' });
+  }
 }

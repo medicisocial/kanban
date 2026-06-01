@@ -1,5 +1,8 @@
-import { findClientLogin } from './_lib/clientPortalAuth.mjs';
-import { loadClientAuthMap, updateClientUserPassword } from './_lib/clientCredentialsStore.mjs';
+import { findClientLoginAcrossOrgs } from './_lib/clientPortalAuth.mjs';
+import { updateClientUserPassword } from './_lib/clientCredentialsStore.mjs';
+import { isSupabaseConfigured, fetchRowsAcrossOrgs } from './_lib/supabase.mjs';
+import { getRedis, loadWorkspace } from './_lib/redis.mjs';
+import { getClientPortalAuthMap, findClientLogin } from './_lib/clientPortalAuth.mjs';
 import {
   consumeClientResetToken,
   createResetToken,
@@ -39,14 +42,33 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Username is required.' });
     }
 
-    const authMap = await loadClientAuthMap();
-    if (!authMap) {
-      return res.status(503).json({
-        error: 'Client portal is not available yet. Contact your agency for help.',
-      });
+    let login = null;
+    if (isSupabaseConfigured()) {
+      try {
+        const rows = await fetchRowsAcrossOrgs('client_portal_credentials');
+        if (!rows) {
+          return res.status(503).json({ error: 'Client portal is not available yet. Contact your agency for help.' });
+        }
+        const match = findClientLoginAcrossOrgs(rows, username);
+        if (match) login = { brand: match.brand, user: match.user, orgId: match.org_id };
+      } catch (error) {
+        console.error('[client-password-reset] Supabase lookup failed:', error?.message || error);
+        return res.status(503).json({ error: 'Client portal is temporarily unavailable. Try again shortly.' });
+      }
+    } else {
+      const redis = getRedis();
+      if (!redis) {
+        return res.status(503).json({ error: 'Client portal is not available yet. Contact your agency for help.' });
+      }
+      const workspace = await loadWorkspace(redis);
+      const authMap = getClientPortalAuthMap(workspace);
+      if (!authMap) {
+        return res.status(503).json({ error: 'Client portal is not available yet. Contact your agency for help.' });
+      }
+      const match = findClientLogin(authMap, username);
+      if (match) login = { brand: match.brand, user: match.user, orgId: undefined };
     }
 
-    const login = findClientLogin(authMap, username);
     if (!login) {
       return res.status(200).json(genericSuccess());
     }
@@ -76,6 +98,7 @@ export default async function handler(req, res) {
       userId: login.user.id,
       username: login.user.username,
       email: resetEmail,
+      orgId: login.orgId,
     });
 
     const resetUrl = `${getPortalOrigin(req)}/?login=1&client=1&client-reset=${encodeURIComponent(token)}`;
@@ -117,6 +140,7 @@ export default async function handler(req, res) {
         userId: record.userId,
         username: record.username,
         newPassword: password,
+        orgId: record.orgId,
       });
     } catch (error) {
       console.error('[client-password-reset] update failed:', error?.message || error);

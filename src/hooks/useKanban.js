@@ -182,7 +182,11 @@ export function useKanban() {
   }, [cards]);
 
   const replaceCards = useCallback((next) => {
-    setCards(next.map(normalizeCard));
+    const normalized = next.map(normalizeCard);
+    setCards(normalized);
+    if (SUPABASE_ENABLED && normalized.length) {
+      void pushStaffSyncRecords('cards', normalized);
+    }
   }, []);
 
   const addCard = useCallback((columnId) => {

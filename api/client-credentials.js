@@ -3,6 +3,7 @@ import { saveClientAuthMap } from './_lib/clientCredentialsStore.mjs';
 import { isSupabaseConfigured } from './_lib/supabase.mjs';
 import { getRedis } from './_lib/redis.mjs';
 import { normalizeBrandUsers } from './_lib/clientPortalAuth.mjs';
+import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
 
 function unauthorized(res) {
   return res.status(401).json({ error: 'Unauthorized' });
@@ -20,22 +21,24 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const session = getSessionFromRequest(req);
-  if (!isStaffSessionValid(session)) {
-    return unauthorized(res);
-  }
-
-  const { credentials } = req.body || {};
+  const { credentials, orgId: requestedOrgId } = req.body || {};
   if (!credentials || typeof credentials !== 'object') {
     return res.status(400).json({ error: 'Invalid credentials payload.' });
   }
+
+  // Accept both legacy staff session and Supabase JWT (SaaS staff).
+  const orgCheck = await assertAuthorizedOrgId(req, requestedOrgId);
+  if (!orgCheck.ok) {
+    return unauthorized(res);
+  }
+  const resolvedOrgId = orgCheck.orgId;
 
   if (!isSupabaseConfigured() && !getRedis()) {
     return unavailable(res);
   }
 
   try {
-    await saveClientAuthMap(credentials);
+    await saveClientAuthMap(credentials, resolvedOrgId);
   } catch (error) {
     console.error('[client-credentials] save failed:', error?.message || error);
     return res.status(500).json({ error: error.message || 'Could not save client logins to cloud.' });

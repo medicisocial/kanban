@@ -9,10 +9,10 @@ import { fetchCollectionMap, isSupabaseConfigured, upsertRecord, deleteRecord } 
 
 const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
 
-export async function loadClientAuthMap() {
+export async function loadClientAuthMap(orgId) {
   if (isSupabaseConfigured()) {
     try {
-      const map = await fetchCollectionMap('client_portal_credentials');
+      const map = await fetchCollectionMap('client_portal_credentials', orgId);
       if (map) return map;
     } catch (error) {
       console.error('[clientCredentialsStore] Supabase fetch failed:', error?.message || error);
@@ -25,16 +25,16 @@ export async function loadClientAuthMap() {
   return getClientPortalAuthMap(workspace);
 }
 
-export async function saveClientAuthMap(authMap) {
+export async function saveClientAuthMap(authMap, orgId) {
   if (isSupabaseConfigured()) {
     for (const [brand, entry] of Object.entries(authMap)) {
       if (brand.startsWith('__')) continue;
       const users = normalizeBrandUsers(entry);
       if (!users.length) {
-        await deleteRecord('client_portal_credentials', brand);
+        await deleteRecord('client_portal_credentials', brand, orgId);
         continue;
       }
-      await upsertRecord('client_portal_credentials', brand, users);
+      await upsertRecord('client_portal_credentials', brand, users, orgId);
     }
     return;
   }
@@ -57,8 +57,8 @@ export async function saveClientAuthMap(authMap) {
   await saveWorkspace(redis, workspace);
 }
 
-export async function updateClientUserPassword({ brand, userId, username, newPassword }) {
-  const authMap = await loadClientAuthMap();
+export async function updateClientUserPassword({ brand, userId, username, newPassword, orgId }) {
+  const authMap = await loadClientAuthMap(orgId);
   if (!authMap) throw new Error('Client portal credentials are not available.');
 
   const users = normalizeBrandUsers(authMap[brand]);
@@ -79,6 +79,6 @@ export async function updateClientUserPassword({ brand, userId, username, newPas
   if (!updated) throw new Error('Client account not found.');
 
   authMap[brand] = nextUsers;
-  await saveClientAuthMap({ [brand]: nextUsers });
+  await saveClientAuthMap({ [brand]: nextUsers }, orgId);
   return true;
 }

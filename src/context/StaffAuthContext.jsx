@@ -198,6 +198,8 @@ export function StaffAuthProvider({ children }) {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, supabaseSession) => {
       if (event === 'SIGNED_OUT') {
+        // Clear any SaaS session so the UI doesn't show stale state.
+        setSession((prev) => (prev?.type === 'saas' ? null : prev));
         return;
       }
       if (!supabaseSession?.user) return;

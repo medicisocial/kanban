@@ -55,6 +55,9 @@ export function useMeetings() {
 
   const replaceMeetings = useCallback((next) => {
     setMeetings(next);
+    if (SUPABASE_ENABLED && next.length) {
+      void pushStaffSyncRecords('meetings', next);
+    }
   }, []);
 
   const addMeeting = useCallback((data) => {

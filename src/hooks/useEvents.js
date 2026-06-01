@@ -55,6 +55,9 @@ export function useEvents() {
 
   const replaceEvents = useCallback((next) => {
     setEvents(next);
+    if (SUPABASE_ENABLED && next.length) {
+      void pushStaffSyncRecords('events', next);
+    }
   }, []);
 
   const addEvent = useCallback((data) => {

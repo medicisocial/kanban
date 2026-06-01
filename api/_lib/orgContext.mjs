@@ -56,7 +56,12 @@ export function getDefaultOrgId() {
   return LEGACY_ORG_ID;
 }
 
-/** Resolve the org this request is allowed to read/write. */
+/**
+ * Resolve the org this request is allowed to read/write.
+ * Returns the orgId string, or null when the caller is unauthenticated /
+ * cannot be mapped to any org. Callers that need a hard 403 should check for
+ * null rather than accepting the legacy fallback.
+ */
 export async function resolveAuthorizedOrgId(req) {
   const staffSession = getSessionFromRequest(req);
   if (isStaffSessionValid(staffSession)) {
@@ -70,16 +75,23 @@ export async function resolveAuthorizedOrgId(req) {
       const userId = await getUserIdFromJwt(token);
       if (userId) {
         const orgId = await fetchMemberOrgId(userId);
-        if (orgId) return orgId;
+        // Return the org if found, or null — never fall back to the legacy org
+        // for a valid JWT that has no membership (that would allow any
+        // Supabase Auth user to read/write the Medici workspace).
+        return orgId || null;
       }
     }
   }
 
-  return LEGACY_ORG_ID;
+  return null;
 }
 
 export async function assertAuthorizedOrgId(req, requestedOrgId) {
   const authorized = await resolveAuthorizedOrgId(req);
+  if (!authorized) {
+    return { ok: false, orgId: null, error: 'Unauthorized.' };
+  }
+
   const target =
     typeof requestedOrgId === 'string' && requestedOrgId.trim()
       ? requestedOrgId.trim()

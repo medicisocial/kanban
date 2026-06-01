@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   clearClientSession,
   fetchClientPortalData,
@@ -23,15 +23,23 @@ export function ClientAuthProvider({ children }) {
   const [loadingData, setLoadingData] = useState(false);
   const [dataError, setDataError] = useState('');
 
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
   const refreshPortalData = useCallback(async (activeSession = session, { silent = false } = {}) => {
     if (!activeSession) return;
     if (!silent) setLoadingData(true);
     setDataError('');
     try {
       const data = await fetchClientPortalData(activeSession);
+      if (!isMountedRef.current) return;
       setPortalData(data);
       setBrand(data.brand);
     } catch (error) {
+      if (!isMountedRef.current) return;
       setDataError(error.message || 'Could not load portal.');
       if (error.message?.includes('Session expired')) {
         setSession(null);
@@ -39,7 +47,7 @@ export function ClientAuthProvider({ children }) {
         setPortalData(null);
       }
     } finally {
-      setLoadingData(false);
+      if (isMountedRef.current) setLoadingData(false);
     }
   }, [session]);
 

@@ -86,7 +86,11 @@ export function useVideoIdeas() {
   }, [ideas]);
 
   const replaceIdeas = useCallback((next) => {
-    setIdeas(stripDemoVideoIdeas(next));
+    const normalized = stripDemoVideoIdeas(next);
+    setIdeas(normalized);
+    if (SUPABASE_ENABLED && normalized.length) {
+      void pushStaffSyncRecords('video_ideas', normalized);
+    }
   }, []);
 
   const addIdea = useCallback((ideaData) => {

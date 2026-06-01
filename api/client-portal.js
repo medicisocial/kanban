@@ -64,6 +64,13 @@ export default async function handler(req, res) {
   const session = getClientSessionFromRequest(req);
   if (!isClientSessionValid(session)) return unauthorized(res);
 
+  // For Supabase-backed deployments, sessions created without an orgId (issued
+  // before multi-tenant support) cannot target the correct tenant. Force re-login.
+  const { isSupabaseConfigured } = await import('./_lib/supabase.mjs');
+  if (isSupabaseConfigured() && !session.orgId) {
+    return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+  }
+
   const workspace = await loadPortalWorkspace(session.orgId);
   if (!workspace) return unavailable(res);
 
