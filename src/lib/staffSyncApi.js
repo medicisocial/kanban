@@ -54,3 +54,24 @@ export async function pushStaffSyncRecords(table, records) {
   if (!records?.length) return true;
   return pushStaffSync({ table, changed: records, removed: [] });
 }
+
+/** Persist rows with explicit { id, data } shape (singleton blobs, map entries). */
+export async function pushStaffSyncRows(table, rows = [], removed = []) {
+  if (!rows.length && !removed.length) return true;
+
+  const headers = await buildAuthHeaders();
+  if (!headers) return false;
+
+  const response = await fetch('/api/staff-sync', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ table, upserts: rows, deleteIds: removed }),
+  });
+
+  return response.ok;
+}
+
+export async function pushStaffSyncSingleton(table, recordId, data) {
+  if (!recordId) return true;
+  return pushStaffSyncRows(table, [{ id: recordId, data }]);
+}

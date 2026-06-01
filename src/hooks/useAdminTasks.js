@@ -5,6 +5,17 @@ import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
+import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
+
+function persistAdminTaskUpsert(task) {
+  if (!SUPABASE_ENABLED || !task) return;
+  void pushStaffSyncRecords('admin_tasks', [task]);
+}
+
+function persistAdminTaskDelete(id) {
+  if (!SUPABASE_ENABLED || !id) return;
+  void pushStaffSync({ table: 'admin_tasks', changed: [], removed: [id] });
+}
 
 const getAdminTaskId = (task) => task.id;
 
@@ -54,7 +65,6 @@ export function useAdminTasks() {
   });
 
   useEffect(() => {
-    if (SUPABASE_ENABLED) return;
     localStorage.setItem(ADMIN_TASKS_STORAGE_KEY, JSON.stringify(adminTasks));
   }, [adminTasks]);
 
@@ -66,27 +76,32 @@ export function useAdminTasks() {
     notifyMutation();
     const task = createAdminTask(data);
     setAdminTasks((prev) => [...prev, task]);
+    persistAdminTaskUpsert(task);
     return task.id;
   }, []);
 
   const toggleAdminTaskComplete = useCallback((id) => {
     notifyMutation();
+    let persisted = null;
     setAdminTasks((prev) =>
       prev.map((task) => {
         if (task.id !== id) return task;
         const completed = !task.completed;
-        return {
+        persisted = {
           ...task,
           completed,
           completedAt: completed ? Date.now() : null,
         };
+        return persisted;
       }),
     );
+    if (persisted) persistAdminTaskUpsert(persisted);
   }, []);
 
   const deleteAdminTask = useCallback((id) => {
     notifyMutation();
     setAdminTasks((prev) => prev.filter((task) => task.id !== id));
+    persistAdminTaskDelete(id);
   }, []);
 
   return {
