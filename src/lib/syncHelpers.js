@@ -84,7 +84,15 @@ export function mergeRemoteRecordWithLocal({ remote, local, syncedStr }) {
   const remoteStr = JSON.stringify(remote);
   if (localStr === remoteStr) return remote;
 
-  if (syncedStr === undefined) return local;
+  if (syncedStr === undefined) {
+    // No sync baseline for this session (e.g. first load on a new device).
+    // We cannot tell if local is a genuine unsynced edit or stale cache from a
+    // previous login. Use timestamps to decide: prefer whichever was updated
+    // more recently; cloud wins on a tie so a fresh device always shows current data.
+    const remoteTs = recordRevision(remote);
+    const localTs = recordRevision(local);
+    return localTs > remoteTs ? local : remote;
+  }
 
   // Local edits not yet reflected in our sync snapshot always win.
   if (localStr !== syncedStr) return local;
@@ -235,7 +243,17 @@ export function mergeClientsWorkspaceState({ remote, local, syncedStr }) {
     const syncedKeyStr =
       synced && synced[key] !== undefined ? JSON.stringify(synced[key]) : undefined;
 
-    if (syncedKeyStr === undefined || localStr !== syncedKeyStr) {
+    if (syncedKeyStr === undefined) {
+      // No sync baseline for this field. Remote is authoritative (cloud wins)
+      // so stale localStorage on a new device does not overwrite fresh cloud data.
+      // Local wins only if local was modified after the remote record's timestamp.
+      const remoteTs = recordRevision(remote);
+      const localTs = recordRevision(local);
+      merged[key] = localTs > remoteTs ? local[key] : (remote[key] !== undefined ? remote[key] : local[key]);
+      continue;
+    }
+
+    if (localStr !== syncedKeyStr) {
       merged[key] = local[key];
       continue;
     }
