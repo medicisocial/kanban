@@ -53,9 +53,29 @@ export function ReferenceMusicLink({ url, compact = false }) {
   );
 }
 
+function videoFileLinkLabel(url) {
+  try {
+    const host = new URL(normalizeLink(url)).hostname.replace(/^www\./, '');
+    if (host.includes('dropbox.com')) return 'Dropbox';
+    if (host.includes('drive.google.com')) return 'Google Drive';
+    if (host.includes('docs.google.com')) return 'Google Drive';
+    if (host.includes('vimeo.com')) return 'Vimeo';
+    if (host.includes('frame.io')) return 'Frame.io';
+    if (host.includes('wetransfer.com')) return 'WeTransfer';
+    if (host.includes('onedrive.live.com') || host.includes('1drv.ms')) return 'OneDrive';
+    if (host.includes('icloud.com')) return 'iCloud';
+    if (host.includes('box.com')) return 'Box';
+    if (host.includes('youtube.com') || host.includes('youtu.be')) return 'YouTube';
+    return host || 'Video file';
+  } catch {
+    return 'Video file';
+  }
+}
+
 export function DropboxLink({ url, compact = false }) {
   if (!url?.trim()) return null;
   const href = normalizeLink(url);
+  const label = videoFileLinkLabel(url);
   return (
     <a
       href={href}
@@ -68,8 +88,8 @@ export function DropboxLink({ url, compact = false }) {
       }`}
       title={url}
     >
-      <span aria-hidden>📦</span>
-      <span className="truncate">Dropbox</span>
+      <span aria-hidden>📁</span>
+      <span className="truncate">{label}</span>
       <span aria-hidden className="shrink-0 text-[10px] opacity-70">↗</span>
     </a>
   );

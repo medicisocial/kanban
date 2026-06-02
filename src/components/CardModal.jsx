@@ -283,12 +283,12 @@ export default function CardModal({
           </Field>
 
 
-          <Field label="Dropbox Content Link">
+          <Field label="Video File Link">
             <input
               type="url"
               value={card.dropboxLink || ''}
               onChange={(e) => handleChange('dropboxLink', e.target.value)}
-              placeholder="Paste Dropbox share link to the content file or folder..."
+              placeholder="Paste link to video file (Dropbox, Google Drive, Vimeo, WeTransfer…)"
               className={inputClass}
             />
             {card.dropboxLink ? (
@@ -298,7 +298,7 @@ export default function CardModal({
                 rel="noopener noreferrer"
                 className="mt-1.5 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
               >
-                Open in Dropbox →
+                Open file →
               </a>
             ) : (
               <p className="mt-1.5 text-xs text-gray-500">
