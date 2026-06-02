@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { getContentTypeStyle } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import TaskPostSchedule from './TaskPostSchedule';
-import ReferenceVideoLink, { ReferenceMusicLink } from './clientPortal/ReferenceVideoLink';
+import { CardLinks } from './clientPortal/ReferenceVideoLink';
 import {
   applyEditorTaskOrder,
   buildBoardEditorTasks,
@@ -102,16 +102,7 @@ function EditorTodoItem({
             <p className="mt-2 line-clamp-2 text-xs text-gray-400">{task.notes}</p>
           )}
 
-          {(task.card?.referenceMusic?.trim() || task.card?.referenceVideo?.trim()) && (
-            <div className="mt-2 flex flex-wrap gap-3">
-              {task.card.referenceMusic?.trim() && (
-                <ReferenceMusicLink url={task.card.referenceMusic} compact />
-              )}
-              {task.card.referenceVideo?.trim() && (
-                <ReferenceVideoLink url={task.card.referenceVideo} compact />
-              )}
-            </div>
-          )}
+          <CardLinks card={task.card} compact />
 
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
             {task.assignedTo && <span>Assigned to {task.assignedTo}</span>}

@@ -53,6 +53,43 @@ export function ReferenceMusicLink({ url, compact = false }) {
   );
 }
 
+export function DropboxLink({ url, compact = false }) {
+  if (!url?.trim()) return null;
+  const href = normalizeLink(url);
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      className={`inline-flex max-w-full items-center gap-1 text-[#69c] underline-offset-2 transition hover:text-[#8ae] hover:underline ${
+        compact ? 'text-[11px]' : 'text-xs'
+      }`}
+      title={url}
+    >
+      <span aria-hidden>📦</span>
+      <span className="truncate">Dropbox</span>
+      <span aria-hidden className="shrink-0 text-[10px] opacity-70">↗</span>
+    </a>
+  );
+}
+
+/** Renders all three links (Dropbox, music, video) for a card in a single row. */
+export function CardLinks({ card, compact = false }) {
+  const hasDropbox = card?.dropboxLink?.trim();
+  const hasMusic = card?.referenceMusic?.trim();
+  const hasVideo = card?.referenceVideo?.trim();
+  if (!hasDropbox && !hasMusic && !hasVideo) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-3">
+      {hasDropbox && <DropboxLink url={card.dropboxLink} compact={compact} />}
+      {hasMusic && <ReferenceMusicLink url={card.referenceMusic} compact={compact} />}
+      {hasVideo && <ReferenceVideoLink url={card.referenceVideo} compact={compact} />}
+    </div>
+  );
+}
+
 export default function ReferenceVideoLink({ url, compact = false }) {
   if (!url?.trim()) {
     return <span className="text-xs text-white/25">—</span>;

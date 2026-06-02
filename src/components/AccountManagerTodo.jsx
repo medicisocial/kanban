@@ -15,6 +15,7 @@ import {
 import { getEditorTaskStatusOptions } from '../utils/editorTodo';
 import NeedsEditsModal from './NeedsEditsModal';
 import { glassInsetClass, selectClass } from './clientPortal/clientPortalUi';
+import { CardLinks } from './clientPortal/ReferenceVideoLink';
 import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
 
 const taskActionBtnClass =
@@ -69,6 +70,8 @@ function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate }) {
               {task.client}
             </p>
           )}
+
+          <CardLinks card={task.card} compact />
 
           <div className="mt-3">
             <button
@@ -149,6 +152,8 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onAppr
           {task.notes && (
             <p className="mt-2 line-clamp-2 text-xs text-gray-400">{task.notes}</p>
           )}
+
+          <CardLinks card={task.card} compact />
 
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
             {task.assignedTo && <span>Assigned to {task.assignedTo}</span>}
@@ -233,6 +238,8 @@ function ApprovedScheduleTaskCard({ task, getClientColor, onOpenCard, onMarkSche
             <p className="mt-2 line-clamp-2 text-xs text-gray-400">{task.notes}</p>
           )}
 
+          <CardLinks card={task.card} compact />
+
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
             {task.assignedTo && <span>Editor: {task.assignedTo}</span>}
             {task.accountManager && <span>AM: {task.accountManager}</span>}
@@ -303,6 +310,8 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted }) {
           {task.notes && (
             <p className="mt-2 line-clamp-2 text-xs text-gray-400">{task.notes}</p>
           )}
+
+          <CardLinks card={task.card} compact />
 
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
             {task.assignedTo && <span>Editor: {task.assignedTo}</span>}
