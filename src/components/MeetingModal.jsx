@@ -128,6 +128,7 @@ export default function MeetingModal({
   onMeetingClick,
 }) {
   const overlayRef = useRef(null);
+  const mouseDownOnOverlayRef = useRef(false);
   const { clients } = useClientsContext();
   const isEdit = Boolean(meeting?.id);
   const recurring = isRecurringMeeting(meeting);
@@ -340,8 +341,11 @@ export default function MeetingModal({
     <div
       ref={overlayRef}
       className="fixed inset-0 z-[500] flex items-center justify-center bg-black/70 p-2 backdrop-blur-sm sm:p-4"
+      onMouseDown={(e) => {
+        mouseDownOnOverlayRef.current = e.target === overlayRef.current;
+      }}
       onClick={(event) => {
-        if (event.target === overlayRef.current) onClose();
+        if (event.target === overlayRef.current && mouseDownOnOverlayRef.current) onClose();
       }}
     >
       <form

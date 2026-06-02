@@ -41,6 +41,7 @@ export default function CardModal({
   onOpenCard,
 }) {
   const overlayRef = useRef(null);
+  const mouseDownOnOverlayRef = useRef(false);
   const pendingTabRef = useRef(null);
   const [activeTab, setActiveTab] = useState('details');
   const { clients, getClientAccountManager, getMemberNamesForRole } = useClientsContext();
@@ -230,8 +231,11 @@ export default function CardModal({
     <div
       ref={overlayRef}
       className="fixed inset-0 z-[270] flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center"
+      onMouseDown={(e) => {
+        mouseDownOnOverlayRef.current = e.target === overlayRef.current;
+      }}
       onClick={(e) => {
-        if (e.target === overlayRef.current) onClose();
+        if (e.target === overlayRef.current && mouseDownOnOverlayRef.current) onClose();
       }}
     >
       <div
