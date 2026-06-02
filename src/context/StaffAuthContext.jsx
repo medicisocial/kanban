@@ -13,6 +13,7 @@ import {
 import { SUPABASE_ENABLED, supabase } from '../lib/supabaseClient';
 import { normalizePlanType } from '../constants/plans';
 import { LEGACY_ORG_ID, resetOrgSession, setOrgSession } from '../lib/orgSession';
+import { clearOrgScopedCache } from '../lib/orgStorage';
 import { authenticateTeamMemberCredentials } from '../utils/teamAuth';
 import {
   ensureStaffSupabaseSession,
@@ -115,6 +116,9 @@ export function StaffAuthProvider({ children }) {
       return false;
     }
     const saasOrg = buildSaasOrg(membership, user.email);
+    // Clear stale localStorage cache for this org so the initial merge
+    // always loads fresh data from Supabase on a new login session.
+    clearOrgScopedCache(saasOrg.id);
     setOrg(saasOrg);
     setOrgSession(saasOrg.id, true);
     return true;
@@ -338,13 +342,16 @@ export function StaffAuthProvider({ children }) {
   }, [resolveSaasOrg]);
 
   const logout = useCallback(() => {
+    // Clear org-scoped cache before resetting so getOrgId() still returns the
+    // current org when clearOrgScopedCache reads it.
+    if (org?.id) clearOrgScopedCache(org.id);
     clearStaffSession();
     signOutStaffSupabaseSession();
     signOutSupabaseAuth();
     setSession(null);
     setOrg(null);
     resetOrgSession();
-  }, []);
+  }, [org?.id]);
 
   const value = useMemo(
     () => ({

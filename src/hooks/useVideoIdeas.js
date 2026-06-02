@@ -106,7 +106,7 @@ export function useVideoIdeas() {
     setIdeas((prev) =>
       prev.map((i) => {
         if (i.id !== id) return i;
-        persisted = { ...i, ...updates };
+        persisted = { ...i, ...updates, updatedAt: Date.now() };
         return persisted;
       }),
     );

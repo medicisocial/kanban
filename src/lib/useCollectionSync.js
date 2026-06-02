@@ -15,6 +15,8 @@ import {
 } from './syncHelpers';
 
 const REALTIME_REFETCH_DEBOUNCE_MS = 350;
+// Minimum gap before a focus/visibility event triggers a full re-fetch.
+const FOCUS_REFETCH_MIN_MS = 30_000;
 
 function attachRowUpdatedAt(record, rowUpdatedAt) {
   if (!rowUpdatedAt) return record;
@@ -313,8 +315,22 @@ export function useCollectionSync({
       });
     };
 
-    applyRemote();
+    let lastFetchAt = 0;
+
+    const onFocus = () => {
+      if (!active || !loadedRef.current) return;
+      if (Date.now() - lastFetchAt < FOCUS_REFETCH_MIN_MS) return;
+      applyRemote();
+    };
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') onFocus();
+    });
+
+    applyRemote().then(() => { lastFetchAt = Date.now(); }).catch(() => {});
     const unsubscribe = store.subscribe((payload) => {
+      lastFetchAt = Date.now();
       if (payload && typeof payload === 'object' && payload.eventType) {
         applyRealtimePayload(payload);
         return;
@@ -325,6 +341,7 @@ export function useCollectionSync({
       active = false;
       clearTimeout(refetchTimer);
       unsubscribe?.();
+      window.removeEventListener('focus', onFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, orgReady, table, isLegacyOrg]);

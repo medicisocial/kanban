@@ -94,6 +94,7 @@ export function useAdminTasks() {
           ...task,
           completed,
           completedAt: completed ? Date.now() : null,
+          updatedAt: Date.now(),
         };
         return persisted;
       }),

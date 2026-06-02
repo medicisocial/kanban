@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+
+const FOCUS_REFETCH_MIN_MS = 30_000;
 import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
 import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
@@ -141,11 +143,28 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
       }
     };
 
-    applyRemote();
-    const unsubscribe = store.subscribe(() => applyRemote());
+    let lastFetchAt = 0;
+
+    const onFocus = () => {
+      if (!active || !loadedRef.current) return;
+      if (Date.now() - lastFetchAt < FOCUS_REFETCH_MIN_MS) return;
+      applyRemote();
+    };
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') onFocus();
+    });
+
+    applyRemote().then(() => { lastFetchAt = Date.now(); }).catch(() => {});
+    const unsubscribe = store.subscribe(() => {
+      lastFetchAt = Date.now();
+      applyRemote();
+    });
     return () => {
       active = false;
       unsubscribe?.();
+      window.removeEventListener('focus', onFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, orgReady, table, recordId, isLegacyOrg]);

@@ -113,7 +113,7 @@ export function useTeamMembers() {
     setTeamMembers((prev) =>
       prev.map((member) => {
         if (member.id !== id) return member;
-        persisted = mergeTeamMemberUpdates(member, updates);
+        persisted = { ...mergeTeamMemberUpdates(member, updates), updatedAt: Date.now() };
         return persisted;
       }),
     );
