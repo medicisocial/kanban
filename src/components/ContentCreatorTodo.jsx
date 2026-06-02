@@ -7,6 +7,7 @@ import { buildContentCreatorTasks } from '../utils/contentCreatorTodo';
 import { resolveStaffMemberName } from '../utils/staffMembers';
 import { usesPersonalWorkspaceView } from '../utils/staffAuth';
 import { btnSecondaryClass } from './clientPortal/clientPortalUi';
+import ReferenceVideoLink, { ReferenceMusicLink } from './clientPortal/ReferenceVideoLink';
 
 export default function ContentCreatorTodo({
   cards,
@@ -87,6 +88,16 @@ export default function ContentCreatorTodo({
                     : 'No shoot date set'}
                   {task.assignedTo ? ` · Editor: ${task.assignedTo}` : ''}
                 </p>
+                {(task.card?.referenceMusic?.trim() || task.card?.referenceVideo?.trim()) && (
+                  <div className="mt-2 flex flex-wrap gap-3">
+                    {task.card.referenceMusic?.trim() && (
+                      <ReferenceMusicLink url={task.card.referenceMusic} compact />
+                    )}
+                    {task.card.referenceVideo?.trim() && (
+                      <ReferenceVideoLink url={task.card.referenceVideo} compact />
+                    )}
+                  </div>
+                )}
               </button>
               <button
                 type="button"
