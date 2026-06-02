@@ -959,7 +959,11 @@ export default function AppShell({ onSignOut }) {
         <section>
           <KanbanBoard
             cards={cards}
-            onAddCard={addCard}
+            onAddCard={(columnId) => {
+              const client = clientFilter !== 'all' ? clientFilter : undefined;
+              const newCard = addCard(columnId, { client });
+              if (newCard) setSelectedCard(newCard);
+            }}
             onCardClick={handleCardClick}
             onDeleteCard={handleDelete}
             onMoveCard={handleMoveCard}

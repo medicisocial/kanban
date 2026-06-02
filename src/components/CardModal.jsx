@@ -19,7 +19,7 @@ import TimeInput from './TimeInput';
 import DateInput from './DateInput';
 import ClientNameInput from './ClientNameInput';
 import { btnPrimaryClass } from './clientPortal/clientPortalUi';
-import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
+import ReferenceVideoLink, { ReferenceMusicLink } from './clientPortal/ReferenceVideoLink';
 
 const CARD_TABS = [
   { id: 'details', label: 'Details' },
@@ -807,6 +807,11 @@ export default function CardModal({
                 placeholder="Paste Spotify, Apple Music, or other link..."
                 className={inputClass}
               />
+              {card.referenceMusic?.trim() && (
+                <div className="mt-2">
+                  <ReferenceMusicLink url={card.referenceMusic} />
+                </div>
+              )}
             </Field>
             <Field label="Reference Video">
               <input

@@ -189,12 +189,12 @@ export function useKanban() {
     }
   }, []);
 
-  const addCard = useCallback((columnId) => {
+  const addCard = useCallback((columnId, { client } = {}) => {
     notifyMutation();
     const status = getStatusForColumn(columnId);
     const card = normalizeCard({
       id: crypto.randomUUID(),
-      client: 'Plume',
+      client: client || 'Plume',
       contentType: 'Reel',
       platform: PLATFORM,
       title: 'New task',
@@ -222,6 +222,7 @@ export function useKanban() {
     });
     setCards((prev) => [...prev, card]);
     persistCardRecord(card);
+    return card;
   }, []);
 
   const createCardFromIdea = useCallback((idea) => {
