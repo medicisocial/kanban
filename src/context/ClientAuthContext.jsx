@@ -40,6 +40,9 @@ export function ClientAuthProvider({ children }) {
       if (!isMountedRef.current) return;
       setPortalData(data);
       setBrand(data.brand);
+      if (isClientHubPortal()) {
+        setContentTypeColorOverrides(normalizeContentTypeColors(data.contentTypeColors || {}));
+      }
     } catch (error) {
       if (!isMountedRef.current) return;
       setDataError(error.message || 'Could not load portal.');
@@ -47,6 +50,9 @@ export function ClientAuthProvider({ children }) {
         setSession(null);
         setBrand('');
         setPortalData(null);
+        if (isClientHubPortal()) {
+          setContentTypeColorOverrides(null);
+        }
       }
     } finally {
       if (isMountedRef.current) setLoadingData(false);
@@ -67,16 +73,6 @@ export function ClientAuthProvider({ children }) {
       refreshPortalData(session, { silent: true });
     }, portalOrgId);
   }, [session, portalData?.orgId, refreshPortalData]);
-
-  useEffect(() => {
-    if (!isClientHubPortal()) return undefined;
-    if (!portalData) {
-      setContentTypeColorOverrides(null);
-      return undefined;
-    }
-    setContentTypeColorOverrides(normalizeContentTypeColors(portalData.contentTypeColors || {}));
-    return undefined;
-  }, [portalData]);
 
   useEffect(() => {
     if (!session) return undefined;
@@ -107,6 +103,9 @@ export function ClientAuthProvider({ children }) {
     setSession(null);
     setBrand('');
     setPortalData(null);
+    if (isClientHubPortal()) {
+      setContentTypeColorOverrides(null);
+    }
   }, []);
 
   const queueCloudResponse = useCallback(

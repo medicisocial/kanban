@@ -1,9 +1,8 @@
-import { COLUMNS, getContentTypeStyle, PLATFORM_ICON } from "../constants";
-import { contentTypeCardStyle, contentTypeLabelProps, contentTypePillProps } from "../utils/contentTypeColors";
+import { COLUMNS, getContentTypeStyle } from "../constants";
+import { contentTypeCardStyle, contentTypeLabelProps } from "../utils/contentTypeColors";
 import { useClientsContext } from "../context/ClientsContext";
 import { formatTime } from "../utils";
 import { formatStoryScheduleSummary, hasStoryDailyRange, hasStoryRecurrence, isCalendarEventPosted } from "../utils/calendar";
-import CardTitleLink from "./CardTitleLink";
 import CalendarDayCard from "./CalendarDayCard";
 
 export default function CalendarEvent({
@@ -71,7 +70,7 @@ export default function CalendarEvent({
     onClick?.(card);
   };
 
-  if (compact && isShootSession) {
+  if (isShootSession) {
     return (
       <CalendarDayCard
         accentColor={clientColor}
@@ -82,6 +81,7 @@ export default function CalendarEvent({
         title={`${card.title}${card.shootSessionCount > 1 ? ` · ${card.shootSessionCount} items` : ''}`}
         onClick={handleClick}
         titleAttr={`${card.client} shoot${sessionTimeLabel ? ` · ${sessionTimeLabel}` : ''}`}
+        dense
       />
     );
   }
@@ -91,114 +91,51 @@ export default function CalendarEvent({
     onRemove?.(card);
   };
 
-  if (compact) {
-    const timeLabel = card.dueTime
-      ? `${formatTime(card.dueTime)}${hasStorySchedule ? ' ↻' : ''}`
-      : hasStorySchedule
-        ? `↻ ${scheduleSummary || 'recurring'}`
-        : '';
-
-    return (
-      <div className="relative">
-        {onRemove && (
-          <button
-            type="button"
-            onClick={handleRemove}
-            className="absolute right-0.5 top-0.5 z-10 rounded px-1 text-[9px] font-medium text-red-300/80 hover:bg-red-500/20 hover:text-red-300"
-            aria-label={`Remove ${card.title} from calendar`}
-          >
-            ×
-          </button>
-        )}
-        <CalendarDayCard
-          accentColor={clientColor}
-          surfaceStyle={contentTypeCardStyle(typeStyle)}
-          clientLabel={card.client}
-          hideClient={hideClient}
-          timeLabel={timeLabel}
-          badgeLabel={showBoardStatus ? boardStatus : ''}
-          badgeClassName={`font-semibold ${statusClass}`}
-          typeLabel={card.contentType}
-          typeLabelProps={contentTypeLabelProps(
-            typeStyle,
-            'text-[10px] font-semibold uppercase tracking-wide',
-          )}
-          title={card.title}
-          titleLink={card.dropboxLink}
-          titleClassName={`block font-medium leading-snug text-[#f9f6f2] ${
-            fullTitle ? 'whitespace-normal text-[12px]' : 'truncate text-[11px]'
-          }`}
-          onClick={() => onClick?.(card)}
-          titleAttr={eventTitle}
-          opacity={isPosted ? 0.72 : 1}
-          dense
-          className={`${highlighted ? 'ring-1 ring-white/30' : ''} ${
-            canDrag ? 'cursor-grab active:cursor-grabbing' : ''
-          } ${onRemove ? 'pr-5' : ''}`}
-          dragProps={dragProps}
-        />
-      </div>
-    );
-  }
+  const timeLabel = card.dueTime
+    ? `${formatTime(card.dueTime)}${hasStorySchedule ? ' ↻' : ''}`
+    : hasStorySchedule
+      ? `↻ ${scheduleSummary || 'recurring'}`
+      : scheduleSummary || '';
 
   return (
-    <div
-      {...dragProps}
-      className={`group/event relative w-full rounded-lg border border-white/8 text-left transition hover:brightness-110 ${
-        canDrag ? 'cursor-grab active:cursor-grabbing' : ''
-      }`}
-      style={{
-        ...contentTypeCardStyle(typeStyle),
-        opacity: isPosted ? 0.78 : 1,
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => onClick(card)}
-        className="w-full p-2.5 text-left"
-      >
-        <div className="mb-1 flex items-center justify-between gap-1">
-          {!hideClient && (
-            <span
-              className="truncate text-xs font-semibold"
-              style={{ color: clientColor }}
-            >
-              {card.client}
-            </span>
-          )}
-          <div className={`flex shrink-0 items-center gap-1${hideClient ? ' ml-auto' : ''}`}>
-            {showBoardStatus && (
-              <span className={`text-[9px] font-semibold ${statusClass}`}>{boardStatus}</span>
-            )}
-            <span {...contentTypePillProps(typeStyle, 'rounded-full px-1.5 py-0.5 text-[10px] font-semibold')}>
-              {card.contentType}
-            </span>
-          </div>
-        </div>
-        <CardTitleLink
-          title={card.title}
-          dropboxLink={card.dropboxLink}
-          className="line-clamp-2 block text-xs font-medium leading-snug text-white"
-        />
-        {(card.dueTime || scheduleSummary || (!hideClient && card.assignedTo)) && (
-          <p className="mt-1 truncate text-[10px] text-gray-500">
-            {card.dueTime ? `${formatTime(card.dueTime)}` : ""}
-            {card.dueTime && scheduleSummary ? " · " : ""}
-            {scheduleSummary ? `${scheduleSummary}` : ""}
-            {(card.dueTime || scheduleSummary) && !hideClient && card.assignedTo ? " · " : ""}
-            {!hideClient && card.assignedTo ? `${PLATFORM_ICON} ${card.assignedTo}` : ""}
-          </p>
-        )}
-      </button>
+    <div className="relative min-w-0">
       {onRemove && (
         <button
           type="button"
           onClick={handleRemove}
-          className="absolute right-2 top-2 rounded border border-red-500/20 px-1.5 py-0.5 text-[10px] font-medium text-red-300/80 transition hover:bg-red-500/10 hover:text-red-300"
+          className="absolute right-0.5 top-0.5 z-10 rounded px-1 text-[9px] font-medium text-red-300/80 hover:bg-red-500/20 hover:text-red-300"
+          aria-label={`Remove ${card.title} from calendar`}
         >
-          Remove
+          ×
         </button>
       )}
+      <CalendarDayCard
+        accentColor={clientColor}
+        surfaceStyle={contentTypeCardStyle(typeStyle)}
+        clientLabel={card.client}
+        hideClient={hideClient}
+        timeLabel={timeLabel}
+        badgeLabel={showBoardStatus ? boardStatus : ''}
+        badgeClassName={`font-semibold ${statusClass}`}
+        typeLabel={card.contentType}
+        typeLabelProps={contentTypeLabelProps(
+          typeStyle,
+          'text-[10px] font-semibold uppercase tracking-wide',
+        )}
+        title={card.title}
+        titleLink={card.dropboxLink}
+        titleClassName={`block min-w-0 font-medium leading-snug text-[#f9f6f2] ${
+          fullTitle ? 'whitespace-normal text-[12px]' : 'truncate text-[11px]'
+        }`}
+        onClick={() => onClick?.(card)}
+        titleAttr={eventTitle}
+        opacity={isPosted ? 0.72 : 1}
+        dense
+        className={`min-w-0 ${highlighted ? 'ring-1 ring-white/30' : ''} ${
+          canDrag ? 'cursor-grab active:cursor-grabbing' : ''
+        } ${onRemove ? 'pr-5' : ''}`}
+        dragProps={dragProps}
+      />
     </div>
   );
 }
