@@ -7,6 +7,7 @@ import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
 import { markPendingRemoved } from '../lib/syncHelpers';
+import { initialSyncCollectionState } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
@@ -49,7 +50,7 @@ function loadAdminTasks() {
 }
 
 export function useAdminTasks() {
-  const [adminTasks, setAdminTasks] = useState(loadAdminTasks);
+  const [adminTasks, setAdminTasks] = useState(() => initialSyncCollectionState(loadAdminTasks));
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;

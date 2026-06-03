@@ -4,7 +4,11 @@ export function pendingRemovedKey(orgId, table) {
   return `medici-pending-removed:${orgId}:${table}`;
 }
 
-function readPendingRemovedStorage(key) {
+export function pendingCreatesKey(orgId, table) {
+  return `medici-pending-creates:${orgId}:${table}`;
+}
+
+function readStringSetStorage(key) {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return [];
@@ -15,18 +19,45 @@ function readPendingRemovedStorage(key) {
   }
 }
 
-export function loadPendingRemoved(orgId, table) {
-  const key = pendingRemovedKey(orgId, table);
-  return new Set(readPendingRemovedStorage(key));
-}
-
-export function savePendingRemoved(orgId, table, ids) {
-  const key = pendingRemovedKey(orgId, table);
+function writeStringSetStorage(key, ids) {
   if (!ids.size) {
     localStorage.removeItem(key);
     return;
   }
   localStorage.setItem(key, JSON.stringify([...ids]));
+}
+
+export function loadPendingRemoved(orgId, table) {
+  const key = pendingRemovedKey(orgId, table);
+  return new Set(readStringSetStorage(key));
+}
+
+export function savePendingRemoved(orgId, table, ids) {
+  writeStringSetStorage(pendingRemovedKey(orgId, table), ids);
+}
+
+/** Records created locally that have not finished uploading yet. */
+export function loadPendingCreates(orgId, table) {
+  return new Set(readStringSetStorage(pendingCreatesKey(orgId, table)));
+}
+
+export function savePendingCreates(orgId, table, ids) {
+  writeStringSetStorage(pendingCreatesKey(orgId, table), ids);
+}
+
+export function markPendingCreates(orgId, table, ids) {
+  if (!orgId || !table || !ids?.length) return new Set();
+  const pending = loadPendingCreates(orgId, table);
+  for (const id of ids) pending.add(String(id));
+  savePendingCreates(orgId, table, pending);
+  return pending;
+}
+
+export function unmarkPendingCreates(orgId, table, ids) {
+  if (!orgId || !table || !ids?.length) return;
+  const pending = loadPendingCreates(orgId, table);
+  for (const id of ids) pending.delete(String(id));
+  savePendingCreates(orgId, table, pending);
 }
 
 /** Tombstone deletes immediately so cloud pulls cannot resurrect them before push runs. */
@@ -36,6 +67,34 @@ export function markPendingRemoved(orgId, table, ids) {
   for (const id of ids) pending.add(String(id));
   savePendingRemoved(orgId, table, pending);
   return pending;
+}
+
+/** Pull unsynced local creates from cache when initial React state starts empty. */
+export function augmentLocalWithPendingCreates(localItems, loadLocal, getId, pendingLocalCreates) {
+  if (!loadLocal || !pendingLocalCreates?.size) return localItems;
+  const localById = new Map(localItems.map((record) => [String(getId(record)), record]));
+  const cache = loadLocal();
+  if (!Array.isArray(cache)) return localItems;
+
+  const augmented = [...localItems];
+  for (const record of cache) {
+    const id = String(getId(record));
+    if (!pendingLocalCreates.has(id) || localById.has(id)) continue;
+    augmented.push(record);
+  }
+  return augmented;
+}
+
+/** Pull unsynced local map entries from cache when initial React state starts empty. */
+export function augmentLocalMapWithPendingCreates(localMap, loadLocal, pendingLocalCreates) {
+  if (!loadLocal || !pendingLocalCreates?.size) return localMap || {};
+  const cache = loadLocal() || {};
+  const merged = { ...(localMap || {}) };
+  for (const key of pendingLocalCreates) {
+    if (merged[key] !== undefined || cache[key] === undefined) continue;
+    merged[key] = cache[key];
+  }
+  return merged;
 }
 
 export async function fetchRowsWithTimeout(store) {
@@ -123,8 +182,10 @@ export function mergeRemoteListWithLocalPending({
   syncedSnapshot,
   localItems,
   pendingRemoved,
+  pendingLocalCreates,
 }) {
   const synced = syncedSnapshot || new Map();
+  const pendingCreates = pendingLocalCreates || new Set();
   const localById = new Map(localItems.map((record) => [String(getId(record)), record]));
   const remoteIds = new Set();
 
@@ -154,6 +215,8 @@ export function mergeRemoteListWithLocalPending({
     if (pendingRemoved.has(id) || remoteIds.has(id)) continue;
     // Was synced before but gone from cloud — drop stale localStorage copy.
     if (synced.has(id)) continue;
+    // Only keep local-only rows that were explicitly created this session and not yet uploaded.
+    if (!pendingCreates.has(id)) continue;
     merged.push(local);
   }
 
@@ -166,8 +229,10 @@ export function mergeRemoteMapWithLocalPending({
   syncedSnapshot,
   localMap,
   pendingRemoved,
+  pendingLocalCreates,
 }) {
   const synced = syncedSnapshot || new Map();
+  const pendingCreates = pendingLocalCreates || new Set();
   const local = localMap || {};
   const remote = remoteMap || {};
   const remoteKeys = new Set(Object.keys(remote));
@@ -199,6 +264,8 @@ export function mergeRemoteMapWithLocalPending({
 
   for (const [key, localValue] of Object.entries(local)) {
     if (pendingRemoved.has(key) || remoteKeys.has(key)) continue;
+    if (synced.has(key)) continue;
+    if (!pendingCreates.has(key)) continue;
     merged[key] = localValue;
   }
 

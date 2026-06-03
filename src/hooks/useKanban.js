@@ -3,6 +3,7 @@ import { STORAGE_KEY, COLUMNS, PLATFORM, createCard, EDITOR_TODO_STORAGE_KEY, is
 import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
+import { initialSyncCollectionState } from '../lib/syncInitialState';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
 import { markPendingRemoved } from '../lib/syncHelpers';
@@ -160,7 +161,7 @@ function canMoveCardToColumn(card, targetColumnId) {
 }
 
 export function useKanban() {
-  const [cards, setCards] = useState(loadCards);
+  const [cards, setCards] = useState(() => initialSyncCollectionState(loadCards));
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;

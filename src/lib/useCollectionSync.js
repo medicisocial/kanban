@@ -5,13 +5,18 @@ import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupa
 import { pushStaffSync } from './staffSyncApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import {
+  augmentLocalWithPendingCreates,
   fetchRowsWithTimeout,
+  loadPendingCreates,
   loadPendingRemoved,
+  markPendingCreates,
   markPendingRemoved,
   mergeRemoteListWithLocalPending,
   mergeRemoteRecordWithLocal,
   recordsMatchSnapshot,
+  savePendingCreates,
   savePendingRemoved,
+  unmarkPendingCreates,
 } from './syncHelpers';
 
 const REALTIME_REFETCH_DEBOUNCE_MS = 350;
@@ -59,6 +64,7 @@ export function useCollectionSync({
   const loadedRef = useRef(!SUPABASE_ENABLED);
   const pendingWriteRef = useRef(false);
   const pendingRemovedRef = useRef(new Set());
+  const pendingLocalCreatesRef = useRef(new Set());
   const localItemsRef = useRef(items);
   const [writeNonce, setWriteNonce] = useState(0);
 
@@ -90,6 +96,7 @@ export function useCollectionSync({
     applyingRemoteRef.current = false;
     loadedRef.current = false;
     pendingRemovedRef.current = loadPendingRemoved(orgId, table);
+    pendingLocalCreatesRef.current = loadPendingCreates(orgId, table);
 
     const store = storeRef.current;
     let active = true;
@@ -98,6 +105,7 @@ export function useCollectionSync({
     const applyRemote = async () => {
       try {
         pendingRemovedRef.current = loadPendingRemoved(orgId, table);
+    pendingLocalCreatesRef.current = loadPendingCreates(orgId, table);
 
         const rows = await fetchRowsWithTimeout(store);
         if (!active) return;
@@ -197,8 +205,14 @@ export function useCollectionSync({
           remoteItems: keptItems,
           getId,
           syncedSnapshot: previousSynced,
-          localItems: localItemsRef.current,
+          localItems: augmentLocalWithPendingCreates(
+            localItemsRef.current,
+            loadLocal,
+            getId,
+            pendingLocalCreatesRef.current,
+          ),
           pendingRemoved: pendingRemovedRef.current,
+          pendingLocalCreates: pendingLocalCreatesRef.current,
         });
         const hasUnsyncedLocalChanges = !recordsMatchSnapshot(
           mergedItems,
@@ -217,7 +231,11 @@ export function useCollectionSync({
       } catch (err) {
         console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
         if (loadLocal && isLegacyOrg) {
-          const local = excludePendingRemoved(loadLocal(), getId, pendingRemovedRef.current);
+          const local = excludePendingRemoved(
+            augmentLocalWithPendingCreates([], loadLocal, getId, pendingLocalCreatesRef.current),
+            getId,
+            pendingRemovedRef.current,
+          );
           if (local.length) {
             applyingRemoteRef.current = true;
             syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
@@ -245,6 +263,7 @@ export function useCollectionSync({
       if (rowOrg && rowOrg !== orgId) return;
 
       pendingRemovedRef.current = loadPendingRemoved(orgId, table);
+    pendingLocalCreatesRef.current = loadPendingCreates(orgId, table);
 
       const mapRow = (row) => {
         const base = normalize ? normalize(row.data ?? row) : row.data ?? row;
@@ -377,7 +396,22 @@ export function useCollectionSync({
 
       if (removed.length) {
         markPendingRemoved(orgId, table, removed);
-        for (const id of removed) pendingRemovedRef.current.add(String(id));
+        unmarkPendingCreates(orgId, table, removed);
+        for (const id of removed) {
+          pendingRemovedRef.current.add(String(id));
+          pendingLocalCreatesRef.current.delete(String(id));
+        }
+      }
+
+      const newIds = [];
+      for (const record of items) {
+        const id = String(getId(record));
+        if (!prev.has(id)) newIds.push(id);
+      }
+      if (newIds.length) {
+        markPendingCreates(orgId, table, newIds);
+        for (const id of newIds) pendingLocalCreatesRef.current.add(String(id));
+        savePendingCreates(orgId, table, pendingLocalCreatesRef.current);
       }
 
       if (!changed.length && !removed.length) return;
@@ -411,7 +445,11 @@ export function useCollectionSync({
 
         if (!cancelled) {
           for (const id of removed) pendingRemovedRef.current.delete(String(id));
+          for (const id of [...pendingLocalCreatesRef.current]) {
+            if (next.has(id)) pendingLocalCreatesRef.current.delete(id);
+          }
           savePendingRemoved(orgId, table, pendingRemovedRef.current);
+          savePendingCreates(orgId, table, pendingLocalCreatesRef.current);
           syncedRef.current = next;
           pendingWriteRef.current = false;
         }

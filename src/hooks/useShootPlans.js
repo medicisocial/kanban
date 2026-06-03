@@ -7,6 +7,7 @@ import { SUPABASE_ENABLED } from "../lib/supabaseClient";
 import { useMapSync } from "../lib/useMapSync";
 import { pushStaffSyncRows } from "../lib/staffSyncApi";
 import { markPendingRemoved } from "../lib/syncHelpers";
+import { initialSyncMapState } from "../lib/syncInitialState";
 import { getOrgId } from "../lib/orgSession";
 import { readOrgScopedJson, writeOrgScopedJson } from "../lib/orgStorage";
 
@@ -49,7 +50,7 @@ function createPlan(client, dateKey) {
 }
 
 export function useShootPlans() {
-  const [plans, setPlans] = useState(loadPlans);
+  const [plans, setPlans] = useState(() => initialSyncMapState(loadPlans));
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;

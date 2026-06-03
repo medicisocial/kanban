@@ -12,6 +12,7 @@ import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
 import { markPendingRemoved } from '../lib/syncHelpers';
+import { initialSyncCollectionState } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
@@ -41,7 +42,7 @@ function loadTeamMembers() {
 }
 
 export function useTeamMembers() {
-  const [teamMembers, setTeamMembers] = useState(loadTeamMembers);
+  const [teamMembers, setTeamMembers] = useState(() => initialSyncCollectionState(loadTeamMembers));
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;

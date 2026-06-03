@@ -11,6 +11,7 @@ import { SUPABASE_ENABLED } from "../lib/supabaseClient";
 import { useCollectionSync } from "../lib/useCollectionSync";
 import { pushStaffSync, pushStaffSyncRecords } from "../lib/staffSyncApi";
 import { markPendingRemoved } from "../lib/syncHelpers";
+import { initialSyncCollectionState } from "../lib/syncInitialState";
 import { getOrgId } from "../lib/orgSession";
 import { readOrgScopedJson, writeOrgScopedJson } from "../lib/orgStorage";
 
@@ -64,7 +65,7 @@ function loadIdeas() {
 }
 
 export function useVideoIdeas() {
-  const [ideas, setIdeas] = useState(loadIdeas);
+  const [ideas, setIdeas] = useState(() => initialSyncCollectionState(loadIdeas));
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;

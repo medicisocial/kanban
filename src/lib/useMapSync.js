@@ -7,12 +7,17 @@ import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupa
 import { pushStaffSyncRows } from './staffSyncApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import {
+  augmentLocalMapWithPendingCreates,
   fetchRowsWithTimeout,
+  loadPendingCreates,
   loadPendingRemoved,
+  markPendingCreates,
   markPendingRemoved,
   mapMatchesSnapshot,
   mergeRemoteMapWithLocalPending,
+  savePendingCreates,
   savePendingRemoved,
+  unmarkPendingCreates,
 } from './syncHelpers';
 
 /**
@@ -32,6 +37,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
   const loadedRef = useRef(!SUPABASE_ENABLED);
   const pendingWriteRef = useRef(false);
   const pendingRemovedRef = useRef(new Set());
+  const pendingLocalCreatesRef = useRef(new Set());
   const localMapRef = useRef(map);
   const [writeNonce, setWriteNonce] = useState(0);
 
@@ -59,6 +65,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
     applyingRemoteRef.current = false;
     loadedRef.current = false;
     pendingRemovedRef.current = loadPendingRemoved(orgId, table);
+    pendingLocalCreatesRef.current = loadPendingCreates(orgId, table);
 
     const store = storeRef.current;
     let active = true;
@@ -121,8 +128,13 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
         const mergedMap = mergeRemoteMapWithLocalPending({
           remoteMap,
           syncedSnapshot: previousSynced,
-          localMap: localMapRef.current,
+          localMap: augmentLocalMapWithPendingCreates(
+            localMapRef.current,
+            loadLocal,
+            pendingLocalCreatesRef.current,
+          ),
           pendingRemoved: pendingRemovedRef.current,
+          pendingLocalCreates: pendingLocalCreatesRef.current,
         });
         const hasUnsyncedLocalChanges = !mapMatchesSnapshot(mergedMap, syncedRef.current);
 
@@ -206,8 +218,22 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
 
       if (removed.length) {
         markPendingRemoved(orgId, table, removed);
-        for (const id of removed) pendingRemovedRef.current.add(id);
+        unmarkPendingCreates(orgId, table, removed);
+        for (const id of removed) {
+          pendingRemovedRef.current.add(id);
+          pendingLocalCreatesRef.current.delete(id);
+        }
         savePendingRemoved(orgId, table, pendingRemovedRef.current);
+      }
+
+      const newKeys = [];
+      for (const key of entries.map(([key]) => key)) {
+        if (!prev.has(key)) newKeys.push(key);
+      }
+      if (newKeys.length) {
+        markPendingCreates(orgId, table, newKeys);
+        for (const key of newKeys) pendingLocalCreatesRef.current.add(key);
+        savePendingCreates(orgId, table, pendingLocalCreatesRef.current);
       }
 
       if (!changed.length && !removed.length) return;
@@ -237,7 +263,11 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
 
         if (!cancelled) {
           for (const id of removed) pendingRemovedRef.current.delete(id);
+          for (const key of [...pendingLocalCreatesRef.current]) {
+            if (next.has(key)) pendingLocalCreatesRef.current.delete(key);
+          }
           savePendingRemoved(orgId, table, pendingRemovedRef.current);
+          savePendingCreates(orgId, table, pendingLocalCreatesRef.current);
           syncedRef.current = next;
           pendingWriteRef.current = false;
         }

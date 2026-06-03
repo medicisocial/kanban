@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "check:imports": "node scripts/check-module-imports.mjs",
-    "build": "node scripts/check-module-imports.mjs && vite build",
+    "build": "node scripts/check-module-imports.mjs && node scripts/test-sync-merge.mjs && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
