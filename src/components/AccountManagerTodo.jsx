@@ -449,7 +449,8 @@ export default function AccountManagerTodo({
         </label>
       </div>
 
-      <div className="mx-auto grid max-w-[2200px] grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-4 xl:items-start">
+      <div className="overflow-x-auto pb-1">
+        <div className="mx-auto grid max-w-[2200px] grid-cols-1 gap-4 lg:min-w-[920px] lg:grid-cols-4 lg:items-start">
         <PortalTaskSection
           title="Set post date"
           subtitle="Pipeline cards missing a target publish date."
@@ -559,6 +560,7 @@ export default function AccountManagerTodo({
             />
           )}
         </PortalTaskSection>
+        </div>
       </div>
 
       {needsEditsCard && (

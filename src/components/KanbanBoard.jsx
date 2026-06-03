@@ -171,7 +171,13 @@ export default function KanbanBoard({
         </div>
       )}
 
-      <div className={`flex w-full justify-center overflow-x-auto ${embedded ? 'pb-2' : 'scroll-px-4 pb-6 sm:scroll-px-6'}`}>
+      <div
+        className={`kanban-board-scroll flex w-full overflow-x-auto overscroll-x-contain ${
+          embedded
+            ? 'pb-2 md:-mx-8 md:scroll-px-8 md:px-8 lg:-mx-10 lg:scroll-px-10 lg:px-10'
+            : 'scroll-px-4 pb-6 sm:scroll-px-6'
+        }`}
+      >
         <div className="flex w-max gap-3 px-1">
           {visibleGroups.map((group) => {
               const isArchive = group.collapsible;

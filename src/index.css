@@ -1969,7 +1969,15 @@ textarea:focus::placeholder {
   min-height: 520px;
 }
 
+.kanban-board-scroll {
+  justify-content: flex-start;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-gutter: stable;
+}
+
 .kanban-stage {
+  scroll-snap-align: start;
   display: flex;
   width: min(85vw, 280px);
   min-width: min(85vw, 280px);
@@ -1980,6 +1988,27 @@ textarea:focus::placeholder {
 .kanban-stage-wide {
   width: min(92vw, 540px);
   min-width: min(92vw, 540px);
+}
+
+@media (min-width: 1024px) {
+  .kanban-stage {
+    width: 280px;
+    min-width: 280px;
+  }
+
+  .kanban-stage-wide {
+    width: 540px;
+    min-width: 540px;
+  }
+
+  .kanban-column-lane,
+  .kanban-column-lane-embedded {
+    min-height: min(calc(100dvh - 280px), 720px);
+  }
+
+  .kanban-archive-collapsed {
+    min-height: min(calc(100dvh - 280px), 720px);
+  }
 }
 
 .kanban-stage-header {
@@ -2097,6 +2126,10 @@ textarea:focus::placeholder {
   flex-direction: column;
   min-height: inherit;
   transition: background-color 0.2s ease;
+}
+
+.kanban-column-lane-embedded {
+  min-height: 420px;
 }
 
 .kanban-column-lane-solo {

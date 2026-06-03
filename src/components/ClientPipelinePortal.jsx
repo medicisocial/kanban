@@ -25,7 +25,7 @@ export default function ClientPipelinePortal({ cards, clientColor, embedded = fa
   const filteredCards = pipelineCards;
 
   const content = (
-    <div className="flex w-full justify-center overflow-x-auto pb-2">
+    <div className="kanban-board-scroll flex w-full overflow-x-auto overscroll-x-contain pb-2 md:-mx-8 md:scroll-px-8 md:px-8 lg:-mx-10 lg:scroll-px-10 lg:px-10">
       <div className="flex w-max gap-3 px-1">
       {CLIENT_PIPELINE_COLUMNS.map((column) => {
         const columnCards = sortPipelineCards(

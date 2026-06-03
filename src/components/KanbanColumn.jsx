@@ -21,9 +21,9 @@ export default function KanbanColumn({
     <div
       ref={setNodeRef}
       className={`kanban-column-lane ${solo ? 'kanban-column-lane-solo' : ''} ${
-        isOver ? 'kanban-column-lane-over' : ''
-      }`}
-      style={{ minHeight: embedded ? '420px' : 'calc(100vh - 240px)' }}
+        embedded ? 'kanban-column-lane-embedded' : ''
+      } ${isOver ? 'kanban-column-lane-over' : ''}`}
+      style={embedded ? undefined : { minHeight: 'calc(100vh - 240px)' }}
     >
       {!solo && (
         <div className="kanban-column-sublabel">
