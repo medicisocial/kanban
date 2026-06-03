@@ -114,7 +114,7 @@ export default function CalendarMonthView({
                     )}
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     {dayCards.length === 0 && markedLabel && inMonth && (
                       <p className="px-1 text-[10px] font-medium text-[#fca5a5]/80">{markedLabel}</p>
                     )}

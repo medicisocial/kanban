@@ -104,7 +104,7 @@ export default function CalendarEvent({
           <button
             type="button"
             onClick={handleRemove}
-            className="absolute right-1 top-1 z-10 rounded px-1 text-[11px] font-medium leading-none text-red-300/80 hover:bg-red-500/20 hover:text-red-300"
+            className="absolute right-0.5 top-0.5 z-10 rounded px-1 text-[9px] font-medium text-red-300/80 hover:bg-red-500/20 hover:text-red-300"
             aria-label={`Remove ${card.title} from calendar`}
           >
             ×
@@ -121,12 +121,12 @@ export default function CalendarEvent({
           typePill={card.contentType}
           typePillProps={contentTypePillProps(
             typeStyle,
-            'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+            'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
           )}
           title={card.title}
           titleLink={card.dropboxLink}
-          titleClassName={`block font-medium leading-snug text-[#f9f6f2] ${
-            fullTitle ? 'whitespace-normal text-[14px]' : 'truncate text-[12px]'
+          titleClassName={`block font-medium text-[#f9f6f2] ${
+            fullTitle ? 'whitespace-normal text-[11px] leading-snug' : 'truncate text-[10px]'
           }`}
           onClick={() => onClick?.(card)}
           titleAttr={eventTitle}

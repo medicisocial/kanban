@@ -27,13 +27,13 @@ export default function CalendarDayCard({
   };
 
   const shellClass = dense
-    ? 'group/event relative mb-1 w-full cursor-pointer rounded-lg border border-white/8 px-2 py-1 text-left leading-snug transition hover:brightness-110'
+    ? 'group/event relative mb-1 w-full cursor-pointer rounded-lg border border-white/8 px-1.5 py-1 text-left transition hover:brightness-110'
     : 'group/event relative mb-1 w-full cursor-pointer rounded-lg border border-white/8 px-1.5 py-1 text-left transition hover:brightness-110';
 
   const metaRow = (badgeLabel || (typePill && typePillProps)) && (
-    <div className="mb-1 flex flex-wrap items-center gap-1.5">
+    <div className={`flex flex-wrap items-center ${dense ? 'mb-0.5 gap-1' : 'mb-1 gap-1.5'}`}>
       {badgeLabel && (
-        <span className={`truncate text-[11px] ${badgeClassName}`.trim()}>{badgeLabel}</span>
+        <span className={`truncate ${dense ? 'text-[9px]' : 'text-[11px]'} ${badgeClassName}`.trim()}>{badgeLabel}</span>
       )}
       {typePill && typePillProps && (
         <span className={typePillProps.className} style={typePillProps.style}>
@@ -65,17 +65,17 @@ export default function CalendarDayCard({
       {dense ? (
         <>
           {((!hideClient && clientLabel) || timeLabel) && (
-            <div className="mb-1 flex items-center justify-between gap-1.5">
+            <div className="mb-0.5 flex items-center justify-between gap-1">
               {!hideClient && clientLabel && (
                 <span
-                  className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-wide"
+                  className="min-w-0 truncate text-[9px] font-semibold uppercase tracking-wide"
                   style={{ color: accentColor }}
                 >
                   {clientLabel}
                 </span>
               )}
               {timeLabel && (
-                <span className="shrink-0 text-[11px] font-medium text-gray-400">{timeLabel}</span>
+                <span className="shrink-0 text-[9px] font-medium text-gray-400">{timeLabel}</span>
               )}
             </div>
           )}
