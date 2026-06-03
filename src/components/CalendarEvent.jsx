@@ -1,5 +1,5 @@
 import { COLUMNS, getContentTypeStyle, PLATFORM_ICON } from "../constants";
-import { contentTypeCardStyle, contentTypePillProps } from "../utils/contentTypeColors";
+import { contentTypeCardStyle, contentTypeLabelProps, contentTypePillProps } from "../utils/contentTypeColors";
 import { useClientsContext } from "../context/ClientsContext";
 import { formatTime } from "../utils";
 import { formatStoryScheduleSummary, hasStoryDailyRange, hasStoryRecurrence, isCalendarEventPosted } from "../utils/calendar";
@@ -118,15 +118,15 @@ export default function CalendarEvent({
           timeLabel={timeLabel}
           badgeLabel={showBoardStatus ? boardStatus : ''}
           badgeClassName={`font-semibold ${statusClass}`}
-          typePill={card.contentType}
-          typePillProps={contentTypePillProps(
+          typeLabel={card.contentType}
+          typeLabelProps={contentTypeLabelProps(
             typeStyle,
-            'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+            'text-[10px] font-semibold uppercase tracking-wide',
           )}
           title={card.title}
           titleLink={card.dropboxLink}
-          titleClassName={`block font-medium text-[#f9f6f2] ${
-            fullTitle ? 'whitespace-normal text-[11px] leading-snug' : 'truncate text-[10px]'
+          titleClassName={`block font-medium leading-snug text-[#f9f6f2] ${
+            fullTitle ? 'whitespace-normal text-[12px]' : 'truncate text-[11px]'
           }`}
           onClick={() => onClick?.(card)}
           titleAttr={eventTitle}
