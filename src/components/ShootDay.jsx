@@ -17,7 +17,9 @@ import { useClientsContext } from '../context/ClientsContext';
 import ShootDayDetail from './ShootDayDetail';
 import ShootDayMonthView from './ShootDayMonthView';
 import AddShootDayModal from './AddShootDayModal';
+import CalendarZoomControls, { CalendarZoomViewport } from './CalendarZoomControls';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
+import { useCalendarZoom, CALENDAR_ZOOM_STORAGE_KEYS } from '../hooks/useCalendarZoom';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, surfacePanelClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 
 export default function ShootDay({
@@ -44,6 +46,7 @@ export default function ShootDay({
   const [viewMode, setViewMode] = useState('month');
   const [shootModal, setShootModal] = useState(null);
   const [pinnedClient, setPinnedClient] = useState(null);
+  const { zoom, defaultZoom, setZoom } = useCalendarZoom(CALENDAR_ZOOM_STORAGE_KEYS.shoots);
 
   useEffect(() => {
     if (!focusRequest?.dateKey) return;
@@ -188,7 +191,14 @@ export default function ShootDay({
           )}
         </div>
 
-        <div className={`${glassSegmentClass} flex p-0.5 ${embedded ? '' : 'rounded-lg'}`}>
+        <div className={`${glassSegmentClass} flex items-center p-0.5 ${embedded ? '' : 'rounded-lg'}`}>
+          <CalendarZoomControls
+            zoom={zoom}
+            defaultZoom={defaultZoom}
+            onZoomChange={setZoom}
+            embedded={embedded}
+          />
+          <div className="mx-1 w-px self-stretch bg-white/10" />
           <button
             type="button"
             onClick={() => setShootModal({ mode: viewMode === 'day' ? 'item' : 'day' })}
@@ -196,7 +206,7 @@ export default function ShootDay({
           >
             + {viewMode === 'day' ? 'Add item' : 'Add client shoot'}
           </button>
-          <div className="mx-1 w-px bg-white/10" />
+          <div className="mx-1 w-px self-stretch bg-white/10" />
           <button type="button" onClick={() => setViewMode('month')} className={viewBtnClass('month')}>
             Month
           </button>
@@ -215,37 +225,39 @@ export default function ShootDay({
       )}
 
       <div className={embedded ? `${surfacePanelClass} p-4` : ''}>
-        {viewMode === 'day' ? (
-          <ShootDayDetail
-            focusDate={focusDate}
-            dateKey={dateKey}
-            clientGroups={clientGroups}
-            shootCount={shootCards.length}
-            hasShootDay={hasShootDay}
-            cards={cards}
-            onCardClick={onCardClick}
-            onUpdateCard={onUpdateCard}
-            onAddShootDay={() => setShootModal({ mode: 'day' })}
-            onAddShootItem={() => setShootModal({ mode: 'item' })}
-            onAddShootItemForClient={(client) => setShootModal({ mode: 'item', client, lockFields: true })}
-            onAssignExistingToShoot={onAssignExistingToShoot}
-            onAddCardsToShoot={onAddCardsToShoot}
-            getPlan={getPlan}
-            onUpdatePlan={onUpdatePlan}
-            onRemoveFromSchedule={onRemoveFromSchedule}
-            onRemoveClientShoot={onRemoveClientShoot}
-            onMoveClientShootDay={onMoveClientShootDay}
-          />
-        ) : (
-          <ShootDayMonthView
-            focusDate={focusDate}
-            shootsByDate={shootsByDate}
-            plans={visiblePlans}
-            onDayClick={handleDayClick}
-            getPlan={getPlan}
-            onRemoveClientShoot={onRemoveClientShoot}
-          />
-        )}
+        <CalendarZoomViewport zoom={zoom}>
+          {viewMode === 'day' ? (
+            <ShootDayDetail
+              focusDate={focusDate}
+              dateKey={dateKey}
+              clientGroups={clientGroups}
+              shootCount={shootCards.length}
+              hasShootDay={hasShootDay}
+              cards={cards}
+              onCardClick={onCardClick}
+              onUpdateCard={onUpdateCard}
+              onAddShootDay={() => setShootModal({ mode: 'day' })}
+              onAddShootItem={() => setShootModal({ mode: 'item' })}
+              onAddShootItemForClient={(client) => setShootModal({ mode: 'item', client, lockFields: true })}
+              onAssignExistingToShoot={onAssignExistingToShoot}
+              onAddCardsToShoot={onAddCardsToShoot}
+              getPlan={getPlan}
+              onUpdatePlan={onUpdatePlan}
+              onRemoveFromSchedule={onRemoveFromSchedule}
+              onRemoveClientShoot={onRemoveClientShoot}
+              onMoveClientShootDay={onMoveClientShootDay}
+            />
+          ) : (
+            <ShootDayMonthView
+              focusDate={focusDate}
+              shootsByDate={shootsByDate}
+              plans={visiblePlans}
+              onDayClick={handleDayClick}
+              getPlan={getPlan}
+              onRemoveClientShoot={onRemoveClientShoot}
+            />
+          )}
+        </CalendarZoomViewport>
       </div>
 
       {shootModal && (

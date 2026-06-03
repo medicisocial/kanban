@@ -14,7 +14,9 @@ import CalendarWeekView from './CalendarWeekView';
 import CalendarMonthView from './CalendarMonthView';
 import CalendarSharePanel from './CalendarSharePanel';
 import AddCalendarPostModal from './AddCalendarPostModal';
+import CalendarZoomControls, { CalendarZoomViewport } from './CalendarZoomControls';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
+import { useCalendarZoom, CALENDAR_ZOOM_STORAGE_KEYS } from '../hooks/useCalendarZoom';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 
 export default function Calendar({
@@ -33,6 +35,7 @@ export default function Calendar({
   const [viewMode, setViewMode] = useState('month');
   const [showAddModal, setShowAddModal] = useState(false);
   const [addDefaults, setAddDefaults] = useState({ dueDate: '' });
+  const { zoom, defaultZoom, setZoom } = useCalendarZoom(CALENDAR_ZOOM_STORAGE_KEYS.content);
 
   const isStories = calendarTab === 'stories';
 
@@ -139,6 +142,12 @@ export default function Calendar({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <CalendarZoomControls
+            zoom={zoom}
+            defaultZoom={defaultZoom}
+            onZoomChange={setZoom}
+            embedded={embedded}
+          />
           <button type="button" onClick={() => openAddModal()} className={addBtnClass}>
             + {isStories ? 'Add story' : 'Add post'}
           </button>
@@ -162,27 +171,29 @@ export default function Calendar({
       )}
 
       <div className={embedded ? `${surfacePanelClass} p-4` : ''}>
-        {viewMode === 'week' ? (
-          <CalendarWeekView
-            focusDate={focusDate}
-            cardsByDate={cardsByDate}
-            onCardClick={handleCalendarClick}
-            onAddPost={openAddModal}
-            onRemoveFromCalendar={onRemoveFromCalendar}
-            onMoveCalendarPost={onMoveCalendarPost}
-            overviewLabel={overviewLabel}
-          />
-        ) : (
-          <CalendarMonthView
-            focusDate={focusDate}
-            cardsByDate={cardsByDate}
-            onCardClick={handleCalendarClick}
-            onDayClick={handleDayClick}
-            onRemoveFromCalendar={onRemoveFromCalendar}
-            onMoveCalendarPost={onMoveCalendarPost}
-            overviewLabel={overviewLabel}
-          />
-        )}
+        <CalendarZoomViewport zoom={zoom}>
+          {viewMode === 'week' ? (
+            <CalendarWeekView
+              focusDate={focusDate}
+              cardsByDate={cardsByDate}
+              onCardClick={handleCalendarClick}
+              onAddPost={openAddModal}
+              onRemoveFromCalendar={onRemoveFromCalendar}
+              onMoveCalendarPost={onMoveCalendarPost}
+              overviewLabel={overviewLabel}
+            />
+          ) : (
+            <CalendarMonthView
+              focusDate={focusDate}
+              cardsByDate={cardsByDate}
+              onCardClick={handleCalendarClick}
+              onDayClick={handleDayClick}
+              onRemoveFromCalendar={onRemoveFromCalendar}
+              onMoveCalendarPost={onMoveCalendarPost}
+              overviewLabel={overviewLabel}
+            />
+          )}
+        </CalendarZoomViewport>
       </div>
 
       {showAddModal && (

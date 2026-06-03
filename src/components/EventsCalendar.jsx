@@ -11,6 +11,8 @@ import { formatTimeRange } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import EventsMonthView from './EventsMonthView';
 import IndustryEventModal from './IndustryEventModal';
+import CalendarZoomControls, { CalendarZoomViewport } from './CalendarZoomControls';
+import { useCalendarZoom, CALENDAR_ZOOM_STORAGE_KEYS } from '../hooks/useCalendarZoom';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass, statusBadgeClass } from './clientPortal/clientPortalUi';
 
 export default function EventsCalendar({
@@ -28,6 +30,7 @@ export default function EventsCalendar({
 }) {
   const [focusDate, setFocusDate] = useState(() => getDefaultCalendarDate());
   const [modal, setModal] = useState(null);
+  const { zoom, defaultZoom, setZoom } = useCalendarZoom(CALENDAR_ZOOM_STORAGE_KEYS.events);
 
   const effectiveClientFilter = scopedBrand || clientFilter;
   const showAllClients = !clientMode && !scopedBrand && effectiveClientFilter === 'all';
@@ -87,19 +90,29 @@ export default function EventsCalendar({
             Next →
           </button>
         </div>
-        <button type="button" onClick={() => openAdd()} className={`${btnPrimaryClass} text-[11px]`}>
-          + Log event
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <CalendarZoomControls
+            zoom={zoom}
+            defaultZoom={defaultZoom}
+            onZoomChange={setZoom}
+            embedded={embedded}
+          />
+          <button type="button" onClick={() => openAdd()} className={`${btnPrimaryClass} text-[11px]`}>
+            + Log event
+          </button>
+        </div>
       </div>
 
       <div className={`${embedded ? surfacePanelClass : ''} ${embedded ? 'p-4' : ''}`}>
-        <EventsMonthView
-          focusDate={focusDate}
-          eventsByDate={eventsByDate}
-          onEventClick={openEdit}
-          onDayClick={handleDayClick}
-          showClientName={showAllClients}
-        />
+        <CalendarZoomViewport zoom={zoom}>
+          <EventsMonthView
+            focusDate={focusDate}
+            eventsByDate={eventsByDate}
+            onEventClick={openEdit}
+            onDayClick={handleDayClick}
+            showClientName={showAllClients}
+          />
+        </CalendarZoomViewport>
       </div>
 
       {upcoming.length > 0 && (

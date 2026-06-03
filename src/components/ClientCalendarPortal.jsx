@@ -22,6 +22,8 @@ import CardTitleLink from './CardTitleLink';
 import { formatTime } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import SharePortalShell from './clientPortal/SharePortalShell';
+import CalendarZoomControls, { CalendarZoomViewport } from './CalendarZoomControls';
+import { useCalendarZoom, CALENDAR_ZOOM_STORAGE_KEYS } from '../hooks/useCalendarZoom';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 
 function ClientCalendarDetail({ card, onClose }) {
@@ -123,6 +125,7 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
   const [focusDate, setFocusDate] = useState(() => getDefaultCalendarDate());
   const [viewMode, setViewMode] = useState('month');
   const [selectedCard, setSelectedCard] = useState(null);
+  const { zoom, defaultZoom, setZoom } = useCalendarZoom(CALENDAR_ZOOM_STORAGE_KEYS.content);
 
   const visibleCards = useMemo(() => {
     const snapshot = parseCalendarShareHash();
@@ -196,44 +199,54 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
           </button>
         </div>
 
-        <div className={`${glassSegmentClass} flex p-0.5 ${embedded ? '' : 'rounded-lg'}`}>
-          <button
-            type="button"
-            onClick={() => setViewMode('month')}
-            className={viewTabClass(viewMode === 'month')}
-          >
-            Month
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('week')}
-            className={viewTabClass(viewMode === 'week')}
-          >
-            Week
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <CalendarZoomControls
+            zoom={zoom}
+            defaultZoom={defaultZoom}
+            onZoomChange={setZoom}
+            embedded
+          />
+          <div className={`${glassSegmentClass} flex p-0.5 ${embedded ? '' : 'rounded-lg'}`}>
+            <button
+              type="button"
+              onClick={() => setViewMode('month')}
+              className={viewTabClass(viewMode === 'month')}
+            >
+              Month
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('week')}
+              className={viewTabClass(viewMode === 'week')}
+            >
+              Week
+            </button>
+          </div>
         </div>
       </div>
 
       <div className={`${surfacePanelClass} p-4`}>
-        {viewMode === 'week' ? (
-          <CalendarWeekView
-            focusDate={focusDate}
-            cardsByDate={cardsByDate}
-            onCardClick={setSelectedCard}
-            hideClient
-            clientPortal
-          />
-        ) : (
-          <CalendarMonthView
-            focusDate={focusDate}
-            cardsByDate={cardsByDate}
-            onCardClick={setSelectedCard}
-            onDayClick={handleDayClick}
-            hideClient
-            clientPortal
-            maxVisibleCards={5}
-          />
-        )}
+        <CalendarZoomViewport zoom={zoom}>
+          {viewMode === 'week' ? (
+            <CalendarWeekView
+              focusDate={focusDate}
+              cardsByDate={cardsByDate}
+              onCardClick={setSelectedCard}
+              hideClient
+              clientPortal
+            />
+          ) : (
+            <CalendarMonthView
+              focusDate={focusDate}
+              cardsByDate={cardsByDate}
+              onCardClick={setSelectedCard}
+              onDayClick={handleDayClick}
+              hideClient
+              clientPortal
+              maxVisibleCards={5}
+            />
+          )}
+        </CalendarZoomViewport>
       </div>
     </>
   );

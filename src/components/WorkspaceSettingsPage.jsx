@@ -1,6 +1,7 @@
 import { useWorkspaceAdmin } from './FilterBar';
 import StaffProfilePhotoPanel from './StaffProfilePhotoPanel';
 import ContentTypeColorsEditor from './ContentTypeColorsEditor';
+import CalendarDefaultZoomSetting from './CalendarDefaultZoomSetting';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
@@ -18,6 +19,8 @@ export default function WorkspaceSettingsPage({ clientFilter, onClientChange }) 
         <StaffProfilePhotoPanel />
 
         <ContentTypeColorsEditor />
+
+        <CalendarDefaultZoomSetting />
 
         <div className={`${surfacePanelClass} p-5`}>
           <h3 className="text-sm font-semibold text-white">Team access</h3>

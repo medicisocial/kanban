@@ -12,10 +12,10 @@ export default function CalendarDropboxLink({ href, size = 'sm', className = '' 
       onClick={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
       title="Open content in Dropbox"
-      className={`mt-1.5 inline-flex max-w-full items-center gap-1 rounded-md border border-sky-400/30 bg-sky-500/10 px-2 py-0.5 font-medium text-sky-300 transition hover:border-sky-400/50 hover:bg-sky-500/20 hover:text-sky-200 ${sizeClass} ${className}`.trim()}
+      className={`mt-1.5 inline-flex w-fit max-w-full flex-nowrap items-center gap-1 rounded-md border border-sky-400/30 bg-sky-500/10 px-2 py-0.5 font-medium text-sky-300 transition hover:border-sky-400/50 hover:bg-sky-500/20 hover:text-sky-200 ${sizeClass} ${className}`.trim()}
     >
-      <span className="truncate">View in Dropbox</span>
-      <span className="shrink-0 opacity-80" aria-hidden="true">
+      <span className="min-w-0 truncate">View in Dropbox</span>
+      <span className="shrink-0 whitespace-nowrap opacity-80" aria-hidden="true">
         ↗
       </span>
     </a>

@@ -141,7 +141,7 @@ export default function CalendarEvent({
         titleClassName={
           clientPortal
             ? undefined
-            : `block min-w-0 font-medium leading-snug text-[#f9f6f2] ${
+            : `min-w-0 font-medium leading-snug text-[#f9f6f2] ${
                 fullTitle || relaxed
                   ? `whitespace-normal ${relaxed ? 'text-[13px]' : 'text-[12px]'}`
                   : 'truncate text-[11px]'

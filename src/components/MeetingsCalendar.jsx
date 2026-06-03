@@ -23,6 +23,8 @@ import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader'
 import MeetingsMonthView from './MeetingsMonthView';
 import MeetingModal from './MeetingModal';
 import MeetingVideoLink from './MeetingVideoLink';
+import CalendarZoomControls, { CalendarZoomViewport } from './CalendarZoomControls';
+import { useCalendarZoom, CALENDAR_ZOOM_STORAGE_KEYS } from '../hooks/useCalendarZoom';
 import { getMeetingVideoLink } from '../utils/meetingLinks';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
@@ -42,6 +44,7 @@ export default function MeetingsCalendar({
 }) {
   const [focusDate, setFocusDate] = useState(() => getDefaultCalendarDate());
   const [modal, setModal] = useState(null);
+  const { zoom, defaultZoom, setZoom } = useCalendarZoom(CALENDAR_ZOOM_STORAGE_KEYS.meetings);
 
   useEffect(() => {
     if (!openMeetingRequest?.meeting) return;
@@ -145,19 +148,30 @@ export default function MeetingsCalendar({
             Next →
           </button>
         </div>
-        <button type="button" onClick={() => openAdd()} className={`${btnPrimaryClass} text-[11px]`}>
-          + Schedule meeting
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <CalendarZoomControls
+            zoom={zoom}
+            defaultZoom={defaultZoom}
+            onZoomChange={setZoom}
+            embedded={embedded}
+          />
+          <button type="button" onClick={() => openAdd()} className={`${btnPrimaryClass} text-[11px]`}>
+            + Schedule meeting
+          </button>
+        </div>
       </div>
 
       <div className={`${embedded ? surfacePanelClass : ''} ${embedded ? 'p-4' : ''}`}>
-        <MeetingsMonthView
-          focusDate={focusDate}
-          meetingsByDate={meetingsByDate}
-          onMeetingClick={openEdit}
-          onDayClick={handleDayClick}
-          showClientName={showAllClients}
-        />
+        <CalendarZoomViewport zoom={zoom}>
+          <MeetingsMonthView
+            focusDate={focusDate}
+            meetingsByDate={meetingsByDate}
+            onMeetingClick={openEdit}
+            onDayClick={handleDayClick}
+            showClientName={showAllClients}
+            clientPortal={clientMode || embedded}
+          />
+        </CalendarZoomViewport>
       </div>
 
       {upcoming.length > 0 && (

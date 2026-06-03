@@ -4,13 +4,17 @@ import {
   isToday,
   formatMonthYear,
 } from '../utils/calendar';
-import { formatTime } from '../utils';
-import { useClientsContext } from '../context/ClientsContext';
-import { getMeetingContactLabel, isRecurringMeeting, isOccurrenceRescheduled } from '../utils/meetingsCalendar';
-import { getMeetingLinkShortLabel, getMeetingVideoLink } from '../utils/meetingLinks';
-import CalendarDayCard from './CalendarDayCard';
+import MeetingCalendarEvent from './MeetingCalendarEvent';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function sortMeetingsByTime(meetings) {
+  return [...meetings].sort((a, b) => {
+    const byTime = (a.time || '99:99').localeCompare(b.time || '99:99');
+    if (byTime !== 0) return byTime;
+    return (a.title || '').localeCompare(b.title || '');
+  });
+}
 
 export default function MeetingsMonthView({
   focusDate,
@@ -20,35 +24,12 @@ export default function MeetingsMonthView({
   onSelectDate,
   selectedDateKey = '',
   showClientName = false,
+  clientPortal = false,
+  maxVisibleCards = 5,
 }) {
-  const { getClientColor } = useClientsContext();
   const year = focusDate.getFullYear();
   const month = focusDate.getMonth();
   const weeks = getMonthWeeks(year, month);
-
-  const getMeetingAccent = (meeting) => {
-    if (meeting.prospectName) return '#fbbf24';
-    if (meeting.client) return getClientColor(meeting.client);
-    return '#f9f6f2';
-  };
-
-  const getMeetingBadge = (meeting) => {
-    const parts = [];
-    if (isRecurringMeeting(meeting)) parts.push('Recurring');
-    if (isOccurrenceRescheduled(meeting)) parts.push('Rescheduled');
-    const video = getMeetingLinkShortLabel(getMeetingVideoLink(meeting));
-    if (video) parts.push(video);
-    return parts.join(' · ');
-  };
-
-  const getMeetingTitleAttr = (meeting) => {
-    const contact = getMeetingContactLabel(meeting);
-    const recurring = isRecurringMeeting(meeting) ? ' ↻' : '';
-    const moved = isOccurrenceRescheduled(meeting) ? ' ↔' : '';
-    const video = getMeetingLinkShortLabel(getMeetingVideoLink(meeting));
-    const videoSuffix = video ? ` · ${video}` : '';
-    return `${contact} · ${meeting.title}${recurring}${moved}${videoSuffix}`;
-  };
 
   return (
     <div className="flex flex-col">
@@ -67,12 +48,12 @@ export default function MeetingsMonthView({
           <div key={wi} className="calendar-grid-row grid grid-cols-7">
             {week.map((day) => {
               const key = toDateKey(day);
-              const dayMeetings = meetingsByDate[key] || [];
+              const dayMeetings = sortMeetingsByTime(meetingsByDate[key] || []);
               const inMonth = day.getMonth() === month;
               const today = isToday(day);
               const selected = selectedDateKey === key;
-              const visibleMeetings = dayMeetings.slice(0, 3);
-              const hiddenCount = Math.max(0, dayMeetings.length - 3);
+              const visibleMeetings = dayMeetings.slice(0, maxVisibleCards);
+              const hiddenCount = Math.max(0, dayMeetings.length - maxVisibleCards);
 
               return (
                 <button
@@ -109,26 +90,16 @@ export default function MeetingsMonthView({
                     )}
                   </div>
 
-                  <div className="space-y-0.5">
-                    {visibleMeetings.map((meeting) => {
-                      const accentColor = getMeetingAccent(meeting);
-                      const contactLabel = getMeetingContactLabel(meeting);
-
-                      return (
-                        <CalendarDayCard
-                          key={meeting.occurrenceKey || meeting.id}
-                          accentColor={accentColor}
-                          clientLabel={contactLabel}
-                          hideClient={Boolean(meeting.client) && !showClientName}
-                          timeLabel={meeting.time ? formatTime(meeting.time) : ''}
-                          badgeLabel={getMeetingBadge(meeting)}
-                          badgeClassName="text-[9px] font-semibold text-sky-300"
-                          title={meeting.title}
-                          onClick={() => onMeetingClick(meeting)}
-                          titleAttr={getMeetingTitleAttr(meeting)}
-                        />
-                      );
-                    })}
+                  <div className={clientPortal ? 'space-y-1.5' : 'space-y-1'}>
+                    {visibleMeetings.map((meeting) => (
+                      <MeetingCalendarEvent
+                        key={meeting.occurrenceKey || meeting.id}
+                        meeting={meeting}
+                        onClick={onMeetingClick}
+                        showClientName={showClientName}
+                        clientPortal={clientPortal}
+                      />
+                    ))}
                     {hiddenCount > 0 && (
                       <p className="px-1 text-[10px] text-gray-500">+{hiddenCount} more</p>
                     )}
