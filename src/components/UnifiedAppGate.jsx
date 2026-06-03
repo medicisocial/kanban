@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { normalizePlanType } from '../constants/plans';
 import { clearClientSession, loadClientSession } from '../utils/clientPortalAuth';
+import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { StaffAuthProvider, useStaffAuth } from '../context/StaffAuthContext';
 import { ClientsProvider } from '../context/ClientsContext';
 import { WorkspaceSyncProvider } from '../context/WorkspaceSyncContext';
@@ -8,8 +9,8 @@ import UnifiedLogin from './UnifiedLogin';
 import MarketingLandingPage from './MarketingLandingPage';
 import PricingPage from './PricingPage';
 
-const AppShell = lazy(() => import('./AppShell'));
-const ClientPortalApp = lazy(() => import('../ClientPortalApp'));
+const AppShell = lazyWithRetry(() => import('./AppShell'));
+const ClientPortalApp = lazyWithRetry(() => import('../ClientPortalApp'));
 
 function GateLoading() {
   return (

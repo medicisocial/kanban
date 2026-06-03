@@ -75,7 +75,7 @@ export function mergeBrandUserDrafts(existingUsers, draftUsers, hashPassword) {
 
       let passwordHash = existing?.passwordHash || '';
       if (draft.password) {
-        passwordHash = await hashPassword(draft.password);
+        passwordHash = await hashPassword(String(draft.password).trim());
       }
 
       const avatar = await resolveUserAvatarDraft(draft.avatar, existing?.avatar);

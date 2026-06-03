@@ -330,7 +330,7 @@ export default function UnifiedLogin({
 
       try {
         await Promise.race([
-          loginClientPortal(loginId, password),
+          loginClientPortal(loginId, password.trim()),
           new Promise((_, reject) => {
             setTimeout(
               () => reject(new Error('Sign-in timed out. Please try again.')),

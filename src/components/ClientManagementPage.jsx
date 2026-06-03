@@ -50,6 +50,7 @@ export default function ClientManagementPage({
     getClientColor,
     getClientLogo,
     getClientBusinessType,
+    getClientPhotoGalleryLink,
     saveClientProfile,
     getClientUsers,
     setClientPortalUsers,
@@ -69,6 +70,7 @@ export default function ClientManagementPage({
   const [activeTab, setActiveTab] = useState(initialTab);
   const [color, setColor] = useState('');
   const [businessType, setBusinessType] = useState('');
+  const [photoGalleryLink, setPhotoGalleryLink] = useState('');
   const [previewSrc, setPreviewSrc] = useState(null);
   const [logoCrop, setLogoCrop] = useState(DEFAULT_LOGO_CROP);
   const [pendingLogo, setPendingLogo] = useState(undefined);
@@ -99,6 +101,7 @@ export default function ClientManagementPage({
     if (!selectedClient) return;
     setColor(getClientColor(selectedClient));
     setBusinessType(getClientBusinessType(selectedClient));
+    setPhotoGalleryLink(getClientPhotoGalleryLink(selectedClient));
     const normalized = normalizeClientLogo(getClientLogo(selectedClient));
     setPreviewSrc(normalized?.src || null);
     setLogoCrop({
@@ -109,7 +112,7 @@ export default function ClientManagementPage({
     setPendingLogo(undefined);
     setProfileError('');
     setProfileMessage('');
-  }, [selectedClient, getClientColor, getClientLogo, getClientBusinessType]);
+  }, [selectedClient, getClientColor, getClientLogo, getClientBusinessType, getClientPhotoGalleryLink]);
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
@@ -157,6 +160,7 @@ export default function ClientManagementPage({
       const result = await saveClientProfile(selectedClient, {
         color,
         businessType,
+        photoGalleryLink,
         logo: logoToSave,
       });
       if (result?.ok === false) {
@@ -186,7 +190,8 @@ export default function ClientManagementPage({
   const hasProfileChanges =
     pendingLogo !== undefined ||
     (selectedClient && color !== getClientColor(selectedClient)) ||
-    (selectedClient && businessType !== getClientBusinessType(selectedClient));
+    (selectedClient && businessType !== getClientBusinessType(selectedClient)) ||
+    (selectedClient && photoGalleryLink !== getClientPhotoGalleryLink(selectedClient));
 
   const handleAddClient = async (name, clientColor, logo) => {
     const result = await addClient(name, clientColor, logo);
@@ -353,6 +358,22 @@ export default function ClientManagementPage({
                 </div>
                 <p className="mt-1.5 text-[10px] text-white/35">
                   Controls which event form this client sees on the Events Calendar.
+                </p>
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                  Photo gallery link
+                </span>
+                <input
+                  type="url"
+                  value={photoGalleryLink}
+                  onChange={(e) => setPhotoGalleryLink(e.target.value)}
+                  placeholder="Paste Dropbox shared folder link…"
+                  className="w-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
+                />
+                <p className="mt-1.5 text-[10px] text-white/35">
+                  Clients see this on the Photos tab in their portal.
                 </p>
               </label>
 

@@ -62,7 +62,7 @@ export default async function handler(req, res) {
   }
 
   const username = req.body?.username?.trim().toLowerCase();
-  const password = req.body?.password || '';
+  const password = String(req.body?.password || '').trim();
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password are required.' });
   }
