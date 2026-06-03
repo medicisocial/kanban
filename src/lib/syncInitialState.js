@@ -1,13 +1,15 @@
 import { SUPABASE_ENABLED } from './supabaseClient';
 
-/** Empty initial state when cloud sync is active — never hydrate lists from cache. */
+/** Hydrate from local cache on boot; cloud sync merges afterward when enabled. */
 export function initialSyncCollectionState(loadLocal) {
-  if (SUPABASE_ENABLED) return [];
   return loadLocal();
 }
 
-/** Empty initial state when cloud sync is active — never hydrate maps from cache. */
+/** Hydrate from local cache on boot; cloud sync merges afterward when enabled. */
 export function initialSyncMapState(loadLocal) {
-  if (SUPABASE_ENABLED) return {};
   return loadLocal();
+}
+
+export function shouldPersistSyncedState(syncLoaded) {
+  return !SUPABASE_ENABLED || syncLoaded;
 }

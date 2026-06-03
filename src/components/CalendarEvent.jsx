@@ -35,7 +35,7 @@ export default function CalendarEvent({
   const showBoardStatus = boardStatus && (!hideClient || isPosted) && (!clientPortal || isPosted);
   const typeLabelClass = clientPortal
     ? ''
-    : 'text-[10px] font-semibold uppercase tracking-wide';
+    : 'text-[11px] font-semibold uppercase tracking-wide';
   const typeLabelPresentation = clientPortal
     ? contentTypeBadgeProps(typeStyle)
     : contentTypeLabelProps(typeStyle, typeLabelClass);
@@ -141,7 +141,7 @@ export default function CalendarEvent({
         titleClassName={
           clientPortal
             ? undefined
-            : `min-w-0 font-medium leading-snug text-[#f9f6f2] ${
+            : `block min-w-0 font-medium leading-snug text-[#f9f6f2] ${
                 fullTitle || relaxed
                   ? `whitespace-normal ${relaxed ? 'text-[13px]' : 'text-[12px]'}`
                   : 'truncate text-[11px]'

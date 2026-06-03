@@ -72,10 +72,6 @@ export default function ContentCreatorTodo({
                     {task.contentType}
                   </span>
                   <span className="tesla-task-card-client" style={{ color: clientColor }}>
-                    <span
-                      className="client-filter-dot client-filter-dot-active"
-                      style={{ '--client-filter-color': clientColor }}
-                    />
                     {task.client}
                   </span>
                 </div>

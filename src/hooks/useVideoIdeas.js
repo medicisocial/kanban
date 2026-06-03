@@ -11,7 +11,7 @@ import { SUPABASE_ENABLED } from "../lib/supabaseClient";
 import { useCollectionSync } from "../lib/useCollectionSync";
 import { pushStaffSync, pushStaffSyncRecords } from "../lib/staffSyncApi";
 import { markPendingRemoved } from "../lib/syncHelpers";
-import { initialSyncCollectionState } from "../lib/syncInitialState";
+import { initialSyncCollectionState, shouldPersistSyncedState } from "../lib/syncInitialState";
 import { getOrgId } from "../lib/orgSession";
 import { readOrgScopedJson, writeOrgScopedJson } from "../lib/orgStorage";
 
@@ -73,7 +73,7 @@ export function useVideoIdeas() {
   }, []);
   useReloadFromStorage(reloadFromStorage);
 
-  useCollectionSync({
+  const syncLoaded = useCollectionSync({
     table: 'video_ideas',
     items: ideas,
     setItems: setIdeas,
@@ -84,8 +84,9 @@ export function useVideoIdeas() {
   });
 
   useEffect(() => {
+    if (!shouldPersistSyncedState(syncLoaded)) return;
     writeOrgScopedJson(VIDEO_IDEAS_STORAGE_KEY, ideas);
-  }, [ideas]);
+  }, [ideas, syncLoaded]);
 
   const replaceIdeas = useCallback((next) => {
     const normalized = stripDemoVideoIdeas(next);

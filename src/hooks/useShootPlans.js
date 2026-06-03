@@ -7,7 +7,7 @@ import { SUPABASE_ENABLED } from "../lib/supabaseClient";
 import { useMapSync } from "../lib/useMapSync";
 import { pushStaffSyncRows } from "../lib/staffSyncApi";
 import { markPendingRemoved } from "../lib/syncHelpers";
-import { initialSyncMapState } from "../lib/syncInitialState";
+import { initialSyncMapState, shouldPersistSyncedState } from "../lib/syncInitialState";
 import { getOrgId } from "../lib/orgSession";
 import { readOrgScopedJson, writeOrgScopedJson } from "../lib/orgStorage";
 
@@ -58,7 +58,7 @@ export function useShootPlans() {
   }, []);
   useReloadFromStorage(reloadFromStorage);
 
-  useMapSync({
+  const syncLoaded = useMapSync({
     table: 'shoot_plans',
     map: plans,
     setMap: setPlans,
@@ -66,8 +66,9 @@ export function useShootPlans() {
   });
 
   useEffect(() => {
+    if (!shouldPersistSyncedState(syncLoaded)) return;
     writeOrgScopedJson(SHOOT_PLANS_STORAGE_KEY, plans);
-  }, [plans]);
+  }, [plans, syncLoaded]);
 
   const getPlan = useCallback(
     (client, dateKey) => {

@@ -3,7 +3,7 @@ import { STORAGE_KEY, COLUMNS, PLATFORM, createCard, EDITOR_TODO_STORAGE_KEY, is
 import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
-import { initialSyncCollectionState } from '../lib/syncInitialState';
+import { initialSyncCollectionState, shouldPersistSyncedState } from '../lib/syncInitialState';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
 import { markPendingRemoved } from '../lib/syncHelpers';
@@ -169,7 +169,7 @@ export function useKanban() {
   }, []);
   useReloadFromStorage(reloadFromStorage);
 
-  useCollectionSync({
+  const syncLoaded = useCollectionSync({
     table: 'cards',
     items: cards,
     setItems: setCards,
@@ -179,8 +179,9 @@ export function useKanban() {
   });
 
   useEffect(() => {
+    if (!shouldPersistSyncedState(syncLoaded)) return;
     writeOrgScopedJson(STORAGE_KEY, cards);
-  }, [cards]);
+  }, [cards, syncLoaded]);
 
   const replaceCards = useCallback((next) => {
     const normalized = next.map(normalizeCard);

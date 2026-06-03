@@ -15,7 +15,8 @@ import {
 } from '../utils/accountManagerTodo';
 import { getEditorTaskStatusOptions } from '../utils/editorTodo';
 import NeedsEditsModal from './NeedsEditsModal';
-import { glassInsetClass, selectClass } from './clientPortal/clientPortalUi';
+import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
+import { selectClass } from './clientPortal/clientPortalUi';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
 import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
 
@@ -31,17 +32,17 @@ const kindStyles = {
 
 const inReviewKindStyle = 'border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]';
 
-function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate }) {
+function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate, animationDelay }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const clientColor = getClientColor(task.client);
   const pipelineStage = COLUMNS.find((col) => col.id === task.columnId)?.title;
   const openCard = () => onOpenCard(task.card);
 
   return (
-    <article className={`${glassInsetClass} border-amber-500/30 p-4`}>
+    <TeamTaskCard accentColor={clientColor} animationDelay={animationDelay}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
+          <div className="tesla-task-card-meta mb-2">
             <span
               className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${kindStyles['set-post-date']}`}
             >
@@ -57,17 +58,12 @@ function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate }) {
                 {task.contentType}
               </span>
             )}
+            <TeamTaskClientLabel client={task.client} color={clientColor} />
           </div>
 
           <button type="button" onClick={openCard} className="text-left hover:text-[#fca5a5]">
             <h3 className="text-sm font-semibold text-white">{task.title}</h3>
           </button>
-
-          {task.client && (
-            <p className="mt-1 text-xs font-medium" style={{ color: clientColor }}>
-              {task.client}
-            </p>
-          )}
 
           <CardLinks card={task.card} compact />
 
@@ -93,11 +89,19 @@ function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate }) {
           </button>
         </div>
       </div>
-    </article>
+    </TeamTaskCard>
   );
 }
 
-function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onApproveReview, onRequestEdits }) {
+function InReviewTaskCard({
+  task,
+  getClientColor,
+  onOpenCard,
+  onMoveTask,
+  onApproveReview,
+  onRequestEdits,
+  animationDelay,
+}) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const clientColor = getClientColor(task.client);
   const statusOptions = getEditorTaskStatusOptions(task.isOneOffProject);
@@ -105,7 +109,7 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onAppr
   const openCard = () => onOpenCard(task.card);
 
   return (
-    <article className={`${glassInsetClass} p-4`}>
+    <TeamTaskCard accentColor={clientColor} animationDelay={animationDelay}>
       <div className="flex flex-wrap items-start gap-3">
         <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] text-gray-400">
           →
@@ -116,7 +120,7 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onAppr
           onClick={openCard}
           className="min-w-0 flex-1 cursor-pointer rounded-lg text-left transition hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#810100]/50"
         >
-          <div className="mb-2 flex flex-wrap items-center gap-2">
+          <div className="tesla-task-card-meta mb-2">
             <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${inReviewKindStyle}`}>
               {task.label}
             </span>
@@ -125,6 +129,7 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onAppr
                 {task.contentType}
               </span>
             )}
+            <TeamTaskClientLabel client={task.client} color={clientColor} />
           </div>
 
           <h3 className="text-sm font-semibold text-white">{task.title}</h3>
@@ -133,10 +138,6 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onAppr
               <TaskPostSchedule postDate={task.dueDate} dueTime={task.dueTime} />
             </p>
           )}
-
-          <p className="mt-1 text-xs font-medium" style={{ color: clientColor }}>
-            {task.client}
-          </p>
 
           {task.clientComment && (
             <p className="mt-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-200">
@@ -185,20 +186,26 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onAppr
           </button>
         </div>
       </div>
-    </article>
+    </TeamTaskCard>
   );
 }
 
-function ApprovedScheduleTaskCard({ task, getClientColor, onOpenCard, onMarkScheduled }) {
+function ApprovedScheduleTaskCard({
+  task,
+  getClientColor,
+  onOpenCard,
+  onMarkScheduled,
+  animationDelay,
+}) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const clientColor = getClientColor(task.client);
   const openCard = () => onOpenCard(task.card);
 
   return (
-    <article className={`${glassInsetClass} p-4`}>
+    <TeamTaskCard accentColor={clientColor} animationDelay={animationDelay}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
+          <div className="tesla-task-card-meta mb-2">
             <span
               className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${kindStyles.schedule}`}
             >
@@ -209,6 +216,7 @@ function ApprovedScheduleTaskCard({ task, getClientColor, onOpenCard, onMarkSche
                 {task.contentType}
               </span>
             )}
+            <TeamTaskClientLabel client={task.client} color={clientColor} />
           </div>
 
           <button type="button" onClick={openCard} className="text-left hover:text-[#fca5a5]">
@@ -219,12 +227,6 @@ function ApprovedScheduleTaskCard({ task, getClientColor, onOpenCard, onMarkSche
               )}
             </div>
           </button>
-
-          {task.client && (
-            <p className="mt-1 text-xs font-medium" style={{ color: clientColor }}>
-              {task.client}
-            </p>
-          )}
 
           {task.notes && (
             <p className="mt-2 line-clamp-2 text-xs text-gray-400">{task.notes}</p>
@@ -248,11 +250,11 @@ function ApprovedScheduleTaskCard({ task, getClientColor, onOpenCard, onMarkSche
           </button>
         </div>
       </div>
-    </article>
+    </TeamTaskCard>
   );
 }
 
-function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted }) {
+function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted, animationDelay }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const badgeStyle = kindStyles[task.kind] || kindStyles.schedule;
   const canMarkPosted = task.kind === 'publish' || task.kind === 'post-story';
@@ -261,10 +263,10 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted }) {
   const openCard = () => onOpenCard(task.card);
 
   return (
-    <article className={`${glassInsetClass} p-4`}>
+    <TeamTaskCard accentColor={clientColor} animationDelay={animationDelay}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
+          <div className="tesla-task-card-meta mb-2">
             <span
               className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${badgeStyle}`}
             >
@@ -275,6 +277,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted }) {
                 {task.contentType}
               </span>
             )}
+            <TeamTaskClientLabel client={task.client} color={clientColor} />
           </div>
 
           <button
@@ -289,12 +292,6 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted }) {
               )}
             </div>
           </button>
-
-          {task.client && (
-            <p className="mt-1 text-xs font-medium" style={{ color: clientColor }}>
-              {task.client}
-            </p>
-          )}
 
           {task.notes && (
             <p className="mt-2 line-clamp-2 text-xs text-gray-400">{task.notes}</p>
@@ -326,7 +323,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted }) {
           )}
         </div>
       </div>
-    </article>
+    </TeamTaskCard>
   );
 }
 
@@ -336,8 +333,8 @@ function TaskList({ tasks, renderItem }) {
   }
 
   return (
-    <div className="space-y-2 p-2">
-      {tasks.map((task) => renderItem(task))}
+    <div className="space-y-3 p-2">
+      {tasks.map((task, index) => renderItem(task, index))}
     </div>
   );
 }
@@ -465,13 +462,14 @@ export default function AccountManagerTodo({
           ) : (
             <TaskList
               tasks={orderedSetPostDateTasks}
-              renderItem={(task) => (
+              renderItem={(task, index) => (
                 <SetPostDateTaskCard
                   key={task.id}
                   task={task}
                   getClientColor={getClientColor}
                   onOpenCard={onOpenCard}
                   onPlanDate={onPlanPostDate}
+                  animationDelay={`${0.08 + index * 0.05}s`}
                 />
               )}
             />
@@ -492,7 +490,7 @@ export default function AccountManagerTodo({
           ) : (
             <TaskList
               tasks={orderedInReviewTasks}
-              renderItem={(task) => (
+              renderItem={(task, index) => (
                 <InReviewTaskCard
                   key={task.id}
                   task={task}
@@ -501,6 +499,7 @@ export default function AccountManagerTodo({
                   onMoveTask={onMoveTask}
                   onApproveReview={onApproveReview}
                   onRequestEdits={setNeedsEditsCard}
+                  animationDelay={`${0.08 + index * 0.05}s`}
                 />
               )}
             />
@@ -521,13 +520,14 @@ export default function AccountManagerTodo({
           ) : (
             <TaskList
               tasks={orderedStoryTasks}
-              renderItem={(task) => (
+              renderItem={(task, index) => (
                 <TaskCard
                   key={task.id}
                   task={task}
                   getClientColor={getClientColor}
                   onOpenCard={onOpenCard}
                   onMarkPosted={onMarkPosted}
+                  animationDelay={`${0.08 + index * 0.05}s`}
                 />
               )}
             />
@@ -548,13 +548,14 @@ export default function AccountManagerTodo({
           ) : (
             <TaskList
               tasks={visiblePostsTasks}
-              renderItem={(task) => (
+              renderItem={(task, index) => (
                 <ApprovedScheduleTaskCard
                   key={task.id}
                   task={task}
                   getClientColor={getClientColor}
                   onOpenCard={onOpenCard}
                   onMarkScheduled={onMarkScheduled}
+                  animationDelay={`${0.08 + index * 0.05}s`}
                 />
               )}
             />

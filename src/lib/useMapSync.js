@@ -35,11 +35,17 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
   const syncedRef = useRef(null); // Map<key, JSON string of last-synced value>
   const applyingRemoteRef = useRef(false);
   const loadedRef = useRef(!SUPABASE_ENABLED);
+  const [syncLoaded, setSyncLoaded] = useState(!SUPABASE_ENABLED);
   const pendingWriteRef = useRef(false);
   const pendingRemovedRef = useRef(new Set());
   const pendingLocalCreatesRef = useRef(new Set());
   const localMapRef = useRef(map);
   const [writeNonce, setWriteNonce] = useState(0);
+
+  const markSyncLoaded = () => {
+    loadedRef.current = true;
+    setSyncLoaded(true);
+  };
 
   localMapRef.current = map;
 
@@ -64,6 +70,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
     syncedRef.current = null;
     applyingRemoteRef.current = false;
     loadedRef.current = false;
+    setSyncLoaded(false);
     pendingRemovedRef.current = loadPendingRemoved(orgId, table);
     pendingLocalCreatesRef.current = loadPendingCreates(orgId, table);
 
@@ -87,14 +94,14 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
             );
             applyingRemoteRef.current = true;
             syncedRef.current = new Map(localKeys.map((key) => [key, JSON.stringify(local[key])]));
-            loadedRef.current = true;
+            markSyncLoaded();
             setMap(local);
             return;
           }
           await store.upsertRecords(localKeys.map((key) => ({ id: key, data: local[key] })));
           applyingRemoteRef.current = true;
           syncedRef.current = new Map(localKeys.map((key) => [key, JSON.stringify(local[key])]));
-          loadedRef.current = true;
+          markSyncLoaded();
           setMap(local);
           return;
         }
@@ -103,7 +110,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
           if (localKeys.length && isLegacyOrg) {
             applyingRemoteRef.current = true;
             syncedRef.current = new Map(localKeys.map((key) => [key, JSON.stringify(local[key])]));
-            loadedRef.current = true;
+            markSyncLoaded();
             setMap(local);
             pendingWriteRef.current = true;
             queueMicrotask(() => setWriteNonce((current) => current + 1));
@@ -112,7 +119,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
 
           applyingRemoteRef.current = true;
           syncedRef.current = new Map();
-          loadedRef.current = true;
+          markSyncLoaded();
           setMap({});
           return;
         }
@@ -139,7 +146,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
         const hasUnsyncedLocalChanges = !mapMatchesSnapshot(mergedMap, syncedRef.current);
 
         applyingRemoteRef.current = true;
-        loadedRef.current = true;
+        markSyncLoaded();
         setMap(mergedMap);
 
         if (hasUnsyncedLocalChanges) {
@@ -157,7 +164,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
             setMap(local);
           }
         }
-        loadedRef.current = true;
+        markSyncLoaded();
       }
     };
 
@@ -284,4 +291,6 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, writeNonce, orgId, table]);
+
+  return syncLoaded;
 }

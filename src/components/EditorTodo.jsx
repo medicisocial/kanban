@@ -13,7 +13,8 @@ import {
 } from '../utils/editorTodo';
 import AddEditorTaskModal from './AddEditorTaskModal';
 import NeedsEditsModal from './NeedsEditsModal';
-import { btnPrimaryClass, glassInsetClass, selectClass } from './clientPortal/clientPortalUi';
+import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
+import { btnPrimaryClass, selectClass } from './clientPortal/clientPortalUi';
 import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
 
 const taskActionBtnClass =
@@ -40,6 +41,7 @@ function EditorTodoItem({
   onSendBackForEditing,
   onMoveTask,
   getClientColor,
+  animationDelay,
 }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const isOneOff = task.isOneOffProject;
@@ -51,10 +53,10 @@ function EditorTodoItem({
   };
 
   return (
-    <article
-      className={`${glassInsetClass} p-4 transition ${
-        task.completed ? 'opacity-60' : ''
-      }`}
+    <TeamTaskCard
+      accentColor={clientColor}
+      completed={task.completed}
+      animationDelay={animationDelay}
     >
       <div className="flex flex-wrap items-start gap-3">
         <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] text-gray-400">
@@ -66,7 +68,7 @@ function EditorTodoItem({
           onClick={openCard}
           className="min-w-0 flex-1 cursor-pointer rounded-lg text-left transition hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#810100]/50"
         >
-          <div className="mb-2 flex flex-wrap items-center gap-2">
+          <div className="tesla-task-card-meta mb-2">
             <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${kindStyles[task.kind]}`}>
               {task.label}
             </span>
@@ -75,6 +77,7 @@ function EditorTodoItem({
                 {task.contentType}
               </span>
             )}
+            <TeamTaskClientLabel client={task.client} color={clientColor} />
           </div>
 
           <div className="flex flex-wrap items-baseline gap-2">
@@ -85,10 +88,6 @@ function EditorTodoItem({
               <TaskPostSchedule postDate={task.postDate} dueTime={task.dueTime} />
             )}
           </div>
-
-          <p className="mt-1 text-xs font-medium" style={{ color: clientColor }}>
-            {task.client}
-          </p>
 
           {task.clientComment && (
             <p className="mt-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-200">
@@ -186,7 +185,7 @@ function EditorTodoItem({
           )}
         </div>
       </div>
-    </article>
+    </TeamTaskCard>
   );
 }
 
@@ -198,9 +197,14 @@ function EditorTaskList({ tasks, emptyMessage, itemProps }) {
   }
 
   return (
-    <div className="space-y-2 p-2">
-      {tasks.map((task) => (
-        <EditorTodoItem key={task.id} task={task} {...itemProps} />
+    <div className="space-y-3 p-2">
+      {tasks.map((task, index) => (
+        <EditorTodoItem
+          key={task.id}
+          task={task}
+          animationDelay={`${0.08 + index * 0.05}s`}
+          {...itemProps}
+        />
       ))}
     </div>
   );

@@ -6,7 +6,7 @@ import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
 import { markPendingRemoved } from '../lib/syncHelpers';
-import { initialSyncCollectionState } from '../lib/syncInitialState';
+import { initialSyncCollectionState, shouldPersistSyncedState } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
@@ -42,7 +42,7 @@ export function useMeetings() {
   }, []);
   useReloadFromStorage(reloadFromStorage);
 
-  useCollectionSync({
+  const syncLoaded = useCollectionSync({
     table: 'meetings',
     items: meetings,
     setItems: setMeetings,
@@ -51,8 +51,9 @@ export function useMeetings() {
   });
 
   useEffect(() => {
+    if (!shouldPersistSyncedState(syncLoaded)) return;
     writeOrgScopedJson(MEETINGS_STORAGE_KEY, meetings);
-  }, [meetings]);
+  }, [meetings, syncLoaded]);
 
   const replaceMeetings = useCallback((next) => {
     setMeetings(next);

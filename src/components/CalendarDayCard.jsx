@@ -42,33 +42,47 @@ export default function CalendarDayCard({
     : relaxed
       ? 'group/event relative mb-1.5 w-full cursor-pointer rounded-xl border border-white/8 px-3 py-2.5 text-left leading-snug transition hover:brightness-110'
       : dense
-        ? 'group/event relative mb-1 w-full cursor-pointer rounded-lg border border-white/8 px-2 py-1.5 text-left leading-snug transition hover:brightness-110'
+        ? 'group/event relative mb-1 w-full cursor-pointer rounded-lg border border-white/8 px-2.5 py-1.5 text-left leading-snug transition hover:brightness-110'
         : 'group/event relative mb-1 w-full cursor-pointer rounded-lg border border-white/8 px-1.5 py-1 text-left transition hover:brightness-110';
 
-  const clientMetaClass = relaxed ? 'text-xs' : 'text-[10px]';
+  const clientMetaClass = relaxed ? 'text-xs' : 'text-[11px]';
   const clientTitleClass = relaxed ? 'text-[13px]' : 'text-[11px]';
+  const hasTypeLabel = Boolean(typeLabel && typeLabelProps);
+  const typeLabelEl = hasTypeLabel ? (
+    <span
+      className={`shrink-0 uppercase tracking-wide ${clientMetaClass} ${typeLabelProps.className || ''}`.trim()}
+      style={typeLabelProps.style}
+    >
+      {typeLabel}
+    </span>
+  ) : null;
+
+  const resolvedTitleClassName =
+    titleClassName ||
+    (clientPortal
+      ? `block whitespace-normal font-medium leading-snug text-[#f9f6f2] ${clientTitleClass}`
+      : undefined);
+
+  const titleContent = titleLink ? (
+    <CardTitleLink title={title} dropboxLink={titleLink} className={resolvedTitleClassName} />
+  ) : (
+    <span className={resolvedTitleClassName}>{title}</span>
+  );
 
   const clientPortalBody = clientPortal && (
     <>
-      <div className="mb-1.5 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          {timeLabel && (
-            <p className={`font-semibold tabular-nums text-white/70 ${clientMetaClass}`}>{timeLabel}</p>
-          )}
+      {timeLabel && (
+        <p className={`mb-0.5 font-semibold tabular-nums text-white/70 ${clientMetaClass}`}>{timeLabel}</p>
+      )}
+      {(badgeLabel || hasTypeLabel) && (
+        <div className="mb-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
           {badgeLabel && (
-            <p className={`mt-0.5 font-semibold ${badgeClassName} ${clientMetaClass}`.trim()}>{badgeLabel}</p>
+            <span className={`font-semibold ${badgeClassName} ${clientMetaClass}`.trim()}>{badgeLabel}</span>
           )}
+          {typeLabelEl}
         </div>
-        {typeLabel && typeLabelProps && (
-          <span
-            className={`shrink-0 uppercase tracking-wide ${clientMetaClass} ${typeLabelProps.className || ''}`.trim()}
-            style={typeLabelProps.style}
-          >
-            {typeLabel}
-          </span>
-        )}
-      </div>
-      <p className={`whitespace-normal font-medium leading-snug text-[#f9f6f2] ${clientTitleClass}`}>{title}</p>
+      )}
+      <div className="min-w-0">{titleContent}</div>
       <CalendarDropboxLink href={titleLink} size={relaxed ? 'md' : 'sm'} />
     </>
   );
@@ -86,27 +100,16 @@ export default function CalendarDayCard({
     </div>
   );
 
-  const categoryRow = (dense || relaxed) && (badgeLabel || (typeLabel && typeLabelProps)) && (
-    <div className={`flex items-center justify-between gap-1.5 ${relaxed ? 'mb-1.5' : 'mb-1'}`}>
-      {badgeLabel ? (
+  const categoryRow = (dense || relaxed) && (badgeLabel || hasTypeLabel) && (
+    <div className="mb-0.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+      {badgeLabel && (
         <span
-          className={`min-w-0 truncate font-semibold ${relaxed ? 'text-[11px]' : 'text-[10px]'} ${badgeClassName}`.trim()}
+          className={`font-semibold ${relaxed ? 'text-xs' : 'text-[11px]'} ${badgeClassName}`.trim()}
         >
           {badgeLabel}
         </span>
-      ) : (
-        <span aria-hidden="true" />
       )}
-      {typeLabel && typeLabelProps && (
-        <span
-          className={`shrink-0 font-semibold uppercase tracking-wide ${
-            relaxed ? 'text-[11px]' : 'text-[10px]'
-          } ${typeLabelProps.className || ''}`.trim()}
-          style={typeLabelProps.style}
-        >
-          {typeLabel}
-        </span>
-      )}
+      {typeLabelEl}
     </div>
   );
 
@@ -134,11 +137,11 @@ export default function CalendarDayCard({
       ) : dense || relaxed ? (
         <>
           {((!hideClient && clientLabel) || timeLabel) && (
-            <div className={`flex items-center justify-between gap-1.5 ${relaxed ? 'mb-1.5' : 'mb-1'}`}>
+            <div className={`flex items-center justify-between gap-1.5 ${relaxed ? 'mb-1' : 'mb-0.5'}`}>
               {!hideClient && clientLabel && (
                 <span
                   className={`min-w-0 truncate font-semibold uppercase tracking-wide ${
-                    relaxed ? 'text-xs' : 'text-[10px]'
+                    relaxed ? 'text-xs' : 'text-[11px]'
                   }`}
                   style={{ color: accentColor }}
                 >
@@ -146,18 +149,14 @@ export default function CalendarDayCard({
                 </span>
               )}
               {timeLabel && (
-                <span className={`shrink-0 font-medium text-gray-400 ${relaxed ? 'text-xs' : 'text-[10px]'}`}>
+                <span className={`shrink-0 font-medium text-gray-400 ${relaxed ? 'text-xs' : 'text-[11px]'}`}>
                   {timeLabel}
                 </span>
               )}
             </div>
           )}
           {categoryRow}
-          {titleLink ? (
-            <CardTitleLink title={title} dropboxLink={titleLink} className={titleClassName} />
-          ) : (
-            <span className={titleClassName}>{title}</span>
-          )}
+          <div className="min-w-0">{titleContent}</div>
         </>
       ) : (
         <>

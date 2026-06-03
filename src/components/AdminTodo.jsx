@@ -7,7 +7,8 @@ import {
   groupAdminTasksByDate,
 } from '../utils/adminTodo';
 import AddAdminTaskModal from './AddAdminTaskModal';
-import { glassInsetClass, btnPrimaryClass, selectClass } from './clientPortal/clientPortalUi';
+import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
+import { btnPrimaryClass, selectClass } from './clientPortal/clientPortalUi';
 
 export default function AdminTodo({
   embedded = false,
@@ -114,17 +115,17 @@ export default function AdminTodo({
                   ({group.tasks.length})
                 </span>
               </h3>
-              <div className="space-y-2">
-                {group.tasks.map((task) => {
+              <div className="space-y-3">
+                {group.tasks.map((task, index) => {
                   const clientColor =
                     task.client === 'General' ? '#a78bfa' : getClientColor(task.client);
 
                   return (
-                    <article
+                    <TeamTaskCard
                       key={task.id}
-                      className={`${glassInsetClass} p-4 transition ${
-                        task.completed ? 'opacity-60' : ''
-                      }`}
+                      accentColor={clientColor}
+                      completed={task.completed}
+                      animationDelay={`${0.08 + index * 0.05}s`}
                     >
                       <div className="flex flex-wrap items-start gap-3">
                         <input
@@ -136,16 +137,11 @@ export default function AdminTodo({
                         />
 
                         <div className="min-w-0 flex-1">
-                          <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <div className="tesla-task-card-meta mb-2">
                             <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-violet-200">
                               Admin
                             </span>
-                            <span
-                              className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-gray-300"
-                              style={{ backgroundColor: `${clientColor}22` }}
-                            >
-                              {task.client}
-                            </span>
+                            <TeamTaskClientLabel client={task.client} color={clientColor} />
                           </div>
 
                           <h3
@@ -174,7 +170,7 @@ export default function AdminTodo({
                           Delete
                         </button>
                       </div>
-                    </article>
+                    </TeamTaskCard>
                   );
                 })}
               </div>

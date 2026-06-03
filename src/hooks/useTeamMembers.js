@@ -12,7 +12,7 @@ import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
 import { markPendingRemoved } from '../lib/syncHelpers';
-import { initialSyncCollectionState } from '../lib/syncInitialState';
+import { initialSyncCollectionState, shouldPersistSyncedState } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
@@ -50,7 +50,7 @@ export function useTeamMembers() {
   }, []);
   useReloadFromStorage(reloadFromStorage);
 
-  useCollectionSync({
+  const syncLoaded = useCollectionSync({
     table: 'team_members',
     items: teamMembers,
     setItems: setTeamMembers,
@@ -64,8 +64,9 @@ export function useTeamMembers() {
   // localStorage directly, and the /api/team-auth endpoint reads the KV blob fed
   // from it. Supabase realtime updates flow into state -> here -> localStorage.
   useEffect(() => {
+    if (!shouldPersistSyncedState(syncLoaded)) return;
     writeOrgScopedJson(TEAM_STORAGE_KEY, teamMembers);
-  }, [teamMembers]);
+  }, [teamMembers, syncLoaded]);
 
   const getMembersByRole = useCallback(
     (role) => teamMembers.filter((member) => memberMatchesRole(member, role)),

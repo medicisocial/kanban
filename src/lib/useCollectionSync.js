@@ -63,11 +63,17 @@ export function useCollectionSync({
   const syncedRef = useRef(null); // Map<id, JSON string of last-synced record>
   const applyingRemoteRef = useRef(false);
   const loadedRef = useRef(!SUPABASE_ENABLED);
+  const [syncLoaded, setSyncLoaded] = useState(!SUPABASE_ENABLED);
   const pendingWriteRef = useRef(false);
   const pendingRemovedRef = useRef(new Set());
   const pendingLocalCreatesRef = useRef(new Set());
   const localItemsRef = useRef(items);
   const [writeNonce, setWriteNonce] = useState(0);
+
+  const markSyncLoaded = () => {
+    loadedRef.current = true;
+    setSyncLoaded(true);
+  };
 
   localItemsRef.current = items;
 
@@ -96,6 +102,7 @@ export function useCollectionSync({
     syncedRef.current = null;
     applyingRemoteRef.current = false;
     loadedRef.current = false;
+    setSyncLoaded(false);
     pendingRemovedRef.current = loadPendingRemoved(orgId, table);
     pendingLocalCreatesRef.current = loadPendingCreates(orgId, table);
 
@@ -127,14 +134,14 @@ export function useCollectionSync({
               );
               applyingRemoteRef.current = true;
               syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
-              loadedRef.current = true;
+              markSyncLoaded();
               setItems(local);
               return;
             }
             await store.upsertRecords(local.map((r) => ({ id: getId(r), data: r })));
             applyingRemoteRef.current = true;
             syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
-            loadedRef.current = true;
+            markSyncLoaded();
             setItems(local);
             return;
           }
@@ -145,7 +152,7 @@ export function useCollectionSync({
           if (local.length && isLegacyOrg) {
             applyingRemoteRef.current = true;
             syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
-            loadedRef.current = true;
+            markSyncLoaded();
             setItems(local);
             pendingWriteRef.current = true;
             queueMicrotask(() => setWriteNonce((current) => current + 1));
@@ -154,7 +161,7 @@ export function useCollectionSync({
 
           applyingRemoteRef.current = true;
           syncedRef.current = new Map();
-          loadedRef.current = true;
+          markSyncLoaded();
           setItems([]);
           return;
         }
@@ -254,7 +261,7 @@ export function useCollectionSync({
         );
 
         applyingRemoteRef.current = true;
-        loadedRef.current = true;
+        markSyncLoaded();
         setItems(mergedItems);
 
         if (hasUnsyncedLocalChanges) {
@@ -275,7 +282,7 @@ export function useCollectionSync({
             setItems(local);
           }
         }
-        loadedRef.current = true;
+        markSyncLoaded();
       }
     };
 
@@ -499,4 +506,6 @@ export function useCollectionSync({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, writeNonce, orgId, table]);
+
+  return syncLoaded;
 }
