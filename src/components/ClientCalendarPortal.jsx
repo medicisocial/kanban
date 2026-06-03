@@ -58,11 +58,11 @@ function ClientCalendarDetail({ card, onClose }) {
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Content</p>
-            {card.dropboxLink ? (
-              <h3 className="mt-1 text-lg font-semibold text-white">{card.title}</h3>
-            ) : (
-              <CardTitleLink title={card.title} className="mt-1 text-lg font-semibold text-white" />
-            )}
+            <CardTitleLink
+              title={card.title}
+              dropboxLink={card.dropboxLink}
+              className="mt-1 text-lg font-semibold text-white"
+            />
           </div>
           <button
             type="button"
@@ -100,17 +100,6 @@ function ClientCalendarDetail({ card, onClose }) {
 
         {card.notes && (
           <p className="mt-4 rounded-lg bg-white/5 px-3 py-2 text-sm text-gray-400">{card.notes}</p>
-        )}
-
-        {card.dropboxLink && (
-          <a
-            href={card.dropboxLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`${btnPrimaryClass} mt-4 flex w-full items-center justify-center gap-2 py-2.5 text-[11px]`}
-          >
-            View in Dropbox ↗
-          </a>
         )}
       </div>
     </div>

@@ -1,5 +1,4 @@
 import CardTitleLink from './CardTitleLink';
-import CalendarDropboxLink from './CalendarDropboxLink';
 import { accentCardStyle } from '../utils/contentTypeColors';
 
 function withoutLeftAccentLine(style) {
@@ -64,12 +63,11 @@ export default function CalendarDayCard({
       ? `block whitespace-normal font-medium leading-snug text-[#f9f6f2] ${clientTitleClass}`
       : undefined);
 
-  const titleContent =
-    titleLink && !clientPortal ? (
-      <CardTitleLink title={title} dropboxLink={titleLink} className={resolvedTitleClassName} />
-    ) : (
-      <span className={resolvedTitleClassName}>{title}</span>
-    );
+  const titleContent = titleLink ? (
+    <CardTitleLink title={title} dropboxLink={titleLink} className={resolvedTitleClassName} />
+  ) : (
+    <span className={resolvedTitleClassName}>{title}</span>
+  );
 
   const clientPortalBody = clientPortal && (
     <>
@@ -85,7 +83,6 @@ export default function CalendarDayCard({
         </div>
       )}
       <div className="min-w-0">{titleContent}</div>
-      <CalendarDropboxLink href={titleLink} size={relaxed ? 'md' : 'sm'} />
       {footerContent && <div className="mt-1 min-w-0">{footerContent}</div>}
     </>
   );
