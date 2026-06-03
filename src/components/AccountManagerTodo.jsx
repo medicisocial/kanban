@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { getContentTypeStyle, COLUMNS } from '../constants';
+import { contentTypePillProps } from '../utils/contentTypeColors';
 import { useClientsContext } from '../context/ClientsContext';
 import TaskPostSchedule from './TaskPostSchedule';
 import { formatStoryScheduleSummary, toDateKey } from '../utils/calendar';
@@ -52,10 +53,7 @@ function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate }) {
               </span>
             )}
             {task.contentType && typeStyle && (
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeStyle.label}`}
-                style={{ backgroundColor: `${typeStyle.border}22` }}
-              >
+              <span {...contentTypePillProps(typeStyle)}>
                 {task.contentType}
               </span>
             )}
@@ -123,10 +121,7 @@ function InReviewTaskCard({ task, getClientColor, onOpenCard, onMoveTask, onAppr
               {task.label}
             </span>
             {task.contentType && typeStyle && (
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeStyle.label}`}
-                style={{ backgroundColor: `${typeStyle.border}22` }}
-              >
+              <span {...contentTypePillProps(typeStyle)}>
                 {task.contentType}
               </span>
             )}
@@ -210,10 +205,7 @@ function ApprovedScheduleTaskCard({ task, getClientColor, onOpenCard, onMarkSche
               {task.label}
             </span>
             {task.contentType && typeStyle && (
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeStyle.label}`}
-                style={{ backgroundColor: `${typeStyle.border}22` }}
-              >
+              <span {...contentTypePillProps(typeStyle)}>
                 {task.contentType}
               </span>
             )}
@@ -279,10 +271,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted }) {
               {task.label}
             </span>
             {task.contentType && typeStyle && (
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeStyle.label}`}
-                style={{ backgroundColor: `${typeStyle.border}22` }}
-              >
+              <span {...contentTypePillProps(typeStyle)}>
                 {task.contentType}
               </span>
             )}

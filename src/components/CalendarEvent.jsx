@@ -1,8 +1,10 @@
 import { COLUMNS, getContentTypeStyle, PLATFORM_ICON } from "../constants";
+import { contentTypeCardStyle, contentTypePillProps } from "../utils/contentTypeColors";
 import { useClientsContext } from "../context/ClientsContext";
 import { formatTime } from "../utils";
 import { formatStoryScheduleSummary, hasStoryDailyRange, hasStoryRecurrence, isCalendarEventPosted } from "../utils/calendar";
 import CardTitleLink from "./CardTitleLink";
+import CalendarDayCard from "./CalendarDayCard";
 
 export default function CalendarEvent({
   card,
@@ -71,39 +73,16 @@ export default function CalendarEvent({
 
   if (compact && isShootSession) {
     return (
-      <div
-        role="button"
-        tabIndex={0}
+      <CalendarDayCard
+        accentColor={clientColor}
+        clientLabel={card.client}
+        timeLabel={sessionTimeLabel}
+        badgeLabel="Shoot"
+        badgeClassName="text-[9px] font-semibold text-[#fca5a5]"
+        title={`${card.title}${card.shootSessionCount > 1 ? ` · ${card.shootSessionCount} items` : ''}`}
         onClick={handleClick}
-        onKeyDown={(ev) => {
-          if (ev.key === 'Enter' || ev.key === ' ') {
-            ev.preventDefault();
-            onClick?.(card);
-          }
-        }}
-        className="group/event relative mb-1 w-full cursor-pointer rounded px-1.5 py-1 text-left transition hover:brightness-125"
-        style={{
-          backgroundColor: clientColor + '33',
-        }}
-        title={`${card.client} shoot${sessionTimeLabel ? ` · ${sessionTimeLabel}` : ''}`}
-      >
-        <span
-          className="mb-0.5 block truncate text-[9px] font-semibold uppercase tracking-wide"
-          style={{ color: clientColor }}
-        >
-          {card.client}
-        </span>
-        {sessionTimeLabel && (
-          <span className="mb-0.5 block text-[9px] font-medium text-gray-300">
-            {sessionTimeLabel}
-          </span>
-        )}
-        <span className="mb-0.5 block text-[9px] font-semibold text-[#fca5a5]">Shoot</span>
-        <span className="block truncate text-[10px] font-medium text-[#f9f6f2]">
-          {card.title}
-          {card.shootSessionCount > 1 ? ` · ${card.shootSessionCount} items` : ''}
-        </span>
-      </div>
+        titleAttr={`${card.client} shoot${sessionTimeLabel ? ` · ${sessionTimeLabel}` : ''}`}
+      />
     );
   }
 
@@ -113,68 +92,50 @@ export default function CalendarEvent({
   };
 
   if (compact) {
+    const timeLabel = card.dueTime
+      ? `${formatTime(card.dueTime)}${hasStorySchedule ? ' ↻' : ''}`
+      : hasStorySchedule
+        ? `↻ ${scheduleSummary || 'recurring'}`
+        : '';
+
     return (
-      <div
-        role="button"
-        tabIndex={0}
-        {...dragProps}
-        onClick={(ev) => {
-          ev.stopPropagation();
-          onClick?.(card);
-        }}
-        onKeyDown={(ev) => {
-          if (ev.key === "Enter" || ev.key === " ") {
-            ev.preventDefault();
-            onClick?.(card);
-          }
-        }}
-        className={`group/event relative mb-1 w-full rounded px-1.5 py-1 text-left transition hover:brightness-125 ${
-          highlighted ? 'ring-1 ring-white/30' : ''
-        } ${canDrag ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
-        style={{
-          backgroundColor: typeStyle.border + (isPosted ? "22" : "33"),
-          opacity: isPosted ? 0.72 : 1,
-        }}
-        title={eventTitle}
-      >
+      <div className="relative">
         {onRemove && (
           <button
             type="button"
             onClick={handleRemove}
-            className="absolute right-0.5 top-0.5 rounded px-1 text-[9px] font-medium text-red-300/80 hover:bg-red-500/20 hover:text-red-300"
+            className="absolute right-1 top-1 z-10 rounded px-1 text-[11px] font-medium leading-none text-red-300/80 hover:bg-red-500/20 hover:text-red-300"
             aria-label={`Remove ${card.title} from calendar`}
           >
             ×
           </button>
         )}
-        {!hideClient && (
-          <span
-            className="mb-0.5 block truncate text-[9px] font-semibold uppercase tracking-wide"
-            style={{ color: clientColor }}
-          >
-            {card.client}
-          </span>
-        )}
-        {card.dueTime && (
-          <span className="mb-0.5 block text-[9px] font-medium text-gray-400">
-            {formatTime(card.dueTime)}
-            {hasStorySchedule && <span className="ml-1 text-[#fca5a5]">↻</span>}
-          </span>
-        )}
-        {!card.dueTime && hasStorySchedule && (
-          <span className="mb-0.5 block text-[9px] font-medium text-[#fca5a5]">↻ {scheduleSummary || 'recurring'}</span>
-        )}
-        {showBoardStatus && (
-          <span className={`mb-0.5 block text-[9px] font-semibold ${statusClass}`}>
-            {boardStatus}
-          </span>
-        )}
-        <CardTitleLink
+        <CalendarDayCard
+          accentColor={clientColor}
+          surfaceStyle={contentTypeCardStyle(typeStyle)}
+          clientLabel={card.client}
+          hideClient={hideClient}
+          timeLabel={timeLabel}
+          badgeLabel={showBoardStatus ? boardStatus : ''}
+          badgeClassName={`font-semibold ${statusClass}`}
+          typePill={card.contentType}
+          typePillProps={contentTypePillProps(
+            typeStyle,
+            'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+          )}
           title={card.title}
-          dropboxLink={card.dropboxLink}
-          className={`block font-medium text-[#f9f6f2] ${
-            fullTitle ? 'whitespace-normal text-[11px] leading-snug' : 'truncate text-[10px]'
+          titleLink={card.dropboxLink}
+          titleClassName={`block font-medium leading-snug text-[#f9f6f2] ${
+            fullTitle ? 'whitespace-normal text-[14px]' : 'truncate text-[12px]'
           }`}
+          onClick={() => onClick?.(card)}
+          titleAttr={eventTitle}
+          opacity={isPosted ? 0.72 : 1}
+          dense
+          className={`${highlighted ? 'ring-1 ring-white/30' : ''} ${
+            canDrag ? 'cursor-grab active:cursor-grabbing' : ''
+          } ${onRemove ? 'pr-5' : ''}`}
+          dragProps={dragProps}
         />
       </div>
     );
@@ -187,7 +148,7 @@ export default function CalendarEvent({
         canDrag ? 'cursor-grab active:cursor-grabbing' : ''
       }`}
       style={{
-        backgroundColor: typeStyle.bg,
+        ...contentTypeCardStyle(typeStyle),
         opacity: isPosted ? 0.78 : 1,
       }}
     >
@@ -196,7 +157,7 @@ export default function CalendarEvent({
         onClick={() => onClick(card)}
         className="w-full p-2.5 text-left"
       >
-        <div className="mb-1.5 flex items-center justify-between gap-1">
+        <div className="mb-1 flex items-center justify-between gap-1">
           {!hideClient && (
             <span
               className="truncate text-xs font-semibold"
@@ -205,11 +166,11 @@ export default function CalendarEvent({
               {card.client}
             </span>
           )}
-          <div className={`flex shrink-0 items-center gap-1.5${hideClient ? ' ml-auto' : ''}`}>
+          <div className={`flex shrink-0 items-center gap-1${hideClient ? ' ml-auto' : ''}`}>
             {showBoardStatus && (
-              <span className={`text-[10px] font-semibold ${statusClass}`}>{boardStatus}</span>
+              <span className={`text-[9px] font-semibold ${statusClass}`}>{boardStatus}</span>
             )}
-            <span className={`text-[10px] font-semibold ${typeStyle.label}`}>
+            <span {...contentTypePillProps(typeStyle, 'rounded-full px-1.5 py-0.5 text-[10px] font-semibold')}>
               {card.contentType}
             </span>
           </div>

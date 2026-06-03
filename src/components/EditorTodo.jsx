@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { getContentTypeStyle } from '../constants';
+import { contentTypePillProps } from '../utils/contentTypeColors';
 import { useClientsContext } from '../context/ClientsContext';
 import TaskPostSchedule from './TaskPostSchedule';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
@@ -70,10 +71,7 @@ function EditorTodoItem({
               {task.label}
             </span>
             {task.contentType && typeStyle && (
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeStyle.label}`}
-                style={{ backgroundColor: `${typeStyle.border}22` }}
-              >
+              <span {...contentTypePillProps(typeStyle)}>
                 {task.contentType}
               </span>
             )}

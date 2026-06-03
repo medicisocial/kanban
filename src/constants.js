@@ -80,6 +80,13 @@ export const DEFAULT_SHOOT_DURATIONS = {
   'Static Post': 30,
 };
 
+import {
+  buildContentTypeStyle,
+  DEFAULT_CONTENT_TYPE_COLORS,
+} from './utils/contentTypeColors';
+
+export { DEFAULT_CONTENT_TYPE_COLORS };
+
 export const CONTENT_TYPE_COLORS = {
   Reel: { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.14)', label: 'text-amber-300' },
   Story: { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.14)', label: 'text-blue-300' },
@@ -90,7 +97,7 @@ export const CONTENT_TYPE_COLORS = {
 };
 
 export function getContentTypeStyle(contentType) {
-  return CONTENT_TYPE_COLORS[contentType] || CONTENT_TYPE_COLORS['Static Post'];
+  return buildContentTypeStyle(contentType);
 }
 
 export function needsShootSchedule(contentType) {

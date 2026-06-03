@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { buildShootTimeline } from '../../utils/shootDay';
 import { getContentTypeStyle, COLUMNS } from '../../constants';
+import { contentTypePillProps } from '../../utils/contentTypeColors';
 import KanbanBoard from '../KanbanBoard';
 import ClientPortalHome from '../ClientPortalHome';
 import ClientIdeasTable from '../clientPortal/ClientIdeasTable';
@@ -219,10 +220,7 @@ export function ShowcaseTeamView() {
                       {pipelineStage}
                     </span>
                   )}
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeStyle.label}`}
-                    style={{ backgroundColor: `${typeStyle.border}22` }}
-                  >
+                  <span {...contentTypePillProps(typeStyle)}>
                     {TEAM_TASK.contentType}
                   </span>
                 </div>

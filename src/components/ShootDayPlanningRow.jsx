@@ -1,4 +1,5 @@
 import { getContentTypeStyle } from "../constants";
+import { contentTypeLabelProps, contentTypeCardStyle } from "../utils/contentTypeColors";
 import { useClientsContext } from "../context/ClientsContext";
 import {
   getDefaultShootEndTime,
@@ -45,13 +46,11 @@ export default function ShootDayPlanningRow({
   return (
     <div
       className="rounded-lg border border-white/8 p-3"
-      style={{
-        backgroundColor: typeStyle.bg,
-      }}
+      style={contentTypeCardStyle(typeStyle)}
     >
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <span className={`text-[10px] font-semibold uppercase ${typeStyle.label}`}>
+          <span {...contentTypeLabelProps(typeStyle, 'text-[10px] font-semibold uppercase')}>
             {card.contentType}
           </span>
           {onCardClick ? (

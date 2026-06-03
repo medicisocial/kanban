@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getContentTypeStyle } from '../constants';
+import { contentTypeLabelProps } from '../utils/contentTypeColors';
 import { useClientsContext } from '../context/ClientsContext';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import {
@@ -94,7 +95,7 @@ function ClientCalendarDetail({ card, onClose }) {
           )}
           <div className="flex justify-between gap-4">
             <dt className="text-gray-500">Type</dt>
-            <dd className={`font-medium ${typeStyle.label}`}>{card.contentType}</dd>
+            <dd {...contentTypeLabelProps(typeStyle, 'font-medium text-right')}>{card.contentType}</dd>
           </div>
         </dl>
 

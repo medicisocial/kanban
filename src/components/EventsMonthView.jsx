@@ -7,6 +7,8 @@ import {
 import { formatTimeRange } from '../utils';
 import { useClientsContext } from '../context/ClientsContext';
 import { getEventAttachmentChipLabel } from '../utils/eventPdfUpload';
+import { getDisplayEventType } from '../utils/eventFormSchemas';
+import CalendarDayCard from './CalendarDayCard';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -22,9 +24,14 @@ export default function EventsMonthView({
   const month = focusDate.getMonth();
   const weeks = getMonthWeeks(year, month);
 
+  const getEventAccent = (event) => {
+    if (event.client) return getClientColor(event.client);
+    return '#a78bfa';
+  };
+
   return (
     <div className="flex flex-col">
-      <p className="mb-3 text-xs text-white/45">{formatMonthYear(focusDate)}</p>
+      <p className="mb-3 text-sm text-gray-400">{formatMonthYear(focusDate)} overview</p>
 
       <div className="calendar-grid-shell">
         <div className="calendar-grid-head grid grid-cols-7">
@@ -42,14 +49,16 @@ export default function EventsMonthView({
               const dayEvents = eventsByDate[key] || [];
               const inMonth = day.getMonth() === month;
               const today = isToday(day);
+              const visibleEvents = dayEvents.slice(0, 3);
+              const hiddenCount = Math.max(0, dayEvents.length - 3);
 
               return (
                 <button
                   key={key}
                   type="button"
                   onClick={() => onDayClick?.(day, key)}
-                  className={`calendar-grid-cell min-h-[108px] p-1.5 sm:min-h-[124px] sm:p-2 ${
-                    !inMonth ? 'bg-black/20 opacity-45' : ''
+                  className={`calendar-grid-cell min-h-[120px] p-1.5 sm:min-h-[140px] sm:p-2 ${
+                    !inMonth ? 'bg-black/20 opacity-50' : ''
                   } ${today ? 'calendar-cell-today' : ''}`}
                   aria-current={today ? 'date' : undefined}
                 >
@@ -59,53 +68,53 @@ export default function EventsMonthView({
                         today
                           ? 'calendar-day-number-today'
                           : inMonth
-                            ? 'flex h-6 w-6 items-center justify-center text-white/85'
-                            : 'flex h-6 w-6 items-center justify-center text-white/35'
+                            ? 'flex h-6 w-6 items-center justify-center text-[#f9f6f2]'
+                            : 'flex h-6 w-6 items-center justify-center text-gray-600'
                       }`}
                     >
                       {day.getDate()}
                     </span>
                     {dayEvents.length > 0 && (
-                      <span className="text-[10px] tabular-nums text-white/35">{dayEvents.length}</span>
+                      <span className="text-[10px] text-gray-500">{dayEvents.length}</span>
                     )}
                   </div>
 
                   <div className="space-y-0.5">
-                    {dayEvents.slice(0, 3).map((event) => {
+                    {visibleEvents.map((event) => {
                       const attachmentLabel = getEventAttachmentChipLabel(event);
+                      const accentColor = getEventAccent(event);
+                      const eventType = getDisplayEventType(event.fields);
+                      const badgeParts = [
+                        event.status === 'draft' ? 'Draft' : '',
+                        eventType,
+                        attachmentLabel,
+                      ].filter(Boolean);
 
                       return (
-                      <button
-                        key={event.id}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEventClick(event);
-                        }}
-                        className="block w-full truncate border px-1.5 py-0.5 text-left text-[10px] transition hover:brightness-110"
-                        style={{
-                          borderColor: `${getClientColor(event.client)}55`,
-                          backgroundColor: `${getClientColor(event.client)}18`,
-                          color: getClientColor(event.client),
-                        }}
-                        title={`${event.client ? `${event.client} · ` : ''}${event.title}${event.status === 'draft' ? ' (Draft)' : ''}${attachmentLabel ? ` · ${attachmentLabel}` : ''}`}
-                      >
-                        {event.status === 'draft' && (
-                          <span className="mr-0.5 opacity-70">◦</span>
-                        )}
-                        {event.time || event.endTime ? `${formatTimeRange(event.time, event.endTime)} ` : ''}
-                        {showClientName && event.client ? `${event.client}: ` : ''}
-                        {event.title}
-                        {attachmentLabel && (
-                          <span className="ml-1 opacity-75">· {attachmentLabel}</span>
-                        )}
-                      </button>
-                    );})}
-                    {dayEvents.length > 3 && (
-                      <p className="px-1 text-[10px] text-white/35">+{dayEvents.length - 3} more</p>
-                    )}
-                    {dayEvents.length === 0 && inMonth && (
-                      <p className="px-1 text-[10px] text-white/20">+</p>
+                        <CalendarDayCard
+                          key={event.id}
+                          accentColor={accentColor}
+                          clientLabel={event.client}
+                          hideClient={!event.client || !showClientName}
+                          timeLabel={
+                            event.time || event.endTime
+                              ? formatTimeRange(event.time, event.endTime)
+                              : ''
+                          }
+                          badgeLabel={badgeParts.join(' · ')}
+                          badgeClassName={`text-[9px] font-semibold ${
+                            event.status === 'draft' ? 'text-amber-300' : 'text-violet-300'
+                          }`}
+                          title={event.title}
+                          onClick={() => onEventClick(event)}
+                          titleAttr={`${event.client ? `${event.client} · ` : ''}${event.title}${
+                            event.status === 'draft' ? ' (Draft)' : ''
+                          }${attachmentLabel ? ` · ${attachmentLabel}` : ''}`}
+                        />
+                      );
+                    })}
+                    {hiddenCount > 0 && (
+                      <p className="px-1 text-[10px] text-gray-500">+{hiddenCount} more</p>
                     )}
                   </div>
                 </button>

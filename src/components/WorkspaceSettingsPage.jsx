@@ -1,5 +1,6 @@
 import { useWorkspaceAdmin } from './FilterBar';
 import StaffProfilePhotoPanel from './StaffProfilePhotoPanel';
+import ContentTypeColorsEditor from './ContentTypeColorsEditor';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
@@ -13,8 +14,10 @@ export default function WorkspaceSettingsPage({ clientFilter, onClientChange }) 
         description="Workspace configuration, internal team access, and data backup."
       />
 
-      <div className="max-w-xl space-y-6">
+      <div className="max-w-2xl space-y-6">
         <StaffProfilePhotoPanel />
+
+        <ContentTypeColorsEditor />
 
         <div className={`${surfacePanelClass} p-5`}>
           <h3 className="text-sm font-semibold text-white">Team access</h3>

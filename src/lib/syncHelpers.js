@@ -221,6 +221,8 @@ const CLIENTS_WORKSPACE_KEYS = [
   'specialMenus',
   'photoGalleryLinks',
   'portalPasswordVault',
+  'contentTypeColors',
+  'customColorPalette',
 ];
 
 /** Field-level three-way merge for the clients workspace blob (contacts, logos, etc.). */

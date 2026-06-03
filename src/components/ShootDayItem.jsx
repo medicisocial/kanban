@@ -2,6 +2,7 @@ import {
   getContentTypeStyle,
   PLATFORM_ICON,
 } from "../constants";
+import { contentTypePillProps, contentTypeCardStyle } from "../utils/contentTypeColors";
 import { formatTimeInput } from "../utils/shootDay";
 import CardTitleLink from "./CardTitleLink";
 import ReferenceVideoLink from "./clientPortal/ReferenceVideoLink";
@@ -14,9 +15,7 @@ export default function ShootDayItem({ card, onClick }) {
       type="button"
       onClick={() => onClick(card)}
       className="w-full rounded-lg border border-white/8 p-3 text-left transition hover:brightness-110"
-      style={{
-        backgroundColor: typeStyle.bg,
-      }}
+      style={contentTypeCardStyle(typeStyle)}
     >
       <div className="mb-1.5 flex flex-wrap items-center gap-2">
         {card.shootTime && (
@@ -26,7 +25,7 @@ export default function ShootDayItem({ card, onClick }) {
               : formatTimeInput(card.shootTime)}
           </span>
         )}
-        <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${typeStyle.label}`}>
+        <span {...contentTypePillProps(typeStyle, 'rounded-md px-2 py-0.5 text-[10px] font-semibold')}>
           {card.contentType}
         </span>
         <span className="text-[10px] text-gray-500">{card.status}</span>

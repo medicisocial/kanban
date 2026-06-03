@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import {
   clearClientSession,
   fetchClientPortalData,
+  isClientHubPortal,
   loadClientSession,
   loginClientPortal,
   saveClientSession,
@@ -10,6 +11,7 @@ import {
 } from '../utils/clientPortalAuth';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { subscribeClientPortalChanges } from '../lib/clientPortalRealtime';
+import { normalizeContentTypeColors, setContentTypeColorOverrides } from '../utils/contentTypeColors';
 
 const PORTAL_POLL_MS = SUPABASE_ENABLED ? 45000 : 15000;
 
@@ -65,6 +67,16 @@ export function ClientAuthProvider({ children }) {
       refreshPortalData(session, { silent: true });
     }, portalOrgId);
   }, [session, portalData?.orgId, refreshPortalData]);
+
+  useEffect(() => {
+    if (!isClientHubPortal()) return undefined;
+    if (!portalData) {
+      setContentTypeColorOverrides(null);
+      return undefined;
+    }
+    setContentTypeColorOverrides(normalizeContentTypeColors(portalData.contentTypeColors || {}));
+    return undefined;
+  }, [portalData]);
 
   useEffect(() => {
     if (!session) return undefined;

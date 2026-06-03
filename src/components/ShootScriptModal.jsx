@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getContentTypeStyle } from '../constants';
+import { contentTypeLabelProps } from '../utils/contentTypeColors';
 
 const inputClass =
   'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50';
@@ -43,7 +44,7 @@ export default function ShootScriptModal({ card, onClose, onSave, readOnly = fal
       >
         <div className="flex items-start justify-between border-b border-white/5 px-5 py-4">
           <div>
-            <p className={`text-xs font-semibold uppercase ${typeStyle.label}`}>{card.contentType}</p>
+            <p {...contentTypeLabelProps(typeStyle, 'text-xs font-semibold uppercase')}>{card.contentType}</p>
             <h2 className="mt-1 text-lg font-semibold text-white">{card.title}</h2>
             <p className="mt-0.5 text-xs text-gray-500">Shoot script</p>
           </div>

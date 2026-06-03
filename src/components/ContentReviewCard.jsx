@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getContentTypeStyle } from '../constants';
+import { contentTypePillProps } from '../utils/contentTypeColors';
 import { useClientsContext } from '../context/ClientsContext';
 import { glassInsetClass, inputClass } from './clientPortal/clientPortalUi';
 
@@ -33,10 +34,7 @@ export default function ContentReviewCard({ card, onApprove, onDeny }) {
             </span>
             <h3 className="mt-0.5 text-base font-semibold text-white">{card.title}</h3>
           </div>
-          <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${typeStyle.label}`}
-            style={{ backgroundColor: `${typeStyle.border}22` }}
-          >
+          <span {...contentTypePillProps(typeStyle, 'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase')}>
             {card.contentType}
           </span>
         </div>

@@ -4,6 +4,7 @@ import {
   needsShootSchedule,
   isOneOffProjectCard,
 } from '../constants';
+import { contentTypePillProps, contentTypeCardStyle } from '../utils/contentTypeColors';
 import { formatDate, formatScheduledDateTime, isOverdue } from '../utils';
 import CardTitleLink from './CardTitleLink';
 import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
@@ -35,7 +36,7 @@ export default function KanbanCard({ card, onClick, onDelete }) {
       role="button"
       tabIndex={0}
       style={{
-        backgroundColor: typeStyle.bg,
+        ...contentTypeCardStyle(typeStyle),
         touchAction: 'none',
       }}
       className={`group relative cursor-grab rounded-xl border border-white/8 p-3 pr-8 text-left shadow-md outline-none transition-shadow active:cursor-grabbing focus-visible:ring-1 focus-visible:ring-[#810100]/50 ${
@@ -66,10 +67,7 @@ export default function KanbanCard({ card, onClick, onDelete }) {
       />
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span
-          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium ${typeStyle.label}`}
-          style={{ backgroundColor: typeStyle.border + '22' }}
-        >
+        <span {...contentTypePillProps(typeStyle, 'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-xs')}>
           {card.contentType}
         </span>
         {card.shootDate && needsShootSchedule(card.contentType) && !isOneOff && (

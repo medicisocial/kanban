@@ -12,6 +12,9 @@ export default function MarketingShowcaseClientsProvider({ children }) {
       getClientBusinessType: () => '',
       getClientCompanyFiles: () => [],
       getClientSpecialMenus: () => [],
+      customColorPalette: [],
+      addCustomColor: async () => ({ ok: true }),
+      removeCustomColor: async () => ({ ok: true }),
     }),
     [],
   );

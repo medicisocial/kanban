@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { getContentTypeStyle } from '../constants';
+import { contentTypePillProps } from '../utils/contentTypeColors';
 import { formatDate, formatTime } from '../utils';
 import { buildContentCreatorTasks } from '../utils/contentCreatorTodo';
 import { resolveStaffMemberName } from '../utils/staffMembers';
@@ -67,10 +68,7 @@ export default function ContentCreatorTodo({
                 className="min-w-0 flex-1 text-left transition-opacity duration-300 hover:opacity-90"
               >
                 <div className="tesla-task-card-meta mb-2">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${typeStyle.label}`}
-                    style={{ backgroundColor: `${typeStyle.border}22` }}
-                  >
+                  <span {...contentTypePillProps(typeStyle)}>
                     {task.contentType}
                   </span>
                   <span className="tesla-task-card-client" style={{ color: clientColor }}>

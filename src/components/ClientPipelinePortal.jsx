@@ -61,7 +61,7 @@ export default function ClientPipelinePortal({ cards, clientColor, embedded = fa
                         <div className="flex items-start justify-between gap-2">
                           <p
                             className="text-[10px] font-medium uppercase tracking-wider"
-                            style={{ color: clientColor }}
+                            style={{ color: typeStyle.border }}
                           >
                             {card.contentType}
                           </p>

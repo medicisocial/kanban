@@ -85,6 +85,7 @@ export default async function handler(req, res) {
   const companyFiles = clientStore.companyFiles || {};
   const specialMenus = clientStore.specialMenus || {};
   const photoGalleryLinks = clientStore.photoGalleryLinks || {};
+  const contentTypeColors = clientStore.contentTypeColors || {};
   const authMap = getClientPortalAuthMap(workspace);
   const brandUsers = normalizeBrandUsers(authMap[brand]);
   const sessionUsername = session.username.trim().toLowerCase();
@@ -107,6 +108,7 @@ export default async function handler(req, res) {
     ),
     specialMenus: normalizeClientSpecialMenus(specialMenus[brand]),
     photoGalleryLink: photoGalleryLinks[brand] || null,
+    contentTypeColors,
     userAvatar: currentUser?.avatar || null,
     userDisplayName: currentUser?.displayName || session.username,
     cards: filterForBrand(data[STORAGE_KEY], brand).map(stripInternalCardFields),

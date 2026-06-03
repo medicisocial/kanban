@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { getContentTypeStyle } from "../constants";
+import { contentTypeLabelProps } from "../utils/contentTypeColors";
 import { getUnscheduledShootCards } from "../utils/shootDay";
 import { formatDate, formatTime } from "../utils";
 
@@ -106,7 +107,7 @@ export default function AddExistingToShootModal({
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-white">{card.title}</p>
                         <p className="mt-0.5 text-xs text-gray-500">
-                          <span className={typeStyle.label}>{card.contentType}</span>
+                          <span {...contentTypeLabelProps(typeStyle, 'text-xs')}>{card.contentType}</span>
                           {card.status ? ` · ${card.status}` : ""}
                         </p>
                       </div>

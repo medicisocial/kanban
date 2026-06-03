@@ -9,6 +9,7 @@ import {
   isOneOffProjectCard,
   isScheduledPostType,
 } from '../constants';
+import { contentTypeLabelProps } from '../utils/contentTypeColors';
 import { useClientsContext } from '../context/ClientsContext';
 import { hasStoryRecurrence, hasStoryDailyRange, getStoryScheduleMode, parseRecurrenceDays, parseStoryOccurrenceNotes } from '../utils/calendar';
 import { formatScheduledDateTime, formatDate, formatTime } from '../utils';
@@ -441,7 +442,7 @@ export default function CardModal({
           )}
 
           <div className="flex flex-wrap items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
-            <span className={`text-xs font-medium ${typeStyle.label}`}>{card.contentType}</span>
+            <span {...contentTypeLabelProps(typeStyle, 'text-xs font-medium')}>{card.contentType}</span>
             <span className="text-xs text-gray-500">·</span>
             <span className="text-xs text-gray-400">{PLATFORM_ICON} {PLATFORM}</span>
             <span className="text-xs text-gray-500">·</span>

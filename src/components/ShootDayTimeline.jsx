@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { getContentTypeStyle } from "../constants";
+import { contentTypeLabelProps } from "../utils/contentTypeColors";
 import { normalizeLink } from "../utils/links";
 import {
   getShootWindow,
@@ -134,7 +135,7 @@ export default function ShootDayTimeline({
                     }}
                     title={isLongSlot ? "End time looks unusually late — check this card's end time" : undefined}
                   >
-                    <p className={`text-xs font-semibold uppercase ${typeStyle.label}`}>
+                    <p {...contentTypeLabelProps(typeStyle, 'text-xs font-semibold uppercase')}>
                       {entry.card.contentType}
                     </p>
                     <p className="mt-0.5 line-clamp-2 text-sm font-semibold leading-snug text-white">
@@ -201,7 +202,7 @@ export default function ShootDayTimeline({
                   </p>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className={`text-xs font-semibold uppercase ${typeStyle.label}`}>
+                  <p {...contentTypeLabelProps(typeStyle, 'text-xs font-semibold uppercase')}>
                     {entry.card.contentType}
                   </p>
                   <p className="text-base font-medium text-white">{entry.card.title}</p>
