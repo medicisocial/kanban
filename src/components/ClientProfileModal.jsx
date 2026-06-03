@@ -28,6 +28,8 @@ export default function ClientProfileModal({ onClose }) {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
+  const overlayRef = useRef(null);
+  const mouseDownOnOverlayRef = useRef(false);
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -55,7 +57,8 @@ export default function ClientProfileModal({ onClose }) {
     setPreviewLogo(getClientLogo(selectedClient));
     setPendingLogo(undefined);
     setError('');
-  }, [selectedClient, getClientColor, getClientLogo, getClientBusinessType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClient]);
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
@@ -110,8 +113,14 @@ export default function ClientProfileModal({ onClose }) {
 
   return (
     <div
+      ref={overlayRef}
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-      onClick={onClose}
+      onMouseDown={(e) => {
+        mouseDownOnOverlayRef.current = e.target === overlayRef.current;
+      }}
+      onClick={(e) => {
+        if (e.target === overlayRef.current && mouseDownOnOverlayRef.current) onClose();
+      }}
     >
       <div
         className="w-full max-w-md border border-white/10 bg-[#111111] shadow-2xl"

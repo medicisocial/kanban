@@ -475,6 +475,7 @@ export function buildShootDayTimelineSubtitle(client, cards, plan) {
 }
 
 export function getClientUpcomingShoots(cards, plans, client) {
+  const todayKey = toDateKey(new Date());
   const dateKeys = new Set();
 
   for (const card of getShootCards(cards)) {
@@ -496,6 +497,7 @@ export function getClientUpcomingShoots(cards, plans, client) {
   }
 
   return [...dateKeys]
+    .filter((dateKey) => isUpcomingShootDateKey(dateKey, todayKey))
     .sort()
     .map((dateKey) => {
       const plan = plans?.[getShootPlanKey(client, dateKey)] || {};
@@ -521,6 +523,12 @@ export function getClientUpcomingShoots(cards, plans, client) {
 
 export function getShootPlanKey(client, dateKey) {
   return `${client}|${dateKey}`;
+}
+
+/** Shoot days on or after today (local calendar date). */
+export function isUpcomingShootDateKey(dateKey, todayKey = toDateKey(new Date())) {
+  if (!dateKey) return false;
+  return dateKey >= todayKey;
 }
 
 export { addDays, addMonths, toDateKey, isToday, parseDateKey };

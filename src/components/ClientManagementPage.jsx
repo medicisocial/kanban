@@ -114,7 +114,9 @@ export default function ClientManagementPage({
     setPendingLogo(undefined);
     setProfileError('');
     setProfileMessage('');
-  }, [selectedClient, getClientColor, getClientLogo, getClientBusinessType, getClientPhotoGalleryLink]);
+    // Only reload the form when switching clients — not on background sync updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClient]);
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];

@@ -129,6 +129,7 @@ export function ShowcaseClientShootsView() {
           plans={MARKETING_SHOWCASE_CLIENT_SHOOT_PLANS}
           clientColor={SHOWCASE_BRAND_COLOR}
           embedded
+          upcomingOnly={false}
         />
       </div>
     </ShowcaseRoot>

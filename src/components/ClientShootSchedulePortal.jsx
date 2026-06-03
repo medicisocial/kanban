@@ -11,8 +11,9 @@ export default function ClientShootSchedulePortal({
   plans,
   clientColor,
   embedded = false,
+  upcomingOnly = true,
 }) {
-  const shootCards = getClientShootCards(stripInternalCardsForClientPortal(cards));
+  const shootCards = getClientShootCards(stripInternalCardsForClientPortal(cards), { upcomingOnly });
   const filteredCards = shootCards;
 
   const grouped = filteredCards.reduce((acc, card) => {

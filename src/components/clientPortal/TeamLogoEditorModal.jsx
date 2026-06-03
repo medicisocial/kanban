@@ -19,6 +19,8 @@ export default function TeamLogoEditorModal({
   description = 'Upload your logo, then drag and zoom so it looks sharp in the sidebar circle.',
 }) {
   const fileInputRef = useRef(null);
+  const overlayRef = useRef(null);
+  const mouseDownOnOverlayRef = useRef(false);
   const normalized = normalizeClientLogo(initialLogo);
   const [src, setSrc] = useState(normalized?.src || null);
   const [crop, setCrop] = useState({
@@ -102,8 +104,14 @@ export default function TeamLogoEditorModal({
 
   return (
     <div
+      ref={overlayRef}
       className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-      onClick={onClose}
+      onMouseDown={(e) => {
+        mouseDownOnOverlayRef.current = e.target === overlayRef.current;
+      }}
+      onClick={(e) => {
+        if (e.target === overlayRef.current && mouseDownOnOverlayRef.current) onClose?.();
+      }}
     >
       <div
         className="w-full max-w-md border border-white/[0.08] bg-[#0a0a0a] shadow-2xl"

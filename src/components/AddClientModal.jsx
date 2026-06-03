@@ -15,6 +15,8 @@ export default function AddClientModal({ onClose, onAdd, existingClients }) {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef(null);
+  const overlayRef = useRef(null);
+  const mouseDownOnOverlayRef = useRef(false);
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -71,8 +73,14 @@ export default function AddClientModal({ onClose, onAdd, existingClients }) {
 
   return (
     <div
+      ref={overlayRef}
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-      onClick={onClose}
+      onMouseDown={(e) => {
+        mouseDownOnOverlayRef.current = e.target === overlayRef.current;
+      }}
+      onClick={(e) => {
+        if (e.target === overlayRef.current && mouseDownOnOverlayRef.current) onClose();
+      }}
     >
       <form
         onSubmit={handleSubmit}

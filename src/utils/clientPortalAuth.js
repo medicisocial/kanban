@@ -1,3 +1,6 @@
+import { isUpcomingShootDateKey } from './shootDay';
+import { toDateKey } from './calendar';
+
 export const CLIENT_SESSION_KEY = 'medici-client-portal-session';
 const CLIENT_API_TIMEOUT_MS = 15000;
 
@@ -190,9 +193,13 @@ export function getClientPipelineCards(cards) {
   return cards.filter((card) => getClientPipelineDisplayColumn(card) !== null);
 }
 
-export function getClientShootCards(cards) {
+export function getClientShootCards(cards, { upcomingOnly = true, todayKey = toDateKey(new Date()) } = {}) {
   return cards
-    .filter((card) => card.shootDate && card.contentType !== 'Story')
+    .filter((card) => {
+      if (!card.shootDate || card.contentType === 'Story') return false;
+      if (upcomingOnly && !isUpcomingShootDateKey(card.shootDate, todayKey)) return false;
+      return true;
+    })
     .sort((a, b) => {
       const dateCompare = (a.shootDate || '').localeCompare(b.shootDate || '');
       if (dateCompare !== 0) return dateCompare;
