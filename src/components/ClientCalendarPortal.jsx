@@ -1,6 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getContentTypeStyle } from '../constants';
-import { contentTypeLabelProps } from '../utils/contentTypeColors';
 import { useClientsContext } from '../context/ClientsContext';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import {
@@ -27,8 +25,6 @@ import { useCalendarZoom, CALENDAR_ZOOM_STORAGE_KEYS } from '../hooks/useCalenda
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 
 function ClientCalendarDetail({ card, onClose }) {
-  const typeStyle = getContentTypeStyle(card.contentType);
-
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === 'Escape') onClose();
@@ -57,7 +53,6 @@ function ClientCalendarDetail({ card, onClose }) {
     >
       <div
         className={`${surfacePanelClass} w-full max-w-md p-5 shadow-2xl`}
-        style={{ borderTopColor: typeStyle.border, borderTopWidth: '3px' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-start justify-between gap-3">
@@ -97,7 +92,9 @@ function ClientCalendarDetail({ card, onClose }) {
           )}
           <div className="flex justify-between gap-4">
             <dt className="text-gray-500">Type</dt>
-            <dd {...contentTypeLabelProps(typeStyle, 'font-medium text-right')}>{card.contentType}</dd>
+            <dd className="text-right text-[11px] font-medium uppercase tracking-wide text-white/50">
+              {card.contentType}
+            </dd>
           </div>
         </dl>
 

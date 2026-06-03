@@ -31,6 +31,7 @@ export default function CalendarDayCard({
   dense = false,
   relaxed = false,
   clientPortal = false,
+  footerContent = null,
 }) {
   const handleClick = (event) => {
     event.stopPropagation();
@@ -84,6 +85,7 @@ export default function CalendarDayCard({
       )}
       <div className="min-w-0">{titleContent}</div>
       <CalendarDropboxLink href={titleLink} size={relaxed ? 'md' : 'sm'} />
+      {footerContent && <div className="mt-1 min-w-0">{footerContent}</div>}
     </>
   );
 
@@ -157,6 +159,7 @@ export default function CalendarDayCard({
           )}
           {categoryRow}
           <div className="min-w-0">{titleContent}</div>
+          {footerContent && <div className="mt-0.5 min-w-0">{footerContent}</div>}
         </>
       ) : (
         <>
@@ -177,6 +180,7 @@ export default function CalendarDayCard({
           ) : (
             <span className={titleClassName}>{title}</span>
           )}
+          {footerContent && <div className="mt-0.5 min-w-0">{footerContent}</div>}
         </>
       )}
     </div>

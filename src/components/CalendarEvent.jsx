@@ -1,5 +1,5 @@
 import { COLUMNS, getContentTypeStyle } from "../constants";
-import { contentTypeBadgeProps, contentTypeCardStyle, contentTypeLabelProps } from "../utils/contentTypeColors";
+import { contentTypeCardStyle, contentTypeLabelProps } from "../utils/contentTypeColors";
 import { useClientsContext } from "../context/ClientsContext";
 import { formatTime } from "../utils";
 import { formatStoryScheduleSummary, hasStoryDailyRange, hasStoryRecurrence, isCalendarEventPosted } from "../utils/calendar";
@@ -34,10 +34,10 @@ export default function CalendarEvent({
   const boardStatus = isPosted ? 'Posted' : (columnMeta?.title ?? null);
   const showBoardStatus = boardStatus && (!hideClient || isPosted) && (!clientPortal || isPosted);
   const typeLabelClass = clientPortal
-    ? ''
+    ? 'text-[10px] font-medium uppercase tracking-wide text-white/50'
     : 'text-[11px] font-semibold uppercase tracking-wide';
   const typeLabelPresentation = clientPortal
-    ? contentTypeBadgeProps(typeStyle)
+    ? { className: typeLabelClass }
     : contentTypeLabelProps(typeStyle, typeLabelClass);
   const statusClass = isPosted
     ? 'text-gray-400'
@@ -128,7 +128,9 @@ export default function CalendarEvent({
       )}
       <CalendarDayCard
         accentColor={clientColor}
-        surfaceStyle={contentTypeCardStyle(typeStyle)}
+        surfaceStyle={
+          clientPortal ? { backgroundColor: 'rgba(255,255,255,0.04)' } : contentTypeCardStyle(typeStyle)
+        }
         clientLabel={card.client}
         hideClient={hideClient}
         timeLabel={timeLabel}
