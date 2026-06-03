@@ -58,7 +58,13 @@ export async function pushStaffSyncRecords(table, records) {
 }
 
 /** Persist rows with explicit { id, data } shape (singleton blobs, map entries). */
-export async function pushStaffSyncRows(table, rows = [], removed = [], orgId = getOrgId()) {
+export async function pushStaffSyncRows(
+  table,
+  rows = [],
+  removed = [],
+  orgId = getOrgId(),
+  options = {},
+) {
   if (!rows.length && !removed.length) return true;
 
   const headers = await buildAuthHeaders();
@@ -67,7 +73,13 @@ export async function pushStaffSyncRows(table, rows = [], removed = [], orgId = 
   const response = await fetch('/api/staff-sync', {
     method: 'POST',
     headers,
-    body: JSON.stringify({ table, orgId, upserts: rows, deleteIds: removed }),
+    body: JSON.stringify({
+      table,
+      orgId,
+      upserts: rows,
+      deleteIds: removed,
+      authDeleteConfirmed: Boolean(options.authDeleteConfirmed),
+    }),
   });
 
   return response.ok;

@@ -14,6 +14,7 @@ import { pushStaffSyncRows } from '../lib/staffSyncApi';
 import { initialSyncMapState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
+import { hasConfiguredPortalUsers, markPendingCreates } from '../lib/syncHelpers';
 
 function loadCredentials() {
   try {
@@ -29,6 +30,12 @@ export { loadCredentials };
 
 async function syncPortalCredentialsRow(client, activeUsers) {
   if (!SUPABASE_ENABLED) return { ok: true };
+  if (!hasConfiguredPortalUsers(activeUsers)) {
+    return {
+      ok: false,
+      error: 'Portal login requires a username and password before syncing to the cloud.',
+    };
+  }
   const ok = await pushStaffSyncRows('client_portal_credentials', [{ id: client, data: activeUsers }]);
   if (!ok) {
     return {
@@ -83,6 +90,19 @@ export function useClientPortalCredentials() {
     const mergedUsers = await mergeBrandUserDrafts(existingUsers, draftUsers, hashPassword);
     const activeUsers = mergedUsers.filter((user) => user.passwordHash && user.username);
 
+    if (!hasConfiguredPortalUsers(activeUsers)) {
+      return {
+        ok: false,
+        error: 'Set a username and password for at least one portal user before saving.',
+        users: activeUsers,
+      };
+    }
+
+    const isNewBrand = !Object.prototype.hasOwnProperty.call(loadCredentials(), client);
+    if (isNewBrand) {
+      markPendingCreates(getOrgId(), 'client_portal_credentials', [client]);
+    }
+
     setCredentials((prev) => {
       const next = { ...prev, [client]: activeUsers };
       writeOrgScopedJson(CLIENT_PORTAL_AUTH_STORAGE_KEY, next);
@@ -125,7 +145,9 @@ export function useClientPortalCredentials() {
       return next;
     });
     if (SUPABASE_ENABLED) {
-      await pushStaffSyncRows('client_portal_credentials', [], [client]);
+      await pushStaffSyncRows('client_portal_credentials', [], [client], getOrgId(), {
+        authDeleteConfirmed: true,
+      });
     }
   }, []);
 

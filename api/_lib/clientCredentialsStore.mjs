@@ -1,11 +1,7 @@
 import { getRedis, loadWorkspace, saveWorkspace } from './redis.mjs';
-import {
-  getClientPortalAuthMap,
-  hashValue,
-  mergeClientPortalAuth,
-  normalizeBrandUsers,
-} from './clientPortalAuth.mjs';
+import { getClientPortalAuthMap, hashValue, mergeClientPortalAuth, normalizeBrandUsers } from './clientPortalAuth.mjs';
 import { fetchCollectionMap, fetchRecord, isSupabaseConfigured, upsertRecord, deleteRecord } from './supabase.mjs';
+import { hasConfiguredPortalUsers, mergePortalCredentialData } from './authCriticalSync.mjs';
 
 const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
 const CLIENTS_WORKSPACE_ID = 'workspace';
@@ -69,10 +65,21 @@ export async function loadClientAuthMap(orgId) {
 
 export async function saveClientAuthMap(authMap, orgId) {
   if (isSupabaseConfigured()) {
+    let existingMap = {};
+    try {
+      existingMap = (await fetchCollectionMap('client_portal_credentials', orgId)) || {};
+    } catch (error) {
+      console.error('[clientCredentialsStore] existing credential fetch failed:', error?.message || error);
+    }
+
     for (const [brand, entry] of Object.entries(authMap)) {
       if (brand.startsWith('__')) continue;
-      const users = normalizeBrandUsers(entry);
-      if (!users.length) {
+      const users = mergePortalCredentialData(existingMap[brand], entry);
+      if (!hasConfiguredPortalUsers(users)) {
+        if (hasConfiguredPortalUsers(existingMap[brand])) {
+          console.warn(`[clientCredentialsStore] skipped empty save for ${brand}`);
+          continue;
+        }
         await deleteRecord('client_portal_credentials', brand, orgId);
         continue;
       }

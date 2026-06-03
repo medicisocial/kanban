@@ -10,6 +10,7 @@ import {
   augmentLocalMapWithPendingCreates,
   fetchRowsWithTimeout,
   filterProtectedSyncRemovals,
+  filterProtectedSyncUpserts,
   loadPendingCreates,
   loadPendingRemoved,
   localCollectionHasRecords,
@@ -145,6 +146,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
           ),
           pendingRemoved: pendingRemovedRef.current,
           pendingLocalCreates: pendingLocalCreatesRef.current,
+          protectCredentialEntries: table === 'client_portal_credentials',
         });
         const hasUnsyncedLocalChanges = !mapMatchesSnapshot(mergedMap, syncedRef.current);
 
@@ -221,6 +223,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
       for (const [key, value] of entries) {
         if (prev.get(key) !== next.get(key)) changed.push({ id: key, data: value });
       }
+      const safeChanged = filterProtectedSyncUpserts(table, changed);
       const rawRemoved = [];
       for (const key of prev.keys()) {
         if (!next.has(key)) rawRemoved.push(key);
@@ -252,7 +255,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
         savePendingCreates(orgId, table, pendingLocalCreatesRef.current);
       }
 
-      if (!changed.length && !removed.length) return;
+      if (!safeChanged.length && !removed.length) return;
 
       const store = storeRef.current;
 
@@ -264,10 +267,10 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
 
       try {
         if (canWrite) {
-          if (changed.length) await store.upsertRecords(changed);
+          if (safeChanged.length) await store.upsertRecords(safeChanged);
           if (removed.length) await store.deleteRecords(removed);
         } else {
-          const ok = await pushStaffSyncRows(table, changed, removed);
+          const ok = await pushStaffSyncRows(table, safeChanged, removed);
           if (!ok) {
             pendingWriteRef.current = true;
             console.warn(

@@ -64,6 +64,17 @@ export function isSupabaseConfigured() {
   return Boolean(anon);
 }
 
+/** Safe auth lookup check — never throws, unlike isSupabaseConfigured(). */
+export function canUseSupabaseForAuth() {
+  const url = getSupabaseUrl();
+  if (!url) return false;
+  try {
+    return Boolean(resolveServerKey());
+  } catch {
+    return false;
+  }
+}
+
 const SERVER_FETCH_TIMEOUT_MS = 10000;
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = SERVER_FETCH_TIMEOUT_MS) {

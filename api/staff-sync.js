@@ -2,6 +2,10 @@ import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs
 import { deleteRecords, isSupabaseConfigured, upsertRecords } from './_lib/supabase.mjs';
 import { patchRedisWorkspaceCards } from './_lib/redisWorkspace.mjs';
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
+import {
+  filterAuthCriticalDeletes,
+  sanitizeAuthCriticalUpserts,
+} from './_lib/authCriticalSync.mjs';
 
 const ALLOWED_TABLES = new Set([
   'cards',
@@ -88,7 +92,7 @@ export default async function handler(req, res) {
     return unavailable(res);
   }
 
-  const { table, upserts, deleteIds, orgId } = req.body || {};
+  const { table, upserts, deleteIds, orgId, authDeleteConfirmed = false } = req.body || {};
   if (!table || !ALLOWED_TABLES.has(table)) {
     return res.status(400).json({ error: 'Invalid table.' });
   }
@@ -100,20 +104,23 @@ export default async function handler(req, res) {
   const resolvedOrgId = orgCheck.orgId;
 
   try {
-    if (Array.isArray(deleteIds) && deleteIds.length) {
-      await deleteRecords(table, deleteIds, resolvedOrgId);
+    const safeDeleteIds = filterAuthCriticalDeletes(table, deleteIds, authDeleteConfirmed);
+    const safeUpserts = await sanitizeAuthCriticalUpserts(table, upserts, resolvedOrgId);
+
+    if (safeDeleteIds.length) {
+      await deleteRecords(table, safeDeleteIds, resolvedOrgId);
     }
-    if (Array.isArray(upserts) && upserts.length) {
+    if (safeUpserts.length) {
       await upsertRecords(
         table,
-        upserts.map((row) => ({ id: row.id, data: row.data })),
+        safeUpserts.map((row) => ({ id: row.id, data: row.data })),
         resolvedOrgId,
       );
       if (table === 'cards') {
-        await patchRedisWorkspaceCards(upserts, deleteIds);
+        await patchRedisWorkspaceCards(safeUpserts, safeDeleteIds);
       }
-    } else if (Array.isArray(deleteIds) && deleteIds.length && table === 'cards') {
-      await patchRedisWorkspaceCards([], deleteIds);
+    } else if (safeDeleteIds.length && table === 'cards') {
+      await patchRedisWorkspaceCards([], safeDeleteIds);
     }
     return res.status(200).json({ ok: true });
   } catch (error) {

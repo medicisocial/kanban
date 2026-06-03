@@ -1,6 +1,6 @@
 import { getRedis, loadWorkspace } from './_lib/redis.mjs';
 import { findTeamMember, verifyTeamMemberPassword } from './_lib/teamAuth.mjs';
-import { isSupabaseConfigured, fetchRowsAcrossOrgs } from './_lib/supabase.mjs';
+import { canUseSupabaseForAuth, fetchRowsAcrossOrgs } from './_lib/supabase.mjs';
 
 const TEAM_STORAGE_KEY = 'medici-social-team';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -11,13 +11,19 @@ function unavailable(res) {
   });
 }
 
+function misconfigured(res) {
+  return res.status(503).json({
+    error:
+      'Team login is misconfigured. Add SUPABASE_SERVICE_ROLE_KEY in Vercel (server-only, no VITE_ prefix), then redeploy.',
+  });
+}
+
 /**
  * Load team members across all orgs so SaaS tenants can log in regardless of
- * which orgId is set in env. Falls back to the KV blob for non-Supabase deploys.
- * Returns { workspace, orgId } where orgId identifies the member's org.
+ * which orgId is set in env. Falls back to the KV blob only when Supabase isn't configured.
  */
 async function resolveTeamLogin(username) {
-  if (isSupabaseConfigured()) {
+  if (canUseSupabaseForAuth()) {
     try {
       const rows = await fetchRowsAcrossOrgs('team_members');
       if (rows) {
@@ -31,8 +37,11 @@ async function resolveTeamLogin(username) {
         return { member: null, orgId: null };
       }
     } catch (error) {
-      console.error('[team-auth] Supabase fetch failed, falling back to KV:', error?.message || error);
+      console.error('[team-auth] Supabase fetch failed:', error?.message || error);
+      return { member: null, orgId: null, misconfigured: true };
     }
+
+    return { member: null, orgId: null, misconfigured: true };
   }
 
   const redis = getRedis();
@@ -59,8 +68,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Enter the work email for your team account.' });
   }
 
-  const { member, orgId, unavailable: isUnavailable } = await resolveTeamLogin(username);
+  const { member, orgId, unavailable: isUnavailable, misconfigured: isMisconfigured } =
+    await resolveTeamLogin(username);
   if (isUnavailable) return unavailable(res);
+  if (isMisconfigured) return misconfigured(res);
 
   if (!member || !verifyTeamMemberPassword(member, password)) {
     return res.status(401).json({ error: 'Invalid email or password.' });

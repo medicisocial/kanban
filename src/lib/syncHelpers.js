@@ -1,5 +1,15 @@
 export const FETCH_TIMEOUT_MS = 12000;
 
+function normalizeBrandUsers(entry) {
+  if (Array.isArray(entry)) {
+    return entry.filter((user) => user && typeof user === 'object');
+  }
+  if (entry && typeof entry === 'object' && (entry.username || entry.passwordHash)) {
+    return [entry];
+  }
+  return [];
+}
+
 /** Tables where accidental bulk deletes would break logins. */
 export const AUTH_CRITICAL_SYNC_TABLES = new Set([
   'client_portal_credentials',
@@ -16,6 +26,79 @@ export function localCollectionHasRecords(local) {
 export function filterProtectedSyncRemovals(table, removed, pendingRemoved) {
   if (!AUTH_CRITICAL_SYNC_TABLES.has(table)) return removed;
   return removed.filter((id) => pendingRemoved.has(String(id)));
+}
+
+export function hasConfiguredPortalUsers(entry) {
+  return normalizeBrandUsers(entry).some((user) => user.username && user.passwordHash);
+}
+
+/** Never let stale local cache replace configured portal users with an empty list. */
+export function mergePortalCredentialValue({ remote, local, syncedStr }) {
+  const remoteUsers = normalizeBrandUsers(remote);
+  const localUsers = normalizeBrandUsers(local);
+
+  if (!localUsers.length && remoteUsers.length) return remoteUsers;
+
+  if (!remoteUsers.length && localUsers.length) {
+    if (syncedStr) {
+      try {
+        const syncedUsers = normalizeBrandUsers(JSON.parse(syncedStr));
+        if (syncedUsers.length) return syncedUsers;
+      } catch {
+        /* ignore */
+      }
+    }
+    return hasConfiguredPortalUsers(localUsers) ? localUsers : remoteUsers;
+  }
+
+  const merged = [];
+  const seen = new Set();
+
+  for (const localUser of localUsers) {
+    const remoteUser =
+      remoteUsers.find((user) => user.id === localUser.id) ||
+      remoteUsers.find(
+        (user) => user.username.toLowerCase() === localUser.username.toLowerCase(),
+      );
+
+    const passwordHash = localUser.passwordHash || remoteUser?.passwordHash || '';
+    const username = localUser.username || remoteUser?.username || '';
+    if (!passwordHash || !username) {
+      if (remoteUser?.passwordHash) {
+        merged.push(remoteUser);
+        seen.add(remoteUser.id);
+      }
+      continue;
+    }
+
+    const id = localUser.id || remoteUser?.id;
+    seen.add(id);
+    merged.push({
+      ...remoteUser,
+      ...localUser,
+      id,
+      username,
+      passwordHash,
+    });
+  }
+
+  for (const remoteUser of remoteUsers) {
+    if (seen.has(remoteUser.id)) continue;
+    if (remoteUser.username && remoteUser.passwordHash) merged.push(remoteUser);
+  }
+
+  if (merged.length) return merged;
+  return remoteUsers.length ? remoteUsers : localUsers;
+}
+
+/** Block empty credential payloads from being pushed to the cloud. */
+export function filterProtectedSyncUpserts(table, changed) {
+  if (table !== 'client_portal_credentials') return changed;
+  return changed.filter(({ id, data }) => {
+    if (hasConfiguredPortalUsers(data)) return true;
+    console.warn(`[supabase:${table}] blocked empty credential upsert for ${id}`);
+    return false;
+  });
 }
 
 /** Drop rows tombstoned locally so deleted records do not hydrate from cache. */
@@ -282,6 +365,7 @@ export function mergeRemoteMapWithLocalPending({
   localMap,
   pendingRemoved,
   pendingLocalCreates,
+  protectCredentialEntries = false,
 }) {
   const synced = syncedSnapshot || new Map();
   const pendingCreates = pendingLocalCreates || new Set();
@@ -307,11 +391,17 @@ export function mergeRemoteMapWithLocalPending({
       continue;
     }
 
-    merged[key] = mergeRemoteRecordWithLocal({
-      remote: remoteValue,
-      local: localValue,
-      syncedStr: synced.get(key),
-    });
+    merged[key] = protectCredentialEntries
+      ? mergePortalCredentialValue({
+          remote: remoteValue,
+          local: localValue,
+          syncedStr: synced.get(key),
+        })
+      : mergeRemoteRecordWithLocal({
+          remote: remoteValue,
+          local: localValue,
+          syncedStr: synced.get(key),
+        });
   }
 
   for (const [key, localValue] of Object.entries(local)) {

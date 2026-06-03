@@ -6,7 +6,8 @@ import {
   getClientPortalAuthMap,
   verifyClientPassword,
 } from './_lib/clientPortalAuth.mjs';
-import { isSupabaseConfigured, fetchRowsAcrossOrgs } from './_lib/supabase.mjs';
+import { canUseSupabaseForAuth, fetchRowsAcrossOrgs } from './_lib/supabase.mjs';
+import { repairPortalCredentialFromVault } from './_lib/authCriticalSync.mjs';
 
 function unavailable(res) {
   return res.status(503).json({
@@ -14,13 +15,11 @@ function unavailable(res) {
   });
 }
 
-function supabaseEnabled() {
-  try {
-    return isSupabaseConfigured();
-  } catch (error) {
-    console.error('[client-auth] Supabase config error, falling back to KV:', error?.message || error);
-    return false;
-  }
+function misconfigured(res) {
+  return res.status(503).json({
+    error:
+      'Client portal login is misconfigured. Add SUPABASE_SERVICE_ROLE_KEY in Vercel (server-only, no VITE_ prefix), then redeploy.',
+  });
 }
 
 /**
@@ -30,20 +29,39 @@ function supabaseEnabled() {
  * to the Upstash KV blob (legacy single-tenant) only if Supabase isn't available.
  *
  * Returns { brand, orgId, user } or null when no match is found, and
- * { unavailable: true } / { empty: true } for surfaced error states.
+ * { unavailable: true } / { empty: true } / { misconfigured: true } for surfaced error states.
  */
-async function resolveClientLogin(username) {
-  if (supabaseEnabled()) {
+async function resolveClientLogin(username, password) {
+  if (canUseSupabaseForAuth()) {
     try {
       const rows = await fetchRowsAcrossOrgs('client_portal_credentials');
       if (rows) {
         if (!rows.length) return { empty: true };
-        const match = findClientLoginAcrossOrgs(rows, username);
-        return match ? { brand: match.brand, orgId: match.org_id, user: match.user } : null;
+        let match = findClientLoginAcrossOrgs(rows, username);
+        if (!match) return null;
+
+        if (!verifyClientPassword(match.user, password)) {
+          const repaired = await repairPortalCredentialFromVault({
+            brand: match.brand,
+            orgId: match.org_id,
+            user: match.user,
+            password,
+          });
+          if (repaired) {
+            match = { ...match, user: repaired };
+          }
+        }
+
+        return match
+          ? { brand: match.brand, orgId: match.org_id, user: match.user }
+          : null;
       }
     } catch (error) {
-      console.error('[client-auth] Supabase fetch failed, falling back to KV:', error?.message || error);
+      console.error('[client-auth] Supabase fetch failed:', error?.message || error);
+      return { misconfigured: true };
     }
+
+    return { misconfigured: true };
   }
 
   const redis = getRedis();
@@ -67,8 +85,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Username and password are required.' });
   }
 
-  const result = await resolveClientLogin(username);
+  const result = await resolveClientLogin(username, password);
   if (result?.unavailable) return unavailable(res);
+  if (result?.misconfigured) return misconfigured(res);
   if (result?.empty) {
     return res.status(503).json({
       error:

@@ -1,7 +1,9 @@
 import {
   mergeRemoteListWithLocalPending,
   mergeRemoteMapWithLocalPending,
+  mergePortalCredentialValue,
   filterProtectedSyncRemovals,
+  filterProtectedSyncUpserts,
   excludePendingRemovedFromCollection,
   excludePendingRemovedFromMap,
   markPendingRemoved,
@@ -121,6 +123,28 @@ if (typeof localStorage !== 'undefined') {
     'shoot_plans',
   );
   assert(Object.keys(map).length === 2, 'map filter without pending should pass through');
+}
+
+// Empty local portal users must not wipe configured cloud users.
+{
+  const remoteUsers = [{ id: 'u1', username: 'plumehtx', passwordHash: 'abc123' }];
+  const merged = mergePortalCredentialValue({
+    remote: remoteUsers,
+    local: [],
+    syncedStr: JSON.stringify(remoteUsers),
+  });
+  assert(merged.length === 1, 'empty local should not wipe remote portal users');
+  assert(merged[0].username === 'plumehtx', 'remote portal username should remain');
+}
+
+// Empty credential upserts must be blocked before cloud push.
+{
+  const changed = filterProtectedSyncUpserts('client_portal_credentials', [
+    { id: 'Plume', data: [] },
+    { id: 'Arco Fit', data: [{ id: 'u1', username: 'arco', passwordHash: 'deadbeef' }] },
+  ]);
+  assert(changed.length === 1, 'only configured credential upserts should pass');
+  assert(changed[0].id === 'Arco Fit', 'configured brand should remain');
 }
 
 console.log('Sync merge tests passed.');
