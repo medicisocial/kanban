@@ -219,6 +219,8 @@ const CLIENTS_WORKSPACE_KEYS = [
   'socialLogins',
   'companyFiles',
   'specialMenus',
+  'photoGalleryLinks',
+  'portalPasswordVault',
 ];
 
 /** Field-level three-way merge for the clients workspace blob (contacts, logos, etc.). */

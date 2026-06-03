@@ -1,6 +1,16 @@
-import { CLIENT_PORTAL_PASSWORD_VAULT_KEY } from '../constants';
+import { CLIENT_PORTAL_PASSWORD_VAULT_KEY, CLIENTS_STORAGE_KEY } from '../constants';
+import { readOrgScopedJson } from '../lib/orgStorage';
 
 export function loadPortalPasswordVault() {
+  try {
+    const clients = readOrgScopedJson(CLIENTS_STORAGE_KEY, null);
+    if (clients?.portalPasswordVault && typeof clients.portalPasswordVault === 'object') {
+      return clients.portalPasswordVault;
+    }
+  } catch {
+    /* ignore */
+  }
+
   try {
     const raw = localStorage.getItem(CLIENT_PORTAL_PASSWORD_VAULT_KEY);
     if (raw) {
@@ -38,7 +48,7 @@ export function updatePortalPasswordVault(client, draftUsers, savedUsers) {
     if (!userId) continue;
 
     if (draft.password) {
-      clientVault[userId] = draft.password;
+      clientVault[userId] = String(draft.password).trim();
     }
   }
 

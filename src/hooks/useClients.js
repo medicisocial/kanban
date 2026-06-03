@@ -23,6 +23,28 @@ import { pushStaffSyncSingleton } from '../lib/staffSyncApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
+import { CLIENT_PORTAL_PASSWORD_VAULT_KEY } from '../constants';
+
+function loadLegacyPortalPasswordVault() {
+  try {
+    const raw = localStorage.getItem(CLIENT_PORTAL_PASSWORD_VAULT_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return parsed;
+    }
+  } catch {
+    /* ignore */
+  }
+  return {};
+}
+
+function mergePortalPasswordVault(sourceVault, legacyVault) {
+  const merged = { ...(legacyVault || {}) };
+  for (const [brand, users] of Object.entries(sourceVault || {})) {
+    merged[brand] = { ...(merged[brand] || {}), ...(users || {}) };
+  }
+  return merged;
+}
 
 function normalizeBusinessTypesMap(types = {}) {
   const normalized = {};
@@ -55,6 +77,10 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
     companyFiles: source.companyFiles || {},
     specialMenus: source.specialMenus || {},
     photoGalleryLinks: source.photoGalleryLinks || {},
+    portalPasswordVault: mergePortalPasswordVault(
+      source.portalPasswordVault,
+      source.portalPasswordVault ? {} : loadLegacyPortalPasswordVault(),
+    ),
   };
 }
 
@@ -288,6 +314,46 @@ export function useClients() {
     [state.photoGalleryLinks],
   );
 
+  const getPortalPasswordForUser = useCallback(
+    (client, userId) => {
+      if (!client || !userId) return '';
+      return state.portalPasswordVault?.[client]?.[userId] || '';
+    },
+    [state.portalPasswordVault],
+  );
+
+  const syncPortalPasswordVault = useCallback(async (client, draftUsers, savedUsers) => {
+    if (!client) return { ok: true };
+
+    return applyClientsWorkspaceUpdate(setState, (prev) => {
+      const nextVault = { ...(prev.portalPasswordVault || {}) };
+      const clientVault = { ...(nextVault[client] || {}) };
+
+      for (const draft of draftUsers) {
+        const saved =
+          savedUsers.find((user) => user.id === draft.id) ||
+          savedUsers.find(
+            (user) => user.username.toLowerCase() === draft.username.trim().toLowerCase(),
+          );
+        const userId = saved?.id || draft.id;
+        if (!userId) continue;
+        if (draft.password) {
+          clientVault[userId] = String(draft.password).trim();
+        }
+      }
+
+      const savedIds = new Set(savedUsers.map((user) => user.id));
+      for (const userId of Object.keys(clientVault)) {
+        if (!savedIds.has(userId)) {
+          delete clientVault[userId];
+        }
+      }
+
+      nextVault[client] = clientVault;
+      return { ...prev, portalPasswordVault: nextVault };
+    });
+  }, []);
+
   const getClientContacts = useCallback(
     (client) => normalizeClientContacts(state.contacts[client]),
     [state.contacts],
@@ -388,5 +454,8 @@ export function useClients() {
     getClientSpecialMenus,
     setClientSpecialMenus,
     getClientPhotoGalleryLink,
+    portalPasswordVault: state.portalPasswordVault,
+    getPortalPasswordForUser,
+    syncPortalPasswordVault,
   };
 }

@@ -5,9 +5,51 @@ import {
   mergeClientPortalAuth,
   normalizeBrandUsers,
 } from './clientPortalAuth.mjs';
-import { fetchCollectionMap, isSupabaseConfigured, upsertRecord, deleteRecord } from './supabase.mjs';
+import { fetchCollectionMap, fetchRecord, isSupabaseConfigured, upsertRecord, deleteRecord } from './supabase.mjs';
 
 const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
+const CLIENTS_WORKSPACE_ID = 'workspace';
+
+async function updatePortalPasswordVaultInClientsWorkspace({ orgId, brand, userId, password }) {
+  if (!brand || !userId) return;
+  const trimmedPassword = String(password).trim();
+
+  if (isSupabaseConfigured()) {
+    const existing = (await fetchRecord('clients', CLIENTS_WORKSPACE_ID, orgId)) || {};
+    const vault = { ...(existing.portalPasswordVault || {}) };
+    const brandVault = { ...(vault[brand] || {}) };
+    brandVault[userId] = trimmedPassword;
+    vault[brand] = brandVault;
+
+    await upsertRecord(
+      'clients',
+      CLIENTS_WORKSPACE_ID,
+      { ...existing, portalPasswordVault: vault },
+      orgId,
+    );
+    return;
+  }
+
+  const redis = getRedis();
+  if (!redis) return;
+
+  const workspace = (await loadWorkspace(redis)) || {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    app: 'medici-social-kanban',
+    data: {},
+  };
+  workspace.data = workspace.data || {};
+  const clientsKey = 'medici-social-clients';
+  const existing = workspace.data[clientsKey] || {};
+  const vault = { ...(existing.portalPasswordVault || {}) };
+  const brandVault = { ...(vault[brand] || {}) };
+  brandVault[userId] = trimmedPassword;
+  vault[brand] = brandVault;
+  workspace.data[clientsKey] = { ...existing, portalPasswordVault: vault };
+  workspace.exportedAt = new Date().toISOString();
+  await saveWorkspace(redis, workspace);
+}
 
 export async function loadClientAuthMap(orgId) {
   if (isSupabaseConfigured()) {
@@ -64,8 +106,10 @@ export async function updateClientUserPassword({ brand, userId, username, newPas
   const users = normalizeBrandUsers(authMap[brand]);
   if (!users.length) throw new Error('Client account not found.');
 
-  const passwordHash = hashValue(newPassword);
+  const trimmedPassword = String(newPassword).trim();
+  const passwordHash = hashValue(trimmedPassword);
   let updated = false;
+  let resolvedUserId = userId;
 
   const nextUsers = users.map((user) => {
     const matches =
@@ -73,6 +117,7 @@ export async function updateClientUserPassword({ brand, userId, username, newPas
       user.username.trim().toLowerCase() === String(username || '').trim().toLowerCase();
     if (!matches) return user;
     updated = true;
+    resolvedUserId = user.id;
     return { ...user, passwordHash };
   });
 
@@ -80,5 +125,11 @@ export async function updateClientUserPassword({ brand, userId, username, newPas
 
   authMap[brand] = nextUsers;
   await saveClientAuthMap({ [brand]: nextUsers }, orgId);
+  await updatePortalPasswordVaultInClientsWorkspace({
+    orgId,
+    brand,
+    userId: resolvedUserId,
+    password: trimmedPassword,
+  });
   return true;
 }

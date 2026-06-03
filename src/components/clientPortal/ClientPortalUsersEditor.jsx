@@ -8,15 +8,16 @@ import {
   normalizePortalLogin,
   suggestPortalUsername,
 } from '../../utils/portalLogin';
-import { updatePortalPasswordVault, getPortalPasswordForUser } from '../../utils/clientPortalPasswordVault';
+import { getPortalPasswordForUser as getVaultPasswordForUser } from '../../utils/clientPortalPasswordVault';
 import { loadCredentials } from '../../hooks/useClientPortalCredentials';
+import { useClientsContext } from '../../context/ClientsContext';
 import PasswordField from './PasswordField';
 import ProfilePhotoEditor from './ProfilePhotoEditor';
 import PortalInviteTemplate from './PortalInviteTemplate';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 import { SUPABASE_ENABLED } from '../../lib/supabaseClient';
 
-function buildDraftUsers(client, getClientUsers, getClientContacts) {
+function buildDraftUsers(client, getClientUsers, getClientContacts, getPortalPasswordForUser) {
   const users = getClientUsers(client);
   if (users.length > 0) {
     return users.map((user) => ({
@@ -54,8 +55,15 @@ export default function ClientPortalUsersEditor({
   saveLabel = 'Save portal access',
   loginFieldLabel = 'Username',
 }) {
+  const {
+    getPortalPasswordForUser: getSyncedPortalPassword = getVaultPasswordForUser,
+    syncPortalPasswordVault,
+    portalPasswordVault,
+    credentials: syncedCredentials,
+  } = useClientsContext();
+
   const [users, setUsers] = useState(() =>
-    buildDraftUsers(client, getClientUsers, getClientContacts),
+    buildDraftUsers(client, getClientUsers, getClientContacts, getSyncedPortalPassword),
   );
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -65,11 +73,16 @@ export default function ClientPortalUsersEditor({
 
   useEffect(() => {
     dirtyRef.current = false;
-    setUsers(buildDraftUsers(client, getClientUsers, getClientContacts));
+    setUsers(buildDraftUsers(client, getClientUsers, getClientContacts, getSyncedPortalPassword));
     setMessage('');
     setError('');
     setInviteDetails(null);
   }, [client]);
+
+  useEffect(() => {
+    if (dirtyRef.current) return;
+    setUsers(buildDraftUsers(client, getClientUsers, getClientContacts, getSyncedPortalPassword));
+  }, [client, getClientUsers, getClientContacts, getSyncedPortalPassword, portalPasswordVault, syncedCredentials]);
 
   const updateUser = (userId, patch) => {
     dirtyRef.current = true;
@@ -105,7 +118,7 @@ export default function ClientPortalUsersEditor({
 
   const userHasLogin = (user) => {
     if (user.password) return true;
-    if (getPortalPasswordForUser(client, user.id)) return true;
+    if (getSyncedPortalPassword(client, user.id)) return true;
     const stored = storedUsers.find((entry) => entry.id === user.id);
     return Boolean(stored?.passwordHash);
   };
@@ -174,7 +187,14 @@ export default function ClientPortalUsersEditor({
 
       const savedUsers = saveResult?.users ?? saveResult;
 
-      updatePortalPasswordVault(client, users, savedUsers);
+      if (syncPortalPasswordVault) {
+        const vaultResult = await syncPortalPasswordVault(client, users, savedUsers);
+        if (vaultResult?.ok === false) {
+          setError(vaultResult.error || 'Portal logins saved but password vault could not sync.');
+          return;
+        }
+      }
+
       credentials[client] = savedUsers;
 
       if (onSyncToCloud && !SUPABASE_ENABLED) {
@@ -199,7 +219,7 @@ export default function ClientPortalUsersEditor({
         });
       }
 
-      setUsers(buildDraftUsers(client, () => savedUsers, getClientContacts));
+      setUsers(buildDraftUsers(client, () => savedUsers, getClientContacts, getSyncedPortalPassword));
       dirtyRef.current = false;
       setTimeout(() => setMessage(''), 8000);
     } catch (err) {
