@@ -7,6 +7,7 @@ import ClientPipelinePortal from './ClientPipelinePortal';
 import ClientShootSchedulePortal from './ClientShootSchedulePortal';
 import ClientProfilePortal from './ClientProfilePortal';
 import ClientCompanyFilesPage from './ClientCompanyFilesPage';
+import ClientPhotosPage from './ClientPhotosPage';
 import ClientPortalHome from './ClientPortalHome';
 import ClientUnifiedCalendarsPortal from './ClientUnifiedCalendarsPortal';
 import ClientPortalLayout from './clientPortal/ClientPortalLayout';
@@ -46,6 +47,7 @@ export default function ClientHubPortal({ onSignOut }) {
   const profileSocialLogins = portalData?.socialLogins || {};
   const profileCompanyFiles = portalData?.companyFiles || [];
   const profileSpecialMenus = portalData?.specialMenus || [];
+  const photoGalleryLink = portalData?.photoGalleryLink || '';
   const cards = useMemo(
     () => stripInternalCardsForClientPortal(portalData?.cards || []),
     [portalData?.cards],
@@ -263,6 +265,14 @@ export default function ClientHubPortal({ onSignOut }) {
           specialMenus={profileSpecialMenus}
           onSaveCompanyFiles={handleSaveCompanyFiles}
           onSaveSpecialMenus={handleSaveSpecialMenus}
+          embedded
+        />
+      )}
+
+      {portalData && activeTab === 'photos' && (
+        <ClientPhotosPage
+          photoGalleryLink={photoGalleryLink}
+          brand={brand}
           embedded
         />
       )}

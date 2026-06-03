@@ -54,6 +54,7 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
     socialLogins: source.socialLogins || {},
     companyFiles: source.companyFiles || {},
     specialMenus: source.specialMenus || {},
+    photoGalleryLinks: source.photoGalleryLinks || {},
   };
 }
 
@@ -254,7 +255,7 @@ export function useClients() {
   const saveClientProfile = useCallback(async (client, patch = {}) => {
     if (!client) return { ok: false, error: 'Missing client.' };
 
-    const { color, businessType, logo } = patch;
+    const { color, businessType, logo, photoGalleryLink } = patch;
     return applyClientsWorkspaceUpdate(setState, (prev) => {
       const next = { ...prev };
       if (color) {
@@ -272,9 +273,20 @@ export function useClients() {
         else delete nextLogos[client];
         next.logos = nextLogos;
       }
+      if (photoGalleryLink !== undefined) {
+        next.photoGalleryLinks = {
+          ...(prev.photoGalleryLinks || {}),
+          [client]: photoGalleryLink || '',
+        };
+      }
       return next;
     });
   }, []);
+
+  const getClientPhotoGalleryLink = useCallback(
+    (client) => state.photoGalleryLinks?.[client] || '',
+    [state.photoGalleryLinks],
+  );
 
   const getClientContacts = useCallback(
     (client) => normalizeClientContacts(state.contacts[client]),
@@ -375,5 +387,6 @@ export function useClients() {
     setClientCompanyFiles,
     getClientSpecialMenus,
     setClientSpecialMenus,
+    getClientPhotoGalleryLink,
   };
 }

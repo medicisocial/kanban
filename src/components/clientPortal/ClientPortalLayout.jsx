@@ -4,6 +4,7 @@ import {
   IconFiles,
   IconHome,
   IconIdeas,
+  IconPhotos,
   IconShoots,
   IconTasks,
   IconRefresh,
@@ -30,7 +31,10 @@ const NAV_SECTIONS = [
   },
   {
     label: 'Resources',
-    items: [{ id: 'files', label: 'Brand assets', Icon: IconFiles }],
+    items: [
+      { id: 'files', label: 'Brand assets', Icon: IconFiles },
+      { id: 'photos', label: 'Photos', Icon: IconPhotos },
+    ],
   },
 ];
 

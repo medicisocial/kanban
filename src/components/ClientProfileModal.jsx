@@ -13,12 +13,14 @@ export default function ClientProfileModal({ onClose }) {
     getClientColor,
     getClientLogo,
     getClientBusinessType,
+    getClientPhotoGalleryLink,
     saveClientProfile,
   } = useClientsContext();
   const profileClients = getClientPortalBrands(clients, INTERNAL_TEAM_CLIENT);
   const [selectedClient, setSelectedClient] = useState(profileClients[0] || '');
   const [color, setColor] = useState('');
   const [businessType, setBusinessType] = useState('');
+  const [photoGalleryLink, setPhotoGalleryLink] = useState('');
   const [previewLogo, setPreviewLogo] = useState(null);
   const [pendingLogo, setPendingLogo] = useState(undefined);
   const [error, setError] = useState('');
@@ -47,6 +49,7 @@ export default function ClientProfileModal({ onClose }) {
     if (!selectedClient) return;
     setColor(getClientColor(selectedClient));
     setBusinessType(getClientBusinessType(selectedClient));
+    setPhotoGalleryLink(getClientPhotoGalleryLink(selectedClient));
     setPreviewLogo(getClientLogo(selectedClient));
     setPendingLogo(undefined);
     setError('');
@@ -78,7 +81,7 @@ export default function ClientProfileModal({ onClose }) {
     setError('');
 
     try {
-      const patch = { color, businessType };
+      const patch = { color, businessType, photoGalleryLink };
       if (pendingLogo !== undefined) patch.logo = pendingLogo;
       const result = await saveClientProfile(selectedClient, patch);
       if (result?.ok === false) {
@@ -96,7 +99,8 @@ export default function ClientProfileModal({ onClose }) {
   const hasChanges =
     pendingLogo !== undefined ||
     (selectedClient && color !== getClientColor(selectedClient)) ||
-    (selectedClient && businessType !== getClientBusinessType(selectedClient));
+    (selectedClient && businessType !== getClientBusinessType(selectedClient)) ||
+    (selectedClient && photoGalleryLink !== getClientPhotoGalleryLink(selectedClient));
 
   if (profileClients.length === 0) {
     return null;
@@ -167,6 +171,22 @@ export default function ClientProfileModal({ onClose }) {
             </div>
             <p className="mt-1.5 text-[10px] text-white/35">
               Controls which event form this client sees on the Events Calendar.
+            </p>
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-white/45">
+              Photo gallery link
+            </span>
+            <input
+              type="url"
+              value={photoGalleryLink}
+              onChange={(e) => setPhotoGalleryLink(e.target.value)}
+              placeholder="Google Drive, Dropbox, or other shared folder URL…"
+              className="w-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
+            />
+            <p className="mt-1.5 text-[10px] text-white/35">
+              Clients will see a button to access this folder from their portal.
             </p>
           </label>
 
