@@ -50,17 +50,19 @@ export default function CalendarDayCard({
   const hasTypeLabel = Boolean(typeLabel && typeLabelProps);
   const typeLabelEl = hasTypeLabel ? (
     <span
-      className={`shrink-0 uppercase tracking-wide ${clientMetaClass} ${typeLabelProps.className || ''}`.trim()}
+      className={`min-w-0 truncate uppercase tracking-wide ${clientMetaClass} ${typeLabelProps.className || ''}`.trim()}
       style={typeLabelProps.style}
     >
       {typeLabel}
     </span>
   ) : null;
 
+  const metaBadgeClass = `shrink-0 truncate ${relaxed ? 'max-w-[52%]' : 'max-w-[48%]'}`;
+
   const resolvedTitleClassName =
     titleClassName ||
     (clientPortal
-      ? `block whitespace-normal font-medium leading-snug text-[#f9f6f2] ${clientTitleClass}`
+      ? `block line-clamp-2 font-medium leading-snug text-[#f9f6f2] ${clientTitleClass}`
       : undefined);
 
   const titleContent = titleLink ? (
@@ -75,9 +77,11 @@ export default function CalendarDayCard({
         <p className={`mb-0.5 font-semibold tabular-nums text-white/70 ${clientMetaClass}`}>{timeLabel}</p>
       )}
       {(badgeLabel || hasTypeLabel) && (
-        <div className="mb-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+        <div className="mb-0.5 flex min-w-0 items-center gap-x-1.5 overflow-hidden">
           {badgeLabel && (
-            <span className={`font-semibold ${badgeClassName} ${clientMetaClass}`.trim()}>{badgeLabel}</span>
+            <span className={`font-semibold ${metaBadgeClass} ${badgeClassName} ${clientMetaClass}`.trim()}>
+              {badgeLabel}
+            </span>
           )}
           {typeLabelEl}
         </div>
@@ -88,12 +92,12 @@ export default function CalendarDayCard({
   );
 
   const metaRow = !dense && (badgeLabel || (typePill && typePillProps)) && (
-    <div className="mb-1 flex flex-wrap items-center gap-1.5">
+    <div className="mb-1 flex min-w-0 items-center gap-1.5 overflow-hidden">
       {badgeLabel && (
-        <span className={`truncate text-[11px] ${badgeClassName}`.trim()}>{badgeLabel}</span>
+        <span className={`shrink-0 truncate max-w-[48%] text-[11px] ${badgeClassName}`.trim()}>{badgeLabel}</span>
       )}
       {typePill && typePillProps && (
-        <span className={typePillProps.className} style={typePillProps.style}>
+        <span className={`min-w-0 truncate ${typePillProps.className}`} style={typePillProps.style}>
           {typePill}
         </span>
       )}
@@ -101,10 +105,10 @@ export default function CalendarDayCard({
   );
 
   const categoryRow = (dense || relaxed) && (badgeLabel || hasTypeLabel) && (
-    <div className="mb-0.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+    <div className="mb-0.5 flex min-w-0 items-center gap-x-1.5 overflow-hidden">
       {badgeLabel && (
         <span
-          className={`font-semibold ${relaxed ? 'text-xs' : 'text-[11px]'} ${badgeClassName}`.trim()}
+          className={`${metaBadgeClass} font-semibold ${relaxed ? 'text-xs' : 'text-[11px]'} ${badgeClassName}`.trim()}
         >
           {badgeLabel}
         </span>

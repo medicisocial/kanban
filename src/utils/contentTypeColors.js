@@ -54,10 +54,25 @@ function buildTypeStyle(border, useDefaultLabel, contentType) {
   };
 }
 
-export function contentTypeCardStyle(typeStyle) {
+export function contentTypeCardStyle(typeStyle, { bgAlpha = 0.32 } = {}) {
   return {
-    backgroundColor: typeStyle.bg,
+    backgroundColor: hexToRgba(typeStyle.border, bgAlpha),
     boxShadow: `inset 3px 0 0 ${typeStyle.border}`,
+  };
+}
+
+/** High-contrast type pill for pipeline kanban cards (tinted card surface). */
+export function contentTypeKanbanPillProps(
+  typeStyle,
+  className = 'inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+) {
+  const accent = typeStyle.border;
+  return {
+    className: `${className} text-[#f9f6f2]`.trim(),
+    style: {
+      backgroundColor: 'rgba(0, 0, 0, 0.48)',
+      boxShadow: `inset 0 0 0 1px ${hexToRgba(accent, 0.72)}`,
+    },
   };
 }
 
