@@ -13,6 +13,7 @@ export default function CalendarEvent({
   compact = false,
   hideClient = false,
   fullTitle = false,
+  relaxed = false,
   highlighted = false,
 }) {
   const { getClientColor } = useClientsContext();
@@ -77,11 +78,19 @@ export default function CalendarEvent({
         clientLabel={card.client}
         timeLabel={sessionTimeLabel}
         badgeLabel="Shoot"
-        badgeClassName="text-[9px] font-semibold text-[#fca5a5]"
+        badgeClassName={
+          relaxed ? 'text-[11px] font-semibold text-[#fca5a5]' : 'text-[9px] font-semibold text-[#fca5a5]'
+        }
         title={`${card.title}${card.shootSessionCount > 1 ? ` · ${card.shootSessionCount} items` : ''}`}
+        titleClassName={
+          relaxed
+            ? 'block whitespace-normal text-[13px] font-medium text-[#f9f6f2]'
+            : undefined
+        }
         onClick={handleClick}
         titleAttr={`${card.client} shoot${sessionTimeLabel ? ` · ${sessionTimeLabel}` : ''}`}
         dense
+        relaxed={relaxed}
       />
     );
   }
@@ -125,15 +134,18 @@ export default function CalendarEvent({
         title={card.title}
         titleLink={card.dropboxLink}
         titleClassName={`block min-w-0 font-medium leading-snug text-[#f9f6f2] ${
-          fullTitle ? 'whitespace-normal text-[12px]' : 'truncate text-[11px]'
+          fullTitle || relaxed
+            ? `whitespace-normal ${relaxed ? 'text-[13px]' : 'text-[12px]'}`
+            : 'truncate text-[11px]'
         }`}
         onClick={() => onClick?.(card)}
         titleAttr={eventTitle}
         opacity={isPosted ? 0.72 : 1}
         dense
+        relaxed={relaxed}
         className={`min-w-0 ${highlighted ? 'ring-1 ring-white/30' : ''} ${
           canDrag ? 'cursor-grab active:cursor-grabbing' : ''
-        } ${onRemove ? 'pr-5' : ''}`}
+        } ${onRemove ? (relaxed ? 'pr-6' : 'pr-5') : ''}`}
         dragProps={dragProps}
       />
     </div>

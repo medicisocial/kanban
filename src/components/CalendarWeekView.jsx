@@ -34,7 +34,7 @@ export default function CalendarWeekView({
         {formatWeekRange(weekStart)}
         {overviewLabel ? ` · ${overviewLabel}` : ""}
       </p>
-      <div className="flex min-h-[calc(100vh-220px)] gap-2 overflow-x-auto pb-4">
+      <div className="grid min-h-[calc(100vh-220px)] grid-cols-7 gap-2 pb-4">
         {days.map((day) => {
           const key = toDateKey(day);
           const dayCards = cardsByDate[key] || [];
@@ -43,7 +43,7 @@ export default function CalendarWeekView({
           return (
             <div
               key={key}
-              className={`flex w-[160px] shrink-0 flex-col rounded-xl sm:w-[200px] ${
+              className={`flex min-w-0 flex-col rounded-xl ${
                 today ? 'calendar-cell-today' : 'calendar-week-column'
               } ${dragOverKey === key ? 'ring-2 ring-[#810100]/60' : ''}`}
               aria-current={today ? 'date' : undefined}
@@ -72,7 +72,7 @@ export default function CalendarWeekView({
                 </p>
               </div>
 
-              <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-2" style={{ minHeight: "480px" }}>
+              <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto p-3" style={{ minHeight: "480px" }}>
                 {dayCards.length === 0 ? (
                   <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-white/10 py-6">
                     <p className="text-[10px] text-gray-600">No posts</p>
@@ -96,6 +96,7 @@ export default function CalendarWeekView({
                         onRemove={onRemoveFromCalendar}
                         onMove={onMoveCalendarPost}
                         hideClient={hideClient}
+                        relaxed
                       />
                     ))}
                     {onAddPost && (

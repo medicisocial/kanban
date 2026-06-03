@@ -28,15 +28,18 @@ export default function CalendarDayCard({
   className = '',
   dragProps = {},
   dense = false,
+  relaxed = false,
 }) {
   const handleClick = (event) => {
     event.stopPropagation();
     onClick?.(event);
   };
 
-  const shellClass = dense
-    ? 'group/event relative mb-1 w-full cursor-pointer rounded-lg border border-white/8 px-2 py-1.5 text-left leading-snug transition hover:brightness-110'
-    : 'group/event relative mb-1 w-full cursor-pointer rounded-lg border border-white/8 px-1.5 py-1 text-left transition hover:brightness-110';
+  const shellClass = relaxed
+    ? 'group/event relative mb-1.5 w-full cursor-pointer rounded-xl border border-white/8 px-3 py-2.5 text-left leading-snug transition hover:brightness-110'
+    : dense
+      ? 'group/event relative mb-1 w-full cursor-pointer rounded-lg border border-white/8 px-2 py-1.5 text-left leading-snug transition hover:brightness-110'
+      : 'group/event relative mb-1 w-full cursor-pointer rounded-lg border border-white/8 px-1.5 py-1 text-left transition hover:brightness-110';
 
   const metaRow = !dense && (badgeLabel || (typePill && typePillProps)) && (
     <div className="mb-1 flex flex-wrap items-center gap-1.5">
@@ -51,10 +54,12 @@ export default function CalendarDayCard({
     </div>
   );
 
-  const categoryRow = dense && (badgeLabel || (typeLabel && typeLabelProps)) && (
-    <div className="mb-1 flex items-center justify-between gap-1.5">
+  const categoryRow = (dense || relaxed) && (badgeLabel || (typeLabel && typeLabelProps)) && (
+    <div className={`flex items-center justify-between gap-1.5 ${relaxed ? 'mb-1.5' : 'mb-1'}`}>
       {badgeLabel ? (
-        <span className={`min-w-0 truncate text-[10px] font-semibold ${badgeClassName}`.trim()}>
+        <span
+          className={`min-w-0 truncate font-semibold ${relaxed ? 'text-[11px]' : 'text-[10px]'} ${badgeClassName}`.trim()}
+        >
           {badgeLabel}
         </span>
       ) : (
@@ -62,7 +67,9 @@ export default function CalendarDayCard({
       )}
       {typeLabel && typeLabelProps && (
         <span
-          className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide ${typeLabelProps.className || ''}`.trim()}
+          className={`shrink-0 font-semibold uppercase tracking-wide ${
+            relaxed ? 'text-[11px]' : 'text-[10px]'
+          } ${typeLabelProps.className || ''}`.trim()}
           style={typeLabelProps.style}
         >
           {typeLabel}
@@ -90,20 +97,24 @@ export default function CalendarDayCard({
       }}
       title={titleAttr}
     >
-      {dense ? (
+      {dense || relaxed ? (
         <>
           {((!hideClient && clientLabel) || timeLabel) && (
-            <div className="mb-1 flex items-center justify-between gap-1.5">
+            <div className={`flex items-center justify-between gap-1.5 ${relaxed ? 'mb-1.5' : 'mb-1'}`}>
               {!hideClient && clientLabel && (
                 <span
-                  className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-wide"
+                  className={`min-w-0 truncate font-semibold uppercase tracking-wide ${
+                    relaxed ? 'text-xs' : 'text-[10px]'
+                  }`}
                   style={{ color: accentColor }}
                 >
                   {clientLabel}
                 </span>
               )}
               {timeLabel && (
-                <span className="shrink-0 text-[10px] font-medium text-gray-400">{timeLabel}</span>
+                <span className={`shrink-0 font-medium text-gray-400 ${relaxed ? 'text-xs' : 'text-[10px]'}`}>
+                  {timeLabel}
+                </span>
               )}
             </div>
           )}
