@@ -8,6 +8,7 @@ import { pushStaffSyncSingleton } from './staffSyncApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import {
   fetchRowsWithTimeout,
+  localCollectionHasRecords,
   mergeClientsWorkspaceState,
   mergeRemoteSingletonWithLocal,
   singletonMatchesSnapshot,
@@ -30,8 +31,14 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
   const pendingWriteRef = useRef(false);
   const localValueRef = useRef(value);
   const [writeNonce, setWriteNonce] = useState(0);
+  const [syncLoaded, setSyncLoaded] = useState(!SUPABASE_ENABLED);
 
   localValueRef.current = value;
+
+  const markSyncLoaded = () => {
+    loadedRef.current = true;
+    setSyncLoaded(true);
+  };
 
   useEffect(() => {
     if (!SUPABASE_ENABLED || !supabase) return undefined;
@@ -54,6 +61,7 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
     syncedRef.current = null;
     applyingRemoteRef.current = false;
     loadedRef.current = false;
+    setSyncLoaded(false);
 
     const store = storeRef.current;
     let active = true;
@@ -84,7 +92,7 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
           const hasUnsyncedLocalChanges = !singletonMatchesSnapshot(merged, syncedRef.current);
 
           applyingRemoteRef.current = true;
-          loadedRef.current = true;
+          markSyncLoaded();
           setValue(merged);
 
           if (hasUnsyncedLocalChanges) {
@@ -94,31 +102,25 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
           return;
         }
 
-        // First run with an empty table: seed from local data for the legacy org only.
-        if (local && isLegacyOrg) {
-          const canWrite = await hasStaffSupabaseSession();
-          if (!canWrite) {
-            console.warn(
-              `[supabase:${table}] using local data — cloud write session not ready yet`,
-            );
-            applyingRemoteRef.current = true;
-            syncedRef.current = JSON.stringify(local);
-            loadedRef.current = true;
-            setValue(local);
-            return;
+        // Empty cloud table: keep local cache when it still has records (any org).
+        if (localCollectionHasRecords(local)) {
+          if (isLegacyOrg) {
+            const canWrite = await hasStaffSupabaseSession();
+            if (canWrite) {
+              try {
+                await store.upsertRecords([{ id: recordId, data: local }]);
+              } catch (seedErr) {
+                console.warn(`[supabase:${table}] seed failed:`, seedErr?.message || seedErr);
+              }
+            } else {
+              console.warn(
+                `[supabase:${table}] using local data — cloud write session not ready yet`,
+              );
+            }
           }
-          await store.upsertRecords([{ id: recordId, data: local }]);
           applyingRemoteRef.current = true;
           syncedRef.current = JSON.stringify(local);
-          loadedRef.current = true;
-          setValue(local);
-          return;
-        }
-
-        if (local && isLegacyOrg) {
-          applyingRemoteRef.current = true;
-          syncedRef.current = JSON.stringify(local);
-          loadedRef.current = true;
+          markSyncLoaded();
           setValue(local);
           pendingWriteRef.current = true;
           queueMicrotask(() => setWriteNonce((current) => current + 1));
@@ -127,19 +129,19 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
 
         applyingRemoteRef.current = true;
         syncedRef.current = JSON.stringify(local ?? null);
-        loadedRef.current = true;
+        markSyncLoaded();
         if (loadLocal) setValue(local ?? loadLocal());
       } catch (err) {
         console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
-        if (loadLocal && isLegacyOrg) {
+        if (loadLocal) {
           const local = loadLocal();
-          if (local) {
+          if (localCollectionHasRecords(local)) {
             applyingRemoteRef.current = true;
             syncedRef.current = JSON.stringify(local);
             setValue(local);
           }
         }
-        loadedRef.current = true;
+        markSyncLoaded();
       }
     };
 
@@ -226,4 +228,6 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, writeNonce, orgId, table, recordId]);
+
+  return syncLoaded;
 }

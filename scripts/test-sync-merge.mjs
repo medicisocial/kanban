@@ -1,6 +1,7 @@
 import {
   mergeRemoteListWithLocalPending,
   mergeRemoteMapWithLocalPending,
+  filterProtectedSyncRemovals,
 } from '../src/lib/syncHelpers.js';
 
 function assert(condition, message) {
@@ -69,6 +70,27 @@ const getId = (record) => record.id;
   });
   assert(Object.keys(merged).length === 1, 'stale map ghost should be dropped');
   assert(merged.a.value === 1, 'remote map value should remain');
+}
+
+// Auth-critical tables must not bulk-delete unless explicitly tombstoned.
+{
+  const pending = new Set(['explicit-delete']);
+  const removed = filterProtectedSyncRemovals(
+    'client_portal_credentials',
+    ['Plume', 'Ara Med Spa', 'explicit-delete'],
+    pending,
+  );
+  assert(removed.length === 1, 'only tombstoned ids should be deleted');
+  assert(removed[0] === 'explicit-delete', 'tombstoned id should pass through');
+}
+
+{
+  const removed = filterProtectedSyncRemovals(
+    'cards',
+    ['card-1', 'card-2'],
+    new Set(),
+  );
+  assert(removed.length === 2, 'non-auth tables should allow all removals');
 }
 
 console.log('Sync merge tests passed.');

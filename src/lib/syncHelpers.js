@@ -1,5 +1,23 @@
 export const FETCH_TIMEOUT_MS = 12000;
 
+/** Tables where accidental bulk deletes would break logins. */
+export const AUTH_CRITICAL_SYNC_TABLES = new Set([
+  'client_portal_credentials',
+  'team_members',
+]);
+
+export function localCollectionHasRecords(local) {
+  if (Array.isArray(local)) return local.length > 0;
+  if (local && typeof local === 'object') return Object.keys(local).length > 0;
+  return Boolean(local);
+}
+
+/** Only push deletes that were explicitly requested (tombstoned) for auth tables. */
+export function filterProtectedSyncRemovals(table, removed, pendingRemoved) {
+  if (!AUTH_CRITICAL_SYNC_TABLES.has(table)) return removed;
+  return removed.filter((id) => pendingRemoved.has(String(id)));
+}
+
 export function pendingRemovedKey(orgId, table) {
   return `medici-pending-removed:${orgId}:${table}`;
 }

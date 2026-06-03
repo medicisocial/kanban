@@ -12,6 +12,7 @@ import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useMapSync } from '../lib/useMapSync';
 import { pushStaffSyncRows } from '../lib/staffSyncApi';
 import { markPendingRemoved } from '../lib/syncHelpers';
+import { initialSyncMapState, shouldPersistSyncedState } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
@@ -40,7 +41,7 @@ async function syncPortalCredentialsRow(client, activeUsers) {
 }
 
 export function useClientPortalCredentials() {
-  const [credentials, setCredentials] = useState(loadCredentials);
+  const [credentials, setCredentials] = useState(() => initialSyncMapState(loadCredentials));
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;
@@ -48,7 +49,7 @@ export function useClientPortalCredentials() {
   }, []);
   useReloadFromStorage(reloadFromStorage);
 
-  useMapSync({
+  const syncLoaded = useMapSync({
     table: 'client_portal_credentials',
     map: credentials,
     setMap: setCredentials,
@@ -58,8 +59,9 @@ export function useClientPortalCredentials() {
   // Keep localStorage as a write-through cache even when Supabase is enabled,
   // because the mutation helpers below read existing users via loadCredentials().
   useEffect(() => {
+    if (!shouldPersistSyncedState(syncLoaded)) return;
     writeOrgScopedJson(CLIENT_PORTAL_AUTH_STORAGE_KEY, credentials);
-  }, [credentials]);
+  }, [credentials, syncLoaded]);
 
   const getClientUsers = useCallback(
     (client) => getClientUsersFromStore(credentials, client),

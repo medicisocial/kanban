@@ -7,8 +7,10 @@ import { useStaffAuth } from '../context/StaffAuthContext';
 import {
   augmentLocalWithPendingCreates,
   fetchRowsWithTimeout,
+  filterProtectedSyncRemovals,
   loadPendingCreates,
   loadPendingRemoved,
+  localCollectionHasRecords,
   markPendingCreates,
   markPendingRemoved,
   mergeRemoteListWithLocalPending,
@@ -123,33 +125,24 @@ export function useCollectionSync({
           return attachRowUpdatedAt(base, row.updated_at);
         };
 
-        // First run with an empty table: seed from local data for the legacy org only.
-        if (rows.length === 0 && loadLocal && isLegacyOrg) {
-          const local = loadLocal();
-          if (local.length) {
-            const canWrite = await hasStaffSupabaseSession();
-            if (!canWrite) {
-              console.warn(
-                `[supabase:${table}] using local data — cloud write session not ready yet`,
-              );
-              applyingRemoteRef.current = true;
-              syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
-              markSyncLoaded();
-              setItems(local);
-              return;
-            }
-            await store.upsertRecords(local.map((r) => ({ id: getId(r), data: r })));
-            applyingRemoteRef.current = true;
-            syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
-            markSyncLoaded();
-            setItems(local);
-            return;
-          }
-        }
-
+        // Empty cloud table: keep local cache when it still has records (any org).
         if (rows.length === 0) {
           const local = loadLocal ? loadLocal() : [];
-          if (local.length && isLegacyOrg) {
+          if (localCollectionHasRecords(local)) {
+            if (isLegacyOrg) {
+              const canWrite = await hasStaffSupabaseSession();
+              if (canWrite) {
+                try {
+                  await store.upsertRecords(local.map((r) => ({ id: getId(r), data: r })));
+                } catch (seedErr) {
+                  console.warn(`[supabase:${table}] seed failed:`, seedErr?.message || seedErr);
+                }
+              } else {
+                console.warn(
+                  `[supabase:${table}] using local data — cloud write session not ready yet`,
+                );
+              }
+            }
             applyingRemoteRef.current = true;
             syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
             markSyncLoaded();
@@ -270,13 +263,13 @@ export function useCollectionSync({
         }
       } catch (err) {
         console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
-        if (loadLocal && isLegacyOrg) {
+        if (loadLocal) {
           const local = excludePendingRemoved(
             augmentLocalWithPendingCreates([], loadLocal, getId, pendingLocalCreatesRef.current),
             getId,
             pendingRemovedRef.current,
           );
-          if (local.length) {
+          if (localCollectionHasRecords(local)) {
             applyingRemoteRef.current = true;
             syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
             setItems(local);
@@ -429,9 +422,15 @@ export function useCollectionSync({
         const id = String(getId(record));
         if (prev.get(id) !== next.get(id)) changed.push(record);
       }
-      const removed = [];
+      const rawRemoved = [];
       for (const id of prev.keys()) {
-        if (!next.has(id)) removed.push(id);
+        if (!next.has(id)) rawRemoved.push(id);
+      }
+      const removed = filterProtectedSyncRemovals(table, rawRemoved, pendingRemovedRef.current);
+      if (rawRemoved.length > removed.length) {
+        console.warn(
+          `[supabase:${table}] blocked ${rawRemoved.length - removed.length} accidental delete(s) — re-sync from cloud`,
+        );
       }
 
       if (removed.length) {

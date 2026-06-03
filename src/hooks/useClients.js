@@ -25,6 +25,7 @@ import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useSingletonSync } from '../lib/useSingletonSync';
 import { pushStaffSyncSingleton } from '../lib/staffSyncApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { shouldPersistSyncedState } from '../lib/syncInitialState';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
 
 function loadLegacyPortalPasswordVault() {
@@ -143,7 +144,9 @@ function applyClientsWorkspaceUpdate(setState, updater) {
 export function useClients() {
   const { isLegacyOrg, planType, orgId } = useStaffAuth();
   const includeDefaults = isLegacyOrg;
-  const [state, setState] = useState(() => normalizeClientsState(loadClientsRaw(), { includeDefaults }));
+  const [state, setState] = useState(() =>
+    normalizeClientsState(loadClientsRaw(), { includeDefaults }),
+  );
 
   const loadClientsForSync = useCallback(
     () => normalizeClientsState(loadClientsRaw(), { includeDefaults }),
@@ -156,7 +159,7 @@ export function useClients() {
   }, [loadClientsForSync]);
   useReloadFromStorage(reloadFromStorage);
 
-  useSingletonSync({
+  const syncLoaded = useSingletonSync({
     table: 'clients',
     value: state,
     setValue: (next) => setState(normalizeClientsState(next, { includeDefaults })),
@@ -165,8 +168,9 @@ export function useClients() {
   });
 
   useEffect(() => {
+    if (!shouldPersistSyncedState(syncLoaded)) return;
     writeOrgScopedJson(CLIENTS_STORAGE_KEY, state);
-  }, [state]);
+  }, [state, syncLoaded]);
 
   const addClient = useCallback(async (name, color, logo = null, businessType = '') => {
     const trimmed = normalizeClientName(name);
