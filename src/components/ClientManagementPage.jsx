@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { useStaffAuth } from '../context/StaffAuthContext';
-import { CLIENT_COLOR_PALETTE, INTERNAL_TEAM_CLIENT } from '../constants';
+import { INTERNAL_TEAM_CLIENT } from '../constants';
 import { BUSINESS_TYPES } from '../utils/eventFormSchemas';
 import { getClientPortalBrands } from '../utils/clients';
 import { syncClientPortalCredentialsToCloud } from '../utils/clientPortalAdmin';
@@ -13,6 +13,7 @@ import {
   bakeLogoCrop,
 } from '../utils/clientLogo';
 import AddClientModal from './AddClientModal';
+import ClientBrandColorField from './ClientBrandColorField';
 import ClientAvatar from './ClientAvatar';
 import ClientLogoAvatar from './clientPortal/ClientLogoAvatar';
 import LogoCropEditor from './clientPortal/LogoCropEditor';
@@ -377,25 +378,11 @@ export default function ClientManagementPage({
                 </p>
               </label>
 
-              <div>
-                <span className="mb-2 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
-                  Brand color
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {CLIENT_COLOR_PALETTE.map((swatch) => (
-                    <button
-                      key={swatch}
-                      type="button"
-                      onClick={() => setColor(swatch)}
-                      className={`h-8 w-8 border-2 transition duration-300 ${
-                        color === swatch ? 'border-white scale-110' : 'border-transparent hover:scale-105'
-                      }`}
-                      style={{ backgroundColor: swatch }}
-                      aria-label={`Select color ${swatch}`}
-                    />
-                  ))}
-                </div>
-              </div>
+              <ClientBrandColorField
+                value={color}
+                onChange={setColor}
+                clientName={selectedClient}
+              />
 
               {profileError && <p className="text-sm text-rose-300">{profileError}</p>}
               {profileMessage && <p className="text-sm text-emerald-300">{profileMessage}</p>}

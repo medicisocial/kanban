@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
-import { CLIENT_COLOR_PALETTE, INTERNAL_TEAM_CLIENT } from '../constants';
+import { INTERNAL_TEAM_CLIENT } from '../constants';
 import { BUSINESS_TYPES } from '../utils/eventFormSchemas';
 import { getClientPortalBrands } from '../utils/clients';
 import { readClientProfileImage } from '../utils/clientImage';
 import ClientAvatar from './ClientAvatar';
+import ClientBrandColorField from './ClientBrandColorField';
 import { btnPrimaryClass, btnSecondaryClass, selectClass } from './clientPortal/clientPortalUi';
 
 export default function ClientProfileModal({ onClose }) {
@@ -223,25 +224,11 @@ export default function ClientProfileModal({ onClose }) {
             </div>
           </div>
 
-          <div>
-            <span className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/45">
-              Brand color
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {CLIENT_COLOR_PALETTE.map((swatch) => (
-                <button
-                  key={swatch}
-                  type="button"
-                  onClick={() => setColor(swatch)}
-                  className={`h-8 w-8 border-2 transition ${
-                    color === swatch ? 'border-white scale-110' : 'border-transparent hover:scale-105'
-                  }`}
-                  style={{ backgroundColor: swatch }}
-                  aria-label={`Select color ${swatch}`}
-                />
-              ))}
-            </div>
-          </div>
+          <ClientBrandColorField
+            value={color}
+            onChange={setColor}
+            clientName={selectedClient}
+          />
 
           {error && <p className="text-sm text-rose-300">{error}</p>}
         </div>

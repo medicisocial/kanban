@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CLIENT_COLOR_PALETTE } from '../constants';
 import { readClientProfileImage } from '../utils/clientImage';
 import { DEFAULT_LOGO_CROP, serializeClientLogo, bakeLogoCrop } from '../utils/clientLogo';
+import ClientBrandColorField from './ClientBrandColorField';
 import ClientLogoAvatar from './clientPortal/ClientLogoAvatar';
 import LogoCropEditor from './clientPortal/LogoCropEditor';
 import { btnPrimaryClass, inputClass } from './clientPortal/clientPortalUi';
@@ -156,25 +157,11 @@ export default function AddClientModal({ onClose, onAdd, existingClients }) {
             </div>
           </div>
 
-          <div>
-            <span className="mb-2 block text-[10px] font-medium uppercase tracking-wider text-white/45">
-              Brand color
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {CLIENT_COLOR_PALETTE.map((swatch) => (
-                <button
-                  key={swatch}
-                  type="button"
-                  onClick={() => setColor(swatch)}
-                  className={`h-8 w-8 border-2 transition ${
-                    color === swatch ? 'border-white scale-110' : 'border-transparent hover:scale-105'
-                  }`}
-                  style={{ backgroundColor: swatch }}
-                  aria-label={`Select color ${swatch}`}
-                />
-              ))}
-            </div>
-          </div>
+          <ClientBrandColorField
+            value={color}
+            onChange={setColor}
+            clientName={name.trim() || 'new client'}
+          />
 
           {existingClients.length > 0 && (
             <p className="text-[10px] text-white/35">

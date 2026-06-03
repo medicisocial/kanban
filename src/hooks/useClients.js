@@ -56,6 +56,15 @@ function normalizeBusinessTypesMap(types = {}) {
   return normalized;
 }
 
+function normalizeClientColorsMap(colors = {}) {
+  const normalized = {};
+  for (const [client, color] of Object.entries(colors)) {
+    const hex = normalizeHexColor(color);
+    if (hex) normalized[client] = hex;
+  }
+  return normalized;
+}
+
 function normalizeClientsState(data, { includeDefaults = true } = {}) {
   const source = data && typeof data === 'object' ? data : {};
   const names = Array.isArray(source.names) && source.names.length > 0
@@ -64,7 +73,10 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
 
   return {
     names,
-    colors: { ...DEFAULT_CLIENT_COLORS, ...(source.colors || {}) },
+    colors: {
+      ...normalizeClientColorsMap(DEFAULT_CLIENT_COLORS),
+      ...normalizeClientColorsMap(source.colors || {}),
+    },
     logos: { ...(source.logos || {}) },
     accountManagers: {
       ...DEFAULT_CLIENT_ACCOUNT_MANAGERS,
@@ -189,7 +201,8 @@ export function useClients() {
       if (prev.names.some((client) => clientNamesConflict(client, trimmed))) {
         return prev;
       }
-      const nextColor = color || pickNextClientColor(prev.colors, CLIENT_COLOR_PALETTE);
+      const nextColor =
+        normalizeHexColor(color) || pickNextClientColor(prev.colors, CLIENT_COLOR_PALETTE);
       added = true;
       const nextBusinessTypes = { ...prev.businessTypes };
       if (businessType) nextBusinessTypes[trimmed] = businessType;
@@ -251,10 +264,11 @@ export function useClients() {
   }, []);
 
   const setClientColor = useCallback(async (client, color) => {
-    if (!client || !color) return { ok: false, error: 'Missing client or color.' };
+    const hex = normalizeHexColor(color);
+    if (!client || !hex) return { ok: false, error: 'Missing client or color.' };
     return applyClientsWorkspaceUpdate(setState, (prev) => ({
       ...prev,
-      colors: { ...prev.colors, [client]: color },
+      colors: { ...prev.colors, [client]: hex },
     }));
   }, []);
 
@@ -289,7 +303,10 @@ export function useClients() {
     return applyClientsWorkspaceUpdate(setState, (prev) => {
       const next = { ...prev };
       if (color) {
-        next.colors = { ...prev.colors, [client]: color };
+        const hex = normalizeHexColor(color);
+        if (hex) {
+          next.colors = { ...prev.colors, [client]: hex };
+        }
       }
       if (businessType !== undefined) {
         next.businessTypes = {

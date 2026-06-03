@@ -65,7 +65,7 @@ export async function loadPortalWorkspace(orgId) {
     fetchPortalSection(() => fetchCollection('events', orgId), 'events'),
     fetchPortalSection(() => fetchCollection('meetings', orgId), 'meetings'),
     fetchPortalSection(() => fetchCollectionMap('shoot_plans', orgId), 'shoot_plans'),
-    fetchPortalSection(() => fetchCollection('clients', orgId), 'clients'),
+    fetchPortalSection(() => fetchCollectionMap('clients', orgId), 'clients'),
     fetchPortalSection(() => fetchCollectionMap('client_portal_credentials', orgId), 'client_portal_credentials'),
   ]);
 
@@ -82,7 +82,9 @@ export async function loadPortalWorkspace(orgId) {
         [MEETINGS_STORAGE_KEY]: pickSection(meetingsResult, kvData, MEETINGS_STORAGE_KEY, []),
         [SHOOT_PLANS_STORAGE_KEY]: pickSection(plansResult, kvData, SHOOT_PLANS_STORAGE_KEY, {}),
         [CLIENTS_STORAGE_KEY]: clientsResult.ok
-          ? clientsResult.value[0] || {}
+          ? clientsResult.value?.workspace
+            || Object.values(clientsResult.value || {})[0]
+            || {}
           : kvData[CLIENTS_STORAGE_KEY] || {},
         [CLIENT_PORTAL_AUTH_KEY]: pickSection(authResult, kvData, CLIENT_PORTAL_AUTH_KEY, {}),
       },

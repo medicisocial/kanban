@@ -19,6 +19,7 @@ import {
   VIDEO_IDEAS_STORAGE_KEY,
   loadPortalWorkspace,
 } from './_lib/portalWorkspace.mjs';
+import { normalizeHexColor } from './_lib/colorHex.mjs';
 import { normalizeContentTypeColors } from './_lib/contentTypeColors.mjs';
 
 function unauthorized(res) {
@@ -98,7 +99,7 @@ export default async function handler(req, res) {
     brand,
     orgId: session.orgId || null,
     exportedAt: workspace?.exportedAt || null,
-    clientColor: colors[brand] || null,
+    clientColor: normalizeHexColor(colors[brand]) || colors[brand] || null,
     clientLogo: logos[brand] || null,
     businessType: normalizeBusinessType(businessTypes[brand] || '') || null,
     contacts: normalizeClientContacts(contacts[brand]),
