@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { toDateKey } from '../utils/calendar';
+import DateInput from './DateInput';
 
 const inputClass =
   'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30';
@@ -96,11 +97,11 @@ export default function AddAdminTaskModal({ onClose, onAdd, defaultAssignee }) {
 
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-gray-400">Due date</span>
-              <input
-                type="date"
+              <DateInput
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className={inputClass}
+                placeholder="Select date"
+                inputClassName={inputClass}
                 required
               />
             </label>

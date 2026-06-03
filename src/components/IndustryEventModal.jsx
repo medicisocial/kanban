@@ -11,6 +11,7 @@ import {
   getEstimatedAttendancePlaceholder,
 } from '../utils/eventFormSchemas';
 import IndustryEventForm, { IndustryEventDetails } from './IndustryEventForm';
+import DateInput from './DateInput';
 import TimeInput from './TimeInput';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, selectClass, statusBadgeClass } from './clientPortal/clientPortalUi';
 
@@ -257,11 +258,11 @@ export default function IndustryEventModal({
                   <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-white/45">
                     Event date *
                   </span>
-                  <input
-                    type="date"
+                  <DateInput
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className={inputClass}
+                    placeholder="Select date"
+                    inputClassName={inputClass}
                     required
                   />
                 </label>

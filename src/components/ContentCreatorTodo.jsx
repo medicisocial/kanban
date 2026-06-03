@@ -9,6 +9,7 @@ import { resolveStaffMemberName } from '../utils/staffMembers';
 import { usesPersonalWorkspaceView } from '../utils/staffAuth';
 import { btnSecondaryClass } from './clientPortal/clientPortalUi';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
+import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
 
 export default function ContentCreatorTodo({
   cards,
@@ -53,15 +54,12 @@ export default function ContentCreatorTodo({
         const typeStyle = getContentTypeStyle(task.contentType);
         const clientColor = getClientColor(task.client);
         return (
-          <article
+          <TeamTaskCard
             key={task.id}
-            className="tesla-task-card"
-            style={{
-              '--task-accent-color': clientColor,
-              animationDelay: `${0.08 + index * 0.05}s`,
-            }}
+            accentColor={clientColor}
+            animationDelay={0.08 + index * 0.05}
           >
-            <div className="tesla-task-card-body flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => onOpenCard?.(task.card)}
@@ -71,9 +69,7 @@ export default function ContentCreatorTodo({
                   <span {...contentTypePillProps(typeStyle)}>
                     {task.contentType}
                   </span>
-                  <span className="tesla-task-card-client" style={{ color: clientColor }}>
-                    {task.client}
-                  </span>
+                  <TeamTaskClientLabel client={task.client} color={clientColor} />
                 </div>
                 <h3 className="text-sm font-semibold tracking-tight text-white">{task.title}</h3>
                 <p className="mt-1 text-xs text-white/45">
@@ -92,7 +88,7 @@ export default function ContentCreatorTodo({
                 Hand off
               </button>
             </div>
-          </article>
+          </TeamTaskCard>
         );
       })}
     </div>

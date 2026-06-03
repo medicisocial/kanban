@@ -5,6 +5,8 @@ import {
   toDateKey,
 } from '../utils/calendar';
 import StoryRecurrencePicker from './StoryRecurrencePicker';
+import DateInput from './DateInput';
+import TimeInput from './TimeInput';
 
 const inputClass =
   'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30';
@@ -93,11 +95,11 @@ export default function SchedulePostModal({ card, onClose, onSchedule }) {
               />
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-gray-400">Publish time (optional)</span>
-                <input
-                  type="time"
+                <TimeInput
                   value={dueTime}
                   onChange={(e) => setDueTime(e.target.value)}
-                  className={inputClass}
+                  placeholder="Select time"
+                  inputClassName={inputClass}
                 />
               </label>
             </>
@@ -105,22 +107,22 @@ export default function SchedulePostModal({ card, onClose, onSchedule }) {
             <>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-gray-400">Publish date</span>
-                <input
-                  type="date"
+                <DateInput
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className={inputClass}
+                  placeholder="Select date"
+                  inputClassName={inputClass}
                   required
                 />
               </label>
 
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-gray-400">Publish time (optional)</span>
-                <input
-                  type="time"
+                <TimeInput
                   value={dueTime}
                   onChange={(e) => setDueTime(e.target.value)}
-                  className={inputClass}
+                  placeholder="Select time"
+                  inputClassName={inputClass}
                 />
               </label>
             </>

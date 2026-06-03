@@ -52,6 +52,23 @@ select option:hover {
 }
 
 /* Hide browser default date/time ghost text until focused or filled */
+input[type='date'].datetime-empty,
+input[type='time'].datetime-empty,
+input[type='datetime-local'].datetime-empty {
+  color: transparent;
+  caret-color: transparent;
+}
+
+input[type='date'].datetime-empty:focus,
+input[type='time'].datetime-empty:focus,
+input[type='datetime-local'].datetime-empty:focus,
+input[type='date']:not(.datetime-empty),
+input[type='time']:not(.datetime-empty),
+input[type='datetime-local']:not(.datetime-empty) {
+  color: #f9f6f2;
+  caret-color: #f9f6f2;
+}
+
 .datetime-empty::-webkit-datetime-edit,
 .datetime-empty::-webkit-datetime-edit-fields-wrapper,
 .datetime-empty::-webkit-datetime-edit-text,
@@ -67,7 +84,7 @@ select option:hover {
 .meeting-time-empty::-webkit-datetime-edit-hour-field,
 .meeting-time-empty::-webkit-datetime-edit-minute-field,
 .meeting-time-empty::-webkit-datetime-edit-ampm-field {
-  color: transparent;
+  opacity: 0;
 }
 
 .datetime-empty:focus::-webkit-datetime-edit,
@@ -84,13 +101,16 @@ select option:hover {
 .meeting-time-empty:focus::-webkit-datetime-edit-text,
 .meeting-time-empty:focus::-webkit-datetime-edit-hour-field,
 .meeting-time-empty:focus::-webkit-datetime-edit-minute-field,
-.meeting-time-empty:focus::-webkit-datetime-edit-ampm-field {
-  color: #f9f6f2;
+.meeting-time-empty:focus::-webkit-datetime-edit-ampm-field,
+input[type='date']:not(.datetime-empty)::-webkit-datetime-edit,
+input[type='time']:not(.datetime-empty)::-webkit-datetime-edit,
+input[type='datetime-local']:not(.datetime-empty)::-webkit-datetime-edit {
+  opacity: 1;
 }
 
 .datetime-empty::-moz-focus-inner,
 .meeting-time-empty::-moz-focus-inner {
-  color: transparent;
+  opacity: 0;
 }
 
 input:focus::placeholder,
@@ -1190,25 +1210,33 @@ textarea:focus::placeholder {
     color-mix(in srgb, var(--task-accent-color, rgba(255, 255, 255, 0.4)) 18%, transparent),
     transparent 70%
   );
-  opacity: 0;
+  opacity: 0.62;
   transition: opacity 0.42s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .tesla-task-card::after {
-  content: none;
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  border-radius: 12px 0 0 12px;
+  background: var(--task-accent-color, rgba(255, 255, 255, 0.35));
+  opacity: 0.9;
+  pointer-events: none;
 }
 
 .tesla-task-card:hover {
-  border-color: color-mix(in srgb, var(--task-accent-color, #fff) 28%, rgba(255, 255, 255, 0.14));
+  border-color: rgba(255, 255, 255, 0.18);
   transform: translateY(-2px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 0 0 1px color-mix(in srgb, var(--task-accent-color, #fff) 10%, transparent),
-    0 14px 36px rgba(0, 0, 0, 0.24);
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 16px 40px rgba(0, 0, 0, 0.28);
 }
 
 .tesla-task-card:hover::before {
-  opacity: 1;
+  opacity: 0.78;
 }
 
 .tesla-task-card-body {

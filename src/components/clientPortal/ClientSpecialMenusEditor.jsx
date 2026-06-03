@@ -10,6 +10,7 @@ import {
   readSpecialMenuPdfUpload,
 } from '../../utils/clientSpecialMenus';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
+import DateInput from '../DateInput';
 import FilePreviewActions from './FilePreviewActions';
 
 function SpecialMenuRunBanner({ startDate, endDate }) {
@@ -345,22 +346,22 @@ export default function ClientSpecialMenusEditor({
               <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-white/45">
                 Runs from
               </span>
-              <input
-                type="date"
+              <DateInput
                 value={draft.startDate}
                 onChange={(e) => setDraft((prev) => ({ ...prev, startDate: e.target.value }))}
-                className={inputClass}
+                placeholder="Select date"
+                inputClassName={inputClass}
               />
             </label>
             <label className="block">
               <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-white/45">
                 Runs until
               </span>
-              <input
-                type="date"
+              <DateInput
                 value={draft.endDate}
                 onChange={(e) => setDraft((prev) => ({ ...prev, endDate: e.target.value }))}
-                className={inputClass}
+                placeholder="Select date"
+                inputClassName={inputClass}
               />
             </label>
           </div>

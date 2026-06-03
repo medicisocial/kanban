@@ -3,6 +3,8 @@ import { CONTENT_TYPES } from "../constants";
 import { useClientsContext } from "../context/ClientsContext";
 import { toDateKey } from "../utils/calendar";
 import StoryRecurrencePicker from "./StoryRecurrencePicker";
+import DateInput from "./DateInput";
+import TimeInput from "./TimeInput";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30";
@@ -162,21 +164,21 @@ export default function AddCalendarPostModal({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-gray-400">Publish date</span>
-                <input
-                  type="date"
+                <DateInput
                   value={form.dueDate}
                   onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-                  className={inputClass}
+                  placeholder="Select date"
+                  inputClassName={inputClass}
                 />
               </label>
 
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-gray-400">Publish time (optional)</span>
-                <input
-                  type="time"
+                <TimeInput
                   value={form.dueTime}
                   onChange={(e) => setForm({ ...form, dueTime: e.target.value })}
-                  className={inputClass}
+                  placeholder="Select time"
+                  inputClassName={inputClass}
                 />
               </label>
             </div>
@@ -185,11 +187,11 @@ export default function AddCalendarPostModal({
           {lockContentType && (recurrenceMode === "weekly" || recurrenceMode === "daily") && (
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-gray-400">Publish time (optional)</span>
-              <input
-                type="time"
+              <TimeInput
                 value={form.dueTime}
                 onChange={(e) => setForm({ ...form, dueTime: e.target.value })}
-                className={inputClass}
+                placeholder="Select time"
+                inputClassName={inputClass}
               />
               <p className="mt-1 text-[10px] text-gray-500">Same time each selected day</p>
             </label>

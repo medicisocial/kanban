@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import ClientNameInput from './ClientNameInput';
+import DateInput from './DateInput';
 import { btnPrimaryClass, btnSecondaryClass, inputClass } from './clientPortal/clientPortalUi';
 
 export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) {
@@ -85,11 +86,11 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-gray-400">Due date (optional)</span>
-              <input
-                type="date"
+              <DateInput
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className={inputClass}
+                placeholder="Select date"
+                inputClassName={inputClass}
               />
             </label>
 

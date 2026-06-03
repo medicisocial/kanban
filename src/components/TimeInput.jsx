@@ -12,7 +12,8 @@ export default function TimeInput({
   ...props
 }) {
   const [focused, setFocused] = useState(false);
-  const showPlaceholder = !value && !focused;
+  const isEmpty = !value;
+  const showPlaceholder = isEmpty && !focused;
 
   return (
     <div className={`relative ${className}`.trim()}>
@@ -28,12 +29,12 @@ export default function TimeInput({
           setFocused(false);
           onBlur?.(event);
         }}
-        className={`${inputClassName} w-full ${value || focused ? '' : 'datetime-empty'}`}
+        className={`${inputClassName} w-full ${isEmpty && !focused ? 'datetime-empty' : ''}`}
         {...props}
       />
       {showPlaceholder && (
         <span
-          className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-white/30"
+          className="pointer-events-none absolute inset-y-0 left-3 z-[1] flex max-w-[calc(100%-2.75rem)] items-center truncate text-sm text-white/30"
           aria-hidden
         >
           {placeholder}
