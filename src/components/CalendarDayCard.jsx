@@ -1,6 +1,12 @@
 import CardTitleLink from './CardTitleLink';
 import { accentCardStyle } from '../utils/contentTypeColors';
 
+function withoutLeftAccentLine(style) {
+  if (!style) return style;
+  const { boxShadow, ...rest } = style;
+  return rest;
+}
+
 export default function CalendarDayCard({
   accentColor = '#810100',
   surfaceStyle,
@@ -79,7 +85,7 @@ export default function CalendarDayCard({
       }}
       className={`${shellClass} ${className}`.trim()}
       style={{
-        ...(surfaceStyle || accentCardStyle(accentColor)),
+        ...withoutLeftAccentLine(surfaceStyle || accentCardStyle(accentColor)),
         opacity,
       }}
       title={titleAttr}
