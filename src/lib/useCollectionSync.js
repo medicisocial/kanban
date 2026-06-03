@@ -15,6 +15,7 @@ import {
   markPendingRemoved,
   mergeRemoteListWithLocalPending,
   mergeRemoteRecordWithLocal,
+  readSyncedLocalCollection,
   recordsMatchSnapshot,
   savePendingCreates,
   savePendingRemoved,
@@ -113,6 +114,9 @@ export function useCollectionSync({
     let refetchTimer = null;
 
     const applyRemote = async () => {
+      const readLocal = () =>
+        loadLocal ? readSyncedLocalCollection(loadLocal, getId, orgId, table) : [];
+
       try {
         pendingRemovedRef.current = loadPendingRemoved(orgId, table);
         pendingLocalCreatesRef.current = loadPendingCreates(orgId, table);
@@ -127,7 +131,7 @@ export function useCollectionSync({
 
         // Empty cloud table: keep local cache when it still has records (any org).
         if (rows.length === 0) {
-          const local = loadLocal ? loadLocal() : [];
+          const local = readLocal();
           if (localCollectionHasRecords(local)) {
             if (isLegacyOrg) {
               const canWrite = await hasStaffSupabaseSession();
@@ -240,7 +244,7 @@ export function useCollectionSync({
           syncedSnapshot: previousSynced,
           localItems: augmentLocalWithPendingCreates(
             localItemsRef.current,
-            loadLocal,
+            loadLocal ? readLocal : null,
             getId,
             pendingLocalCreatesRef.current,
           ),
@@ -265,7 +269,7 @@ export function useCollectionSync({
         console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
         if (loadLocal) {
           const local = excludePendingRemoved(
-            augmentLocalWithPendingCreates([], loadLocal, getId, pendingLocalCreatesRef.current),
+            augmentLocalWithPendingCreates([], readLocal, getId, pendingLocalCreatesRef.current),
             getId,
             pendingRemovedRef.current,
           );

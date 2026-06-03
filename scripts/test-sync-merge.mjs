@@ -2,6 +2,10 @@ import {
   mergeRemoteListWithLocalPending,
   mergeRemoteMapWithLocalPending,
   filterProtectedSyncRemovals,
+  excludePendingRemovedFromCollection,
+  excludePendingRemovedFromMap,
+  markPendingRemoved,
+  pendingRemovedKey,
 } from '../src/lib/syncHelpers.js';
 
 function assert(condition, message) {
@@ -91,6 +95,32 @@ const getId = (record) => record.id;
     new Set(),
   );
   assert(removed.length === 2, 'non-auth tables should allow all removals');
+}
+
+// Tombstoned rows must not hydrate from local cache when pending-remove storage is set.
+if (typeof localStorage !== 'undefined') {
+  markPendingRemoved('test-org', 'meetings', ['ghost']);
+  try {
+    const filtered = excludePendingRemovedFromCollection(
+      [{ id: 'keep' }, { id: 'ghost' }],
+      (row) => row.id,
+      'test-org',
+      'meetings',
+    );
+    assert(filtered.length === 1, 'tombstoned collection row should be skipped');
+    assert(filtered[0].id === 'keep', 'active row should remain');
+  } finally {
+    localStorage.removeItem(pendingRemovedKey('test-org', 'meetings'));
+  }
+}
+
+{
+  const map = excludePendingRemovedFromMap(
+    { keep: { value: 1 }, ghost: { value: 2 } },
+    'medici',
+    'shoot_plans',
+  );
+  assert(Object.keys(map).length === 2, 'map filter without pending should pass through');
 }
 
 console.log('Sync merge tests passed.');

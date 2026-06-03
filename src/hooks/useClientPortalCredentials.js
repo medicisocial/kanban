@@ -11,8 +11,7 @@ import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useMapSync } from '../lib/useMapSync';
 import { pushStaffSyncRows } from '../lib/staffSyncApi';
-import { markPendingRemoved } from '../lib/syncHelpers';
-import { initialSyncMapState, shouldPersistSyncedState } from '../lib/syncInitialState';
+import { initialSyncMapState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
@@ -41,7 +40,9 @@ async function syncPortalCredentialsRow(client, activeUsers) {
 }
 
 export function useClientPortalCredentials() {
-  const [credentials, setCredentials] = useState(() => initialSyncMapState(loadCredentials));
+  const [credentials, setCredentials] = useState(() =>
+    initialSyncMapState(loadCredentials, { table: 'client_portal_credentials' }),
+  );
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;
@@ -116,7 +117,7 @@ export function useClientPortalCredentials() {
   }, [setClientPortalUsers]);
 
   const clearClientPortalCredential = useCallback(async (client) => {
-    markPendingRemoved(getOrgId(), 'client_portal_credentials', [client]);
+    tombstoneSyncedDeletes('client_portal_credentials', [client]);
     setCredentials((prev) => {
       const next = { ...prev };
       delete next[client];

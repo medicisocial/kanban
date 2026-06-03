@@ -5,8 +5,8 @@ import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
-import { markPendingRemoved, loadPendingRemoved } from '../lib/syncHelpers';
-import { initialSyncCollectionState, shouldPersistSyncedState } from '../lib/syncInitialState';
+import { markPendingRemoved } from '../lib/syncHelpers';
+import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
@@ -26,10 +26,7 @@ const getMeetingId = (meeting) => meeting.id;
 function loadMeetings() {
   try {
     const parsed = readOrgScopedJson(MEETINGS_STORAGE_KEY, null);
-    if (!Array.isArray(parsed)) return [];
-    const pendingRemoved = loadPendingRemoved(getOrgId(), 'meetings');
-    if (!pendingRemoved.size) return parsed;
-    return parsed.filter((meeting) => !pendingRemoved.has(String(meeting?.id)));
+    if (Array.isArray(parsed)) return parsed;
   } catch {
     /* fall through */
   }
@@ -37,7 +34,9 @@ function loadMeetings() {
 }
 
 export function useMeetings() {
-  const [meetings, setMeetings] = useState(() => initialSyncCollectionState(loadMeetings));
+  const [meetings, setMeetings] = useState(() =>
+    initialSyncCollectionState(loadMeetings, { table: 'meetings', getId: getMeetingId }),
+  );
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;
@@ -89,7 +88,7 @@ export function useMeetings() {
   const deleteMeeting = useCallback((id) => {
     if (!id) return;
     notifyMutation();
-    markPendingRemoved(getOrgId(), 'meetings', [String(id)]);
+    tombstoneSyncedDeletes('meetings', [id]);
     setMeetings((prev) => prev.filter((meeting) => meeting.id !== id));
     persistMeetingDelete(id);
   }, []);

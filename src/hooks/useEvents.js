@@ -6,7 +6,7 @@ import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
 import { markPendingRemoved } from '../lib/syncHelpers';
-import { initialSyncCollectionState, shouldPersistSyncedState } from '../lib/syncInitialState';
+import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
@@ -34,7 +34,9 @@ function loadEvents() {
 }
 
 export function useEvents() {
-  const [events, setEvents] = useState(() => initialSyncCollectionState(loadEvents));
+  const [events, setEvents] = useState(() =>
+    initialSyncCollectionState(loadEvents, { table: 'events', getId: getEventId }),
+  );
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;
@@ -85,6 +87,7 @@ export function useEvents() {
 
   const deleteEvent = useCallback((id) => {
     notifyMutation();
+    tombstoneSyncedDeletes('events', [id]);
     setEvents((prev) => prev.filter((event) => event.id !== id));
     persistEventDelete(id);
   }, []);

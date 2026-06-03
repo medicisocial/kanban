@@ -17,6 +17,7 @@ import {
   markPendingRemoved,
   mapMatchesSnapshot,
   mergeRemoteMapWithLocalPending,
+  readSyncedLocalMap,
   savePendingCreates,
   savePendingRemoved,
   unmarkPendingCreates,
@@ -80,11 +81,17 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
     let active = true;
 
     const applyRemote = async () => {
+      pendingRemovedRef.current = loadPendingRemoved(orgId, table);
+      pendingLocalCreatesRef.current = loadPendingCreates(orgId, table);
+
+      const readLocal = () =>
+        loadLocal ? readSyncedLocalMap(loadLocal, orgId, table) : {};
+
       try {
         const rows = await fetchRowsWithTimeout(store);
         if (!active) return;
 
-        const local = loadLocal ? loadLocal() || {} : {};
+        const local = readLocal();
         const localKeys = Object.keys(local);
 
         // Empty cloud table: keep local cache when it still has records (any org).
@@ -133,7 +140,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
           syncedSnapshot: previousSynced,
           localMap: augmentLocalMapWithPendingCreates(
             localMapRef.current,
-            loadLocal,
+            loadLocal ? readLocal : null,
             pendingLocalCreatesRef.current,
           ),
           pendingRemoved: pendingRemovedRef.current,
@@ -152,7 +159,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
       } catch (err) {
         console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
         if (loadLocal) {
-          const local = loadLocal() || {};
+          const local = readLocal();
           const keys = Object.keys(local);
           if (localCollectionHasRecords(local)) {
             applyingRemoteRef.current = true;

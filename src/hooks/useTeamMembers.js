@@ -12,7 +12,7 @@ import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
 import { markPendingRemoved } from '../lib/syncHelpers';
-import { initialSyncCollectionState, shouldPersistSyncedState } from '../lib/syncInitialState';
+import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
@@ -42,7 +42,9 @@ function loadTeamMembers() {
 }
 
 export function useTeamMembers() {
-  const [teamMembers, setTeamMembers] = useState(() => initialSyncCollectionState(loadTeamMembers));
+  const [teamMembers, setTeamMembers] = useState(() =>
+    initialSyncCollectionState(loadTeamMembers, { table: 'team_members', getId: getTeamMemberId }),
+  );
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;
@@ -123,8 +125,9 @@ export function useTeamMembers() {
   }, []);
 
   const removeTeamMember = useCallback((id) => {
-    persistTeamMemberDelete(id);
+    tombstoneSyncedDeletes('team_members', [id]);
     setTeamMembers((prev) => prev.filter((member) => member.id !== id));
+    persistTeamMemberDelete(id);
   }, []);
 
   const toggleTeamMemberRole = useCallback((id, role) => {

@@ -10,14 +10,12 @@ import { useReloadFromStorage } from "./useReloadFromStorage";
 import { SUPABASE_ENABLED } from "../lib/supabaseClient";
 import { useCollectionSync } from "../lib/useCollectionSync";
 import { pushStaffSync, pushStaffSyncRecords } from "../lib/staffSyncApi";
-import { markPendingRemoved } from "../lib/syncHelpers";
-import { initialSyncCollectionState, shouldPersistSyncedState } from "../lib/syncInitialState";
+import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDeletes } from "../lib/syncInitialState";
 import { getOrgId } from "../lib/orgSession";
 import { readOrgScopedJson, writeOrgScopedJson } from "../lib/orgStorage";
 
 function tombstoneIdeas(ids) {
-  if (!SUPABASE_ENABLED || !ids?.length) return;
-  markPendingRemoved(getOrgId(), "video_ideas", ids);
+  tombstoneSyncedDeletes("video_ideas", ids);
 }
 
 function persistIdeaUpsert(idea) {
@@ -65,7 +63,9 @@ function loadIdeas() {
 }
 
 export function useVideoIdeas() {
-  const [ideas, setIdeas] = useState(() => initialSyncCollectionState(loadIdeas));
+  const [ideas, setIdeas] = useState(() =>
+    initialSyncCollectionState(loadIdeas, { table: "video_ideas", getId: getIdeaId }),
+  );
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;

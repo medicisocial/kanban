@@ -7,7 +7,7 @@ import { SUPABASE_ENABLED } from "../lib/supabaseClient";
 import { useMapSync } from "../lib/useMapSync";
 import { pushStaffSyncRows } from "../lib/staffSyncApi";
 import { markPendingRemoved } from "../lib/syncHelpers";
-import { initialSyncMapState, shouldPersistSyncedState } from "../lib/syncInitialState";
+import { initialSyncMapState, shouldPersistSyncedState, tombstoneSyncedDeletes } from "../lib/syncInitialState";
 import { getOrgId } from "../lib/orgSession";
 import { readOrgScopedJson, writeOrgScopedJson } from "../lib/orgStorage";
 
@@ -50,7 +50,9 @@ function createPlan(client, dateKey) {
 }
 
 export function useShootPlans() {
-  const [plans, setPlans] = useState(() => initialSyncMapState(loadPlans));
+  const [plans, setPlans] = useState(() =>
+    initialSyncMapState(loadPlans, { table: "shoot_plans" }),
+  );
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;
@@ -118,6 +120,7 @@ export function useShootPlans() {
   const deletePlan = useCallback((client, dateKey) => {
     notifyMutation();
     const key = getShootPlanKey(client, dateKey);
+    tombstoneSyncedDeletes("shoot_plans", [key]);
     setPlans((prev) => {
       const next = { ...prev };
       delete next[key];

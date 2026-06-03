@@ -18,6 +18,40 @@ export function filterProtectedSyncRemovals(table, removed, pendingRemoved) {
   return removed.filter((id) => pendingRemoved.has(String(id)));
 }
 
+/** Drop rows tombstoned locally so deleted records do not hydrate from cache. */
+export function excludePendingRemovedFromCollection(items, getId, orgId, table) {
+  if (!Array.isArray(items) || !items.length) return items || [];
+  const pending = loadPendingRemoved(orgId, table);
+  if (!pending.size) return items;
+  return items.filter((item) => !pending.has(String(getId(item))));
+}
+
+/** Drop map keys tombstoned locally so deleted records do not hydrate from cache. */
+export function excludePendingRemovedFromMap(map, orgId, table) {
+  const source = map && typeof map === 'object' ? map : {};
+  const pending = loadPendingRemoved(orgId, table);
+  if (!pending.size) return source;
+  const filtered = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (!pending.has(String(key))) filtered[key] = value;
+  }
+  return filtered;
+}
+
+export function readSyncedLocalCollection(loadLocal, getId, orgId, table) {
+  if (!loadLocal) return [];
+  const raw = loadLocal();
+  if (!orgId || !table || !getId || !Array.isArray(raw)) return Array.isArray(raw) ? raw : [];
+  return excludePendingRemovedFromCollection(raw, getId, orgId, table);
+}
+
+export function readSyncedLocalMap(loadLocal, orgId, table) {
+  if (!loadLocal) return {};
+  const raw = loadLocal() || {};
+  if (!orgId || !table) return raw;
+  return excludePendingRemovedFromMap(raw, orgId, table);
+}
+
 export function pendingRemovedKey(orgId, table) {
   return `medici-pending-removed:${orgId}:${table}`;
 }

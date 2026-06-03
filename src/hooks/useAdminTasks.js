@@ -7,7 +7,7 @@ import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
 import { markPendingRemoved } from '../lib/syncHelpers';
-import { initialSyncCollectionState, shouldPersistSyncedState } from '../lib/syncInitialState';
+import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
@@ -50,7 +50,9 @@ function loadAdminTasks() {
 }
 
 export function useAdminTasks() {
-  const [adminTasks, setAdminTasks] = useState(() => initialSyncCollectionState(loadAdminTasks));
+  const [adminTasks, setAdminTasks] = useState(() =>
+    initialSyncCollectionState(loadAdminTasks, { table: 'admin_tasks', getId: getAdminTaskId }),
+  );
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;
@@ -106,6 +108,7 @@ export function useAdminTasks() {
 
   const deleteAdminTask = useCallback((id) => {
     notifyMutation();
+    tombstoneSyncedDeletes('admin_tasks', [id]);
     setAdminTasks((prev) => prev.filter((task) => task.id !== id));
     persistAdminTaskDelete(id);
   }, []);
