@@ -5,7 +5,7 @@ import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
-import { markPendingRemoved } from '../lib/syncHelpers';
+import { markPendingRemoved, loadPendingRemoved } from '../lib/syncHelpers';
 import { initialSyncCollectionState, shouldPersistSyncedState } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
@@ -26,7 +26,10 @@ const getMeetingId = (meeting) => meeting.id;
 function loadMeetings() {
   try {
     const parsed = readOrgScopedJson(MEETINGS_STORAGE_KEY, null);
-    if (Array.isArray(parsed)) return parsed;
+    if (!Array.isArray(parsed)) return [];
+    const pendingRemoved = loadPendingRemoved(getOrgId(), 'meetings');
+    if (!pendingRemoved.size) return parsed;
+    return parsed.filter((meeting) => !pendingRemoved.has(String(meeting?.id)));
   } catch {
     /* fall through */
   }
@@ -84,7 +87,9 @@ export function useMeetings() {
   }, []);
 
   const deleteMeeting = useCallback((id) => {
+    if (!id) return;
     notifyMutation();
+    markPendingRemoved(getOrgId(), 'meetings', [String(id)]);
     setMeetings((prev) => prev.filter((meeting) => meeting.id !== id));
     persistMeetingDelete(id);
   }, []);
