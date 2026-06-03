@@ -55,6 +55,7 @@ export function useCollectionSync({
   getId,
   normalize,
   filterItems,
+  getRemotePurgeIds,
   loadLocal,
 }) {
   const { orgId, orgReady, isLegacyOrg } = useStaffAuth();
@@ -105,7 +106,7 @@ export function useCollectionSync({
     const applyRemote = async () => {
       try {
         pendingRemovedRef.current = loadPendingRemoved(orgId, table);
-    pendingLocalCreatesRef.current = loadPendingCreates(orgId, table);
+        pendingLocalCreatesRef.current = loadPendingCreates(orgId, table);
 
         const rows = await fetchRowsWithTimeout(store);
         if (!active) return;
@@ -158,7 +159,39 @@ export function useCollectionSync({
           return;
         }
 
-        const allItems = rows.map(mapRow);
+        let allItems = rows.map(mapRow);
+
+        const purgeIds = getRemotePurgeIds
+          ? [...new Set(getRemotePurgeIds(allItems).map(String).filter(Boolean))]
+          : [];
+        if (purgeIds.length) {
+          markPendingRemoved(orgId, table, purgeIds);
+          for (const id of purgeIds) {
+            pendingRemovedRef.current.add(id);
+            pendingLocalCreatesRef.current.delete(id);
+          }
+          savePendingRemoved(orgId, table, pendingRemovedRef.current);
+          savePendingCreates(orgId, table, pendingLocalCreatesRef.current);
+
+          let canWrite = await hasStaffSupabaseSession();
+          if (!canWrite) {
+            await ensureStaffSupabaseSession();
+            canWrite = await hasStaffSupabaseSession();
+          }
+          try {
+            if (canWrite) {
+              await store.deleteRecords(purgeIds);
+            } else {
+              await pushStaffSync({ table, changed: [], removed: purgeIds, orgId });
+            }
+          } catch (err) {
+            console.warn(`[supabase:${table}] junk purge delete failed:`, err?.message || err);
+          }
+
+          const purgeSet = new Set(purgeIds);
+          allItems = allItems.filter((record) => !purgeSet.has(String(getId(record))));
+        }
+
         const filteredItems = filterItems ? filterItems(allItems) : allItems;
         const keptItems = excludePendingRemoved(
           filteredItems,
@@ -166,16 +199,16 @@ export function useCollectionSync({
           pendingRemovedRef.current,
         );
 
-        const remoteIds = new Set(filteredItems.map((record) => String(getId(record))));
+        const allRemoteIds = new Set(allItems.map((record) => String(getId(record))));
         // Clear tombstones only once the row is gone from the cloud — not when we filtered it out.
         for (const id of [...pendingRemovedRef.current]) {
-          if (!remoteIds.has(id)) {
+          if (!allRemoteIds.has(id)) {
             pendingRemovedRef.current.delete(id);
           }
         }
         savePendingRemoved(orgId, table, pendingRemovedRef.current);
 
-        const droppedIds = filteredItems
+        const droppedIds = allItems
           .map((record) => String(getId(record)))
           .filter((id) => pendingRemovedRef.current.has(id));
 

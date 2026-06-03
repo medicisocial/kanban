@@ -4,7 +4,7 @@ import {
   VIDEO_IDEAS_STORAGE_KEY,
 } from "../constants";
 import { loadClientResponses, clearClientResponses } from "../utils/clientShare";
-import { stripDemoVideoIdeas } from "../utils/demoVideoIdeas";
+import { stripDemoVideoIdeas, getRejectedVideoIdeaIds } from "../utils/demoVideoIdeas";
 import { notifyMutation } from "../utils/undoHistory";
 import { useReloadFromStorage } from "./useReloadFromStorage";
 import { SUPABASE_ENABLED } from "../lib/supabaseClient";
@@ -80,6 +80,7 @@ export function useVideoIdeas() {
     getId: getIdeaId,
     loadLocal: loadIdeas,
     filterItems: stripDemoVideoIdeas,
+    getRemotePurgeIds: getRejectedVideoIdeaIds,
   });
 
   useEffect(() => {
