@@ -6,6 +6,7 @@ import { BUSINESS_TYPES } from '../utils/eventFormSchemas';
 import { getClientPortalBrands } from '../utils/clients';
 import { syncClientPortalCredentialsToCloud } from '../utils/clientPortalAdmin';
 import { readClientProfileImage } from '../utils/clientImage';
+import { normalizeLink } from '../utils/links';
 import {
   DEFAULT_LOGO_CROP,
   normalizeClientLogo,
@@ -373,9 +374,20 @@ export default function ClientManagementPage({
                   placeholder="Paste Dropbox shared folder link…"
                   className="w-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
                 />
-                <p className="mt-1.5 text-[10px] text-white/35">
-                  Clients see this on the Photos tab in their portal.
-                </p>
+                {photoGalleryLink.trim() ? (
+                  <a
+                    href={normalizeLink(photoGalleryLink)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1.5 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
+                  >
+                    Open gallery →
+                  </a>
+                ) : (
+                  <p className="mt-1.5 text-[10px] text-white/35">
+                    Clients see this on the Photos tab in their portal.
+                  </p>
+                )}
               </label>
 
               <ClientBrandColorField

@@ -4,6 +4,7 @@ import { INTERNAL_TEAM_CLIENT } from '../constants';
 import { BUSINESS_TYPES } from '../utils/eventFormSchemas';
 import { getClientPortalBrands } from '../utils/clients';
 import { readClientProfileImage } from '../utils/clientImage';
+import { normalizeLink } from '../utils/links';
 import ClientAvatar from './ClientAvatar';
 import ClientBrandColorField from './ClientBrandColorField';
 import { btnPrimaryClass, btnSecondaryClass, selectClass } from './clientPortal/clientPortalUi';
@@ -186,9 +187,20 @@ export default function ClientProfileModal({ onClose }) {
               placeholder="Google Drive, Dropbox, or other shared folder URL…"
               className="w-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
             />
-            <p className="mt-1.5 text-[10px] text-white/35">
-              Clients will see a button to access this folder from their portal.
-            </p>
+            {photoGalleryLink.trim() ? (
+              <a
+                href={normalizeLink(photoGalleryLink)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1.5 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
+              >
+                Open gallery →
+              </a>
+            ) : (
+              <p className="mt-1.5 text-[10px] text-white/35">
+                Clients will see a button to access this folder from their portal.
+              </p>
+            )}
           </label>
 
           <div className="flex items-center gap-4 border border-white/10 bg-white/[0.03] p-4">
