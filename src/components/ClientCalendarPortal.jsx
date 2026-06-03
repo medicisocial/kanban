@@ -110,7 +110,7 @@ function ClientCalendarDetail({ card, onClose }) {
             rel="noopener noreferrer"
             className={`${btnPrimaryClass} mt-4 flex w-full items-center justify-center gap-2 py-2.5 text-[11px]`}
           >
-            View content ↗
+            View in Dropbox ↗
           </a>
         )}
       </div>
@@ -141,7 +141,14 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
     const merged = { ...postsByDate };
     for (const [dateKey, dayStories] of Object.entries(storiesByDate)) {
       merged[dateKey] = [...(merged[dateKey] || []), ...dayStories];
-      merged[dateKey].sort((a, b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'));
+    }
+    const sortDayCards = (a, b) => {
+      const byTime = (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99');
+      if (byTime !== 0) return byTime;
+      return (a.title || '').localeCompare(b.title || '');
+    };
+    for (const dateKey of Object.keys(merged)) {
+      merged[dateKey].sort(sortDayCards);
     }
     return merged;
   }, [visibleCards, focusDate, viewMode]);
@@ -214,6 +221,7 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
             cardsByDate={cardsByDate}
             onCardClick={setSelectedCard}
             hideClient
+            clientPortal
           />
         ) : (
           <CalendarMonthView
@@ -222,6 +230,8 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
             onCardClick={setSelectedCard}
             onDayClick={handleDayClick}
             hideClient
+            clientPortal
+            maxVisibleCards={5}
           />
         )}
       </div>

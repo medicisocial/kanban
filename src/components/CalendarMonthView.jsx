@@ -20,8 +20,10 @@ export default function CalendarMonthView({
   onMoveCalendarPost,
   overviewLabel = "overview",
   hideClient = false,
+  clientPortal = false,
   expanded = false,
   markedDates = {},
+  maxVisibleCards = 3,
 }) {
   const year = focusDate.getFullYear();
   const month = focusDate.getMonth();
@@ -61,8 +63,8 @@ export default function CalendarMonthView({
               const today = isToday(day);
 
               const selected = selectedDateKey === key;
-              const visibleCards = expanded ? dayCards : dayCards.slice(0, 3);
-              const hiddenCount = expanded ? 0 : Math.max(0, dayCards.length - 3);
+              const visibleCards = expanded ? dayCards : dayCards.slice(0, maxVisibleCards);
+              const hiddenCount = expanded ? 0 : Math.max(0, dayCards.length - maxVisibleCards);
 
               return (
                 <button
@@ -114,7 +116,7 @@ export default function CalendarMonthView({
                     )}
                   </div>
 
-                  <div className="space-y-1">
+                  <div className={clientPortal ? 'space-y-1.5' : 'space-y-1'}>
                     {dayCards.length === 0 && markedLabel && inMonth && (
                       <p className="px-1 text-[10px] font-medium text-[#fca5a5]/80">{markedLabel}</p>
                     )}
@@ -129,7 +131,8 @@ export default function CalendarMonthView({
                         onMove={onMoveCalendarPost}
                         compact
                         hideClient={hideClient}
-                        fullTitle={expanded}
+                        clientPortal={clientPortal}
+                        fullTitle={expanded || clientPortal}
                         highlighted={false}
                       />
                     ))}

@@ -1,4 +1,5 @@
 import CardTitleLink from './CardTitleLink';
+import CalendarDropboxLink from './CalendarDropboxLink';
 import { accentCardStyle } from '../utils/contentTypeColors';
 
 function withoutLeftAccentLine(style) {
@@ -29,17 +30,48 @@ export default function CalendarDayCard({
   dragProps = {},
   dense = false,
   relaxed = false,
+  clientPortal = false,
 }) {
   const handleClick = (event) => {
     event.stopPropagation();
     onClick?.(event);
   };
 
-  const shellClass = relaxed
-    ? 'group/event relative mb-1.5 w-full cursor-pointer rounded-xl border border-white/8 px-3 py-2.5 text-left leading-snug transition hover:brightness-110'
-    : dense
-      ? 'group/event relative mb-1 w-full cursor-pointer rounded-lg border border-white/8 px-2 py-1.5 text-left leading-snug transition hover:brightness-110'
-      : 'group/event relative mb-1 w-full cursor-pointer rounded-lg border border-white/8 px-1.5 py-1 text-left transition hover:brightness-110';
+  const shellClass = clientPortal
+    ? 'group/event relative mb-1.5 w-full cursor-pointer rounded-lg border border-white/10 px-2.5 py-2 text-left leading-snug transition hover:brightness-110'
+    : relaxed
+      ? 'group/event relative mb-1.5 w-full cursor-pointer rounded-xl border border-white/8 px-3 py-2.5 text-left leading-snug transition hover:brightness-110'
+      : dense
+        ? 'group/event relative mb-1 w-full cursor-pointer rounded-lg border border-white/8 px-2 py-1.5 text-left leading-snug transition hover:brightness-110'
+        : 'group/event relative mb-1 w-full cursor-pointer rounded-lg border border-white/8 px-1.5 py-1 text-left transition hover:brightness-110';
+
+  const clientMetaClass = relaxed ? 'text-xs' : 'text-[10px]';
+  const clientTitleClass = relaxed ? 'text-[13px]' : 'text-[11px]';
+
+  const clientPortalBody = clientPortal && (
+    <>
+      <div className="mb-1.5 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          {timeLabel && (
+            <p className={`font-semibold tabular-nums text-white/70 ${clientMetaClass}`}>{timeLabel}</p>
+          )}
+          {badgeLabel && (
+            <p className={`mt-0.5 font-semibold ${badgeClassName} ${clientMetaClass}`.trim()}>{badgeLabel}</p>
+          )}
+        </div>
+        {typeLabel && typeLabelProps && (
+          <span
+            className={`shrink-0 uppercase tracking-wide ${clientMetaClass} ${typeLabelProps.className || ''}`.trim()}
+            style={typeLabelProps.style}
+          >
+            {typeLabel}
+          </span>
+        )}
+      </div>
+      <p className={`whitespace-normal font-medium leading-snug text-[#f9f6f2] ${clientTitleClass}`}>{title}</p>
+      <CalendarDropboxLink href={titleLink} size={relaxed ? 'md' : 'sm'} />
+    </>
+  );
 
   const metaRow = !dense && (badgeLabel || (typePill && typePillProps)) && (
     <div className="mb-1 flex flex-wrap items-center gap-1.5">
@@ -97,7 +129,9 @@ export default function CalendarDayCard({
       }}
       title={titleAttr}
     >
-      {dense || relaxed ? (
+      {clientPortal ? (
+        clientPortalBody
+      ) : dense || relaxed ? (
         <>
           {((!hideClient && clientLabel) || timeLabel) && (
             <div className={`flex items-center justify-between gap-1.5 ${relaxed ? 'mb-1.5' : 'mb-1'}`}>

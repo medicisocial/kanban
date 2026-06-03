@@ -1,5 +1,5 @@
 import { COLUMNS, getContentTypeStyle } from "../constants";
-import { contentTypeCardStyle, contentTypeLabelProps } from "../utils/contentTypeColors";
+import { contentTypeBadgeProps, contentTypeCardStyle, contentTypeLabelProps } from "../utils/contentTypeColors";
 import { useClientsContext } from "../context/ClientsContext";
 import { formatTime } from "../utils";
 import { formatStoryScheduleSummary, hasStoryDailyRange, hasStoryRecurrence, isCalendarEventPosted } from "../utils/calendar";
@@ -14,6 +14,7 @@ export default function CalendarEvent({
   hideClient = false,
   fullTitle = false,
   relaxed = false,
+  clientPortal = false,
   highlighted = false,
 }) {
   const { getClientColor } = useClientsContext();
@@ -31,7 +32,13 @@ export default function CalendarEvent({
   const isPosted = isCalendarEventPosted(card);
   const columnMeta = COLUMNS.find((col) => col.id === card.columnId);
   const boardStatus = isPosted ? 'Posted' : (columnMeta?.title ?? null);
-  const showBoardStatus = boardStatus && (!hideClient || isPosted);
+  const showBoardStatus = boardStatus && (!hideClient || isPosted) && (!clientPortal || isPosted);
+  const typeLabelClass = clientPortal
+    ? ''
+    : 'text-[10px] font-semibold uppercase tracking-wide';
+  const typeLabelPresentation = clientPortal
+    ? contentTypeBadgeProps(typeStyle)
+    : contentTypeLabelProps(typeStyle, typeLabelClass);
   const statusClass = isPosted
     ? 'text-gray-400'
     : card.columnId === 'scheduled'
@@ -91,6 +98,7 @@ export default function CalendarEvent({
         titleAttr={`${card.client} shoot${sessionTimeLabel ? ` · ${sessionTimeLabel}` : ''}`}
         dense
         relaxed={relaxed}
+        clientPortal={clientPortal}
       />
     );
   }
@@ -127,22 +135,24 @@ export default function CalendarEvent({
         badgeLabel={showBoardStatus ? boardStatus : ''}
         badgeClassName={`font-semibold ${statusClass}`}
         typeLabel={card.contentType}
-        typeLabelProps={contentTypeLabelProps(
-          typeStyle,
-          'text-[10px] font-semibold uppercase tracking-wide',
-        )}
+        typeLabelProps={typeLabelPresentation}
         title={card.title}
         titleLink={card.dropboxLink}
-        titleClassName={`block min-w-0 font-medium leading-snug text-[#f9f6f2] ${
-          fullTitle || relaxed
-            ? `whitespace-normal ${relaxed ? 'text-[13px]' : 'text-[12px]'}`
-            : 'truncate text-[11px]'
-        }`}
+        titleClassName={
+          clientPortal
+            ? undefined
+            : `block min-w-0 font-medium leading-snug text-[#f9f6f2] ${
+                fullTitle || relaxed
+                  ? `whitespace-normal ${relaxed ? 'text-[13px]' : 'text-[12px]'}`
+                  : 'truncate text-[11px]'
+              }`
+        }
         onClick={() => onClick?.(card)}
         titleAttr={eventTitle}
         opacity={isPosted ? 0.72 : 1}
         dense
         relaxed={relaxed}
+        clientPortal={clientPortal}
         className={`min-w-0 ${highlighted ? 'ring-1 ring-white/30' : ''} ${
           canDrag ? 'cursor-grab active:cursor-grabbing' : ''
         } ${onRemove ? (relaxed ? 'pr-6' : 'pr-5') : ''}`}

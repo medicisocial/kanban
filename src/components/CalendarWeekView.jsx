@@ -13,6 +13,7 @@ export default function CalendarWeekView({
   onMoveCalendarPost,
   overviewLabel,
   hideClient = false,
+  clientPortal = false,
 }) {
   const weekStart = startOfWeek(focusDate);
   const days = getWeekDays(weekStart);
@@ -96,6 +97,7 @@ export default function CalendarWeekView({
                         onRemove={onRemoveFromCalendar}
                         onMove={onMoveCalendarPost}
                         hideClient={hideClient}
+                        clientPortal={clientPortal}
                         relaxed
                       />
                     ))}
