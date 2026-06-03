@@ -102,7 +102,11 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
               const canWrite = await hasStaffSupabaseSession();
               if (canWrite) {
                 try {
-                  await store.upsertRecords(localKeys.map((key) => ({ id: key, data: local[key] })));
+                  let seedRows = localKeys.map((key) => ({ id: key, data: local[key] }));
+                  seedRows = filterProtectedSyncUpserts(table, seedRows);
+                  if (seedRows.length) {
+                    await store.upsertRecords(seedRows);
+                  }
                 } catch (seedErr) {
                   console.warn(`[supabase:${table}] seed failed:`, seedErr?.message || seedErr);
                 }

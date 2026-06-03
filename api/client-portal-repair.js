@@ -50,10 +50,17 @@ export default async function handler(req, res) {
 
     const vault = clientsWorkspace?.portalPasswordVault || {};
     const nextMap = { ...(credentialMap || {}) };
+    const clientNames = Array.isArray(clientsWorkspace?.names) ? clientsWorkspace.names : [];
+    const brands = new Set([
+      ...clientNames.filter((name) => name && !String(name).startsWith('__')),
+      ...Object.keys(vault),
+      ...Object.keys(nextMap),
+    ]);
     let repairedUsers = 0;
     const repairedBrands = [];
 
-    for (const [brand, brandVault] of Object.entries(vault)) {
+    for (const brand of brands) {
+      const brandVault = vault[brand];
       if (!brandVault || typeof brandVault !== 'object') continue;
 
       const users = normalizeBrandUsers(nextMap[brand]);

@@ -26,6 +26,7 @@ import { useSingletonSync } from '../lib/useSingletonSync';
 import { pushStaffSyncSingleton } from '../lib/staffSyncApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { shouldPersistSyncedState } from '../lib/syncInitialState';
+import { registerPortalCredentialBrand } from '../lib/syncHelpers';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
 
 function loadLegacyPortalPasswordVault() {
@@ -233,6 +234,7 @@ export function useClients() {
     if (!syncResult.ok) {
       return { ok: false, error: syncResult.error, name: trimmed };
     }
+    registerPortalCredentialBrand(orgId, trimmed);
     return { ok: true, name: trimmed };
   }, [orgId, planType, state.names]);
 

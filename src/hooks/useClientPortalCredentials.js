@@ -14,7 +14,7 @@ import { pushStaffSyncRows } from '../lib/staffSyncApi';
 import { initialSyncMapState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
-import { hasConfiguredPortalUsers, markPendingCreates } from '../lib/syncHelpers';
+import { hasConfiguredPortalUsers, registerPortalCredentialBrand } from '../lib/syncHelpers';
 
 function loadCredentials() {
   try {
@@ -98,10 +98,7 @@ export function useClientPortalCredentials() {
       };
     }
 
-    const isNewBrand = !Object.prototype.hasOwnProperty.call(loadCredentials(), client);
-    if (isNewBrand) {
-      markPendingCreates(getOrgId(), 'client_portal_credentials', [client]);
-    }
+    registerPortalCredentialBrand(getOrgId(), client);
 
     setCredentials((prev) => {
       const next = { ...prev, [client]: activeUsers };
@@ -158,5 +155,8 @@ export function useClientPortalCredentials() {
     setClientPortalUsers,
     setClientPortalCredential,
     clearClientPortalCredential,
+    registerPortalCredentialBrand: useCallback((brand) => {
+      registerPortalCredentialBrand(getOrgId(), brand);
+    }, []),
   };
 }

@@ -188,6 +188,12 @@ export function markPendingCreates(orgId, table, ids) {
   return pending;
 }
 
+/** Track a client brand awaiting its first portal credential sync (also covers new clients). */
+export function registerPortalCredentialBrand(orgId, brand) {
+  if (!orgId || !brand) return;
+  markPendingCreates(orgId, 'client_portal_credentials', [String(brand)]);
+}
+
 export function unmarkPendingCreates(orgId, table, ids) {
   if (!orgId || !table || !ids?.length) return;
   const pending = loadPendingCreates(orgId, table);
@@ -379,7 +385,12 @@ export function mergeRemoteMapWithLocalPending({
 
     const localValue = local[key];
     if (localValue === undefined) {
-      if (pendingRemoved.has(key) || synced.has(key)) continue;
+      if (pendingRemoved.has(key)) continue;
+      if (protectCredentialEntries && hasConfiguredPortalUsers(remoteValue)) {
+        merged[key] = remoteValue;
+        continue;
+      }
+      if (synced.has(key)) continue;
       merged[key] = remoteValue;
       continue;
     }

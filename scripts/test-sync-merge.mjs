@@ -4,10 +4,12 @@ import {
   mergePortalCredentialValue,
   filterProtectedSyncRemovals,
   filterProtectedSyncUpserts,
+  registerPortalCredentialBrand,
   excludePendingRemovedFromCollection,
   excludePendingRemovedFromMap,
   markPendingRemoved,
   pendingRemovedKey,
+  pendingCreatesKey,
 } from '../src/lib/syncHelpers.js';
 
 function assert(condition, message) {
@@ -145,6 +147,32 @@ if (typeof localStorage !== 'undefined') {
   ]);
   assert(changed.length === 1, 'only configured credential upserts should pass');
   assert(changed[0].id === 'Arco Fit', 'configured brand should remain');
+}
+
+// New client credentials saved on another device should hydrate locally.
+{
+  const remoteUsers = [{ id: 'u2', username: 'newclient', passwordHash: 'abc123' }];
+  const merged = mergeRemoteMapWithLocalPending({
+    remoteMap: { 'New Client Co': remoteUsers },
+    syncedSnapshot: new Map([['New Client Co', JSON.stringify([])]]),
+    localMap: {},
+    pendingRemoved: new Set(),
+    pendingLocalCreates: new Set(['New Client Co']),
+    protectCredentialEntries: true,
+  });
+  assert(merged['New Client Co']?.[0]?.username === 'newclient', 'new client portal users should hydrate from cloud');
+}
+
+// Adding a client registers it for protected portal credential sync.
+if (typeof localStorage !== 'undefined') {
+  registerPortalCredentialBrand('test-org', 'New Client Co');
+  try {
+    const raw = localStorage.getItem(pendingCreatesKey('test-org', 'client_portal_credentials'));
+    const parsed = JSON.parse(raw);
+    assert(parsed.includes('New Client Co'), 'new client brand should be registered for portal sync');
+  } finally {
+    localStorage.removeItem(pendingCreatesKey('test-org', 'client_portal_credentials'));
+  }
 }
 
 console.log('Sync merge tests passed.');
