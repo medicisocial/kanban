@@ -58,11 +58,11 @@ function ClientCalendarDetail({ card, onClose }) {
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Content</p>
-            <CardTitleLink
-              title={card.title}
-              dropboxLink={card.dropboxLink}
-              className="mt-1 text-lg font-semibold text-white"
-            />
+            {card.dropboxLink ? (
+              <h3 className="mt-1 text-lg font-semibold text-white">{card.title}</h3>
+            ) : (
+              <CardTitleLink title={card.title} className="mt-1 text-lg font-semibold text-white" />
+            )}
           </div>
           <button
             type="button"

@@ -34,11 +34,9 @@ export default function CalendarEvent({
   const boardStatus = isPosted ? 'Posted' : (columnMeta?.title ?? null);
   const showBoardStatus = boardStatus && (!hideClient || isPosted) && (!clientPortal || isPosted);
   const typeLabelClass = clientPortal
-    ? 'text-[10px] font-medium uppercase tracking-wide text-white/50'
+    ? 'text-[10px] font-medium uppercase tracking-wide'
     : 'text-[11px] font-semibold uppercase tracking-wide';
-  const typeLabelPresentation = clientPortal
-    ? { className: typeLabelClass }
-    : contentTypeLabelProps(typeStyle, typeLabelClass);
+  const typeLabelPresentation = contentTypeLabelProps(typeStyle, typeLabelClass);
   const statusClass = isPosted
     ? 'text-gray-400'
     : card.columnId === 'scheduled'
@@ -128,9 +126,7 @@ export default function CalendarEvent({
       )}
       <CalendarDayCard
         accentColor={clientColor}
-        surfaceStyle={
-          clientPortal ? { backgroundColor: 'rgba(255,255,255,0.04)' } : contentTypeCardStyle(typeStyle)
-        }
+        surfaceStyle={contentTypeCardStyle(typeStyle)}
         clientLabel={card.client}
         hideClient={hideClient}
         timeLabel={timeLabel}

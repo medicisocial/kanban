@@ -64,11 +64,12 @@ export default function CalendarDayCard({
       ? `block whitespace-normal font-medium leading-snug text-[#f9f6f2] ${clientTitleClass}`
       : undefined);
 
-  const titleContent = titleLink ? (
-    <CardTitleLink title={title} dropboxLink={titleLink} className={resolvedTitleClassName} />
-  ) : (
-    <span className={resolvedTitleClassName}>{title}</span>
-  );
+  const titleContent =
+    titleLink && !clientPortal ? (
+      <CardTitleLink title={title} dropboxLink={titleLink} className={resolvedTitleClassName} />
+    ) : (
+      <span className={resolvedTitleClassName}>{title}</span>
+    );
 
   const clientPortalBody = clientPortal && (
     <>
