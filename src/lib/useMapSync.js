@@ -5,6 +5,9 @@ import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
 import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
 import { pushStaffSyncRows } from './staffSyncApi';
+import { seedRecordsToCloud } from './syncSeed';
+import { reportSyncIssue } from './workspaceSyncHealth';
+import { subscribeWorkspaceRefetch } from '../utils/workspaceReload';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import {
   augmentLocalMapWithPendingCreates,
@@ -98,23 +101,10 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
         // Empty cloud table: keep local cache when it still has records (any org).
         if (rows.length === 0) {
           if (localKeys.length) {
-            if (isLegacyOrg) {
-              const canWrite = await hasStaffSupabaseSession();
-              if (canWrite) {
-                try {
-                  let seedRows = localKeys.map((key) => ({ id: key, data: local[key] }));
-                  seedRows = filterProtectedSyncUpserts(table, seedRows);
-                  if (seedRows.length) {
-                    await store.upsertRecords(seedRows);
-                  }
-                } catch (seedErr) {
-                  console.warn(`[supabase:${table}] seed failed:`, seedErr?.message || seedErr);
-                }
-              } else {
-                console.warn(
-                  `[supabase:${table}] using local data — cloud write session not ready yet`,
-                );
-              }
+            let seedRows = localKeys.map((key) => ({ id: key, data: local[key] }));
+            seedRows = filterProtectedSyncUpserts(table, seedRows);
+            if (seedRows.length) {
+              await seedRecordsToCloud({ table, orgId, store, rows: seedRows });
             }
             applyingRemoteRef.current = true;
             syncedRef.current = new Map(localKeys.map((key) => [key, JSON.stringify(local[key])]));
@@ -181,13 +171,19 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
 
     const onFocus = () => {
       if (!active || !loadedRef.current) return;
-      if (Date.now() - lastFetchAt < FOCUS_REFETCH_MIN_MS) return;
+      const isEmpty = !localCollectionHasRecords(localMapRef.current);
+      if (!isEmpty && Date.now() - lastFetchAt < FOCUS_REFETCH_MIN_MS) return;
       applyRemote();
     };
 
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') onFocus();
+    });
+
+    const unsubscribeRefetch = subscribeWorkspaceRefetch(() => {
+      if (!active) return;
+      applyRemote();
     });
 
     applyRemote().then(() => { lastFetchAt = Date.now(); }).catch(() => {});
@@ -198,6 +194,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
     return () => {
       active = false;
       unsubscribe?.();
+      unsubscribeRefetch();
       window.removeEventListener('focus', onFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -277,9 +274,12 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
           const ok = await pushStaffSyncRows(table, safeChanged, removed);
           if (!ok) {
             pendingWriteRef.current = true;
-            console.warn(
-              `[supabase:${table}] skipped write — no database session. Log out and log in again.`,
-            );
+            reportSyncIssue({
+              level: 'warn',
+              table,
+              message:
+                'Changes are saved on this device but could not reach the cloud. Stay signed in and reload, or sign in again.',
+            });
             return;
           }
         }
@@ -297,6 +297,11 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
       } catch (err) {
         console.error(`[supabase:${table}] sync failed:`, err?.message || err, err);
         pendingWriteRef.current = true;
+        reportSyncIssue({
+          level: 'error',
+          table,
+          message: err?.message || `Could not save ${table} to the cloud.`,
+        });
       }
     };
 

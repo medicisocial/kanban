@@ -12,8 +12,13 @@ import {
   REMOTE_POLL_MS,
   syncWorkspace,
 } from '../utils/cloudSync';
-import { notifyWorkspaceReload } from '../utils/workspaceReload';
+import {
+  notifyWorkspaceRefetch,
+  notifyWorkspaceReload,
+} from '../utils/workspaceReload';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
+import { bootstrapLocalWorkspaceToCloud } from '../lib/workspaceBootstrap';
+import { subscribeSyncIssues } from '../lib/workspaceSyncHealth';
 import { useStaffAuth } from './StaffAuthContext';
 
 const WorkspaceSyncContext = createContext(null);
@@ -24,18 +29,55 @@ function applyRemoteWorkspaceUpdate(lastPushedRef) {
 }
 
 export function WorkspaceSyncProvider({ children }) {
-  const { authRequired, ready, isAuthenticated, session } = useStaffAuth();
+  const { authRequired, ready, isAuthenticated, session, orgId } = useStaffAuth();
   const [syncReady, setSyncReady] = useState(true);
   const [syncStatus, setSyncStatus] = useState('idle');
   const [syncError, setSyncError] = useState('');
   const [remoteUpdating, setRemoteUpdating] = useState(false);
+  const [syncIssue, setSyncIssue] = useState(null);
+  const [bootstrapNote, setBootstrapNote] = useState('');
   const lastPushedRef = useRef(getLocalSyncMeta().snapshot || getWorkspaceDataSnapshot());
   const pushInFlightRef = useRef(false);
+  const bootstrapRanRef = useRef(false);
 
-  // When Supabase is enabled it is the single source of truth, so the legacy
-  // Upstash KV blob sync is disabled to avoid a second, conflicting sync loop.
-  const shouldSync =
+  const shouldUseRedisSync =
     !SUPABASE_ENABLED && authRequired && isAuthenticated && !isPublicClientPortal();
+
+  const shouldBootstrapSupabase =
+    SUPABASE_ENABLED && authRequired && isAuthenticated && !isPublicClientPortal();
+
+  useEffect(() => subscribeSyncIssues(setSyncIssue), []);
+
+  const runSupabaseBootstrap = useCallback(async () => {
+    const { seeded, skipped } = await bootstrapLocalWorkspaceToCloud();
+    if (skipped || !seeded.length) return;
+
+    notifyWorkspaceRefetch();
+    notifyWorkspaceReload();
+    setBootstrapNote(
+      `Uploaded ${seeded.length} workspace collection${seeded.length === 1 ? '' : 's'} to the cloud.`,
+    );
+    window.setTimeout(() => setBootstrapNote(''), 8000);
+  }, []);
+
+  useEffect(() => {
+    if (!ready || !shouldBootstrapSupabase || !session) return;
+
+    const sessionKey =
+      session?.username || session?.email || session?.userId || 'anonymous';
+    if (bootstrapRanRef.current === sessionKey) return;
+    bootstrapRanRef.current = sessionKey;
+
+    let cancelled = false;
+    (async () => {
+      await runSupabaseBootstrap();
+      if (!cancelled) setSyncStatus('in_sync');
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, shouldBootstrapSupabase, session, orgId, runSupabaseBootstrap]);
 
   const runInitialSync = useCallback(async () => {
     if (!session) return;
@@ -84,9 +126,11 @@ export function WorkspaceSyncProvider({ children }) {
   useEffect(() => {
     if (!ready) return;
 
-    if (!shouldSync) {
+    if (!shouldUseRedisSync) {
       setSyncReady(true);
-      setSyncStatus('local_only');
+      if (!shouldBootstrapSupabase) {
+        setSyncStatus('local_only');
+      }
       return;
     }
 
@@ -96,10 +140,10 @@ export function WorkspaceSyncProvider({ children }) {
     }
 
     runInitialSync();
-  }, [ready, shouldSync, session, runInitialSync]);
+  }, [ready, shouldUseRedisSync, shouldBootstrapSupabase, session, runInitialSync]);
 
   useEffect(() => {
-    if (!shouldSync || !syncReady || !session || syncStatus === 'unavailable') return;
+    if (!shouldUseRedisSync || !syncReady || !session || syncStatus === 'unavailable') return;
 
     let pushTimer;
     let cancelled = false;
@@ -154,23 +198,38 @@ export function WorkspaceSyncProvider({ children }) {
       window.removeEventListener('focus', checkRemoteUpdates);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [shouldSync, syncReady, session, syncStatus, checkRemoteUpdates]);
+  }, [shouldUseRedisSync, syncReady, session, syncStatus, checkRemoteUpdates]);
 
   const value = useMemo(
     () => ({
       syncReady,
       syncStatus,
       syncError,
-      cloudSyncEnabled: syncStatus !== 'unavailable' && syncStatus !== 'local_only',
+      syncIssue,
+      cloudSyncEnabled:
+        shouldBootstrapSupabase ||
+        (syncStatus !== 'unavailable' && syncStatus !== 'local_only'),
     }),
-    [syncReady, syncStatus, syncError],
+    [syncReady, syncStatus, syncError, syncIssue, shouldBootstrapSupabase],
   );
+
+  const issueBannerClass =
+    syncIssue?.level === 'error'
+      ? 'border-red-500/20 bg-red-500/10 text-red-200'
+      : syncIssue?.level === 'info'
+        ? 'border-blue-500/20 bg-blue-500/10 text-blue-100'
+        : 'border-amber-500/20 bg-amber-500/10 text-amber-200';
 
   return (
     <WorkspaceSyncContext.Provider value={value}>
-      {syncStatus === 'syncing' && shouldSync && (
+      {syncStatus === 'syncing' && shouldUseRedisSync && (
         <div className="border-b border-white/10 bg-black px-4 py-2 text-center text-xs text-white/70">
           Syncing workspace…
+        </div>
+      )}
+      {bootstrapNote && shouldBootstrapSupabase && (
+        <div className="border-b border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-center text-xs text-emerald-100">
+          {bootstrapNote}
         </div>
       )}
       {remoteUpdating && (
@@ -180,7 +239,7 @@ export function WorkspaceSyncProvider({ children }) {
           </div>
         </div>
       )}
-      {syncStatus === 'unavailable' && shouldSync && (
+      {syncStatus === 'unavailable' && shouldUseRedisSync && (
         <div className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-200">
           Cloud sync is not set up yet — cards stay on this browser only. Use Export backup on one
           computer and Import backup on another, or add Upstash Redis in Vercel Storage.
@@ -189,6 +248,14 @@ export function WorkspaceSyncProvider({ children }) {
       {syncError && (
         <div className="border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-center text-xs text-red-200">
           {syncError}
+        </div>
+      )}
+      {syncIssue?.message && shouldBootstrapSupabase && (
+        <div
+          className={`border-b px-4 py-2 text-center text-xs ${issueBannerClass}`}
+          role="status"
+        >
+          {syncIssue.message}
         </div>
       )}
       {children}

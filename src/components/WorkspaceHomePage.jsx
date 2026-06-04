@@ -7,6 +7,7 @@ import { buildWorkspaceHomeSummary, buildMyWorkGreeting } from '../utils/workspa
 import { buildTodayTimeline } from '../utils/todayTimeline';
 import { useClientsContext } from '../context/ClientsContext';
 import { surfacePanelClass } from './clientPortal/clientPortalUi';
+import { useWorkspaceSync } from '../context/WorkspaceSyncContext';
 
 export default function WorkspaceHomePage({
   cards,
@@ -29,6 +30,7 @@ export default function WorkspaceHomePage({
   onOpenNotifications,
 }) {
   const { clients } = useClientsContext();
+  const { syncIssue } = useWorkspaceSync();
 
   const summary = buildWorkspaceHomeSummary({
     cards,
@@ -150,9 +152,8 @@ export default function WorkspaceHomePage({
         <div className={`${surfacePanelClass} mb-6 px-5 py-4 text-sm text-white/60`}>
           <p className="font-medium text-white/85">No workspace data loaded yet</p>
           <p className="mt-1.5 leading-relaxed">
-            If you expected cards and tasks here, reload the page or open the app on desktop once while signed in
-            so data can sync to the cloud. Still empty? Confirm Supabase has your workspace rows and that
-            SUPABASE_SERVICE_ROLE_KEY is set in Vercel.
+            {syncIssue?.message ||
+              'Open the app on desktop while signed in so your cards upload to the cloud, then reload here. The banner at the top will show sync progress or errors.'}
           </p>
           <button
             type="button"

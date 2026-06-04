@@ -3,6 +3,9 @@ import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
 import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
 import { pushStaffSync } from './staffSyncApi';
+import { seedRecordsToCloud } from './syncSeed';
+import { reportSyncIssue } from './workspaceSyncHealth';
+import { subscribeWorkspaceRefetch } from '../utils/workspaceReload';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import {
   augmentLocalWithPendingCreates,
@@ -138,20 +141,12 @@ export function useCollectionSync({
         if (rows.length === 0) {
           const local = readLocal();
           if (localCollectionHasRecords(local)) {
-            if (isLegacyOrg) {
-              const canWrite = await hasStaffSupabaseSession();
-              if (canWrite) {
-                try {
-                  await store.upsertRecords(local.map((r) => ({ id: getId(r), data: r })));
-                } catch (seedErr) {
-                  console.warn(`[supabase:${table}] seed failed:`, seedErr?.message || seedErr);
-                }
-              } else {
-                console.warn(
-                  `[supabase:${table}] using local data — cloud write session not ready yet`,
-                );
-              }
-            }
+            await seedRecordsToCloud({
+              table,
+              orgId,
+              store,
+              rows: local.map((r) => ({ id: getId(r), data: r })),
+            });
             applyingRemoteRef.current = true;
             syncedRef.current = new Map(local.map((r) => [String(getId(r)), JSON.stringify(r)]));
             markSyncLoaded();
@@ -382,13 +377,19 @@ export function useCollectionSync({
 
     const onFocus = () => {
       if (!active || !loadedRef.current) return;
-      if (Date.now() - lastFetchAt < FOCUS_REFETCH_MIN_MS) return;
+      const isEmpty = !localCollectionHasRecords(localItemsRef.current);
+      if (!isEmpty && Date.now() - lastFetchAt < FOCUS_REFETCH_MIN_MS) return;
       applyRemote();
     };
 
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') onFocus();
+    });
+
+    const unsubscribeRefetch = subscribeWorkspaceRefetch(() => {
+      if (!active) return;
+      applyRemote();
     });
 
     applyRemote().then(() => { lastFetchAt = Date.now(); }).catch(() => {});
@@ -404,6 +405,7 @@ export function useCollectionSync({
       active = false;
       clearTimeout(refetchTimer);
       unsubscribe?.();
+      unsubscribeRefetch();
       window.removeEventListener('focus', onFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -486,9 +488,12 @@ export function useCollectionSync({
           const ok = await pushStaffSync({ table, changed, removed });
           if (!ok) {
             pendingWriteRef.current = true;
-            console.warn(
-              `[supabase:${table}] skipped write — no database session. Log out and log in again.`,
-            );
+            reportSyncIssue({
+              level: 'warn',
+              table,
+              message:
+                'Changes are saved on this device but could not reach the cloud. Stay signed in and reload, or sign in again.',
+            });
             return;
           }
         }
@@ -506,6 +511,11 @@ export function useCollectionSync({
       } catch (err) {
         console.error(`[supabase:${table}] sync failed:`, err?.message || err, err);
         pendingWriteRef.current = true;
+        reportSyncIssue({
+          level: 'error',
+          table,
+          message: err?.message || `Could not save ${table} to the cloud.`,
+        });
       }
     };
 

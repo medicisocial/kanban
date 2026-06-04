@@ -5,6 +5,8 @@ import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
 import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
 import { pushStaffSyncSingleton } from './staffSyncApi';
+import { seedRecordsToCloud } from './syncSeed';
+import { subscribeWorkspaceRefetch } from '../utils/workspaceReload';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import {
   fetchRowsWithTimeout,
@@ -104,20 +106,12 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
 
         // Empty cloud table: keep local cache when it still has records (any org).
         if (localCollectionHasRecords(local)) {
-          if (isLegacyOrg) {
-            const canWrite = await hasStaffSupabaseSession();
-            if (canWrite) {
-              try {
-                await store.upsertRecords([{ id: recordId, data: local }]);
-              } catch (seedErr) {
-                console.warn(`[supabase:${table}] seed failed:`, seedErr?.message || seedErr);
-              }
-            } else {
-              console.warn(
-                `[supabase:${table}] using local data — cloud write session not ready yet`,
-              );
-            }
-          }
+          await seedRecordsToCloud({
+            table,
+            orgId,
+            store,
+            rows: [{ id: recordId, data: local }],
+          });
           applyingRemoteRef.current = true;
           syncedRef.current = JSON.stringify(local);
           markSyncLoaded();
@@ -149,13 +143,19 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
 
     const onFocus = () => {
       if (!active || !loadedRef.current) return;
-      if (Date.now() - lastFetchAt < FOCUS_REFETCH_MIN_MS) return;
+      const isEmpty = !localCollectionHasRecords(localValueRef.current);
+      if (!isEmpty && Date.now() - lastFetchAt < FOCUS_REFETCH_MIN_MS) return;
       applyRemote();
     };
 
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') onFocus();
+    });
+
+    const unsubscribeRefetch = subscribeWorkspaceRefetch(() => {
+      if (!active) return;
+      applyRemote();
     });
 
     applyRemote().then(() => { lastFetchAt = Date.now(); }).catch(() => {});
@@ -166,6 +166,7 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
     return () => {
       active = false;
       unsubscribe?.();
+      unsubscribeRefetch();
       window.removeEventListener('focus', onFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

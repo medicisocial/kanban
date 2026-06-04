@@ -76,8 +76,12 @@ async function establishLegacyStaffSession(loginId, password, applyLegacyOrg, se
   saveStaffSession(nextSession);
   setSession(nextSession);
   applyLegacyOrg();
-  ensureStaffSupabaseSession(password).catch(() => {});
-  // Retry once after the auth client finishes any in-flight work (helps mobile cold starts).
+  await Promise.race([
+    ensureStaffSupabaseSession(password),
+    new Promise((resolve) => {
+      window.setTimeout(() => resolve({ ok: false }), 8000);
+    }),
+  ]);
   window.setTimeout(() => {
     ensureStaffSupabaseSession(password).catch(() => {});
   }, 500);
