@@ -69,8 +69,17 @@ export async function loginClientPortal(username, password) {
     body: JSON.stringify({ username, password }),
   });
 
-  const payload = await response.json().catch(() => ({}));
+  const contentType = response.headers.get('content-type') || '';
+  const payload = contentType.includes('application/json')
+    ? await response.json().catch(() => ({}))
+    : {};
+
   if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(
+        'Client login API is not running. Restart with npm run dev (this project serves /api locally), or use vercel dev.',
+      );
+    }
     throw new Error(payload.error || 'Login failed.');
   }
 

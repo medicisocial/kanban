@@ -61,6 +61,9 @@ export function contentTypeCardStyle(typeStyle, { bgAlpha = 0.32 } = {}) {
   };
 }
 
+export const CONTENT_TYPE_PIPELINE_PILL_CLASS =
+  'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-xs';
+
 /** High-contrast type pill for pipeline kanban cards (tinted card surface). */
 export function contentTypeKanbanPillProps(
   typeStyle,
@@ -74,6 +77,11 @@ export function contentTypeKanbanPillProps(
       boxShadow: `inset 0 0 0 1px ${hexToRgba(accent, 0.72)}`,
     },
   };
+}
+
+/** Pipeline-matched pill for team tasks and other dark card surfaces. */
+export function contentTypePipelinePillProps(typeStyle) {
+  return contentTypeKanbanPillProps(typeStyle, CONTENT_TYPE_PIPELINE_PILL_CLASS);
 }
 
 /** Pipeline-matched surface for client/event/meeting calendar cards. */

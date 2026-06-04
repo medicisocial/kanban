@@ -2,7 +2,7 @@ import {
   PLATFORM_ICON,
   getContentTypeStyle,
 } from '../constants';
-import { contentTypeKanbanPillProps, contentTypeCardStyle } from '../utils/contentTypeColors';
+import { contentTypePipelinePillProps, contentTypeCardStyle } from '../utils/contentTypeColors';
 import { formatScheduledDateTime } from '../utils';
 
 export default function CardPreview({ card }) {
@@ -18,7 +18,7 @@ export default function CardPreview({ card }) {
       </div>
       <p className="mb-2 line-clamp-2 text-sm font-medium text-white">{card.title}</p>
       <div className="flex items-center gap-2 text-xs">
-        <span {...contentTypeKanbanPillProps(typeStyle, 'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-xs')}>
+        <span {...contentTypePipelinePillProps(typeStyle)}>
           {PLATFORM_ICON} {card.contentType}
         </span>
         {card.dueDate && (

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { getContentTypeStyle, COLUMNS } from '../constants';
-import { contentTypePillProps } from '../utils/contentTypeColors';
+import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import { useClientsContext } from '../context/ClientsContext';
 import TaskPostSchedule from './TaskPostSchedule';
 import { formatStoryScheduleSummary, toDateKey } from '../utils/calendar';
@@ -54,7 +54,7 @@ function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate, ani
               </span>
             )}
             {task.contentType && typeStyle && (
-              <span {...contentTypePillProps(typeStyle)}>
+              <span {...contentTypePipelinePillProps(typeStyle)}>
                 {task.contentType}
               </span>
             )}
@@ -125,7 +125,7 @@ function InReviewTaskCard({
               {task.label}
             </span>
             {task.contentType && typeStyle && (
-              <span {...contentTypePillProps(typeStyle)}>
+              <span {...contentTypePipelinePillProps(typeStyle)}>
                 {task.contentType}
               </span>
             )}
@@ -212,7 +212,7 @@ function ApprovedScheduleTaskCard({
               {task.label}
             </span>
             {task.contentType && typeStyle && (
-              <span {...contentTypePillProps(typeStyle)}>
+              <span {...contentTypePipelinePillProps(typeStyle)}>
                 {task.contentType}
               </span>
             )}
@@ -273,7 +273,7 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted, animationDel
               {task.label}
             </span>
             {task.contentType && typeStyle && (
-              <span {...contentTypePillProps(typeStyle)}>
+              <span {...contentTypePipelinePillProps(typeStyle)}>
                 {task.contentType}
               </span>
             )}

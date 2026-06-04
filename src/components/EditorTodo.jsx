@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { getContentTypeStyle } from '../constants';
-import { contentTypePillProps } from '../utils/contentTypeColors';
+import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import { useClientsContext } from '../context/ClientsContext';
 import TaskPostSchedule from './TaskPostSchedule';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
@@ -73,7 +73,7 @@ function EditorTodoItem({
               {task.label}
             </span>
             {task.contentType && typeStyle && (
-              <span {...contentTypePillProps(typeStyle)}>
+              <span {...contentTypePipelinePillProps(typeStyle)}>
                 {task.contentType}
               </span>
             )}

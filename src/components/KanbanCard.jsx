@@ -4,7 +4,7 @@ import {
   needsShootSchedule,
   isOneOffProjectCard,
 } from '../constants';
-import { contentTypeKanbanPillProps, contentTypeCardStyle } from '../utils/contentTypeColors';
+import { contentTypePipelinePillProps, contentTypeCardStyle } from '../utils/contentTypeColors';
 import { formatDate, formatScheduledDateTime, isOverdue } from '../utils';
 import CardTitleLink from './CardTitleLink';
 import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
@@ -67,7 +67,7 @@ export default function KanbanCard({ card, onClick, onDelete }) {
       />
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span {...contentTypeKanbanPillProps(typeStyle, 'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-xs')}>
+        <span {...contentTypePipelinePillProps(typeStyle)}>
           {card.contentType}
         </span>
         {card.shootDate && needsShootSchedule(card.contentType) && !isOneOff && (
