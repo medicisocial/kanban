@@ -16,6 +16,21 @@ function isProductionRuntime() {
   return process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
 }
 
+function resolveAnonKey() {
+  return (
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    ''
+  ).trim();
+}
+
+/** Key for server reads (client login, etc.). Prefers service role, falls back to anon. */
+function resolveAuthReadKey() {
+  const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (serviceRole) return serviceRole;
+  return resolveAnonKey();
+}
+
 function resolveServerKey() {
   const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (serviceRole) return serviceRole;
@@ -27,12 +42,11 @@ function resolveServerKey() {
     );
   }
 
-  // Non-production only: allow anon for local dev without the secret key.
-  return (
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY ||
-    ''
-  ).trim();
+  return resolveAnonKey();
+}
+
+function getDefaultOrgId() {
+  return (process.env.ORG_ID || process.env.VITE_ORG_ID || 'medici').trim();
 }
 
 function getConfig(orgIdOverride) {
@@ -67,12 +81,12 @@ export function isSupabaseConfigured() {
 /** Safe auth lookup check — never throws, unlike isSupabaseConfigured(). */
 export function canUseSupabaseForAuth() {
   const url = getSupabaseUrl();
-  if (!url) return false;
-  try {
-    return Boolean(resolveServerKey());
-  } catch {
-    return false;
-  }
+  return Boolean(url && resolveAuthReadKey());
+}
+
+/** True when Supabase URL is set but no API key is available for auth reads. */
+export function isSupabaseAuthMisconfigured() {
+  return Boolean(getSupabaseUrl() && !resolveAuthReadKey());
 }
 
 const SERVER_FETCH_TIMEOUT_MS = 10000;
@@ -155,9 +169,8 @@ export async function fetchCollectionMap(table, orgIdOverride) {
  * configured). Used by cross-tenant lookups such as client-portal login, where
  * the org owning a brand is not known until the credentials are matched.
  */
-export async function fetchRowsAcrossOrgs(table) {
+async function fetchRowsAcrossOrgsWithKey(table, key) {
   const url = getSupabaseUrl();
-  const key = resolveServerKey();
   if (!url || !key) return null;
 
   const endpoint = `${url}/rest/v1/${table}?select=id,org_id,data`;
@@ -171,6 +184,58 @@ export async function fetchRowsAcrossOrgs(table) {
   }
 
   return response.json();
+}
+
+async function fetchRowsForOrgWithKey(table, orgId, key) {
+  const url = getSupabaseUrl();
+  if (!url || !key) return null;
+
+  const endpoint = `${url}/rest/v1/${table}?select=id,data&org_id=eq.${encodeURIComponent(orgId)}`;
+  const response = await fetchWithTimeout(endpoint, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Supabase ${table} org fetch failed: ${response.status} ${detail}`.trim());
+  }
+
+  return response.json();
+}
+
+export async function fetchRowsAcrossOrgs(table) {
+  const key = resolveAuthReadKey();
+  return fetchRowsAcrossOrgsWithKey(table, key);
+}
+
+/**
+ * Client portal login: service role reads all orgs; anon key reads the legacy org only
+ * (RLS allows select on org_id = medici).
+ */
+export async function fetchClientPortalCredentialsRows() {
+  const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (serviceRole) {
+    try {
+      const rows = await fetchRowsAcrossOrgsWithKey('client_portal_credentials', serviceRole);
+      if (rows) return rows;
+    } catch (error) {
+      console.warn(
+        '[supabase] client_portal_credentials cross-org failed:',
+        error?.message || error,
+      );
+    }
+  }
+
+  const orgId = getDefaultOrgId();
+  const key = resolveAuthReadKey();
+  if (!key) return null;
+
+  const rows = await fetchRowsForOrgWithKey('client_portal_credentials', orgId, key);
+  return (rows || []).map((row) => ({
+    id: row.id,
+    org_id: orgId,
+    data: row.data,
+  }));
 }
 
 /** Returns a single record's `data` payload (or null if missing / not configured). */

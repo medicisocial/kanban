@@ -6,7 +6,11 @@ import {
   getClientPortalAuthMap,
   verifyClientPassword,
 } from './_lib/clientPortalAuth.mjs';
-import { canUseSupabaseForAuth, fetchRowsAcrossOrgs } from './_lib/supabase.mjs';
+import {
+  canUseSupabaseForAuth,
+  fetchClientPortalCredentialsRows,
+  isSupabaseAuthMisconfigured,
+} from './_lib/supabase.mjs';
 import { repairPortalCredentialFromVault } from './_lib/authCriticalSync.mjs';
 
 function unavailable(res) {
@@ -18,52 +22,33 @@ function unavailable(res) {
 function misconfigured(res) {
   return res.status(503).json({
     error:
-      'Client portal login is misconfigured. Add SUPABASE_SERVICE_ROLE_KEY in Vercel (server-only, no VITE_ prefix), then redeploy.',
+      'Client portal login is misconfigured. In Vercel → Settings → Environment Variables, add SUPABASE_SERVICE_ROLE_KEY (no VITE_ prefix) and redeploy. Also ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.',
   });
 }
 
-/**
- * Resolve a client login across all tenants. Supabase is the source of truth:
- * client_portal_credentials rows are keyed by brand with the user list in `data`
- * and carry an org_id, so the session can be scoped to the owning org. Falls back
- * to the Upstash KV blob (legacy single-tenant) only if Supabase isn't available.
- *
- * Returns { brand, orgId, user } or null when no match is found, and
- * { unavailable: true } / { empty: true } / { misconfigured: true } for surfaced error states.
- */
-async function resolveClientLogin(username, password) {
-  if (canUseSupabaseForAuth()) {
-    try {
-      const rows = await fetchRowsAcrossOrgs('client_portal_credentials');
-      if (rows) {
-        if (!rows.length) return { empty: true };
-        let match = findClientLoginAcrossOrgs(rows, username);
-        if (!match) return null;
+async function resolveFromSupabase(username, password) {
+  const rows = await fetchClientPortalCredentialsRows();
+  if (!rows?.length) return { empty: true };
 
-        if (!verifyClientPassword(match.user, password)) {
-          const repaired = await repairPortalCredentialFromVault({
-            brand: match.brand,
-            orgId: match.org_id,
-            user: match.user,
-            password,
-          });
-          if (repaired) {
-            match = { ...match, user: repaired };
-          }
-        }
+  let match = findClientLoginAcrossOrgs(rows, username);
+  if (!match) return null;
 
-        return match
-          ? { brand: match.brand, orgId: match.org_id, user: match.user }
-          : null;
-      }
-    } catch (error) {
-      console.error('[client-auth] Supabase fetch failed:', error?.message || error);
-      return { misconfigured: true };
+  if (!verifyClientPassword(match.user, password)) {
+    const repaired = await repairPortalCredentialFromVault({
+      brand: match.brand,
+      orgId: match.org_id,
+      user: match.user,
+      password,
+    });
+    if (repaired) {
+      match = { ...match, user: repaired };
     }
-
-    return { misconfigured: true };
   }
 
+  return match ? { brand: match.brand, orgId: match.org_id, user: match.user } : null;
+}
+
+async function resolveFromRedis(username) {
   const redis = getRedis();
   if (!redis) return { unavailable: true };
   const workspace = await loadWorkspace(redis);
@@ -71,6 +56,39 @@ async function resolveClientLogin(username, password) {
   if (!authMap || !Object.keys(authMap).length) return { empty: true };
   const login = findClientLogin(authMap, username);
   return login ? { brand: login.brand, orgId: undefined, user: login.user } : null;
+}
+
+/**
+ * Resolve a client login across all tenants. Supabase is the source of truth;
+ * falls back to Upstash KV when Supabase is unavailable.
+ */
+async function resolveClientLogin(username, password) {
+  if (isSupabaseAuthMisconfigured()) {
+    return { misconfigured: true };
+  }
+
+  if (canUseSupabaseForAuth()) {
+    try {
+      const result = await resolveFromSupabase(username, password);
+      if (result && !result.empty) return result;
+      if (result?.empty) {
+        const redisResult = await resolveFromRedis(username);
+        if (redisResult && !redisResult.unavailable && !redisResult.empty) return redisResult;
+        if (redisResult?.unavailable) return { unavailable: true };
+        return { empty: true };
+      }
+      return result;
+    } catch (error) {
+      console.error('[client-auth] Supabase fetch failed:', error?.message || error);
+    }
+  }
+
+  const redisResult = await resolveFromRedis(username);
+  if (redisResult?.unavailable) return { unavailable: true };
+  if (redisResult?.empty) return { empty: true };
+  if (redisResult) return redisResult;
+
+  return null;
 }
 
 export default async function handler(req, res) {
