@@ -113,6 +113,27 @@ async function fetchRows(table, orgIdOverride) {
   return response.json();
 }
 
+/** Full rows for staff-sync reads (includes updated_at for client merge). */
+export async function fetchSyncRows(table, orgIdOverride) {
+  const { url, key, orgId } = getConfig(orgIdOverride);
+  if (!url || !key) return null;
+
+  const endpoint = `${url}/rest/v1/${table}?select=id,data,updated_at&org_id=eq.${encodeURIComponent(orgId)}`;
+  const response = await fetchWithTimeout(endpoint, {
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+    },
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Supabase ${table} sync fetch failed: ${response.status} ${detail}`.trim());
+  }
+
+  return response.json();
+}
+
 /** Returns an array of each row's `data` payload (or null if not configured). */
 export async function fetchCollection(table, orgIdOverride) {
   const rows = await fetchRows(table, orgIdOverride);

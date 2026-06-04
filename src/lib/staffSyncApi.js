@@ -89,3 +89,34 @@ export async function pushStaffSyncSingleton(table, recordId, data) {
   if (!recordId) return true;
   return pushStaffSyncRows(table, [{ id: recordId, data }]);
 }
+
+const STAFF_FETCH_TIMEOUT_MS = 15000;
+
+/**
+ * Load a workspace table through /api/staff-sync (service-role on the server).
+ * Use when browser Supabase reads return empty — common on mobile with RLS.
+ */
+export async function fetchStaffSyncRows(table, orgId = getOrgId()) {
+  if (!SUPABASE_ENABLED) return null;
+
+  const headers = await buildAuthHeaders();
+  if (!headers) return null;
+
+  const params = new URLSearchParams({ table, orgId });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), STAFF_FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`/api/staff-sync?${params}`, {
+      headers,
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const payload = await response.json().catch(() => ({}));
+    return Array.isArray(payload.rows) ? payload.rows : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}

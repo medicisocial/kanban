@@ -1,5 +1,10 @@
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
-import { deleteRecords, isSupabaseConfigured, upsertRecords } from './_lib/supabase.mjs';
+import {
+  deleteRecords,
+  fetchSyncRows,
+  isSupabaseConfigured,
+  upsertRecords,
+} from './_lib/supabase.mjs';
 import { patchRedisWorkspaceCards } from './_lib/redisWorkspace.mjs';
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
 import {
@@ -79,17 +84,37 @@ async function isAuthorized(req) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
   if (!(await isAuthorized(req))) {
     return unauthorized(res);
   }
 
   if (!isSupabaseConfigured()) {
     return unavailable(res);
+  }
+
+  if (req.method === 'GET') {
+    const table = String(req.query?.table || '').trim();
+    if (!table || !ALLOWED_TABLES.has(table)) {
+      return res.status(400).json({ error: 'Invalid table.' });
+    }
+
+    const orgCheck = await assertAuthorizedOrgId(req, req.query?.orgId);
+    if (!orgCheck.ok) {
+      return res.status(403).json({ error: orgCheck.error || 'Forbidden org scope.' });
+    }
+
+    try {
+      const rows = await fetchSyncRows(table, orgCheck.orgId);
+      return res.status(200).json({ rows: rows || [] });
+    } catch (error) {
+      console.error('[staff-sync] fetch failed:', error?.message || error);
+      return res.status(500).json({ error: 'Could not load workspace data.' });
+    }
+  }
+
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'GET, POST');
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { table, upserts, deleteIds, orgId, authDeleteConfirmed = false } = req.body || {};

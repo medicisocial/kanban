@@ -150,9 +150,17 @@ export default function WorkspaceHomePage({
         <div className={`${surfacePanelClass} mb-6 px-5 py-4 text-sm text-white/60`}>
           <p className="font-medium text-white/85">No workspace data loaded yet</p>
           <p className="mt-1.5 leading-relaxed">
-            If you expected cards and tasks here, pull down to refresh the page or check your connection.
-            Data syncs from the cloud when you sign in on a new device.
+            If you expected cards and tasks here, reload the page or open the app on desktop once while signed in
+            so data can sync to the cloud. Still empty? Confirm Supabase has your workspace rows and that
+            SUPABASE_SERVICE_ROLE_KEY is set in Vercel.
           </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-4 rounded-sm bg-white px-4 py-2 text-xs font-medium text-black transition hover:opacity-80"
+          >
+            Reload workspace
+          </button>
         </div>
       )}
 

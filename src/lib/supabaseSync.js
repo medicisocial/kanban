@@ -1,4 +1,6 @@
 import { supabase } from './supabaseClient';
+import { fetchStaffSyncRows } from './staffSyncApi';
+import { fetchLegacyWorkspaceBlobRows } from './workspaceBlobFallback';
 import { getOrgId, LEGACY_ORG_ID } from './orgSession';
 
 const REST_FETCH_TIMEOUT_MS = 12000;
@@ -41,20 +43,35 @@ async function fetchAllViaRest(table, orgId) {
  * org_id is resolved at call time so legacy (medici) and SaaS workspaces share
  * the same sync layer without duplicating hooks.
  */
+async function fetchAllWithFallbacks(table, orgId) {
+  const restRows = await fetchAllViaRest(table, orgId);
+  if (restRows !== null && restRows.length > 0) return restRows;
+
+  if (supabase) {
+    const { data, error } = await supabase
+      .from(table)
+      .select('id, data, updated_at')
+      .eq('org_id', orgId);
+    if (!error && data?.length) return data;
+    if (error) {
+      console.warn(`[supabase:${table}] client fetch failed:`, error.message);
+    }
+  }
+
+  const staffRows = await fetchStaffSyncRows(table, orgId);
+  if (staffRows?.length) return staffRows;
+
+  const blobRows = await fetchLegacyWorkspaceBlobRows(table);
+  if (blobRows?.length) return blobRows;
+
+  return restRows ?? [];
+}
+
 export function createCollectionStore(table) {
   return {
     async fetchAll() {
       const orgId = getOrgId();
-
-      const restRows = await fetchAllViaRest(table, orgId);
-      if (restRows !== null) return restRows;
-
-      const { data, error } = await supabase
-        .from(table)
-        .select('id, data, updated_at')
-        .eq('org_id', orgId);
-      if (error) throw error;
-      return data || [];
+      return fetchAllWithFallbacks(table, orgId);
     },
 
     async upsertRecords(records) {

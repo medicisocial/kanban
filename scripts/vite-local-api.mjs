@@ -110,10 +110,12 @@ export function localApiPlugin() {
             throw new Error(`No default export in api/${route}.js`);
           }
 
+          const requestUrl = new URL(req.url, 'http://127.0.0.1');
           const mockReq = {
             method: req.method,
             headers: req.headers,
             url: req.url,
+            query: Object.fromEntries(requestUrl.searchParams.entries()),
             body,
           };
 
