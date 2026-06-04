@@ -448,6 +448,7 @@ export function useKanban() {
 
   return {
     cards,
+    cardsSyncLoaded: syncLoaded,
     replaceCards,
     addCard,
     addCardWithDetails,

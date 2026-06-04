@@ -185,6 +185,7 @@ export function useVideoIdeas() {
 
   return {
     ideas,
+    ideasSyncLoaded: syncLoaded,
     replaceIdeas,
     addIdea,
     updateIdea,

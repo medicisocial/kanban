@@ -6,6 +6,7 @@ import OverviewTodayPanel from './clientPortal/OverviewTodayPanel';
 import { buildWorkspaceHomeSummary, buildMyWorkGreeting } from '../utils/workspaceHome';
 import { buildTodayTimeline } from '../utils/todayTimeline';
 import { useClientsContext } from '../context/ClientsContext';
+import { surfacePanelClass } from './clientPortal/clientPortalUi';
 
 export default function WorkspaceHomePage({
   cards,
@@ -21,6 +22,7 @@ export default function WorkspaceHomePage({
   myWorkOnly = false,
   companyWideView = false,
   showAccountManagerQueue = true,
+  workspaceDataLoading = false,
   onNavigate,
   onOpenMeeting,
   onOpenShoot,
@@ -111,6 +113,30 @@ export default function WorkspaceHomePage({
   }
 
   const showTodayPanel = todayTimeline.items.length > 0;
+  const workspaceLooksEmpty =
+    !workspaceDataLoading && cards.length === 0 && ideas.length === 0 && meetings.length === 0;
+
+  if (workspaceDataLoading) {
+    return (
+      <section>
+        <ClientPortalSectionHeader
+          title={title}
+          description="Loading your workspace from the cloud…"
+          eyebrow={personalGreeting?.eyebrow}
+        />
+        <div className="overview-pipeline-row">
+          {[0, 1, 2].map((index) => (
+            <div
+              key={index}
+              className="overview-role-summary glass-surface h-[7.5rem] animate-pulse opacity-60"
+              aria-hidden="true"
+            />
+          ))}
+        </div>
+        <p className="text-center text-sm text-white/45">This can take a few seconds on mobile networks.</p>
+      </section>
+    );
+  }
 
   return (
     <section>
@@ -119,6 +145,16 @@ export default function WorkspaceHomePage({
         description={description}
         eyebrow={personalGreeting?.eyebrow}
       />
+
+      {workspaceLooksEmpty && (
+        <div className={`${surfacePanelClass} mb-6 px-5 py-4 text-sm text-white/60`}>
+          <p className="font-medium text-white/85">No workspace data loaded yet</p>
+          <p className="mt-1.5 leading-relaxed">
+            If you expected cards and tasks here, pull down to refresh the page or check your connection.
+            Data syncs from the cloud when you sign in on a new device.
+          </p>
+        </div>
+      )}
 
       {summary.syncTotal > 0 && (
         <button

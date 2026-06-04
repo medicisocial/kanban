@@ -68,10 +68,24 @@ export default function AppShell({ onSignOut }) {
   const shootImportData = parseShootImportParam();
   const contentImportData = parseContentImportParam();
 
-  const { cards, replaceCards, addCard, addCalendarPost, addShootItem, createCardFromIdea, updateCard, deleteCard, moveCard, markAsPosted, addOneOffProject } = useKanban();
+  const {
+    cards,
+    cardsSyncLoaded,
+    replaceCards,
+    addCard,
+    addCalendarPost,
+    addShootItem,
+    createCardFromIdea,
+    updateCard,
+    deleteCard,
+    moveCard,
+    markAsPosted,
+    addOneOffProject,
+  } = useKanban();
   const { plans, replacePlans, getPlan, updatePlan, ensurePlan, deletePlan } = useShootPlans();
   const {
     ideas,
+    ideasSyncLoaded,
     replaceIdeas,
     addIdea,
     updateIdea,
@@ -88,8 +102,9 @@ export default function AppShell({ onSignOut }) {
     deleteAdminTask,
   } = useAdminTasks();
   const { events, replaceEvents, addEvent, updateEvent, deleteEvent } = useEvents();
-  const { meetings, replaceMeetings, addMeeting, updateMeeting, deleteMeeting } = useMeetings();
-  const { authRequired, ready, logout, session, org } = useStaffAuth();
+  const { meetings, meetingsSyncLoaded, replaceMeetings, addMeeting, updateMeeting, deleteMeeting } =
+    useMeetings();
+  const { authRequired, ready, logout, session, org, orgReady } = useStaffAuth();
   const { teamMembers, clientAccountManagers } = useClientsContext();
 
   const { canUndo, undo } = useUndoHistory({
@@ -779,6 +794,10 @@ export default function AppShell({ onSignOut }) {
   );
   const notificationCount = syncTotal + workspaceAlerts.length;
 
+  const workspaceDataLoading =
+    SUPABASE_ENABLED &&
+    (!orgReady || !cardsSyncLoaded || !ideasSyncLoaded || !meetingsSyncLoaded);
+
   const navBadges = useMemo(() => {
     const summary = buildWorkspaceHomeSummary({
       cards,
@@ -930,6 +949,7 @@ export default function AppShell({ onSignOut }) {
           myWorkOnly={myWorkOnly}
           companyWideView={companyWideView}
           showAccountManagerQueue={showAccountManagerQueue}
+          workspaceDataLoading={workspaceDataLoading}
           onNavigate={handleNavigate}
           onOpenMeeting={(meeting) =>
             handleNavigate('calendars', { calendarsTab: 'meetings', openMeeting: meeting })

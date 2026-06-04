@@ -95,6 +95,7 @@ export function useMeetings() {
 
   return {
     meetings,
+    meetingsSyncLoaded: syncLoaded,
     replaceMeetings,
     addMeeting,
     updateMeeting,

@@ -71,6 +71,7 @@ export function useCollectionSync({
   const pendingRemovedRef = useRef(new Set());
   const pendingLocalCreatesRef = useRef(new Set());
   const localItemsRef = useRef(items);
+  const applyRemoteRef = useRef(() => {});
   const [writeNonce, setWriteNonce] = useState(0);
 
   const markSyncLoaded = () => {
@@ -87,8 +88,12 @@ export function useCollectionSync({
   useEffect(() => {
     if (!SUPABASE_ENABLED || !supabase) return undefined;
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session && pendingWriteRef.current) {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session) return;
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+        applyRemoteRef.current();
+      }
+      if (pendingWriteRef.current) {
         setWriteNonce((current) => current + 1);
       }
     });
@@ -282,6 +287,8 @@ export function useCollectionSync({
         markSyncLoaded();
       }
     };
+
+    applyRemoteRef.current = applyRemote;
 
     const scheduleApplyRemote = () => {
       clearTimeout(refetchTimer);
