@@ -45,26 +45,25 @@ async function fetchAllViaRest(table, orgId) {
  */
 async function fetchAllWithFallbacks(table, orgId) {
   const restRows = await fetchAllViaRest(table, orgId);
-  if (restRows !== null && restRows.length > 0) return restRows;
+  // REST succeeded (including an empty table) — do not chain slow server fallbacks.
+  if (restRows !== null) return restRows;
 
   if (supabase) {
     const { data, error } = await supabase
       .from(table)
       .select('id, data, updated_at')
       .eq('org_id', orgId);
-    if (!error && data?.length) return data;
-    if (error) {
-      console.warn(`[supabase:${table}] client fetch failed:`, error.message);
-    }
+    if (!error) return data || [];
+    console.warn(`[supabase:${table}] client fetch failed:`, error.message);
   }
 
   const staffRows = await fetchStaffSyncRows(table, orgId);
-  if (staffRows?.length) return staffRows;
+  if (staffRows !== null) return staffRows;
 
   const blobRows = await fetchLegacyWorkspaceBlobRows(table);
   if (blobRows?.length) return blobRows;
 
-  return restRows ?? [];
+  return [];
 }
 
 export function createCollectionStore(table) {

@@ -112,8 +112,13 @@ export function useCollectionSync({
     storeRef.current = createCollectionStore(table);
     syncedRef.current = null;
     applyingRemoteRef.current = false;
-    loadedRef.current = false;
-    setSyncLoaded(false);
+    const hasCachedItems = localCollectionHasRecords(localItemsRef.current);
+    loadedRef.current = hasCachedItems;
+    if (!hasCachedItems) {
+      setSyncLoaded(false);
+    } else {
+      markSyncLoaded();
+    }
     pendingRemovedRef.current = loadPendingRemoved(orgId, table);
     pendingLocalCreatesRef.current = loadPendingCreates(orgId, table);
 
@@ -141,7 +146,7 @@ export function useCollectionSync({
         if (rows.length === 0) {
           const local = readLocal();
           if (localCollectionHasRecords(local)) {
-            await seedRecordsToCloud({
+            void seedRecordsToCloud({
               table,
               orgId,
               store,

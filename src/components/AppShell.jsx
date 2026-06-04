@@ -794,9 +794,9 @@ export default function AppShell({ onSignOut }) {
   );
   const notificationCount = syncTotal + workspaceAlerts.length;
 
+  // Show overview as soon as cached cards exist; only block when we have no data yet.
   const workspaceDataLoading =
-    SUPABASE_ENABLED &&
-    (!orgReady || !cardsSyncLoaded || !ideasSyncLoaded || !meetingsSyncLoaded);
+    SUPABASE_ENABLED && !orgReady && cards.length === 0 && !cardsSyncLoaded;
 
   const navBadges = useMemo(() => {
     const summary = buildWorkspaceHomeSummary({

@@ -69,13 +69,16 @@ export function WorkspaceSyncProvider({ children }) {
     bootstrapRanRef.current = sessionKey;
 
     let cancelled = false;
-    (async () => {
-      await runSupabaseBootstrap();
-      if (!cancelled) setSyncStatus('in_sync');
-    })();
+    const bootstrapTimer = window.setTimeout(() => {
+      (async () => {
+        await runSupabaseBootstrap();
+        if (!cancelled) setSyncStatus('in_sync');
+      })();
+    }, 2500);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(bootstrapTimer);
     };
   }, [ready, shouldBootstrapSupabase, session, orgId, runSupabaseBootstrap]);
 

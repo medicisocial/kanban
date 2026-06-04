@@ -135,7 +135,7 @@ export default function WorkspaceHomePage({
             />
           ))}
         </div>
-        <p className="text-center text-sm text-white/45">This can take a few seconds on mobile networks.</p>
+        <p className="text-center text-sm text-white/45">First load on a new device can take a moment.</p>
       </section>
     );
   }

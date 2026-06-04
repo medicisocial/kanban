@@ -62,8 +62,13 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
     storeRef.current = createCollectionStore(table);
     syncedRef.current = null;
     applyingRemoteRef.current = false;
-    loadedRef.current = false;
-    setSyncLoaded(false);
+    const hasCachedItems = localCollectionHasRecords(localValueRef.current);
+    loadedRef.current = hasCachedItems;
+    if (!hasCachedItems) {
+      setSyncLoaded(false);
+    } else {
+      markSyncLoaded();
+    }
 
     const store = storeRef.current;
     let active = true;
@@ -106,7 +111,7 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
 
         // Empty cloud table: keep local cache when it still has records (any org).
         if (localCollectionHasRecords(local)) {
-          await seedRecordsToCloud({
+          void seedRecordsToCloud({
             table,
             orgId,
             store,

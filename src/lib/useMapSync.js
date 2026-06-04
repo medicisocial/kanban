@@ -76,8 +76,13 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
     storeRef.current = createCollectionStore(table);
     syncedRef.current = null;
     applyingRemoteRef.current = false;
-    loadedRef.current = false;
-    setSyncLoaded(false);
+    const hasCachedItems = localCollectionHasRecords(localMapRef.current);
+    loadedRef.current = hasCachedItems;
+    if (!hasCachedItems) {
+      setSyncLoaded(false);
+    } else {
+      markSyncLoaded();
+    }
     pendingRemovedRef.current = loadPendingRemoved(orgId, table);
     pendingLocalCreatesRef.current = loadPendingCreates(orgId, table);
 
@@ -104,7 +109,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
             let seedRows = localKeys.map((key) => ({ id: key, data: local[key] }));
             seedRows = filterProtectedSyncUpserts(table, seedRows);
             if (seedRows.length) {
-              await seedRecordsToCloud({ table, orgId, store, rows: seedRows });
+              void seedRecordsToCloud({ table, orgId, store, rows: seedRows });
             }
             applyingRemoteRef.current = true;
             syncedRef.current = new Map(localKeys.map((key) => [key, JSON.stringify(local[key])]));
