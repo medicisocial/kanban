@@ -49,33 +49,23 @@ function getDefaultOrgId() {
   return (process.env.ORG_ID || process.env.VITE_ORG_ID || 'medici').trim();
 }
 
-function getConfig(orgIdOverride) {
+function getReadConfig(orgIdOverride) {
+  const url = getSupabaseUrl();
+  const key = resolveAuthReadKey();
+  const orgId = orgIdOverride || getDefaultOrgId();
+  return { url, key, orgId };
+}
+
+/** Write paths (staff-sync POST) require the service role in production. */
+function getWriteConfig(orgIdOverride) {
   const url = getSupabaseUrl();
   const key = resolveServerKey();
-  const orgId = orgIdOverride || process.env.ORG_ID || process.env.VITE_ORG_ID || 'medici';
+  const orgId = orgIdOverride || getDefaultOrgId();
   return { url, key, orgId };
 }
 
 export function isSupabaseConfigured() {
-  const url = getSupabaseUrl();
-  if (!url) return false;
-
-  const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-  if (serviceRole) return true;
-
-  if (isProductionRuntime()) {
-    throw new Error(
-      'SUPABASE_SERVICE_ROLE_KEY is required in production when Supabase URL is set. ' +
-        'Add it in Vercel environment variables (never use a VITE_ prefix).',
-    );
-  }
-
-  const anon = (
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY ||
-    ''
-  ).trim();
-  return Boolean(anon);
+  return Boolean(getSupabaseUrl() && resolveAuthReadKey());
 }
 
 /** Safe auth lookup check — never throws, unlike isSupabaseConfigured(). */
@@ -108,7 +98,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = SERVER_FETCH_TIME
 }
 
 async function fetchRows(table, orgIdOverride) {
-  const { url, key, orgId } = getConfig(orgIdOverride);
+  const { url, key, orgId } = getReadConfig(orgIdOverride);
   if (!url || !key) return null;
 
   const endpoint = `${url}/rest/v1/${table}?select=id,data&org_id=eq.${encodeURIComponent(orgId)}`;
@@ -129,7 +119,7 @@ async function fetchRows(table, orgIdOverride) {
 
 /** Full rows for staff-sync reads (includes updated_at for client merge). */
 export async function fetchSyncRows(table, orgIdOverride) {
-  const { url, key, orgId } = getConfig(orgIdOverride);
+  const { url, key, orgId } = getReadConfig(orgIdOverride);
   if (!url || !key) return null;
 
   const endpoint = `${url}/rest/v1/${table}?select=id,data,updated_at&org_id=eq.${encodeURIComponent(orgId)}`;
@@ -240,7 +230,7 @@ export async function fetchClientPortalCredentialsRows() {
 
 /** Returns a single record's `data` payload (or null if missing / not configured). */
 export async function fetchRecord(table, id, orgIdOverride) {
-  const { url, key, orgId } = getConfig(orgIdOverride);
+  const { url, key, orgId } = getReadConfig(orgIdOverride);
   if (!url || !key) return null;
 
   const endpoint = `${url}/rest/v1/${table}?select=data&id=eq.${encodeURIComponent(id)}&org_id=eq.${encodeURIComponent(orgId)}`;
@@ -257,7 +247,7 @@ export async function fetchRecord(table, id, orgIdOverride) {
 
 /** Inserts or updates a single record (upsert on the (org_id, id) primary key). */
 export async function upsertRecord(table, id, data, orgIdOverride) {
-  const { url, key, orgId } = getConfig(orgIdOverride);
+  const { url, key, orgId } = getWriteConfig(orgIdOverride);
   if (!url || !key) throw new Error('Supabase is not configured.');
 
   const endpoint = `${url}/rest/v1/${table}`;
@@ -287,7 +277,7 @@ export async function deleteRecords(table, ids, orgIdOverride) {
   const list = [...new Set((ids || []).map(String).filter(Boolean))];
   if (!list.length) return;
 
-  const { url, key, orgId } = getConfig(orgIdOverride);
+  const { url, key, orgId } = getWriteConfig(orgIdOverride);
   if (!url || !key) throw new Error('Supabase is not configured.');
 
   const idFilter = list.map((id) => encodeURIComponent(id)).join(',');
@@ -307,7 +297,7 @@ export async function upsertRecords(table, records, orgIdOverride) {
   const rows = (records || []).filter((record) => record?.id);
   if (!rows.length) return;
 
-  const { url, key, orgId } = getConfig(orgIdOverride);
+  const { url, key, orgId } = getWriteConfig(orgIdOverride);
   if (!url || !key) throw new Error('Supabase is not configured.');
 
   const payload = rows.map(({ id, data }) => ({

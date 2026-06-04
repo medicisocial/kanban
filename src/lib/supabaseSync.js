@@ -44,9 +44,9 @@ async function fetchAllViaRest(table, orgId) {
  * the same sync layer without duplicating hooks.
  */
 async function fetchAllWithFallbacks(table, orgId) {
-  const restRows = await fetchAllViaRest(table, orgId);
-  // REST succeeded (including an empty table) — do not chain slow server fallbacks.
-  if (restRows !== null) return restRows;
+  // Authenticated server read first — anon REST often returns a partial row set on mobile.
+  const staffRows = await fetchStaffSyncRows(table, orgId);
+  if (staffRows !== null) return staffRows;
 
   if (supabase) {
     const { data, error } = await supabase
@@ -57,8 +57,8 @@ async function fetchAllWithFallbacks(table, orgId) {
     console.warn(`[supabase:${table}] client fetch failed:`, error.message);
   }
 
-  const staffRows = await fetchStaffSyncRows(table, orgId);
-  if (staffRows !== null) return staffRows;
+  const restRows = await fetchAllViaRest(table, orgId);
+  if (restRows !== null) return restRows;
 
   const blobRows = await fetchLegacyWorkspaceBlobRows(table);
   if (blobRows?.length) return blobRows;
