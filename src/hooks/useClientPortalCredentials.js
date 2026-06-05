@@ -90,8 +90,10 @@ export function useClientPortalCredentials() {
 
     registerPortalCredentialBrand(getOrgId(), client);
 
-    if (SUPABASE_ENABLED && hasPasswordChange) {
-      markCredentialPasswordChanges(getOrgId(), [client]);
+    if (SUPABASE_ENABLED) {
+      if (hasPasswordChange) {
+        markCredentialPasswordChanges(getOrgId(), [client]);
+      }
       const apiResult = await saveClientPortalPasswords({
         brand: client,
         users: draftUsers.map((draft) => ({
@@ -103,11 +105,15 @@ export function useClientPortalCredentials() {
         })),
       });
       if (!apiResult.ok) {
-        clearCredentialPasswordChanges(getOrgId(), [client]);
+        if (hasPasswordChange) {
+          clearCredentialPasswordChanges(getOrgId(), [client]);
+        }
         return { ok: false, error: apiResult.error || 'Could not save portal passwords.', users: activeUsers };
       }
       activeUsers = normalizeBrandUsers(apiResult.users);
-      clearCredentialPasswordChanges(getOrgId(), [client]);
+      if (hasPasswordChange) {
+        clearCredentialPasswordChanges(getOrgId(), [client]);
+      }
     }
 
     setCredentials((prev) => {

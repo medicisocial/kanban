@@ -26,6 +26,7 @@ import { useSingletonSync } from '../lib/useSingletonSync';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { shouldPersistSyncedState } from '../lib/syncInitialState';
 import { registerPortalCredentialBrand } from '../lib/syncHelpers';
+import { savePortalPasswordVault } from '../utils/clientPortalPasswordVault';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
 
 function loadLegacyPortalPasswordVault() {
@@ -435,9 +436,10 @@ export function useClients() {
       }
 
       nextVault[client] = clientVault;
+      savePortalPasswordVault(nextVault);
       return { ...prev, portalPasswordVault: nextVault };
     });
-  }, []);
+  }, [applyClientsWorkspaceUpdate]);
 
   const getClientContacts = useCallback(
     (client) => normalizeClientContacts(state.contacts[client]),

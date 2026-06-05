@@ -187,7 +187,7 @@ export default function ClientPortalUsersEditor({
 
       const savedUsers = saveResult?.users ?? saveResult;
 
-      if (syncPortalPasswordVault) {
+      if (syncPortalPasswordVault && !saveResult?.vaultSynced) {
         const vaultResult = await syncPortalPasswordVault(client, users, savedUsers);
         if (vaultResult?.ok === false) {
           setError(vaultResult.error || 'Portal logins saved but password vault could not sync.');
