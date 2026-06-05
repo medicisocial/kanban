@@ -67,6 +67,31 @@ export function canUploadBrandAssetToStorage() {
   return Boolean(clientPortalSession()?.signature);
 }
 
+/** True when the server cannot sign storage uploads (missing service role, etc.). */
+export function isStorageSignUnavailableError(message) {
+  const text = String(message || '').toLowerCase();
+  return (
+    text.includes('storage is not configured') ||
+    text.includes('could not start upload') ||
+    text.includes('cloud sync is not configured')
+  );
+}
+
+/** Async probe — includes Supabase JWT staff sessions not covered by the sync check. */
+export async function probeBrandAssetStorageReady() {
+  if (!SUPABASE_ENABLED || !supabase) return false;
+  if (canUploadBrandAssetToStorage()) return true;
+  try {
+    const { data } = await Promise.race([
+      supabase.auth.getSession(),
+      new Promise((resolve) => setTimeout(() => resolve({ data: null }), 2000)),
+    ]);
+    return Boolean(data?.session?.access_token);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Upload a file to the brand-assets bucket via a server-issued signed URL. The file
  * goes straight to Supabase Storage, bypassing the serverless body limit, and works
@@ -107,22 +132,46 @@ export async function uploadBrandAssetToStorage(file, { brand, folder }) {
     throw new Error(payload?.error || 'Could not upload file.');
   }
 
-  const uploadPromise = supabase.storage
-    .from(BUCKET)
-    .uploadToSignedUrl(payload.path, payload.token, file, {
-      contentType: file?.type || 'application/octet-stream',
-    });
-
-  const { error } = await withTimeout(
-    uploadPromise,
-    STORAGE_UPLOAD_TIMEOUT_MS,
-    'File upload timed out. Please try again.',
-  );
-  if (error) {
-    throw new Error(error.message || 'Could not upload file to storage.');
-  }
+  await putFileToSignedUploadUrl({
+    path: payload.path,
+    token: payload.token,
+    file,
+    contentType: file?.type || 'application/octet-stream',
+  });
 
   return { url: payload.publicUrl, path: payload.path };
+}
+
+/** PUT to the signed URL with an abortable fetch (supabase-js has no upload timeout). */
+async function putFileToSignedUploadUrl({ path, token, file, contentType }) {
+  const base = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '');
+  const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
+  if (!base) {
+    throw new Error('Cloud storage URL is not configured.');
+  }
+
+  const url = `${base}/storage/v1/object/upload/sign/${BUCKET}/${path}?token=${encodeURIComponent(token)}`;
+  const body = new FormData();
+  body.append('cacheControl', '3600');
+  body.append('', file);
+
+  const res = await fetchWithTimeout(
+    url,
+    {
+      method: 'PUT',
+      headers: {
+        ...(anonKey ? { apikey: anonKey } : {}),
+        'x-upsert': 'false',
+      },
+      body,
+    },
+    STORAGE_UPLOAD_TIMEOUT_MS,
+  );
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(detail || 'Could not upload file to storage.');
+  }
 }
 
 /** Best-effort delete of a storage object by path. */

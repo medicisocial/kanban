@@ -15,8 +15,11 @@ import {
 import {
   canUploadBrandAssetToStorage,
   deleteBrandAssetFile,
+  isStorageSignUnavailableError,
+  probeBrandAssetStorageReady,
   uploadBrandAssetToStorage,
 } from '../../utils/brandAssetStorage';
+import { withTimeout } from '../../utils/withTimeout';
 import {
   beginEditorFilePick,
   clearEditorUploadWork,
@@ -69,7 +72,17 @@ export default function ClientCompanyFilesEditor({
   }, [pendingUploads]);
 
   useEffect(() => {
-    setStorageReady(!readOnly && canUploadBrandAssetToStorage());
+    if (readOnly) {
+      setStorageReady(false);
+      return undefined;
+    }
+    let active = true;
+    probeBrandAssetStorageReady().then((ready) => {
+      if (active) setStorageReady(ready);
+    });
+    return () => {
+      active = false;
+    };
   }, [readOnly]);
 
   useEffect(() => {
@@ -112,13 +125,15 @@ export default function ClientCompanyFilesEditor({
     setActiveFolder(folderId);
   };
 
-  const persist = async (nextFiles) => {
+  const persist = async (nextFiles, { manageSaving = true } = {}) => {
     const normalized = normalizeClientCompanyFiles(nextFiles, stableBusinessType);
     setLocalFiles(normalized);
     if (!onSaveFiles) return;
 
-    setSaving(true);
-    savingRef.current = true;
+    if (manageSaving) {
+      setSaving(true);
+      savingRef.current = true;
+    }
     setError('');
     try {
       await onSaveFiles(slimCompanyFilesForApiSave(normalized, stableBusinessType));
@@ -128,8 +143,10 @@ export default function ClientCompanyFilesEditor({
       setError(err.message || 'Could not save files.');
       throw err;
     } finally {
-      savingRef.current = false;
-      setSaving(false);
+      if (manageSaving) {
+        savingRef.current = false;
+        setSaving(false);
+      }
     }
   };
 
@@ -201,53 +218,68 @@ export default function ClientCompanyFilesEditor({
     }
   };
 
+  const buildUploadEntry = async (pending, { existingCount, group, preferStorage }) => {
+    if (preferStorage) {
+      assertCompanyFileUploadable(pending.file, { existingCount });
+      try {
+        const { url, path } = await uploadBrandAssetToStorage(pending.file, {
+          brand: client,
+          folder: activeFolder,
+        });
+        return buildStorageCompanyFileEntry({
+          file: pending.file,
+          name: pending.name,
+          folder: activeFolder,
+          group,
+          url,
+          storagePath: path,
+          businessType: stableBusinessType,
+        });
+      } catch (storageErr) {
+        if (!isStorageSignUnavailableError(storageErr?.message)) {
+          throw storageErr;
+        }
+      }
+    }
+
+    return readClientCompanyFileUpload(pending.file, {
+      name: pending.name,
+      folder: activeFolder,
+      group,
+      businessType: stableBusinessType,
+      existingCount,
+    });
+  };
+
   const handleConfirmUpload = async () => {
     if (!pendingUploads.length || readOnly) return;
     if (pendingUploads.some((entry) => !entry.name.trim())) return;
 
     setError('');
+    setMessage('');
     setSaving(true);
     savingRef.current = true;
     try {
-      const entries = [];
-      let existingCount = localFiles.length;
-      const group = allowsGroups ? pendingGroup.trim() : '';
-      const useStorage = canUploadBrandAssetToStorage();
-      for (const pending of pendingUploads) {
-        if (useStorage) {
-          assertCompanyFileUploadable(pending.file, { existingCount });
-          const { url, path } = await uploadBrandAssetToStorage(pending.file, {
-            brand: client,
-            folder: activeFolder,
-          });
-          entries.push(
-            buildStorageCompanyFileEntry({
-              file: pending.file,
-              name: pending.name,
-              folder: activeFolder,
-              group,
-              url,
-              storagePath: path,
-              businessType: stableBusinessType,
-            }),
-          );
-        } else {
-          entries.push(
-            await readClientCompanyFileUpload(pending.file, {
-              name: pending.name,
-              folder: activeFolder,
-              group,
-              businessType: stableBusinessType,
-              existingCount,
-            }),
-          );
-        }
-        existingCount += 1;
-      }
-      await persist([...entries, ...localFiles]);
-      setPendingUploads([]);
-      pendingUploadsRef.current = [];
-      setPendingGroup('');
+      await withTimeout(
+        (async () => {
+          const entries = [];
+          let existingCount = localFiles.length;
+          const group = allowsGroups ? pendingGroup.trim() : '';
+          const preferStorage = storageReady || canUploadBrandAssetToStorage();
+          for (const pending of pendingUploads) {
+            entries.push(
+              await buildUploadEntry(pending, { existingCount, group, preferStorage }),
+            );
+            existingCount += 1;
+          }
+          await persist([...entries, ...localFiles], { manageSaving: false });
+          setPendingUploads([]);
+          pendingUploadsRef.current = [];
+          setPendingGroup('');
+        })(),
+        120000,
+        'Save timed out. Please try again.',
+      );
     } catch (err) {
       setError(err.message || 'Could not upload file.');
     } finally {
