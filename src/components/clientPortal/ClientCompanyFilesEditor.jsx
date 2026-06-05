@@ -120,7 +120,12 @@ export default function ClientCompanyFilesEditor({
         );
         existingCount += 1;
       }
-      await persist([...entries, ...localFiles]);
+      const replaceMenuFolder =
+        activeFolder === 'drink-menu' || activeFolder === 'food-menu';
+      const existingFiles = replaceMenuFolder
+        ? localFiles.filter((file) => file.folder !== activeFolder)
+        : localFiles;
+      await persist([...entries, ...existingFiles]);
       setPendingUploads([]);
     } catch (err) {
       setError(err.message || 'Could not upload file.');
@@ -256,7 +261,7 @@ export default function ClientCompanyFilesEditor({
             onChange={handlePickFile}
           />
           <p className="text-[11px] text-white/35">
-            PDF, PNG, JPG, WebP, SVG, or ZIP · 8 MB max per file
+            PDF, PNG, JPG, WebP, SVG, or ZIP · 3 MB max per file
             {allowsMultiple && ' · Select multiple files in General'}
           </p>
         </div>

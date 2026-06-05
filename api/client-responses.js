@@ -279,7 +279,13 @@ async function applyResponseToSupabase(res, session, type, response) {
       );
     }
 
-    await upsertRecord(CLIENTS_TABLE, CLIENTS_RECORD_ID, nextStore, orgId);
+    const { mergeClientsWorkspaceData } = await import('./_lib/clientsWorkspaceMerge.mjs');
+    await upsertRecord(
+      CLIENTS_TABLE,
+      CLIENTS_RECORD_ID,
+      mergeClientsWorkspaceData(store, nextStore),
+      orgId,
+    );
 
     if (hasOwn(response, 'userAvatar')) {
       const brandUsers = normalizeBrandUsers(await fetchRecord(CREDENTIALS_TABLE, brand, orgId));

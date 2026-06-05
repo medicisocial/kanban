@@ -7,6 +7,7 @@ import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
 import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
 import { pushStaffSyncSingleton } from './staffSyncApi';
+import { reportSyncIssue } from './workspaceSyncHealth';
 import { seedRecordsToCloud } from './syncSeed';
 import { subscribeWorkspaceRefetch } from '../utils/workspaceReload';
 import { useStaffAuth } from '../context/StaffAuthContext';
@@ -285,9 +286,12 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
           const ok = await pushStaffSyncSingleton(table, recordId, dataToWrite);
           if (!ok) {
             pendingWriteRef.current = true;
-            console.warn(
-              `[supabase:${table}] skipped write — no database session. Log out and log in again.`,
-            );
+            reportSyncIssue({
+              level: 'warn',
+              table,
+              message:
+                'Changes are saved on this device but could not reach the cloud. Stay signed in and reload, or sign in again.',
+            });
             return;
           }
         }
@@ -299,6 +303,11 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
       } catch (err) {
         console.error(`[supabase:${table}] sync failed:`, err?.message || err, err);
         pendingWriteRef.current = true;
+        reportSyncIssue({
+          level: 'error',
+          table,
+          message: err?.message || `Could not save ${table} to the cloud.`,
+        });
       }
     };
 

@@ -1,6 +1,7 @@
 import { normalizeBusinessType } from './eventFormSchemas';
+import { MAX_PDF_BYTES } from './eventPdfUpload';
 
-const MAX_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_FILE_BYTES = MAX_PDF_BYTES;
 export const MAX_FILES_PER_CLIENT = 40;
 
 export function allowsMultipleCompanyFileUpload(folderId) {
@@ -124,7 +125,7 @@ export async function readClientCompanyFileUpload(file, { name, folder, business
     throw new Error('Upload a PDF, image (PNG/JPG/WebP/SVG), or ZIP file.');
   }
   if (file.size > MAX_FILE_BYTES) {
-    throw new Error('Files must be 8 MB or smaller.');
+    throw new Error('Files must be 3 MB or smaller.');
   }
   if (existingCount >= MAX_FILES_PER_CLIENT) {
     throw new Error(`You can store up to ${MAX_FILES_PER_CLIENT} files. Remove one to add another.`);

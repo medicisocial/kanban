@@ -27,6 +27,7 @@ import { useStaffAuth } from '../context/StaffAuthContext';
 import { shouldPersistSyncedState } from '../lib/syncInitialState';
 import { registerPortalCredentialBrand } from '../lib/syncHelpers';
 import { savePortalPasswordVault } from '../utils/clientPortalPasswordVault';
+import { saveStaffBrandAssets } from '../utils/staffBrandAssetsApi';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
 
 function loadLegacyPortalPasswordVault() {
@@ -485,35 +486,55 @@ export function useClients() {
     [state.companyFiles, state.businessTypes],
   );
 
-  const setClientCompanyFiles = useCallback(async (client, files) => {
-    if (!client) return { ok: false, error: 'Missing client.' };
-    return applyClientsWorkspaceUpdate((prev) => ({
-      ...prev,
-      companyFiles: {
-        ...(prev.companyFiles || {}),
-        [client]: normalizeClientCompanyFiles(
-          files,
-          normalizeBusinessType(prev.businessTypes?.[client] || ''),
-        ),
-      },
-    }));
-  }, []);
+  const setClientCompanyFiles = useCallback(
+    async (client, files) => {
+      if (!client) return { ok: false, error: 'Missing client.' };
+
+      const businessType = normalizeBusinessType(stateRef.current.businessTypes?.[client] || '');
+      const normalized = normalizeClientCompanyFiles(files, businessType);
+
+      if (SUPABASE_ENABLED) {
+        const apiResult = await saveStaffBrandAssets({ brand: client, companyFiles: normalized });
+        if (!apiResult.ok) return apiResult;
+      }
+
+      return applyClientsWorkspaceUpdate((prev) => ({
+        ...prev,
+        companyFiles: {
+          ...(prev.companyFiles || {}),
+          [client]: normalized,
+        },
+      }));
+    },
+    [applyClientsWorkspaceUpdate],
+  );
 
   const getClientSpecialMenus = useCallback(
     (client) => normalizeClientSpecialMenus(state.specialMenus?.[client]),
     [state.specialMenus],
   );
 
-  const setClientSpecialMenus = useCallback(async (client, menus) => {
-    if (!client) return { ok: false, error: 'Missing client.' };
-    return applyClientsWorkspaceUpdate((prev) => ({
-      ...prev,
-      specialMenus: {
-        ...(prev.specialMenus || {}),
-        [client]: normalizeClientSpecialMenus(menus),
-      },
-    }));
-  }, []);
+  const setClientSpecialMenus = useCallback(
+    async (client, menus) => {
+      if (!client) return { ok: false, error: 'Missing client.' };
+
+      const normalized = normalizeClientSpecialMenus(menus);
+
+      if (SUPABASE_ENABLED) {
+        const apiResult = await saveStaffBrandAssets({ brand: client, specialMenus: normalized });
+        if (!apiResult.ok) return apiResult;
+      }
+
+      return applyClientsWorkspaceUpdate((prev) => ({
+        ...prev,
+        specialMenus: {
+          ...(prev.specialMenus || {}),
+          [client]: normalized,
+        },
+      }));
+    },
+    [applyClientsWorkspaceUpdate],
+  );
 
   return {
     clients: state.names,

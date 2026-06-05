@@ -1,4 +1,5 @@
-const MAX_PDF_BYTES = 8 * 1024 * 1024;
+/** Keep under hosted API body limits (~4.5 MB on Vercel once base64 + JSON overhead). */
+export const MAX_PDF_BYTES = 3 * 1024 * 1024;
 
 function readAsDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -86,7 +87,7 @@ export async function readEventPdfUpload(file) {
     file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
   if (!isPdf) throw new Error('Please upload a PDF file.');
   if (file.size > MAX_PDF_BYTES) {
-    throw new Error('PDF must be 8 MB or smaller.');
+    throw new Error('PDF must be 3 MB or smaller.');
   }
 
   const dataUrl = await readAsDataUrl(file);

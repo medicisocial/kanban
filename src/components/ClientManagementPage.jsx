@@ -421,11 +421,15 @@ export default function ClientManagementPage({
                 specialMenus={getClientSpecialMenus(selectedClient)}
                 onSaveCompanyFiles={async (files) => {
                   const result = await setClientCompanyFiles(selectedClient, files);
-                  if (result?.ok === false) throw new Error(result.error);
+                  if (result?.ok === false) {
+                    throw new Error(result.error || 'Could not save brand assets.');
+                  }
                 }}
                 onSaveSpecialMenus={async (menus) => {
                   const result = await setClientSpecialMenus(selectedClient, menus);
-                  if (result?.ok === false) throw new Error(result.error);
+                  if (result?.ok === false) {
+                    throw new Error(result.error || 'Could not save special menus.');
+                  }
                 }}
               />
             </div>
