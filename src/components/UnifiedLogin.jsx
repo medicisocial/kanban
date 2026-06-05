@@ -537,6 +537,13 @@ export default function UnifiedLogin({
                   disabled={submitting}
                   required
                 />
+                {!agencyMode && (
+                  <p className="mt-2 text-xs leading-relaxed text-white/40">
+                    Use the portal username your agency assigned (for example{' '}
+                    <span className="text-white/55">plumehtx</span>), not your work email unless
+                    that is the login they set up.
+                  </p>
+                )}
               </label>
 
               {checking ? (

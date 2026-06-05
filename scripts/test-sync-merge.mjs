@@ -208,11 +208,19 @@ if (typeof localStorage !== 'undefined') {
   assert(merged[0].passwordHash === 'b'.repeat(64), 'server merge: blanked hash should inherit existing hash');
 }
 
-// A genuine password change must replace the stored hash.
+// Stale sync must not replace a configured cloud hash with a different local hash.
 {
   const existing = [{ id: 'u1', username: 'plumehtx', passwordHash: 'c'.repeat(64) }];
   const incoming = [{ id: 'u1', username: 'plumehtx', passwordHash: 'd'.repeat(64) }];
   const merged = mergePortalCredentialData(existing, incoming);
+  assert(merged[0].passwordHash === 'c'.repeat(64), 'server merge: stale hash change must be blocked');
+}
+
+// A genuine password change must replace the stored hash when explicitly allowed.
+{
+  const existing = [{ id: 'u1', username: 'plumehtx', passwordHash: 'c'.repeat(64) }];
+  const incoming = [{ id: 'u1', username: 'plumehtx', passwordHash: 'd'.repeat(64) }];
+  const merged = mergePortalCredentialData(existing, incoming, { allowPasswordChange: true });
   assert(merged[0].passwordHash === 'd'.repeat(64), 'server merge: real password change must persist');
 }
 

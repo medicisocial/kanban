@@ -19,9 +19,12 @@ import {
   loadPendingCreates,
   loadPendingRemoved,
   localCollectionHasRecords,
+  clearCredentialPasswordChanges,
+  loadCredentialPasswordChanges,
   markPendingCreates,
   markPendingRemoved,
   mapMatchesSnapshot,
+  mergePortalCredentialDataForPush,
   mergeRemoteMapWithLocalPending,
   mergeRemoteRecordWithLocal,
   mergePortalCredentialValue,
@@ -152,6 +155,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
           pendingRemoved: pendingRemovedRef.current,
           pendingLocalCreates: pendingLocalCreatesRef.current,
           protectCredentialEntries: table === 'client_portal_credentials',
+          orgId,
         });
         const hasUnsyncedLocalChanges = !mapMatchesSnapshot(mergedMap, syncedRef.current);
 
@@ -365,11 +369,29 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
       }
 
       try {
+        let rowsToWrite = safeChanged;
+        const passwordChangeBrands =
+          table === 'client_portal_credentials' ? [...loadCredentialPasswordChanges(orgId)] : [];
+
+        if (table === 'client_portal_credentials' && rowsToWrite.length) {
+          const existingRows = await fetchRowsWithTimeout(store);
+          const existingByBrand = Object.fromEntries(existingRows.map((row) => [row.id, row.data]));
+          rowsToWrite = rowsToWrite.map((row) => ({
+            id: row.id,
+            data: mergePortalCredentialDataForPush(existingByBrand[row.id], row.data, {
+              allowPasswordChange: passwordChangeBrands.includes(String(row.id)),
+            }),
+          }));
+          rowsToWrite = filterProtectedSyncUpserts(table, rowsToWrite);
+        }
+
         if (canWrite) {
-          if (safeChanged.length) await store.upsertRecords(safeChanged);
+          if (rowsToWrite.length) await store.upsertRecords(rowsToWrite);
           if (removed.length) await store.deleteRecords(removed);
         } else {
-          const ok = await pushStaffSyncRows(table, safeChanged, removed);
+          const ok = await pushStaffSyncRows(table, rowsToWrite, removed, orgId, {
+            credentialPasswordChanges: passwordChangeBrands,
+          });
           if (!ok) {
             pendingWriteRef.current = true;
             reportSyncIssue({
@@ -383,6 +405,9 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
         }
 
         if (!cancelled) {
+          if (table === 'client_portal_credentials' && passwordChangeBrands.length) {
+            clearCredentialPasswordChanges(orgId, passwordChangeBrands);
+          }
           for (const id of removed) pendingRemovedRef.current.delete(id);
           for (const key of [...pendingLocalCreatesRef.current]) {
             if (next.has(key)) pendingLocalCreatesRef.current.delete(key);

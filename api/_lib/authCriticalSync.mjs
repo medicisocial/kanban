@@ -11,8 +11,25 @@ export function hasConfiguredPortalUsers(entry) {
   return normalizeBrandUsers(entry).some((user) => user.username && user.passwordHash);
 }
 
+function resolvePortalPasswordHash(previous, incomingUser, allowPasswordChange) {
+  const previousHash = previous?.passwordHash?.trim().toLowerCase() || '';
+  const incomingHash = incomingUser.passwordHash?.trim().toLowerCase() || '';
+  if (!incomingHash) return previousHash;
+  if (!previousHash) return incomingHash;
+  if (incomingHash === previousHash) return incomingHash;
+  if (allowPasswordChange) return incomingHash;
+  console.warn(
+    `[auth-critical] blocked unexpected portal password hash change for ${incomingUser.username || previous?.username || 'user'}`,
+  );
+  return previousHash;
+}
+
 /** Never replace configured portal users with an empty payload. */
-export function mergePortalCredentialData(existingData, incomingData) {
+export function mergePortalCredentialData(
+  existingData,
+  incomingData,
+  { allowPasswordChange = false } = {},
+) {
   const existing = normalizeBrandUsers(existingData);
   const incoming = normalizeBrandUsers(incomingData);
 
@@ -32,7 +49,7 @@ export function mergePortalCredentialData(existingData, incomingData) {
       existingById.get(incomingUser.id) ||
       existingByUsername.get(incomingUser.username.trim().toLowerCase());
 
-    const passwordHash = incomingUser.passwordHash || previous?.passwordHash || '';
+    const passwordHash = resolvePortalPasswordHash(previous, incomingUser, allowPasswordChange);
     const username = incomingUser.username || previous?.username || '';
     if (!passwordHash || !username) continue;
 
@@ -69,7 +86,12 @@ export function filterAuthCriticalDeletes(table, deleteIds, authDeleteConfirmed 
   return [];
 }
 
-export async function sanitizeAuthCriticalUpserts(table, upserts, orgId) {
+export async function sanitizeAuthCriticalUpserts(
+  table,
+  upserts,
+  orgId,
+  { credentialPasswordChanges = null } = {},
+) {
   if (!Array.isArray(upserts) || !upserts.length) return [];
 
   if (table === 'client_portal_credentials') {
@@ -80,10 +102,19 @@ export async function sanitizeAuthCriticalUpserts(table, upserts, orgId) {
       console.error('[auth-critical] credential fetch failed:', error?.message || error);
     }
 
+    const passwordChangeBrands =
+      credentialPasswordChanges instanceof Set
+        ? credentialPasswordChanges
+        : new Set(
+            Array.isArray(credentialPasswordChanges) ? credentialPasswordChanges.map(String) : [],
+          );
+
     const sanitized = [];
     for (const row of upserts) {
       if (!row?.id) continue;
-      const merged = mergePortalCredentialData(existingMap?.[row.id], row.data);
+      const merged = mergePortalCredentialData(existingMap?.[row.id], row.data, {
+        allowPasswordChange: passwordChangeBrands.has(String(row.id)),
+      });
       if (!hasConfiguredPortalUsers(merged)) {
         console.warn(`[auth-critical] blocked empty portal credential upsert for ${row.id}`);
         continue;

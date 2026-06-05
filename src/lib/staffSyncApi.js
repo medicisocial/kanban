@@ -79,6 +79,7 @@ export async function pushStaffSyncRows(
       upserts: rows,
       deleteIds: removed,
       authDeleteConfirmed: Boolean(options.authDeleteConfirmed),
+      credentialPasswordChanges: options.credentialPasswordChanges || [],
     }),
   });
 

@@ -13,7 +13,12 @@ import { useMapSync } from '../lib/useMapSync';
 import { initialSyncMapState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
-import { hasConfiguredPortalUsers, registerPortalCredentialBrand } from '../lib/syncHelpers';
+import {
+  hasConfiguredPortalUsers,
+  markCredentialPasswordChanges,
+  registerPortalCredentialBrand,
+} from '../lib/syncHelpers';
+import { saveClientPortalPasswords } from '../utils/setPortalPasswordApi';
 
 function loadCredentials() {
   try {
@@ -68,8 +73,11 @@ export function useClientPortalCredentials() {
 
   const setClientPortalUsers = useCallback(async (client, draftUsers) => {
     const existingUsers = normalizeBrandUsers(loadCredentials()[client]);
-    const mergedUsers = await mergeBrandUserDrafts(existingUsers, draftUsers, hashPassword);
-    const activeUsers = mergedUsers.filter((user) => user.passwordHash && user.username);
+    const hasPasswordChange = draftUsers.some((draft) => String(draft.password || '').trim());
+
+    let activeUsers = (
+      await mergeBrandUserDrafts(existingUsers, draftUsers, hashPassword)
+    ).filter((user) => user.passwordHash && user.username);
 
     if (!hasConfiguredPortalUsers(activeUsers)) {
       return {
@@ -80,6 +88,24 @@ export function useClientPortalCredentials() {
     }
 
     registerPortalCredentialBrand(getOrgId(), client);
+
+    if (SUPABASE_ENABLED && hasPasswordChange) {
+      markCredentialPasswordChanges(getOrgId(), [client]);
+      const apiResult = await saveClientPortalPasswords({
+        brand: client,
+        users: draftUsers.map((draft) => ({
+          id: draft.id,
+          username: draft.username,
+          password: draft.password,
+          displayName: draft.displayName,
+          avatar: draft.pendingAvatar !== undefined ? draft.pendingAvatar : draft.avatar,
+        })),
+      });
+      if (!apiResult.ok) {
+        return { ok: false, error: apiResult.error || 'Could not save portal passwords.', users: activeUsers };
+      }
+      activeUsers = normalizeBrandUsers(apiResult.users);
+    }
 
     setCredentials((prev) => {
       const next = { ...prev, [client]: activeUsers };

@@ -117,7 +117,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { table, upserts, deleteIds, orgId, authDeleteConfirmed = false } = req.body || {};
+  const {
+    table,
+    upserts,
+    deleteIds,
+    orgId,
+    authDeleteConfirmed = false,
+    credentialPasswordChanges = [],
+  } = req.body || {};
   if (!table || !ALLOWED_TABLES.has(table)) {
     return res.status(400).json({ error: 'Invalid table.' });
   }
@@ -130,7 +137,9 @@ export default async function handler(req, res) {
 
   try {
     const safeDeleteIds = filterAuthCriticalDeletes(table, deleteIds, authDeleteConfirmed);
-    const safeUpserts = await sanitizeAuthCriticalUpserts(table, upserts, resolvedOrgId);
+    const safeUpserts = await sanitizeAuthCriticalUpserts(table, upserts, resolvedOrgId, {
+      credentialPasswordChanges,
+    });
 
     if (safeDeleteIds.length) {
       await deleteRecords(table, safeDeleteIds, resolvedOrgId);

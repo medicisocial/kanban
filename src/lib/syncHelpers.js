@@ -3,7 +3,6 @@ import {
   mergeBrandSpecialMenus,
   mergeClientsWorkspaceFileMap,
 } from '../utils/clientsWorkspaceMerge.js';
-
 export const FETCH_TIMEOUT_MS = 12000;
 
 function normalizeBrandUsers(entry) {
@@ -39,7 +38,79 @@ export function hasConfiguredPortalUsers(entry) {
 }
 
 /** Never let stale local cache replace configured portal users with an empty list. */
-export function mergePortalCredentialValue({ remote, local, syncedStr }) {
+function resolvePortalCredentialPasswordHash(previous, incomingUser, allowPasswordChange) {
+  const previousHash = previous?.passwordHash?.trim().toLowerCase() || '';
+  const incomingHash = incomingUser?.passwordHash?.trim().toLowerCase() || '';
+  if (!incomingHash) return previousHash;
+  if (!previousHash) return incomingHash;
+  if (incomingHash === previousHash) return incomingHash;
+  if (allowPasswordChange) return incomingHash;
+  return previousHash;
+}
+
+/** Client-side mirror of server mergePortalCredentialData for direct Supabase upserts. */
+export function mergePortalCredentialDataForPush(
+  existingData,
+  incomingData,
+  { allowPasswordChange = false } = {},
+) {
+  const existing = normalizeBrandUsers(existingData);
+  const incoming = normalizeBrandUsers(incomingData);
+  if (!incoming.length) return existing;
+  if (!existing.length) return incoming;
+
+  const existingById = new Map(existing.map((user) => [user.id, user]));
+  const existingByUsername = new Map(
+    existing.map((user) => [user.username.trim().toLowerCase(), user]),
+  );
+  const merged = [];
+  const seen = new Set();
+
+  for (const incomingUser of incoming) {
+    const previous =
+      existingById.get(incomingUser.id) ||
+      existingByUsername.get(incomingUser.username.trim().toLowerCase());
+    const passwordHash = resolvePortalCredentialPasswordHash(
+      previous,
+      incomingUser,
+      allowPasswordChange,
+    );
+    const username = incomingUser.username || previous?.username || '';
+    if (!passwordHash || !username) continue;
+    const id = incomingUser.id || previous?.id;
+    seen.add(id);
+    merged.push({
+      ...previous,
+      ...incomingUser,
+      id,
+      username,
+      passwordHash,
+      displayName: incomingUser.displayName || previous?.displayName || '',
+      avatar: Object.prototype.hasOwnProperty.call(incomingUser, 'avatar')
+        ? incomingUser.avatar
+        : previous?.avatar,
+    });
+  }
+
+  for (const user of existing) {
+    if (seen.has(user.id)) continue;
+    if (user.username && user.passwordHash) merged.push(user);
+  }
+
+  return merged;
+}
+
+function resolveClientPortalPasswordHash(localUser, remoteUser, allowPasswordChange) {
+  const localHash = localUser?.passwordHash?.trim().toLowerCase() || '';
+  const remoteHash = remoteUser?.passwordHash?.trim().toLowerCase() || '';
+  if (!localHash) return remoteHash;
+  if (!remoteHash) return localHash;
+  if (localHash === remoteHash) return localHash;
+  if (allowPasswordChange) return localHash;
+  return remoteHash;
+}
+
+export function mergePortalCredentialValue({ remote, local, syncedStr, allowPasswordChange = false }) {
   const remoteUsers = normalizeBrandUsers(remote);
   const localUsers = normalizeBrandUsers(local);
 
@@ -67,7 +138,11 @@ export function mergePortalCredentialValue({ remote, local, syncedStr }) {
         (user) => user.username.toLowerCase() === localUser.username.toLowerCase(),
       );
 
-    const passwordHash = localUser.passwordHash || remoteUser?.passwordHash || '';
+    const passwordHash = resolveClientPortalPasswordHash(
+      localUser,
+      remoteUser,
+      allowPasswordChange,
+    );
     const username = localUser.username || remoteUser?.username || '';
     if (!passwordHash || !username) {
       if (remoteUser?.passwordHash) {
@@ -147,6 +222,32 @@ export function pendingRemovedKey(orgId, table) {
 
 export function pendingCreatesKey(orgId, table) {
   return `medici-pending-creates:${orgId}:${table}`;
+}
+
+export function credentialPasswordChangesKey(orgId) {
+  return `medici-credential-password-changes:${orgId}`;
+}
+
+export function loadCredentialPasswordChanges(orgId) {
+  return new Set(readStringSetStorage(credentialPasswordChangesKey(orgId)));
+}
+
+export function markCredentialPasswordChanges(orgId, brands = []) {
+  if (!orgId || !brands.length) return;
+  const pending = loadCredentialPasswordChanges(orgId);
+  for (const brand of brands) pending.add(String(brand));
+  writeStringSetStorage(credentialPasswordChangesKey(orgId), pending);
+}
+
+export function clearCredentialPasswordChanges(orgId, brands = []) {
+  if (!orgId) return;
+  const pending = loadCredentialPasswordChanges(orgId);
+  if (!brands.length) {
+    writeStringSetStorage(credentialPasswordChangesKey(orgId), new Set());
+    return;
+  }
+  for (const brand of brands) pending.delete(String(brand));
+  writeStringSetStorage(credentialPasswordChangesKey(orgId), pending);
 }
 
 function readStringSetStorage(key) {
@@ -378,6 +479,7 @@ export function mergeRemoteMapWithLocalPending({
   pendingRemoved,
   pendingLocalCreates,
   protectCredentialEntries = false,
+  orgId = '',
 }) {
   const synced = syncedSnapshot || new Map();
   const pendingCreates = pendingLocalCreates || new Set();
@@ -413,6 +515,7 @@ export function mergeRemoteMapWithLocalPending({
           remote: remoteValue,
           local: localValue,
           syncedStr: synced.get(key),
+          allowPasswordChange: orgId ? loadCredentialPasswordChanges(orgId).has(key) : false,
         })
       : mergeRemoteRecordWithLocal({
           remote: remoteValue,

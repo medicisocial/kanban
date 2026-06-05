@@ -1,0 +1,172 @@
+import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
+import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
+import {
+  fetchCollectionMap,
+  fetchRecord,
+  isSupabaseConfigured,
+  upsertRecord,
+} from './_lib/supabase.mjs';
+import { hashValue, normalizeBrandUsers } from './_lib/clientPortalAuth.mjs';
+import { hasConfiguredPortalUsers } from './_lib/authCriticalSync.mjs';
+
+function unauthorized(res) {
+  return res.status(401).json({ error: 'Unauthorized' });
+}
+
+function unavailable(res) {
+  return res.status(503).json({ error: 'Cloud sync is not configured.' });
+}
+
+function isLikelyJwt(token) {
+  return typeof token === 'string' && token.split('.').length === 3;
+}
+
+async function verifySupabaseAccessToken(token) {
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '')
+    .trim()
+    .replace(/\/$/, '');
+  const anonKey = (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '').trim();
+  if (!url || !anonKey || !token) return false;
+
+  const response = await fetch(`${url}/auth/v1/user`, {
+    headers: { apikey: anonKey, Authorization: `Bearer ${token}` },
+  });
+  return response.ok;
+}
+
+async function isAuthorized(req) {
+  const staffSession = getSessionFromRequest(req);
+  if (isStaffSessionValid(staffSession)) return true;
+
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return false;
+  const token = auth.slice(7).trim();
+  if (!isLikelyJwt(token)) return false;
+
+  try {
+    return await verifySupabaseAccessToken(token);
+  } catch {
+    return false;
+  }
+}
+
+function normalizeUserAvatar(avatar) {
+  if (!avatar) return null;
+  if (typeof avatar === 'string') return { src: avatar, zoom: 1, x: 50, y: 50 };
+  if (typeof avatar === 'object' && avatar.src) {
+    return {
+      src: avatar.src,
+      zoom: Math.min(3, Math.max(1, Number(avatar.zoom) || 1)),
+      x: Number(avatar.x ?? 50),
+      y: Number(avatar.y ?? 50),
+    };
+  }
+  return null;
+}
+
+/**
+ * Staff-only: set or reset client portal passwords on the server so hashes are never
+ * lost to a stale workspace sync push.
+ */
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!(await isAuthorized(req))) return unauthorized(res);
+  if (!isSupabaseConfigured()) return unavailable(res);
+
+  const { brand, users, orgId } = req.body || {};
+  if (!brand || !Array.isArray(users) || !users.length) {
+    return res.status(400).json({ error: 'Missing brand or users.' });
+  }
+
+  const orgCheck = await assertAuthorizedOrgId(req, orgId);
+  if (!orgCheck.ok) {
+    return res.status(403).json({ error: orgCheck.error || 'Forbidden org scope.' });
+  }
+  const resolvedOrgId = orgCheck.orgId;
+
+  try {
+    const [credentialMap, clientsWorkspace] = await Promise.all([
+      fetchCollectionMap('client_portal_credentials', resolvedOrgId),
+      fetchRecord('clients', 'workspace', resolvedOrgId),
+    ]);
+
+    const existingUsers = normalizeBrandUsers(credentialMap?.[brand]);
+    const existingById = new Map(existingUsers.map((user) => [user.id, user]));
+    const existingByUsername = new Map(
+      existingUsers.map((user) => [user.username.trim().toLowerCase(), user]),
+    );
+
+    const nextVault = { ...(clientsWorkspace?.portalPasswordVault || {}) };
+    const brandVault = { ...(nextVault[brand] || {}) };
+    const nextUsers = [];
+
+    for (const draft of users) {
+      if (!draft || typeof draft !== 'object') continue;
+      const username = String(draft.username || '').trim().toLowerCase();
+      if (!username) continue;
+
+      const previous =
+        existingById.get(draft.id) ||
+        existingByUsername.get(username) ||
+        null;
+
+      const plainPassword = String(draft.password || '').trim();
+      let passwordHash = previous?.passwordHash || '';
+      if (plainPassword) {
+        passwordHash = hashValue(plainPassword);
+      }
+      if (!passwordHash) continue;
+
+      const id = draft.id || previous?.id;
+      if (!id) continue;
+
+      const nextUser = {
+        ...previous,
+        id,
+        username,
+        passwordHash,
+        displayName: String(draft.displayName || previous?.displayName || '').trim(),
+      };
+
+      if (Object.prototype.hasOwnProperty.call(draft, 'avatar')) {
+        const avatar = normalizeUserAvatar(draft.avatar);
+        if (avatar) nextUser.avatar = avatar;
+        else delete nextUser.avatar;
+      } else if (previous?.avatar) {
+        nextUser.avatar = previous.avatar;
+      }
+
+      nextUsers.push(nextUser);
+
+      if (plainPassword) {
+        brandVault[id] = plainPassword;
+      }
+    }
+
+    if (!hasConfiguredPortalUsers(nextUsers)) {
+      return res.status(400).json({ error: 'Set a username and password for at least one portal user.' });
+    }
+
+    await upsertRecord('client_portal_credentials', brand, nextUsers, resolvedOrgId);
+
+    nextVault[brand] = brandVault;
+    await upsertRecord(
+      'clients',
+      'workspace',
+      {
+        ...(clientsWorkspace || {}),
+        portalPasswordVault: nextVault,
+      },
+      resolvedOrgId,
+    );
+
+    return res.status(200).json({ ok: true, users: nextUsers });
+  } catch (error) {
+    console.error('[client-portal-set-password] failed:', error?.message || error);
+    return res.status(500).json({ error: 'Could not save portal passwords.' });
+  }
+}
