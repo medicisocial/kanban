@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  canUploadSpecialMenuToStorage,
   createSpecialMenuId,
   formatSpecialMenuDateRange,
   getSpecialMenuRunDaysLabel,
@@ -7,7 +8,7 @@ import {
   getSpecialMenuRunStatus,
   MAX_SPECIAL_MENUS,
   normalizeClientSpecialMenus,
-  readSpecialMenuPdfUpload,
+  uploadSpecialMenuPdf,
 } from '../../utils/clientSpecialMenus';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 import DateInput from '../DateInput';
@@ -75,19 +76,25 @@ function ToggleYesNo({ value, onChange, disabled }) {
   );
 }
 
-function PdfUploadRow({ label, pdf, onChange, disabled }) {
+function PdfUploadRow({ label, pdf, onChange, disabled, brand }) {
   const fileInputRef = useRef(null);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const storageReady = canUploadSpecialMenuToStorage();
+  const busy = disabled || uploading;
 
   const handleFile = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
     setError('');
+    setUploading(true);
     try {
-      onChange(await readSpecialMenuPdfUpload(file));
+      onChange(await uploadSpecialMenuPdf(file, { brand }));
     } catch (err) {
       setError(err.message || 'Could not upload PDF.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -107,14 +114,16 @@ function PdfUploadRow({ label, pdf, onChange, disabled }) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-[10px] font-medium uppercase tracking-wider text-white/50 hover:text-white"
+                disabled={busy}
+                className="text-[10px] font-medium uppercase tracking-wider text-white/50 hover:text-white disabled:opacity-50"
               >
-                Replace
+                {uploading ? 'Uploading…' : 'Replace'}
               </button>
               <button
                 type="button"
                 onClick={() => onChange(null)}
-                className="text-[10px] font-medium uppercase tracking-wider text-white/40 hover:text-rose-300"
+                disabled={busy}
+                className="text-[10px] font-medium uppercase tracking-wider text-white/40 hover:text-rose-300 disabled:opacity-50"
               >
                 Remove
               </button>
@@ -123,13 +132,17 @@ function PdfUploadRow({ label, pdf, onChange, disabled }) {
         </div>
       ) : (
         !disabled && (
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className={`${btnSecondaryClass} w-full justify-center py-1.5 text-[10px]`}
-          >
-            Upload PDF
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={busy}
+              className={`${btnSecondaryClass} w-full justify-center py-1.5 text-[10px] disabled:opacity-50`}
+            >
+              {uploading ? 'Uploading…' : 'Upload PDF'}
+            </button>
+            <p className="text-[10px] text-white/35">PDF · {storageReady ? '25 MB' : '3 MB'} max</p>
+          </>
         )
       )}
       {error && <p className="text-xs text-rose-300">{error}</p>}
@@ -139,7 +152,7 @@ function PdfUploadRow({ label, pdf, onChange, disabled }) {
         accept="application/pdf,.pdf"
         className="hidden"
         onChange={handleFile}
-        disabled={disabled}
+        disabled={busy}
       />
     </div>
   );
@@ -156,6 +169,7 @@ const EMPTY_DRAFT = {
 };
 
 export default function ClientSpecialMenusEditor({
+  client = '',
   specialMenus = [],
   onSaveSpecialMenus,
   readOnly = false,
@@ -391,6 +405,7 @@ export default function ClientSpecialMenusEditor({
           {draft.hasDrinkMenu && (
             <PdfUploadRow
               label="Drink menu PDF"
+              brand={client}
               pdf={draft.drinkMenuPdf}
               onChange={(drinkMenuPdf) => setDraft((prev) => ({ ...prev, drinkMenuPdf }))}
               disabled={saving}
@@ -415,6 +430,7 @@ export default function ClientSpecialMenusEditor({
           {draft.hasFoodMenu && (
             <PdfUploadRow
               label="Food menu PDF"
+              brand={client}
               pdf={draft.foodMenuPdf}
               onChange={(foodMenuPdf) => setDraft((prev) => ({ ...prev, foodMenuPdf }))}
               disabled={saving}

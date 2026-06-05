@@ -12,12 +12,17 @@ export function normalizeClientSpecialMenus(menus) {
       const normalizePdf = (value) => {
         if (!value || typeof value !== 'object') return null;
         const pdfName = String(value.name || '').trim();
-        const dataUrl = String(value.dataUrl || '').trim();
-        if (!pdfName || !dataUrl.startsWith('data:application/pdf')) return null;
+        // Either an inline PDF data URL or a Supabase Storage URL.
+        const dataUrl = String(value.dataUrl || value.url || '').trim();
+        const isData = dataUrl.startsWith('data:application/pdf');
+        const isHttp = /^https?:\/\//i.test(dataUrl);
+        if (!pdfName || (!isData && !isHttp)) return null;
+        const storagePath = String(value.storagePath || '').trim();
         return {
           name: pdfName,
           dataUrl,
           size: Number(value.size) || 0,
+          ...(storagePath ? { storagePath } : {}),
         };
       };
 

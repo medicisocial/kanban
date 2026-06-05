@@ -13,12 +13,17 @@ function readAsDataUrl(file) {
 export function normalizeEventPdfAttachment(value) {
   if (!value || typeof value !== 'object') return null;
   const name = String(value.name || '').trim();
-  const dataUrl = String(value.dataUrl || '').trim();
-  if (!name || !dataUrl.startsWith('data:application/pdf')) return null;
+  // Either an inline PDF data URL (legacy / small uploads) or a Supabase Storage URL.
+  const dataUrl = String(value.dataUrl || value.url || '').trim();
+  const isData = dataUrl.startsWith('data:application/pdf');
+  const isHttp = /^https?:\/\//i.test(dataUrl);
+  if (!name || (!isData && !isHttp)) return null;
+  const storagePath = String(value.storagePath || '').trim();
   return {
     name,
     dataUrl,
     size: Number(value.size) || 0,
+    ...(storagePath ? { storagePath } : {}),
   };
 }
 

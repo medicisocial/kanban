@@ -1,5 +1,12 @@
 import { normalizeEventPdfAttachment, readEventPdfUpload } from './eventPdfUpload';
 import { toDateKey } from './calendar';
+import {
+  canUploadBrandAssetToStorage,
+  uploadBrandAssetToStorage,
+} from './brandAssetStorage';
+
+/** Storage uploads bypass the JSON body limit, so allow much larger PDFs. */
+export const MAX_SPECIAL_MENU_STORAGE_BYTES = 25 * 1024 * 1024;
 
 export function createSpecialMenuId() {
   return `sm-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -106,6 +113,35 @@ export function getSpecialMenuRunDaysLabel(startDate, endDate) {
 }
 
 export async function readSpecialMenuPdfUpload(file) {
+  return readEventPdfUpload(file);
+}
+
+/** True when this browser can upload special-menu PDFs to storage (staff or portal). */
+export function canUploadSpecialMenuToStorage() {
+  return canUploadBrandAssetToStorage();
+}
+
+/**
+ * Upload a special-menu PDF. Uses Supabase Storage (up to 25 MB) when a session is
+ * available, otherwise falls back to an inline data URL (small files only).
+ */
+export async function uploadSpecialMenuPdf(file, { brand } = {}) {
+  if (!file) throw new Error('No file selected.');
+  const isPdf =
+    file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  if (!isPdf) throw new Error('Please upload a PDF file.');
+
+  if (canUploadBrandAssetToStorage()) {
+    if (file.size > MAX_SPECIAL_MENU_STORAGE_BYTES) {
+      throw new Error('PDF must be 25 MB or smaller.');
+    }
+    const { url, path } = await uploadBrandAssetToStorage(file, {
+      brand,
+      folder: 'special-menus',
+    });
+    return { name: file.name, dataUrl: url, size: file.size, storagePath: path };
+  }
+
   return readEventPdfUpload(file);
 }
 
