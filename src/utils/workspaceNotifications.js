@@ -20,14 +20,14 @@ export function buildWorkspaceAlerts({
   clientFilter = 'all',
   staffName = '',
   clientAccountManagers = {},
-  myWorkOnly = false,
+  personalTaskScope = false,
 }) {
   const alerts = [];
   const scopedCards = cards.filter((c) => matchesClient(c, clientFilter));
   const scopedIdeas = ideas.filter((i) => matchesClient(i, clientFilter));
 
   const cardScope = (card) => {
-    if (!myWorkOnly || !staffName) return true;
+    if (!personalTaskScope || !staffName) return true;
     return cardIsAssignedToStaff(card, staffName, clientAccountManagers);
   };
 

@@ -51,8 +51,18 @@ function createMockResponse(res) {
 function applyEnv(envDir, mode) {
   const env = loadEnv(mode, envDir, '');
   for (const [key, value] of Object.entries(env)) {
-    if (process.env[key] === undefined) {
+    if (value && process.env[key] === undefined) {
       process.env[key] = value;
+    }
+  }
+  // loadEnv skips empty strings; merge .env again so commented keys in .env can be set in .env.local.
+  const localPath = resolve(envDir, '.env.local');
+  if (existsSync(localPath)) {
+    const localEnv = loadEnv('development', envDir, '');
+    for (const [key, value] of Object.entries(localEnv)) {
+      if (value && process.env[key] === undefined) {
+        process.env[key] = value;
+      }
     }
   }
 }

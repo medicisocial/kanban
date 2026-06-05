@@ -11,6 +11,9 @@ node_modules
 .env.local
 .env.*.local
 .env.vercel*
+.edge-cdp-profile/
+.playwright-edge-profile/
+.playwright-supabase-profile/
 
 # Build
 dist
@@ -30,3 +33,4 @@ Thumbs.db
 
 # Playwright auth profile used for one-off Supabase dashboard automation
 .playwright-supabase-profile
+.env*

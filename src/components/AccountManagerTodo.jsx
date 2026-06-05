@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { getContentTypeStyle, COLUMNS } from '../constants';
 import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import { useClientsContext } from '../context/ClientsContext';
+import { useStaffAssigneeFilter } from '../hooks/useStaffWorkspaceScope';
 import TaskPostSchedule from './TaskPostSchedule';
 import { formatStoryScheduleSummary, toDateKey } from '../utils/calendar';
 import {
@@ -355,7 +356,7 @@ export default function AccountManagerTodo({
   const { getClientColor, clientAccountManagers, getMemberNamesForRole } = useClientsContext();
   const accountManagers = getMemberNamesForRole('Account Manager');
   const todayKey = toDateKey(new Date());
-  const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const { assigneeFilter, setAssigneeFilter, restrictAssigneeFilter } = useStaffAssigneeFilter();
   const [needsEditsCard, setNeedsEditsCard] = useState(null);
 
   const storyTasksToday = useMemo(
@@ -434,9 +435,10 @@ export default function AccountManagerTodo({
           <select
             value={assigneeFilter}
             onChange={(e) => setAssigneeFilter(e.target.value)}
-            className={`${selectClass} py-1.5 text-xs`}
+            disabled={restrictAssigneeFilter}
+            className={`${selectClass} py-1.5 text-xs disabled:opacity-60`}
           >
-            <option value="all">All</option>
+            {!restrictAssigneeFilter && <option value="all">All</option>}
             {accountManagers.map((member) => (
               <option key={member} value={member}>
                 {member}

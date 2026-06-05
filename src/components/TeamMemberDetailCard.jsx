@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TEAM_LEADERSHIP_ROLES, TEAM_OPERATIONAL_ROLES, TEAM_ROLE_DESCRIPTIONS, INTERNAL_TEAM_CLIENT } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import { bakeLogoCrop } from '../utils/clientLogo';
@@ -36,6 +36,20 @@ function buildDraft(member) {
   };
 }
 
+/** Stable snapshot for sync updates — ignore updatedAt from cloud merge. */
+function memberSnapshotKey(member) {
+  return JSON.stringify({
+    id: member.id,
+    name: member.name,
+    roles: member.roles,
+    email: member.email,
+    username: member.username,
+    phone: member.phone,
+    password: member.password,
+    avatar: member.avatar,
+  });
+}
+
 export default function TeamMemberDetailCard({
   member,
   canRemove,
@@ -48,14 +62,36 @@ export default function TeamMemberDetailCard({
   const [draft, setDraft] = useState(() => buildDraft(member));
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const memberIdRef = useRef(member.id);
+  const draftDirtyRef = useRef(false);
+  const lastSnapshotRef = useRef(memberSnapshotKey(member));
 
+  const patchDraft = (updater) => {
+    draftDirtyRef.current = true;
+    setDraft(updater);
+  };
+
+  // Cloud sync replaces teamMembers often; do not wipe in-progress edits when `member` is a new object reference.
   useEffect(() => {
-    setDraft(buildDraft(member));
-    setError('');
+    const snapshot = memberSnapshotKey(member);
+    if (member.id !== memberIdRef.current) {
+      memberIdRef.current = member.id;
+      draftDirtyRef.current = false;
+      lastSnapshotRef.current = snapshot;
+      setDraft(buildDraft(member));
+      setError('');
+      return;
+    }
+
+    if (!draftDirtyRef.current && snapshot !== lastSnapshotRef.current) {
+      lastSnapshotRef.current = snapshot;
+      setDraft(buildDraft(member));
+      setError('');
+    }
   }, [member]);
 
   const toggleRole = (role) => {
-    setDraft((prev) => ({
+    patchDraft((prev) => ({
       ...prev,
       roles: prev.roles.includes(role)
         ? prev.roles.filter((r) => r !== role)
@@ -97,6 +133,8 @@ export default function TeamMemberDetailCard({
           draft.pendingAvatar === null ? null : await bakeLogoCrop(draft.pendingAvatar);
       }
 
+      draftDirtyRef.current = false;
+      lastSnapshotRef.current = memberSnapshotKey({ ...member, ...payload });
       onSave(member.id, payload);
     } catch (err) {
       setError(err.message || 'Could not save photo.');
@@ -134,7 +172,7 @@ export default function TeamMemberDetailCard({
             compact
             label="Profile photo"
             onPendingChange={(pending) =>
-              setDraft((prev) => ({ ...prev, pendingAvatar: pending }))
+              patchDraft((prev) => ({ ...prev, pendingAvatar: pending }))
             }
           />
 
@@ -145,7 +183,7 @@ export default function TeamMemberDetailCard({
             <input
               type="text"
               value={draft.name}
-              onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => patchDraft((prev) => ({ ...prev, name: e.target.value }))}
               className={inputClass}
               autoFocus
             />
@@ -203,7 +241,7 @@ export default function TeamMemberDetailCard({
               <input
                 type="email"
                 value={draft.email}
-                onChange={(e) => setDraft((prev) => ({ ...prev, email: e.target.value }))}
+                onChange={(e) => patchDraft((prev) => ({ ...prev, email: e.target.value }))}
                 placeholder="name@agency.com"
                 className={inputClass}
                 autoComplete="email"
@@ -218,7 +256,7 @@ export default function TeamMemberDetailCard({
               <input
                 type="tel"
                 value={draft.phone}
-                onChange={(e) => setDraft((prev) => ({ ...prev, phone: e.target.value }))}
+                onChange={(e) => patchDraft((prev) => ({ ...prev, phone: e.target.value }))}
                 placeholder="(555) 555-5555"
                 className={inputClass}
                 autoComplete="tel"
@@ -229,7 +267,7 @@ export default function TeamMemberDetailCard({
               <PasswordField
                 label="Password"
                 value={draft.password}
-                onChange={(e) => setDraft((prev) => ({ ...prev, password: e.target.value }))}
+                onChange={(e) => patchDraft((prev) => ({ ...prev, password: e.target.value }))}
                 autoComplete="new-password"
               />
             </div>

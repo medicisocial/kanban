@@ -7,7 +7,9 @@
     "dev": "vite",
     "check:imports": "node scripts/check-module-imports.mjs",
     "build": "node scripts/check-module-imports.mjs && node scripts/test-sync-merge.mjs && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup:service-role": "node scripts/rotate-supabase-secret-key-playwright.mjs",
+    "setup:service-role:edge": "powershell -ExecutionPolicy Bypass -File scripts/launch-edge-debug.ps1; node scripts/sync-service-role-from-edge.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

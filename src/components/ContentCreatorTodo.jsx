@@ -1,12 +1,10 @@
 import { useMemo } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
-import { useStaffAuth } from '../context/StaffAuthContext';
 import { getContentTypeStyle } from '../constants';
 import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import { formatDate, formatTime } from '../utils';
 import { buildContentCreatorTasks } from '../utils/contentCreatorTodo';
-import { resolveStaffMemberName } from '../utils/staffMembers';
-import { usesPersonalWorkspaceView } from '../utils/staffAuth';
+import { useStaffWorkspaceScope } from '../hooks/useStaffWorkspaceScope';
 import { btnSecondaryClass } from './clientPortal/clientPortalUi';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
 import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
@@ -18,18 +16,16 @@ export default function ContentCreatorTodo({
   onHandoff,
   onNavigate,
 }) {
-  const { getClientColor, teamMembers } = useClientsContext();
-  const { session } = useStaffAuth();
-  const staffName = resolveStaffMemberName(session, teamMembers);
-  const myWorkOnly = usesPersonalWorkspaceView(session);
+  const { getClientColor } = useClientsContext();
+  const { staffName, personalTaskScope } = useStaffWorkspaceScope();
 
   const tasks = useMemo(
     () =>
       buildContentCreatorTasks(cards, {
         client: clientFilter,
-        staffName: myWorkOnly ? staffName : '',
+        staffName: personalTaskScope ? staffName : '',
       }),
-    [cards, clientFilter, myWorkOnly, staffName],
+    [cards, clientFilter, personalTaskScope, staffName],
   );
 
   if (tasks.length === 0) {
@@ -45,7 +41,7 @@ export default function ContentCreatorTodo({
 
   return (
     <div className="space-y-3">
-      {myWorkOnly && staffName && (
+      {personalTaskScope && staffName && (
         <p className="text-xs text-white/45">
           Showing To Create items assigned to {staffName}.
         </p>

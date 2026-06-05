@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
+import { useStaffAssigneeFilter } from '../hooks/useStaffWorkspaceScope';
 import { toDateKey } from '../utils/calendar';
 import {
   buildAdminTodoTasks,
@@ -21,7 +22,7 @@ export default function AdminTodo({
   const { getClientColor, getAllTeamMemberNames } = useClientsContext();
   const adminStaff = getAllTeamMemberNames();
   const todayKey = toDateKey(new Date());
-  const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const { assigneeFilter, setAssigneeFilter, restrictAssigneeFilter } = useStaffAssigneeFilter();
   const [showCompleted, setShowCompleted] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -76,9 +77,10 @@ export default function AdminTodo({
           <select
             value={assigneeFilter}
             onChange={(e) => setAssigneeFilter(e.target.value)}
-            className={`${selectClass} py-1.5 text-xs`}
+            disabled={restrictAssigneeFilter}
+            className={`${selectClass} py-1.5 text-xs disabled:opacity-60`}
           >
-            <option value="all">Everyone</option>
+            {!restrictAssigneeFilter && <option value="all">Everyone</option>}
             {adminStaff.map((member) => (
               <option key={member} value={member}>
                 {member}

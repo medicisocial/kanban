@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useStaffWorkspaceScope } from '../hooks/useStaffWorkspaceScope';
 import EditorTodo from './EditorTodo';
 import AccountManagerTodo from './AccountManagerTodo';
 import AdminTodo from './AdminTodo';
@@ -30,11 +31,18 @@ export default function CompanyTasks({
   onNavigate,
   onPlanPostDate,
 }) {
+  const { visibleCompanyTaskTabs } = useStaffWorkspaceScope();
   const [activeRole, setActiveRole] = useState(initialRole);
 
   useEffect(() => {
     setActiveRole(initialRole);
   }, [initialRole]);
+
+  useEffect(() => {
+    if (!visibleCompanyTaskTabs.includes(activeRole)) {
+      setActiveRole(visibleCompanyTaskTabs[0] || 'editor');
+    }
+  }, [visibleCompanyTaskTabs, activeRole]);
 
   const selectRole = (role) => {
     setActiveRole(role);
@@ -57,18 +65,26 @@ export default function CompanyTasks({
           embedded ? '' : 'mx-auto mb-6 justify-center'
         }`}
       >
-        <button type="button" onClick={() => selectRole('creator')} className={tabClass('creator')}>
-          Content creators
-        </button>
-        <button type="button" onClick={() => selectRole('editor')} className={tabClass('editor')}>
-          Editors
-        </button>
-        <button type="button" onClick={() => selectRole('account')} className={tabClass('account')}>
-          Account managers
-        </button>
-        <button type="button" onClick={() => selectRole('admin')} className={tabClass('admin')}>
-          Administrative
-        </button>
+        {visibleCompanyTaskTabs.includes('creator') && (
+          <button type="button" onClick={() => selectRole('creator')} className={tabClass('creator')}>
+            Content creators
+          </button>
+        )}
+        {visibleCompanyTaskTabs.includes('editor') && (
+          <button type="button" onClick={() => selectRole('editor')} className={tabClass('editor')}>
+            Editors
+          </button>
+        )}
+        {visibleCompanyTaskTabs.includes('account') && (
+          <button type="button" onClick={() => selectRole('account')} className={tabClass('account')}>
+            Account managers
+          </button>
+        )}
+        {visibleCompanyTaskTabs.includes('admin') && (
+          <button type="button" onClick={() => selectRole('admin')} className={tabClass('admin')}>
+            Administrative
+          </button>
+        )}
       </div>
 
       {activeRole === 'creator' && (

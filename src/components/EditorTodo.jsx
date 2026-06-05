@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { getContentTypeStyle } from '../constants';
 import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import { useClientsContext } from '../context/ClientsContext';
+import { useStaffAssigneeFilter } from '../hooks/useStaffWorkspaceScope';
 import TaskPostSchedule from './TaskPostSchedule';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
 import {
@@ -240,7 +241,7 @@ export default function EditorTodo({
 }) {
   const { getClientColor, getMemberNamesForRole } = useClientsContext();
   const editors = getMemberNamesForRole('Editor');
-  const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const { assigneeFilter, setAssigneeFilter, restrictAssigneeFilter } = useStaffAssigneeFilter();
   const [showCompleted, setShowCompleted] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [needsEditsCard, setNeedsEditsCard] = useState(null);
@@ -327,9 +328,10 @@ export default function EditorTodo({
           <select
             value={assigneeFilter}
             onChange={(e) => setAssigneeFilter(e.target.value)}
-            className={`${selectClass} py-1.5 text-xs`}
+            disabled={restrictAssigneeFilter}
+            className={`${selectClass} py-1.5 text-xs disabled:opacity-60`}
           >
-            <option value="all">All editors</option>
+            {!restrictAssigneeFilter && <option value="all">All editors</option>}
             {editors.map((member) => (
               <option key={member} value={member}>
                 {member}

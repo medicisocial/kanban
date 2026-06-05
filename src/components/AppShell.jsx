@@ -57,11 +57,12 @@ import {
   readWorkspaceViewFromUrl,
   syncWorkspaceViewUrl,
 } from "../utils/workspaceViewUrl";
-import { resolveStaffMemberName, resolveStaffMemberAvatar, resolveStaffDisplayName, staffHasAccountManagerQueueAccess, staffHasLeadershipWorkspaceAccess } from "../utils/staffMembers";
+import { resolveStaffMemberAvatar, resolveStaffDisplayName, staffHasAccountManagerQueueAccess } from "../utils/staffMembers";
 import { isSharedOperationsLogin } from "../utils/staffAuth";
 import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
 import { buildWorkspaceHomeSummary, buildNavBadgeCounts } from "../utils/workspaceHome";
-import { usesPersonalWorkspaceView } from "../utils/staffAuth";
+import { useStaffWorkspaceScope } from "../hooks/useStaffWorkspaceScope";
+import { scopeAdminTasksForStaff, scopeCardsForStaff } from "../utils/staffWorkspaceScope";
 
 export default function AppShell({ onSignOut }) {
   const importData = parseImportParam();
@@ -773,10 +774,33 @@ export default function AppShell({ onSignOut }) {
   const syncTotal = responseCount + contentReviewResponseCount + shootResponseCount;
   const agencyOps = isSharedOperationsLogin(session);
   const staffDisplayName = resolveStaffDisplayName(session, teamMembers, org?.name);
-  const staffName = agencyOps ? '' : resolveStaffMemberName(session, teamMembers);
   const staffAvatar = resolveStaffMemberAvatar(session, teamMembers);
-  const myWorkOnly = agencyOps ? false : usesPersonalWorkspaceView(session);
-  const companyWideView = agencyOps || !myWorkOnly || staffHasLeadershipWorkspaceAccess(session, teamMembers);
+  const {
+    staffName,
+    myWorkOnly,
+    companyWideView,
+    personalTaskScope,
+    clientAccountManagers: scopeClientAccountManagers,
+  } = useStaffWorkspaceScope();
+  const workspaceCards = useMemo(
+    () =>
+      scopeCardsForStaff(cards, {
+        clientFilter,
+        personalTaskScope,
+        staffName,
+        clientAccountManagers: scopeClientAccountManagers,
+      }),
+    [cards, clientFilter, personalTaskScope, staffName, scopeClientAccountManagers],
+  );
+  const workspaceAdminTasks = useMemo(
+    () =>
+      scopeAdminTasksForStaff(adminTasks, {
+        clientFilter,
+        personalTaskScope,
+        staffName,
+      }),
+    [adminTasks, clientFilter, personalTaskScope, staffName],
+  );
   const showAccountManagerQueue = agencyOps || !myWorkOnly
     ? true
     : staffHasAccountManagerQueueAccess(session, teamMembers) || companyWideView;
@@ -787,10 +811,10 @@ export default function AppShell({ onSignOut }) {
         ideas,
         clientFilter,
         staffName,
-        clientAccountManagers,
-        myWorkOnly,
+        clientAccountManagers: scopeClientAccountManagers,
+        personalTaskScope,
       }),
-    [cards, ideas, clientFilter, staffName, clientAccountManagers, myWorkOnly],
+    [cards, ideas, clientFilter, staffName, scopeClientAccountManagers, personalTaskScope],
   );
   const notificationCount = syncTotal + workspaceAlerts.length;
 
@@ -800,9 +824,9 @@ export default function AppShell({ onSignOut }) {
 
   const navBadges = useMemo(() => {
     const summary = buildWorkspaceHomeSummary({
-      cards,
+      cards: workspaceCards,
       ideas,
-      adminTasks,
+      adminTasks: workspaceAdminTasks,
       clientFilter: 'all',
       syncTotal,
       staffName,
@@ -813,9 +837,9 @@ export default function AppShell({ onSignOut }) {
     });
     return buildNavBadgeCounts(summary, syncTotal);
   }, [
-    cards,
+    workspaceCards,
     ideas,
-    adminTasks,
+    workspaceAdminTasks,
     syncTotal,
     staffName,
     clientAccountManagers,
@@ -936,9 +960,9 @@ export default function AppShell({ onSignOut }) {
     >
       {activeView === "home" && (
         <WorkspaceHomePage
-          cards={cards}
+          cards={workspaceCards}
           ideas={ideas}
-          adminTasks={adminTasks}
+          adminTasks={workspaceAdminTasks}
           meetings={meetings}
           plans={plans}
           getPlan={getPlan}
@@ -1026,8 +1050,8 @@ export default function AppShell({ onSignOut }) {
 
       {activeView === "todo" && (
         <CompanyTasks
-          cards={cards}
-          adminTasks={adminTasks}
+          cards={workspaceCards}
+          adminTasks={workspaceAdminTasks}
           clientFilter={clientFilter}
           embedded
           initialRole={tasksRole}
