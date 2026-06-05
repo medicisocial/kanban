@@ -9,28 +9,11 @@ import { notifyMutation } from "../utils/undoHistory";
 import { useReloadFromStorage } from "./useReloadFromStorage";
 import { SUPABASE_ENABLED } from "../lib/supabaseClient";
 import { useCollectionSync } from "../lib/useCollectionSync";
-import { pushStaffSync, pushStaffSyncRecords } from "../lib/staffSyncApi";
 import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDeletes } from "../lib/syncInitialState";
-import { getOrgId } from "../lib/orgSession";
 import { readOrgScopedJson, writeOrgScopedJson } from "../lib/orgStorage";
 
 function tombstoneIdeas(ids) {
   tombstoneSyncedDeletes("video_ideas", ids);
-}
-
-function persistIdeaUpsert(idea) {
-  if (!SUPABASE_ENABLED || !idea) return;
-  void pushStaffSyncRecords("video_ideas", [idea]);
-}
-
-function persistIdeaDelete(id) {
-  if (!SUPABASE_ENABLED || !id) return;
-  void pushStaffSync({ table: "video_ideas", changed: [], removed: [id] });
-}
-
-function persistIdeaDeletes(ids) {
-  if (!SUPABASE_ENABLED || !ids?.length) return;
-  void pushStaffSync({ table: "video_ideas", changed: [], removed: ids });
 }
 
 const getIdeaId = (idea) => idea.id;
@@ -89,38 +72,29 @@ export function useVideoIdeas() {
   }, [ideas, syncLoaded]);
 
   const replaceIdeas = useCallback((next) => {
-    const normalized = stripDemoVideoIdeas(next);
-    setIdeas(normalized);
-    if (SUPABASE_ENABLED && normalized.length) {
-      void pushStaffSyncRecords('video_ideas', normalized);
-    }
+    setIdeas(stripDemoVideoIdeas(next));
   }, []);
 
   const addIdea = useCallback((ideaData) => {
     notifyMutation();
     const idea = createIdea(ideaData);
     setIdeas((prev) => [...prev, idea]);
-    persistIdeaUpsert(idea);
   }, []);
 
   const updateIdea = useCallback((id, updates) => {
     notifyMutation();
-    let persisted = null;
     setIdeas((prev) =>
       prev.map((i) => {
         if (i.id !== id) return i;
-        persisted = { ...i, ...updates, updatedAt: Date.now() };
-        return persisted;
+        return { ...i, ...updates, updatedAt: Date.now() };
       }),
     );
-    if (persisted) persistIdeaUpsert(persisted);
   }, []);
 
   const deleteIdea = useCallback((id) => {
     notifyMutation();
     tombstoneIdeas([id]);
     setIdeas((prev) => prev.filter((i) => i.id !== id));
-    persistIdeaDelete(id);
   }, []);
 
   const deleteIdeas = useCallback((ids) => {
@@ -128,55 +102,45 @@ export function useVideoIdeas() {
     tombstoneIdeas(ids);
     const idSet = new Set(ids);
     setIdeas((prev) => prev.filter((i) => !idSet.has(i.id)));
-    persistIdeaDeletes(ids);
   }, []);
 
   const markApproved = useCallback((id, clientComment, boardCardId) => {
     notifyMutation();
-    let persisted = null;
     setIdeas((prev) =>
       prev.map((i) => {
         if (i.id !== id) return i;
-        persisted = {
+        return {
           ...i,
           status: "approved",
           clientComment,
           boardCardId,
           reviewedAt: Date.now(),
         };
-        return persisted;
       }),
     );
-    if (persisted) persistIdeaUpsert(persisted);
   }, []);
 
   const markDeclined = useCallback((id, clientComment) => {
     notifyMutation();
-    let persisted = null;
     setIdeas((prev) =>
       prev.map((i) => {
         if (i.id !== id) return i;
-        persisted = {
+        return {
           ...i,
           status: "declined",
           clientComment,
           reviewedAt: Date.now(),
         };
-        return persisted;
       }),
     );
-    if (persisted) persistIdeaUpsert(persisted);
   }, []);
 
   const ensureIdeaExists = useCallback((ideaSnapshot) => {
     notifyMutation();
-    let persisted = null;
     setIdeas((prev) => {
       if (prev.some((i) => i.id === ideaSnapshot.id)) return prev;
-      persisted = createIdea(ideaSnapshot);
-      return [...prev, persisted];
+      return [...prev, createIdea(ideaSnapshot)];
     });
-    if (persisted) persistIdeaUpsert(persisted);
   }, []);
 
   const getPendingResponsesCount = useCallback(() => {

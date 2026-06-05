@@ -23,7 +23,6 @@ import { normalizeClientSpecialMenus } from '../utils/clientSpecialMenus';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useSingletonSync } from '../lib/useSingletonSync';
-import { pushStaffSyncSingleton } from '../lib/staffSyncApi';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { shouldPersistSyncedState } from '../lib/syncInitialState';
 import { registerPortalCredentialBrand } from '../lib/syncHelpers';
@@ -118,15 +117,8 @@ function loadClients() {
   return normalizeClientsState(loadClientsRaw());
 }
 
-async function syncClientsWorkspace(nextState) {
-  if (!SUPABASE_ENABLED) return { ok: true };
-  const ok = await pushStaffSyncSingleton('clients', 'workspace', nextState);
-  if (!ok) {
-    return {
-      ok: false,
-      error: 'Saved locally but could not sync to the cloud. Log out and back in, then try again.',
-    };
-  }
+async function syncClientsWorkspace() {
+  // useSingletonSync pushes cloud writes after setState.
   return { ok: true };
 }
 

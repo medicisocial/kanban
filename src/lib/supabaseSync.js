@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { fetchStaffSyncRows } from './staffSyncApi';
 import { fetchLegacyWorkspaceBlobRows } from './workspaceBlobFallback';
+import { hasStaffSupabaseSession } from './staffSupabaseAuth';
 import { getOrgId, LEGACY_ORG_ID } from './orgSession';
 
 const REST_FETCH_TIMEOUT_MS = 12000;
@@ -44,7 +45,18 @@ async function fetchAllViaRest(table, orgId) {
  * the same sync layer without duplicating hooks.
  */
 async function fetchAllWithFallbacks(table, orgId) {
-  // Authenticated server read first — anon REST often returns a partial row set on mobile.
+  // Direct browser read when a Supabase session exists — fastest path and avoids
+  // routing every table load through Vercel /api/staff-sync.
+  if (supabase && (await hasStaffSupabaseSession())) {
+    const { data, error } = await supabase
+      .from(table)
+      .select('id, data, updated_at')
+      .eq('org_id', orgId);
+    if (!error) return data || [];
+    console.warn(`[supabase:${table}] client fetch failed:`, error.message);
+  }
+
+  // Fallback: authenticated server read (mobile / no browser DB session).
   const staffRows = await fetchStaffSyncRows(table, orgId);
   if (staffRows !== null) return staffRows;
 
@@ -54,7 +66,7 @@ async function fetchAllWithFallbacks(table, orgId) {
       .select('id, data, updated_at')
       .eq('org_id', orgId);
     if (!error) return data || [];
-    console.warn(`[supabase:${table}] client fetch failed:`, error.message);
+    console.warn(`[supabase:${table}] anon client fetch failed:`, error.message);
   }
 
   const restRows = await fetchAllViaRest(table, orgId);

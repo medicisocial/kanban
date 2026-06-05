@@ -10,22 +10,8 @@ import {
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
-import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
-import { markPendingRemoved } from '../lib/syncHelpers';
 import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
-import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
-
-async function persistTeamMemberUpsert(member) {
-  if (!SUPABASE_ENABLED || !member) return true;
-  return pushStaffSyncRecords('team_members', [member]);
-}
-
-function persistTeamMemberDelete(id) {
-  if (!SUPABASE_ENABLED || !id) return;
-  markPendingRemoved(getOrgId(), 'team_members', [id]);
-  void pushStaffSync({ table: 'team_members', changed: [], removed: [id] });
-}
 
 const getTeamMemberId = (member) => member.id;
 
@@ -108,7 +94,6 @@ export function useTeamMembers() {
     if (!addedId) {
       return { ok: false, error: 'A team member with that name already exists.' };
     }
-    if (addedMember) void persistTeamMemberUpsert(addedMember);
     return { ok: true, id: addedId, member: addedMember };
   }, []);
 
@@ -126,36 +111,25 @@ export function useTeamMembers() {
 
   const saveTeamMemberToCloud = useCallback(async (member) => {
     if (!member) return { ok: false, error: 'Nothing to save.' };
-    const ok = await persistTeamMemberUpsert(member);
-    if (!ok) {
-      return {
-        ok: false,
-        error:
-          'Saved on this device but could not sync to the cloud. Stay signed in on desktop and try Save again.',
-      };
-    }
+    // useCollectionSync pushes cloud writes; local state was already updated.
     return { ok: true };
   }, []);
 
   const removeTeamMember = useCallback((id) => {
     tombstoneSyncedDeletes('team_members', [id]);
     setTeamMembers((prev) => prev.filter((member) => member.id !== id));
-    persistTeamMemberDelete(id);
   }, []);
 
   const toggleTeamMemberRole = useCallback((id, role) => {
     if (!TEAM_ROLES.includes(role)) return;
-    let persisted = null;
     setTeamMembers((prev) =>
       prev.map((member) => {
         if (member.id !== id) return member;
         const hasRole = member.roles.includes(role);
         const roles = hasRole ? member.roles.filter((r) => r !== role) : [...member.roles, role];
-        persisted = { ...member, roles };
-        return persisted;
+        return { ...member, roles };
       }),
     );
-    if (persisted) void persistTeamMemberUpsert(persisted);
   }, []);
 
   return {

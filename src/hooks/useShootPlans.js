@@ -5,22 +5,8 @@ import { notifyMutation } from "../utils/undoHistory";
 import { useReloadFromStorage } from "./useReloadFromStorage";
 import { SUPABASE_ENABLED } from "../lib/supabaseClient";
 import { useMapSync } from "../lib/useMapSync";
-import { pushStaffSyncRows } from "../lib/staffSyncApi";
-import { markPendingRemoved } from "../lib/syncHelpers";
 import { initialSyncMapState, shouldPersistSyncedState, tombstoneSyncedDeletes } from "../lib/syncInitialState";
-import { getOrgId } from "../lib/orgSession";
 import { readOrgScopedJson, writeOrgScopedJson } from "../lib/orgStorage";
-
-function persistShootPlan(key, plan) {
-  if (!SUPABASE_ENABLED || !key || !plan) return;
-  void pushStaffSyncRows("shoot_plans", [{ id: key, data: plan }]);
-}
-
-function persistShootPlanDelete(key) {
-  if (!SUPABASE_ENABLED || !key) return;
-  markPendingRemoved(getOrgId(), "shoot_plans", [key]);
-  void pushStaffSyncRows("shoot_plans", [], [key]);
-}
 
 function loadPlans() {
   try {
@@ -82,9 +68,6 @@ export function useShootPlans() {
 
   const replacePlans = useCallback((next) => {
     setPlans(next);
-    if (!SUPABASE_ENABLED) return;
-    const rows = Object.entries(next || {}).map(([id, data]) => ({ id, data }));
-    void pushStaffSyncRows("shoot_plans", rows);
   }, []);
 
   const updatePlan = useCallback((client, dateKey, updates) => {
@@ -99,7 +82,6 @@ export function useShootPlans() {
       };
       return { ...prev, [key]: persisted };
     });
-    if (persisted) persistShootPlan(key, persisted);
   }, []);
 
   const ensurePlan = useCallback((client, dateKey) => {
@@ -114,7 +96,6 @@ export function useShootPlans() {
       };
       return { ...prev, [key]: persisted };
     });
-    if (persisted) persistShootPlan(key, persisted);
   }, []);
 
   const deletePlan = useCallback((client, dateKey) => {
@@ -126,7 +107,6 @@ export function useShootPlans() {
       delete next[key];
       return next;
     });
-    persistShootPlanDelete(key);
   }, []);
 
   return { plans, replacePlans, getPlan, updatePlan, ensurePlan, deletePlan };

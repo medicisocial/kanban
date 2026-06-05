@@ -4,22 +4,8 @@ import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
-import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
-import { markPendingRemoved } from '../lib/syncHelpers';
 import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
-import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
-
-function persistMeetingUpsert(meeting) {
-  if (!SUPABASE_ENABLED || !meeting) return;
-  void pushStaffSyncRecords('meetings', [meeting]);
-}
-
-function persistMeetingDelete(id) {
-  if (!SUPABASE_ENABLED || !id) return;
-  markPendingRemoved(getOrgId(), 'meetings', [id]);
-  void pushStaffSync({ table: 'meetings', changed: [], removed: [id] });
-}
 
 const getMeetingId = (meeting) => meeting.id;
 
@@ -59,30 +45,23 @@ export function useMeetings() {
 
   const replaceMeetings = useCallback((next) => {
     setMeetings(next);
-    if (SUPABASE_ENABLED && next.length) {
-      void pushStaffSyncRecords('meetings', next);
-    }
   }, []);
 
   const addMeeting = useCallback((data) => {
     notifyMutation();
     const meeting = createMeeting(data);
     setMeetings((prev) => [...prev, meeting]);
-    persistMeetingUpsert(meeting);
     return meeting.id;
   }, []);
 
   const updateMeeting = useCallback((id, updates) => {
     notifyMutation();
-    let persisted = null;
     setMeetings((prev) =>
       prev.map((meeting) => {
         if (meeting.id !== id) return meeting;
-        persisted = { ...meeting, ...updates, updatedAt: Date.now() };
-        return persisted;
+        return { ...meeting, ...updates, updatedAt: Date.now() };
       }),
     );
-    if (persisted) persistMeetingUpsert(persisted);
   }, []);
 
   const deleteMeeting = useCallback((id) => {
@@ -90,7 +69,6 @@ export function useMeetings() {
     notifyMutation();
     tombstoneSyncedDeletes('meetings', [id]);
     setMeetings((prev) => prev.filter((meeting) => meeting.id !== id));
-    persistMeetingDelete(id);
   }, []);
 
   return {

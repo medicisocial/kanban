@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
+const REALTIME_REFETCH_DEBOUNCE_MS = 80;
+const SYNC_PUSH_DEBOUNCE_MS = 40;
 const FOCUS_REFETCH_MIN_MS = 30_000;
 import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
@@ -72,6 +74,7 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
 
     const store = storeRef.current;
     let active = true;
+    let refetchTimer = null;
 
     const applyRemote = async () => {
       try {
@@ -144,6 +147,60 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
       }
     };
 
+    const scheduleApplyRemote = () => {
+      clearTimeout(refetchTimer);
+      refetchTimer = setTimeout(() => {
+        if (active) applyRemote();
+      }, REALTIME_REFETCH_DEBOUNCE_MS);
+    };
+
+    const applyRealtimePayload = (payload) => {
+      if (!active || !loadedRef.current || !payload?.eventType) {
+        scheduleApplyRemote();
+        return;
+      }
+
+      const rowOrg = payload.new?.org_id ?? payload.old?.org_id;
+      if (rowOrg && rowOrg !== orgId) return;
+
+      const rowId = String(payload.new?.id ?? payload.old?.id ?? '');
+      if (rowId && rowId !== recordId) return;
+
+      if (payload.eventType === 'DELETE') {
+        return;
+      }
+
+      if (payload.eventType !== 'INSERT' && payload.eventType !== 'UPDATE') {
+        scheduleApplyRemote();
+        return;
+      }
+
+      const row = payload.new;
+      if (!row?.data) {
+        scheduleApplyRemote();
+        return;
+      }
+
+      const previousSynced = syncedRef.current;
+      const merged =
+        table === 'clients'
+          ? mergeClientsWorkspaceState({
+              remote: row.data,
+              syncedStr: previousSynced,
+              local: localValueRef.current,
+            })
+          : mergeRemoteSingletonWithLocal({
+              remote: row.data,
+              syncedStr: previousSynced,
+              local: localValueRef.current,
+            });
+
+      applyingRemoteRef.current = true;
+      syncedRef.current = JSON.stringify(row.data);
+      markSyncLoaded();
+      setValue(merged);
+    };
+
     let lastFetchAt = 0;
 
     const onFocus = () => {
@@ -164,12 +221,17 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
     });
 
     applyRemote().then(() => { lastFetchAt = Date.now(); }).catch(() => {});
-    const unsubscribe = store.subscribe(() => {
+    const unsubscribe = store.subscribe((payload) => {
       lastFetchAt = Date.now();
-      applyRemote();
+      if (payload && typeof payload === 'object' && payload.eventType) {
+        applyRealtimePayload(payload);
+        return;
+      }
+      scheduleApplyRemote();
     });
     return () => {
       active = false;
+      clearTimeout(refetchTimer);
       unsubscribe?.();
       unsubscribeRefetch();
       window.removeEventListener('focus', onFocus);
@@ -193,6 +255,7 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
     if (syncedRef.current === json) return;
 
     let cancelled = false;
+    let pushTimer = null;
 
     const pushChanges = async () => {
       const store = storeRef.current;
@@ -227,10 +290,18 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
       }
     };
 
-    pushChanges();
+    const schedulePushChanges = () => {
+      clearTimeout(pushTimer);
+      pushTimer = setTimeout(() => {
+        if (!cancelled) pushChanges();
+      }, SYNC_PUSH_DEBOUNCE_MS);
+    };
+
+    schedulePushChanges();
 
     return () => {
       cancelled = true;
+      clearTimeout(pushTimer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, writeNonce, orgId, table, recordId]);

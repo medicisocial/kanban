@@ -5,22 +5,8 @@ import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useCollectionSync } from '../lib/useCollectionSync';
-import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
-import { markPendingRemoved } from '../lib/syncHelpers';
 import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
-import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
-
-function persistAdminTaskUpsert(task) {
-  if (!SUPABASE_ENABLED || !task) return;
-  void pushStaffSyncRecords('admin_tasks', [task]);
-}
-
-function persistAdminTaskDelete(id) {
-  if (!SUPABASE_ENABLED || !id) return;
-  markPendingRemoved(getOrgId(), 'admin_tasks', [id]);
-  void pushStaffSync({ table: 'admin_tasks', changed: [], removed: [id] });
-}
 
 const getAdminTaskId = (task) => task.id;
 
@@ -75,42 +61,35 @@ export function useAdminTasks() {
 
   const replaceAdminTasks = useCallback((next) => {
     setAdminTasks(next);
-    if (!SUPABASE_ENABLED || !next?.length) return;
-    void pushStaffSyncRecords('admin_tasks', next);
   }, []);
 
   const addAdminTask = useCallback((data) => {
     notifyMutation();
     const task = createAdminTask(data);
     setAdminTasks((prev) => [...prev, task]);
-    persistAdminTaskUpsert(task);
     return task.id;
   }, []);
 
   const toggleAdminTaskComplete = useCallback((id) => {
     notifyMutation();
-    let persisted = null;
     setAdminTasks((prev) =>
       prev.map((task) => {
         if (task.id !== id) return task;
         const completed = !task.completed;
-        persisted = {
+        return {
           ...task,
           completed,
           completedAt: completed ? Date.now() : null,
           updatedAt: Date.now(),
         };
-        return persisted;
       }),
     );
-    if (persisted) persistAdminTaskUpsert(persisted);
   }, []);
 
   const deleteAdminTask = useCallback((id) => {
     notifyMutation();
     tombstoneSyncedDeletes('admin_tasks', [id]);
     setAdminTasks((prev) => prev.filter((task) => task.id !== id));
-    persistAdminTaskDelete(id);
   }, []);
 
   return {

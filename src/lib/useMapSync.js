@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
+const REALTIME_REFETCH_DEBOUNCE_MS = 80;
+const SYNC_PUSH_DEBOUNCE_MS = 40;
 const FOCUS_REFETCH_MIN_MS = 30_000;
 import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
@@ -21,6 +23,8 @@ import {
   markPendingRemoved,
   mapMatchesSnapshot,
   mergeRemoteMapWithLocalPending,
+  mergeRemoteRecordWithLocal,
+  mergePortalCredentialValue,
   readSyncedLocalMap,
   savePendingCreates,
   savePendingRemoved,
@@ -88,6 +92,8 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
 
     const store = storeRef.current;
     let active = true;
+    let refetchTimer = null;
+    const protectCredentialEntries = table === 'client_portal_credentials';
 
     const applyRemote = async () => {
       pendingRemovedRef.current = loadPendingRemoved(orgId, table);
@@ -172,6 +178,87 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
       }
     };
 
+    const scheduleApplyRemote = () => {
+      clearTimeout(refetchTimer);
+      refetchTimer = setTimeout(() => {
+        if (active) applyRemote();
+      }, REALTIME_REFETCH_DEBOUNCE_MS);
+    };
+
+    const applyRealtimePayload = (payload) => {
+      if (!active || !loadedRef.current || !payload?.eventType) {
+        scheduleApplyRemote();
+        return;
+      }
+
+      const rowOrg = payload.new?.org_id ?? payload.old?.org_id;
+      if (rowOrg && rowOrg !== orgId) return;
+
+      pendingRemovedRef.current = loadPendingRemoved(orgId, table);
+      pendingLocalCreatesRef.current = loadPendingCreates(orgId, table);
+
+      if (payload.eventType === 'DELETE') {
+        const key = String(payload.old?.id || '');
+        if (!key || pendingRemovedRef.current.has(key)) return;
+
+        applyingRemoteRef.current = true;
+        const snapshot = syncedRef.current || new Map();
+        snapshot.delete(key);
+        syncedRef.current = snapshot;
+        setMap((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+        return;
+      }
+
+      if (payload.eventType !== 'INSERT' && payload.eventType !== 'UPDATE') {
+        scheduleApplyRemote();
+        return;
+      }
+
+      const row = payload.new;
+      if (!row?.id || row.data === undefined) {
+        scheduleApplyRemote();
+        return;
+      }
+
+      const key = String(row.id);
+      if (pendingRemovedRef.current.has(key)) return;
+
+      const remoteValue = row.data;
+      applyingRemoteRef.current = true;
+      setMap((prev) => {
+        const localValue = prev[key];
+        const previousSynced = syncedRef.current || new Map();
+
+        if (localValue === undefined) {
+          if (previousSynced.has(key)) return prev;
+          const next = { ...prev, [key]: remoteValue };
+          syncedRef.current = new Map(previousSynced);
+          syncedRef.current.set(key, JSON.stringify(remoteValue));
+          return next;
+        }
+
+        const merged = protectCredentialEntries
+          ? mergePortalCredentialValue({
+              remote: remoteValue,
+              local: localValue,
+              syncedStr: previousSynced.get(key),
+            })
+          : mergeRemoteRecordWithLocal({
+              remote: remoteValue,
+              local: localValue,
+              syncedStr: previousSynced.get(key),
+            });
+
+        syncedRef.current = new Map(previousSynced);
+        syncedRef.current.set(key, JSON.stringify(merged));
+        return { ...prev, [key]: merged };
+      });
+    };
+
     let lastFetchAt = 0;
 
     const onFocus = () => {
@@ -192,12 +279,17 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
     });
 
     applyRemote().then(() => { lastFetchAt = Date.now(); }).catch(() => {});
-    const unsubscribe = store.subscribe(() => {
+    const unsubscribe = store.subscribe((payload) => {
       lastFetchAt = Date.now();
-      applyRemote();
+      if (payload && typeof payload === 'object' && payload.eventType) {
+        applyRealtimePayload(payload);
+        return;
+      }
+      scheduleApplyRemote();
     });
     return () => {
       active = false;
+      clearTimeout(refetchTimer);
       unsubscribe?.();
       unsubscribeRefetch();
       window.removeEventListener('focus', onFocus);
@@ -220,6 +312,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
     }
 
     let cancelled = false;
+    let pushTimer = null;
 
     const pushChanges = async () => {
       const prev = syncedRef.current || new Map();
@@ -310,10 +403,18 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
       }
     };
 
-    pushChanges();
+    const schedulePushChanges = () => {
+      clearTimeout(pushTimer);
+      pushTimer = setTimeout(() => {
+        if (!cancelled) pushChanges();
+      }, SYNC_PUSH_DEBOUNCE_MS);
+    };
+
+    schedulePushChanges();
 
     return () => {
       cancelled = true;
+      clearTimeout(pushTimer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, writeNonce, orgId, table]);

@@ -25,7 +25,9 @@ import {
   unmarkPendingCreates,
 } from './syncHelpers';
 
-const REALTIME_REFETCH_DEBOUNCE_MS = 350;
+const REALTIME_REFETCH_DEBOUNCE_MS = 80;
+// Coalesce rapid local edits (e.g. drag-drop) into one cloud write.
+const SYNC_PUSH_DEBOUNCE_MS = 40;
 // Minimum gap before a focus/visibility event triggers a full re-fetch.
 const FOCUS_REFETCH_MIN_MS = 30_000;
 
@@ -430,6 +432,7 @@ export function useCollectionSync({
     }
 
     let cancelled = false;
+    let pushTimer = null;
 
     const pushChanges = async () => {
       const prev = syncedRef.current || new Map();
@@ -524,10 +527,18 @@ export function useCollectionSync({
       }
     };
 
-    pushChanges();
+    const schedulePushChanges = () => {
+      clearTimeout(pushTimer);
+      pushTimer = setTimeout(() => {
+        if (!cancelled) pushChanges();
+      }, SYNC_PUSH_DEBOUNCE_MS);
+    };
+
+    schedulePushChanges();
 
     return () => {
       cancelled = true;
+      clearTimeout(pushTimer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, writeNonce, orgId, table]);

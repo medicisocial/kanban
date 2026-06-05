@@ -5,21 +5,7 @@ import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { useCollectionSync } from '../lib/useCollectionSync';
-import { pushStaffSync, pushStaffSyncRecords } from '../lib/staffSyncApi';
-import { markPendingRemoved } from '../lib/syncHelpers';
-import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
-
-function persistCardRecord(card) {
-  if (!SUPABASE_ENABLED || !card) return;
-  void pushStaffSyncRecords('cards', [card]);
-}
-
-function persistCardDelete(id) {
-  if (!SUPABASE_ENABLED || !id) return;
-  markPendingRemoved(getOrgId(), 'cards', [id]);
-  void pushStaffSync({ table: 'cards', changed: [], removed: [id] });
-}
 
 const getCardId = (card) => card.id;
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
@@ -186,11 +172,7 @@ export function useKanban() {
   }, [cards, syncLoaded]);
 
   const replaceCards = useCallback((next) => {
-    const normalized = next.map(normalizeCard);
-    setCards(normalized);
-    if (SUPABASE_ENABLED && normalized.length) {
-      void pushStaffSyncRecords('cards', normalized);
-    }
+    setCards(next.map(normalizeCard));
   }, []);
 
   const addCard = useCallback((columnId, { client } = {}) => {
@@ -225,7 +207,6 @@ export function useKanban() {
       createdAt: Date.now(),
     });
     setCards((prev) => [...prev, card]);
-    persistCardRecord(card);
     return card;
   }, []);
 
@@ -281,7 +262,6 @@ export function useKanban() {
       return [...prev, persisted];
     });
 
-    if (persisted) persistCardRecord(persisted);
     return resolvedId;
   }, []);
 
@@ -310,14 +290,12 @@ export function useKanban() {
         return persisted;
       }),
     );
-    if (persisted) persistCardRecord(persisted);
   }, []);
 
   const deleteCard = useCallback((id) => {
     notifyMutation();
     tombstoneSyncedDeletes('cards', [id]);
     setCards((prev) => prev.filter((card) => card.id !== id));
-    persistCardDelete(id);
   }, []);
 
   const moveCard = useCallback((cardId, targetColumnId) => {
@@ -341,7 +319,6 @@ export function useKanban() {
         return persisted;
       }),
     );
-    if (persisted) persistCardRecord(persisted);
   }, []);
 
   const markAsPosted = useCallback((cardId, occurrenceDate) => {
@@ -371,7 +348,6 @@ export function useKanban() {
         return persisted;
       }),
     );
-    if (persisted) persistCardRecord(persisted);
   }, []);
 
   const addCardWithDetails = useCallback((overrides = {}) => {
@@ -388,7 +364,6 @@ export function useKanban() {
       }),
     }));
     setCards((prev) => [...prev, card]);
-    persistCardRecord(card);
     return card.id;
   }, []);
 
