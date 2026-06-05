@@ -60,7 +60,12 @@ async function authorize(req, requestedBrand, requestedOrgId) {
   const clientSession = getClientSessionFromRequest(req);
   if (isClientSessionValid(clientSession)) {
     const sessionBrand = String(clientSession.brand || '').trim();
-    if (sessionBrand && sessionBrand === String(requestedBrand || '').trim()) {
+    const requested = String(requestedBrand || '').trim();
+    if (
+      sessionBrand &&
+      requested &&
+      sessionBrand.localeCompare(requested, undefined, { sensitivity: 'accent' }) === 0
+    ) {
       return { ok: true, orgId: clientSession.orgId || 'medici', brand: sessionBrand };
     }
   }
@@ -120,11 +125,12 @@ export default async function handler(req, res) {
     }
 
     const signJson = await signRes.json().catch(() => ({}));
-    const signedUrl = signJson?.url || '';
-    const tokenMatch = signedUrl.match(/[?&]token=([^&]+)/);
-    const token = tokenMatch ? decodeURIComponent(tokenMatch[1]) : null;
+    const signedUrl = String(signJson?.url || signJson?.signedUrl || '').trim();
+    const tokenFromBody = String(signJson?.token || '').trim();
+    const tokenFromUrl = signedUrl.match(/[?&]token=([^&]+)/);
+    const token = tokenFromBody || (tokenFromUrl ? decodeURIComponent(tokenFromUrl[1]) : null);
     if (!token) {
-      console.error('[brand-asset-sign-upload] no token in sign response:', signedUrl);
+      console.error('[brand-asset-sign-upload] no token in sign response:', signJson);
       return res.status(502).json({ error: 'Could not start upload.' });
     }
 

@@ -79,13 +79,17 @@ export async function uploadBrandAssetToStorage(file, { brand, folder }) {
     throw new Error('Please sign in again to upload files.');
   }
 
+  const client = clientPortalSession();
+  const staff = loadStaffSession();
+  const orgId = client?.orgId || staff?.orgId || getOrgId();
+
   const res = await fetch('/api/brand-asset-sign-upload', {
     method: 'POST',
     headers,
     body: JSON.stringify({
       brand,
       folder,
-      orgId: getOrgId(),
+      orgId,
       fileName: file?.name || 'file',
       contentType: file?.type || 'application/octet-stream',
     }),

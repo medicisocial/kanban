@@ -16,7 +16,7 @@ import { mergeBrandCompanyFiles, mergeBrandSpecialMenus } from '../utils/clients
 
 const PORTAL_POLL_MS = SUPABASE_ENABLED ? 45000 : 15000;
 /** Skip background refreshes for a moment after a save so a stale read can't revert it. */
-const SAVE_REFRESH_COOLDOWN_MS = 5000;
+const SAVE_REFRESH_COOLDOWN_MS = 10000;
 
 const ClientAuthContext = createContext(null);
 
@@ -160,20 +160,32 @@ export function ClientAuthProvider({ children }) {
         try {
           const data = await fetchClientPortalData(session);
           if (!isMountedRef.current) return;
-          const merged = { ...data };
-          // Keep locally-newer entries in case the read hasn't caught up yet.
-          merged.companyFiles = mergeBrandCompanyFiles(
-            data.companyFiles,
-            profile.companyFiles ?? data.companyFiles,
-          );
-          merged.specialMenus = mergeBrandSpecialMenus(
-            data.specialMenus,
-            profile.specialMenus ?? data.specialMenus,
-          );
-          setPortalData(merged);
-          setBrand(merged.brand);
+          setPortalData((prev) => {
+            if (!prev || prev.brand !== data.brand) {
+              const merged = { ...data };
+              if (profile.companyFiles) {
+                merged.companyFiles = mergeBrandCompanyFiles(data.companyFiles, profile.companyFiles);
+              }
+              if (profile.specialMenus) {
+                merged.specialMenus = mergeBrandSpecialMenus(data.specialMenus, profile.specialMenus);
+              }
+              return merged;
+            }
+            const merged = { ...data };
+            // Triple-merge: server read + what we just wrote + what was already on screen.
+            merged.companyFiles = mergeBrandCompanyFiles(
+              mergeBrandCompanyFiles(data.companyFiles, profile.companyFiles ?? prev.companyFiles),
+              prev.companyFiles,
+            );
+            merged.specialMenus = mergeBrandSpecialMenus(
+              mergeBrandSpecialMenus(data.specialMenus, profile.specialMenus ?? prev.specialMenus),
+              prev.specialMenus,
+            );
+            return merged;
+          });
+          setBrand((current) => data.brand || current);
           if (isClientHubPortal()) {
-            setContentTypeColorOverrides(normalizeContentTypeColors(merged.contentTypeColors || {}));
+            setContentTypeColorOverrides(normalizeContentTypeColors(data.contentTypeColors || {}));
           }
         } catch (error) {
           // The write already succeeded; a failed re-read shouldn't look like a

@@ -20,12 +20,14 @@ export default function ProfilePhotoEditor({
   className = '',
 }) {
   const fileInputRef = useRef(null);
+  const editingRef = useRef(false);
   const [previewSrc, setPreviewSrc] = useState(null);
   const [logoCrop, setLogoCrop] = useState(DEFAULT_LOGO_CROP);
   const [removed, setRemoved] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (editingRef.current) return;
     const normalized = normalizeClientLogo(avatar);
     setRemoved(false);
     setPreviewSrc(normalized?.src || null);
@@ -65,12 +67,15 @@ export default function ProfilePhotoEditor({
     event.target.value = '';
     if (!file) return;
 
+    editingRef.current = true;
     setError('');
     try {
       const dataUrl = await readClientProfileImage(file, { preservePng: true });
       applyDraft(dataUrl, DEFAULT_LOGO_CROP);
     } catch (err) {
       setError(err.message || 'Could not upload image.');
+    } finally {
+      editingRef.current = false;
     }
   };
 

@@ -76,19 +76,29 @@ function ToggleYesNo({ value, onChange, disabled }) {
   );
 }
 
-function MenuPdfListEditor({ label, brand, items = [], onChange, disabled }) {
+function MenuPdfListEditor({ label, brand, items = [], onChange, disabled, onUploadBusyChange }) {
   const fileInputRef = useRef(null);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const storageReady = canUploadSpecialMenuToStorage();
   const busy = disabled || uploading;
 
+  const setUploadBusy = (next) => {
+    setUploading(next);
+    onUploadBusyChange?.(next);
+  };
+
+  const openFilePicker = () => {
+    if (busy) return;
+    fileInputRef.current?.click();
+  };
+
   const handleAddFiles = async (event) => {
     const files = Array.from(event.target.files || []);
     event.target.value = '';
     if (!files.length) return;
     setError('');
-    setUploading(true);
+    setUploadBusy(true);
     try {
       const added = [];
       for (const file of files) {
@@ -98,7 +108,7 @@ function MenuPdfListEditor({ label, brand, items = [], onChange, disabled }) {
     } catch (err) {
       setError(err.message || 'Could not upload PDF.');
     } finally {
-      setUploading(false);
+      setUploadBusy(false);
     }
   };
 
@@ -145,7 +155,7 @@ function MenuPdfListEditor({ label, brand, items = [], onChange, disabled }) {
         <>
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={openFilePicker}
             disabled={busy}
             className={`${btnSecondaryClass} w-full justify-center py-1.5 text-[10px] disabled:opacity-50`}
           >
@@ -195,18 +205,28 @@ export default function ClientSpecialMenusEditor({
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const draftRef = useRef(draft);
+  const uploadBusyRef = useRef(false);
+
+  const setDraftGuarded = (updater) => {
+    setDraft((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      draftRef.current = next;
+      return next;
+    });
+  };
 
   useEffect(() => {
     draftRef.current = draft;
   }, [draft]);
 
   useEffect(() => {
-    if (savingRef.current) return;
+    if (savingRef.current || uploadBusyRef.current) return;
     // Don't discard an open draft when a background refresh hands us new props
     // (e.g. the portal refetches on window focus after the file picker closes).
     if (draftRef.current) return;
     setMenus(normalizeClientSpecialMenus(specialMenus));
-    setDraft(null);
+    setDraftGuarded(null);
+    draftRef.current = null;
     setEditingId(null);
     setError('');
   }, [specialMenus]);
@@ -223,7 +243,8 @@ export default function ClientSpecialMenusEditor({
       await onSaveSpecialMenus(normalized);
       setMessage('Special menus saved.');
       setTimeout(() => setMessage(''), 3000);
-      setDraft(null);
+      setDraftGuarded(null);
+      draftRef.current = null;
       setEditingId(null);
     } catch (err) {
       setError(err.message || 'Could not save special menus.');
@@ -287,13 +308,13 @@ export default function ClientSpecialMenusEditor({
 
   const startCreate = () => {
     setEditingId(null);
-    setDraft({ ...EMPTY_DRAFT });
+    setDraftGuarded({ ...EMPTY_DRAFT });
     setError('');
   };
 
   const startEdit = (menu) => {
     setEditingId(menu.id);
-    setDraft({
+    setDraftGuarded({
       name: menu.name,
       startDate: menu.startDate,
       endDate: menu.endDate,
@@ -383,7 +404,7 @@ export default function ClientSpecialMenusEditor({
             <input
               type="text"
               value={draft.name}
-              onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => setDraftGuarded((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="e.g. Valentine's Day specials"
               className={inputClass}
             />
@@ -395,7 +416,7 @@ export default function ClientSpecialMenusEditor({
               </span>
               <DateInput
                 value={draft.startDate}
-                onChange={(e) => setDraft((prev) => ({ ...prev, startDate: e.target.value }))}
+                onChange={(e) => setDraftGuarded((prev) => ({ ...prev, startDate: e.target.value }))}
                 placeholder="Select date"
                 inputClassName={inputClass}
               />
@@ -406,7 +427,7 @@ export default function ClientSpecialMenusEditor({
               </span>
               <DateInput
                 value={draft.endDate}
-                onChange={(e) => setDraft((prev) => ({ ...prev, endDate: e.target.value }))}
+                onChange={(e) => setDraftGuarded((prev) => ({ ...prev, endDate: e.target.value }))}
                 placeholder="Select date"
                 inputClassName={inputClass}
               />
@@ -422,7 +443,7 @@ export default function ClientSpecialMenusEditor({
             <ToggleYesNo
               value={draft.hasDrinkMenu}
               onChange={(hasDrinkMenu) =>
-                setDraft((prev) => ({
+                setDraftGuarded((prev) => ({
                   ...prev,
                   hasDrinkMenu,
                   drinkMenuPdfs: hasDrinkMenu ? prev.drinkMenuPdfs : [],
@@ -436,7 +457,10 @@ export default function ClientSpecialMenusEditor({
               label="Drink menu PDFs"
               brand={client}
               items={draft.drinkMenuPdfs}
-              onChange={(drinkMenuPdfs) => setDraft((prev) => ({ ...prev, drinkMenuPdfs }))}
+              onChange={(drinkMenuPdfs) => setDraftGuarded((prev) => ({ ...prev, drinkMenuPdfs }))}
+              onUploadBusyChange={(busy) => {
+                uploadBusyRef.current = busy;
+              }}
               disabled={saving}
             />
           )}
@@ -447,7 +471,7 @@ export default function ClientSpecialMenusEditor({
             <ToggleYesNo
               value={draft.hasFoodMenu}
               onChange={(hasFoodMenu) =>
-                setDraft((prev) => ({
+                setDraftGuarded((prev) => ({
                   ...prev,
                   hasFoodMenu,
                   foodMenuPdfs: hasFoodMenu ? prev.foodMenuPdfs : [],
@@ -461,7 +485,10 @@ export default function ClientSpecialMenusEditor({
               label="Food menu PDFs"
               brand={client}
               items={draft.foodMenuPdfs}
-              onChange={(foodMenuPdfs) => setDraft((prev) => ({ ...prev, foodMenuPdfs }))}
+              onChange={(foodMenuPdfs) => setDraftGuarded((prev) => ({ ...prev, foodMenuPdfs }))}
+              onUploadBusyChange={(busy) => {
+                uploadBusyRef.current = busy;
+              }}
               disabled={saving}
             />
           )}
@@ -477,7 +504,9 @@ export default function ClientSpecialMenusEditor({
             <button
               type="button"
               onClick={() => {
-                setDraft(null);
+                setDraftGuarded(null);
+                draftRef.current = null;
+                uploadBusyRef.current = false;
                 setEditingId(null);
                 setError('');
               }}

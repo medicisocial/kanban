@@ -16,6 +16,7 @@ import {
   deleteBrandAssetFile,
   uploadBrandAssetToStorage,
 } from '../../utils/brandAssetStorage';
+import { incomingRecordsAreStale } from '../../utils/editorSyncGuard';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 import FilePreviewActions from './FilePreviewActions';
 
@@ -37,10 +38,16 @@ export default function ClientCompanyFilesEditor({
   const [storageReady, setStorageReady] = useState(false);
   const fileInputRef = useRef(null);
   const savingRef = useRef(false);
+  const pickingFileRef = useRef(false);
+  const localFilesRef = useRef(localFiles);
   const pendingUploadsRef = useRef(pendingUploads);
   const allowsMultiple = allowsMultipleCompanyFileUpload(activeFolder);
   const allowsGroups = allowsCompanyFileGroups(activeFolder);
   const existingGroups = getCompanyFileGroups(localFiles, activeFolder);
+
+  useEffect(() => {
+    localFilesRef.current = localFiles;
+  }, [localFiles]);
 
   useEffect(() => {
     pendingUploadsRef.current = pendingUploads;
@@ -51,14 +58,20 @@ export default function ClientCompanyFilesEditor({
   }, [readOnly]);
 
   useEffect(() => {
-    if (savingRef.current) return;
+    if (savingRef.current || pickingFileRef.current) return;
     // Don't discard an in-progress upload when a background refresh hands us new
     // props (e.g. the portal refetches on window focus after the file picker closes).
     if (pendingUploadsRef.current.length > 0) return;
-    setLocalFiles(normalizeClientCompanyFiles(files, businessType));
+
+    const normalized = normalizeClientCompanyFiles(files, businessType);
+    // Keep local state when it is newer than a lagging props read after save.
+    if (incomingRecordsAreStale(localFilesRef.current, normalized)) return;
+
+    setLocalFiles(normalized);
     setMessage('');
     setError('');
     setPendingUploads([]);
+    pendingUploadsRef.current = [];
   }, [files, businessType]);
 
   useEffect(() => {
@@ -95,15 +108,25 @@ export default function ClientCompanyFilesEditor({
 
   const defaultUploadName = (file) => file.name.replace(/\.[^.]+$/, '').trim() || file.name;
 
+  const openFilePicker = () => {
+    if (readOnly || saving) return;
+    pickingFileRef.current = true;
+    fileInputRef.current?.click();
+  };
+
   const handlePickFile = async (event) => {
     const picked = Array.from(event.target.files || []);
     event.target.value = '';
-    if (!picked.length || readOnly) return;
+    if (!picked.length || readOnly) {
+      pickingFileRef.current = false;
+      return;
+    }
 
     const selected = allowsMultiple ? picked : picked.slice(0, 1);
     setError('');
 
     if (localFiles.length + selected.length > MAX_FILES_PER_CLIENT) {
+      pickingFileRef.current = false;
       setError(
         `You can store up to ${MAX_FILES_PER_CLIENT} files. Remove ${localFiles.length + selected.length - MAX_FILES_PER_CLIENT} before adding more.`,
       );
@@ -127,9 +150,14 @@ export default function ClientCompanyFilesEditor({
         nextPending.push({ key: `${file.name}-${file.size}-${file.lastModified}`, file, name: defaultUploadName(file) });
         existingCount += 1;
       }
+      // Update the ref synchronously — a focus refetch can land before React
+      // commits state, and the props-sync effect must see pending work.
+      pendingUploadsRef.current = nextPending;
       setPendingUploads(nextPending);
     } catch (err) {
       setError(err.message || 'Could not upload file.');
+    } finally {
+      pickingFileRef.current = false;
     }
   };
 
@@ -139,6 +167,7 @@ export default function ClientCompanyFilesEditor({
 
     setError('');
     setSaving(true);
+    savingRef.current = true;
     try {
       const entries = [];
       let existingCount = localFiles.length;
@@ -177,10 +206,12 @@ export default function ClientCompanyFilesEditor({
       }
       await persist([...entries, ...localFiles]);
       setPendingUploads([]);
+      pendingUploadsRef.current = [];
       setPendingGroup('');
     } catch (err) {
       setError(err.message || 'Could not upload file.');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -191,7 +222,10 @@ export default function ClientCompanyFilesEditor({
     );
   };
 
-  const clearPendingUploads = () => setPendingUploads([]);
+  const clearPendingUploads = () => {
+    pendingUploadsRef.current = [];
+    setPendingUploads([]);
+  };
 
   const handleRename = async (fileId, name) => {
     const trimmed = String(name || '').trim();
@@ -350,7 +384,7 @@ export default function ClientCompanyFilesEditor({
           {!pendingUploads.length ? (
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={openFilePicker}
               disabled={saving}
               className={`${btnSecondaryClass} w-full justify-center py-2 text-[11px] disabled:opacity-50`}
             >
