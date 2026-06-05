@@ -10,6 +10,7 @@ import {
   markPendingRemoved,
   pendingRemovedKey,
   pendingCreatesKey,
+  mergeClientsWorkspaceState,
 } from '../src/lib/syncHelpers.js';
 import {
   mergePortalCredentialData,
@@ -19,6 +20,7 @@ import {
   mergeBrandCompanyFiles,
   mergeClientsWorkspaceData,
 } from '../api/_lib/clientsWorkspaceMerge.mjs';
+import { mergeClientsWorkspaceBrandFiles } from '../src/utils/clientsWorkspaceMerge.js';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -255,6 +257,58 @@ if (typeof localStorage !== 'undefined') {
   );
   assert(merged.length === 1, 'merge should keep one file');
   assert(merged[0].name === 'New', 'incoming newer file should win');
+}
+
+// Admin delete should stick when staff removes a file locally.
+{
+  const synced = [
+    { id: 'f1', name: 'Logo', updatedAt: 10 },
+    { id: 'f2', name: 'Menu', updatedAt: 20 },
+  ];
+  const local = [{ id: 'f1', name: 'Logo', updatedAt: 10 }];
+  const remote = [...synced];
+  const merged = mergeClientsWorkspaceBrandFiles(remote, local, synced);
+  assert(merged.length === 1, 'admin delete should drop removed file');
+  assert(merged[0].id === 'f1', 'admin delete should keep remaining file');
+}
+
+// Admin upload should keep a concurrent client upload on the same brand.
+{
+  const synced = [{ id: 'f1', name: 'Logo', updatedAt: 10 }];
+  const local = [
+    { id: 'f1', name: 'Logo', updatedAt: 10 },
+    { id: 'f3', name: 'Staff PDF', updatedAt: 30 },
+  ];
+  const remote = [
+    { id: 'f1', name: 'Logo', updatedAt: 10 },
+    { id: 'f2', name: 'Client PDF', updatedAt: 25 },
+  ];
+  const merged = mergeClientsWorkspaceBrandFiles(remote, local, synced);
+  assert(merged.length === 3, 'admin upload should union concurrent client upload');
+  assert(merged.some((file) => file.id === 'f3'), 'staff upload should remain');
+  assert(merged.some((file) => file.id === 'f2'), 'client upload should remain');
+}
+
+// Staff realtime merge should not revert an admin upload when remote is briefly stale.
+{
+  const synced = { companyFiles: { Plume: [] } };
+  const local = {
+    companyFiles: {
+      Plume: [{ id: 'f1', name: 'Admin PDF', updatedAt: 40 }],
+    },
+  };
+  const remote = {
+    companyFiles: {
+      Plume: [],
+    },
+  };
+  const merged = mergeClientsWorkspaceState({
+    remote,
+    local,
+    syncedStr: JSON.stringify(synced),
+  });
+  assert(merged.companyFiles.Plume.length === 1, 'stale remote should not revert admin upload');
+  assert(merged.companyFiles.Plume[0].id === 'f1', 'admin upload id should survive realtime merge');
 }
 
 console.log('Sync merge tests passed.');

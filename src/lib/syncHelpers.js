@@ -1,3 +1,9 @@
+import {
+  mergeBrandCompanyFiles,
+  mergeBrandSpecialMenus,
+  mergeClientsWorkspaceFileMap,
+} from '../utils/clientsWorkspaceMerge.js';
+
 export const FETCH_TIMEOUT_MS = 12000;
 
 function normalizeBrandUsers(entry) {
@@ -445,6 +451,26 @@ const CLIENTS_WORKSPACE_KEYS = [
   'customColorPalette',
 ];
 
+function mergeClientsWorkspaceField(key, remote, local, synced) {
+  if (key === 'companyFiles') {
+    return mergeClientsWorkspaceFileMap(
+      remote?.companyFiles,
+      local?.companyFiles,
+      synced?.companyFiles,
+      mergeBrandCompanyFiles,
+    );
+  }
+  if (key === 'specialMenus') {
+    return mergeClientsWorkspaceFileMap(
+      remote?.specialMenus,
+      local?.specialMenus,
+      synced?.specialMenus,
+      mergeBrandSpecialMenus,
+    );
+  }
+  return undefined;
+}
+
 /** Field-level three-way merge for the clients workspace blob (contacts, logos, etc.). */
 export function mergeClientsWorkspaceState({ remote, local, syncedStr }) {
   if (local == null) return remote;
@@ -478,13 +504,20 @@ export function mergeClientsWorkspaceState({ remote, local, syncedStr }) {
     }
 
     if (localStr !== syncedKeyStr) {
-      merged[key] = local[key];
+      const fileField = mergeClientsWorkspaceField(key, remote, local, synced);
+      merged[key] = fileField !== undefined ? fileField : local[key];
       continue;
     }
 
     const remoteStr = JSON.stringify(remote[key]);
     if (remoteStr !== syncedKeyStr) {
-      merged[key] = remote[key] !== undefined ? remote[key] : local[key];
+      const fileField = mergeClientsWorkspaceField(key, remote, local, synced);
+      merged[key] =
+        fileField !== undefined
+          ? fileField
+          : remote[key] !== undefined
+            ? remote[key]
+            : local[key];
     } else {
       merged[key] = local[key];
     }

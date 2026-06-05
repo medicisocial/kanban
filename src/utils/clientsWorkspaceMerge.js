@@ -83,6 +83,76 @@ function mergeBrandMap(storedMap = {}, incomingMap = {}, mergeList) {
   return merged;
 }
 
+/**
+ * Per-brand three-way merge for staff realtime sync.
+ * Respects admin deletes while keeping client uploads that landed after the last sync baseline.
+ */
+export function mergeClientsWorkspaceBrandFiles(
+  remote = [],
+  local = [],
+  synced = [],
+  mergeList = mergeBrandCompanyFiles,
+) {
+  const localList = Array.isArray(local) ? local : [];
+  const remoteList = Array.isArray(remote) ? remote : [];
+  const syncedList = Array.isArray(synced) ? synced : [];
+  const localChanged = JSON.stringify(localList) !== JSON.stringify(syncedList);
+
+  if (!localChanged) {
+    return mergeList(syncedList, remoteList);
+  }
+
+  const byId = new Map();
+  for (const entry of localList) {
+    if (entry?.id) byId.set(String(entry.id), entry);
+  }
+
+  const syncedById = new Map(
+    syncedList.filter((entry) => entry?.id).map((entry) => [String(entry.id), entry]),
+  );
+
+  for (const entry of remoteList) {
+    if (!entry?.id) continue;
+    const id = String(entry.id);
+    if (byId.has(id)) continue;
+    if (!syncedById.has(id)) {
+      byId.set(id, entry);
+      continue;
+    }
+    const syncedEntry = syncedById.get(id);
+    if (recordUpdatedAt(entry) > recordUpdatedAt(syncedEntry)) {
+      byId.set(id, entry);
+    }
+  }
+
+  return [...byId.values()].sort((a, b) => recordUpdatedAt(b) - recordUpdatedAt(a));
+}
+
+export function mergeClientsWorkspaceFileMap(
+  remoteMap = {},
+  localMap = {},
+  syncedMap = {},
+  mergeList = mergeBrandCompanyFiles,
+) {
+  const brands = new Set([
+    ...Object.keys(remoteMap || {}),
+    ...Object.keys(localMap || {}),
+    ...Object.keys(syncedMap || {}),
+  ]);
+  const merged = {};
+
+  for (const brand of brands) {
+    merged[brand] = mergeClientsWorkspaceBrandFiles(
+      remoteMap?.[brand],
+      localMap?.[brand],
+      syncedMap?.[brand],
+      mergeList,
+    );
+  }
+
+  return merged;
+}
+
 /** Three-way-safe merge for the clients singleton workspace row. */
 export function mergeClientsWorkspaceData(stored = {}, incoming = {}) {
   if (!incoming || typeof incoming !== 'object') return stored || {};
