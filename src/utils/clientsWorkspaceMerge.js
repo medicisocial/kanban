@@ -70,6 +70,22 @@ export function mergeBrandSpecialMenus(stored = [], incoming = []) {
   return [...byId.values()].sort((a, b) => recordUpdatedAt(b) - recordUpdatedAt(a));
 }
 
+/** Deep-merge per-brand portal password vault entries (never wipe stored passwords). */
+export function mergePortalPasswordVault(stored = {}, incoming = {}) {
+  const base = stored && typeof stored === 'object' ? stored : {};
+  const inc = incoming && typeof incoming === 'object' ? incoming : {};
+  const merged = { ...base };
+
+  for (const [brand, users] of Object.entries(inc)) {
+    merged[brand] = {
+      ...(merged[brand] && typeof merged[brand] === 'object' ? merged[brand] : {}),
+      ...(users && typeof users === 'object' ? users : {}),
+    };
+  }
+
+  return merged;
+}
+
 function mergeBrandMap(storedMap = {}, incomingMap = {}, mergeList) {
   const stored = storedMap && typeof storedMap === 'object' ? storedMap : {};
   const incoming = incomingMap && typeof incomingMap === 'object' ? incomingMap : {};
@@ -170,6 +186,10 @@ export function mergeClientsWorkspaceData(stored = {}, incoming = {}) {
       stored.specialMenus,
       incoming.specialMenus,
       mergeBrandSpecialMenus,
+    ),
+    portalPasswordVault: mergePortalPasswordVault(
+      stored.portalPasswordVault,
+      incoming.portalPasswordVault,
     ),
   };
 }

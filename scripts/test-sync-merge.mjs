@@ -257,6 +257,23 @@ if (typeof localStorage !== 'undefined') {
   assert(merged.companyFiles.Plume[0].id === 'file-1', 'client upload id should survive');
 }
 
+// Stale staff-sync must not wipe Plume vault passwords used for login recovery.
+{
+  const stored = {
+    portalPasswordVault: {
+      Plume: { 'user-1': 'SecretPass123' },
+    },
+  };
+  const staleStaff = {
+    portalPasswordVault: {},
+  };
+  const merged = mergeClientsWorkspaceData(stored, staleStaff);
+  assert(
+    merged.portalPasswordVault?.Plume?.['user-1'] === 'SecretPass123',
+    'stale staff push should keep Plume vault password',
+  );
+}
+
 // Per-brand file lists merge by id with newest updatedAt winning.
 {
   const merged = mergeBrandCompanyFiles(

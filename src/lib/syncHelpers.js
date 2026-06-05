@@ -2,6 +2,7 @@ import {
   mergeBrandCompanyFiles,
   mergeBrandSpecialMenus,
   mergeClientsWorkspaceFileMap,
+  mergePortalPasswordVault,
 } from '../utils/clientsWorkspaceMerge.js';
 export const FETCH_TIMEOUT_MS = 12000;
 
@@ -569,6 +570,12 @@ function mergeClientsWorkspaceField(key, remote, local, synced) {
       local?.specialMenus,
       synced?.specialMenus,
       mergeBrandSpecialMenus,
+    );
+  }
+  if (key === 'portalPasswordVault') {
+    return mergePortalPasswordVault(
+      mergePortalPasswordVault(remote?.portalPasswordVault, local?.portalPasswordVault),
+      synced?.portalPasswordVault,
     );
   }
   return undefined;

@@ -11,6 +11,12 @@ export function hasConfiguredPortalUsers(entry) {
   return normalizeBrandUsers(entry).some((user) => user.username && user.passwordHash);
 }
 
+function stripPortalPasswordChangeMarker(user) {
+  if (!user || typeof user !== 'object') return user;
+  const { _passwordChangeAuthorized: _ignored, ...rest } = user;
+  return rest;
+}
+
 function resolvePortalPasswordHash(previous, incomingUser, allowPasswordChange) {
   const previousHash = previous?.passwordHash?.trim().toLowerCase() || '';
   const incomingHash = incomingUser.passwordHash?.trim().toLowerCase() || '';
@@ -55,17 +61,19 @@ export function mergePortalCredentialData(
 
     const id = incomingUser.id || previous?.id;
     seen.add(id);
-    merged.push({
-      ...previous,
-      ...incomingUser,
-      id,
-      username,
-      passwordHash,
-      displayName: incomingUser.displayName || previous?.displayName || '',
-      avatar: Object.prototype.hasOwnProperty.call(incomingUser, 'avatar')
-        ? incomingUser.avatar
-        : previous?.avatar,
-    });
+    merged.push(
+      stripPortalPasswordChangeMarker({
+        ...previous,
+        ...incomingUser,
+        id,
+        username,
+        passwordHash,
+        displayName: incomingUser.displayName || previous?.displayName || '',
+        avatar: Object.prototype.hasOwnProperty.call(incomingUser, 'avatar')
+          ? incomingUser.avatar
+          : previous?.avatar,
+      }),
+    );
   }
 
   for (const user of existing) {

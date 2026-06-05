@@ -57,7 +57,11 @@ const users = Array.isArray(credRows?.[0]?.data) ? credRows[0].data : [];
 const normalized = username.trim().toLowerCase();
 const nextUsers = users.map((user) => {
   if (String(user.username || '').trim().toLowerCase() !== normalized) return user;
-  return { ...user, passwordHash: hashValue(password.trim()) };
+  return {
+    ...user,
+    passwordHash: hashValue(password.trim()),
+    _passwordChangeAuthorized: true,
+  };
 });
 
 if (!nextUsers.some((user) => String(user.username || '').trim().toLowerCase() === normalized)) {

@@ -8,6 +8,7 @@ import {
 } from './_lib/supabase.mjs';
 import { hashValue, normalizeBrandUsers } from './_lib/clientPortalAuth.mjs';
 import { hasConfiguredPortalUsers } from './_lib/authCriticalSync.mjs';
+import { mergeClientsWorkspaceData } from './_lib/clientsWorkspaceMerge.mjs';
 
 function unauthorized(res) {
   return res.status(401).json({ error: 'Unauthorized' });
@@ -130,6 +131,7 @@ export default async function handler(req, res) {
         username,
         passwordHash,
         displayName: String(draft.displayName || previous?.displayName || '').trim(),
+        ...(plainPassword ? { _passwordChangeAuthorized: true } : {}),
       };
 
       if (Object.prototype.hasOwnProperty.call(draft, 'avatar')) {
@@ -157,14 +159,12 @@ export default async function handler(req, res) {
     await upsertRecord(
       'clients',
       'workspace',
-      {
-        ...(clientsWorkspace || {}),
-        portalPasswordVault: nextVault,
-      },
+      mergeClientsWorkspaceData(clientsWorkspace || {}, { portalPasswordVault: nextVault }),
       resolvedOrgId,
     );
 
-    return res.status(200).json({ ok: true, users: nextUsers });
+    const usersForClient = nextUsers.map(({ _passwordChangeAuthorized: _ignored, ...user }) => user);
+    return res.status(200).json({ ok: true, users: usersForClient });
   } catch (error) {
     console.error('[client-portal-set-password] failed:', error?.message || error);
     return res.status(500).json({ error: 'Could not save portal passwords.' });

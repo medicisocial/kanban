@@ -15,6 +15,7 @@ import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import {
   hasConfiguredPortalUsers,
+  clearCredentialPasswordChanges,
   markCredentialPasswordChanges,
   registerPortalCredentialBrand,
 } from '../lib/syncHelpers';
@@ -102,9 +103,11 @@ export function useClientPortalCredentials() {
         })),
       });
       if (!apiResult.ok) {
+        clearCredentialPasswordChanges(getOrgId(), [client]);
         return { ok: false, error: apiResult.error || 'Could not save portal passwords.', users: activeUsers };
       }
       activeUsers = normalizeBrandUsers(apiResult.users);
+      clearCredentialPasswordChanges(getOrgId(), [client]);
     }
 
     setCredentials((prev) => {
