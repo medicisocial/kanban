@@ -652,7 +652,7 @@ export default function EnterprisePortalLayout({
         </header>
 
         <main className="relative flex-1 overflow-y-auto overflow-x-hidden">
-          <div key={activeTab} className="portal-content-fade p-5 md:p-8 lg:p-10">
+          <div className="portal-content-fade p-5 md:p-8 lg:p-10">
             {children}
           </div>
         </main>

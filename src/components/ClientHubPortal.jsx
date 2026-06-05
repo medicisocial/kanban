@@ -45,8 +45,14 @@ export default function ClientHubPortal({ onSignOut }) {
   const businessType = portalData?.businessType || '';
   const profileContacts = portalData?.contacts || [];
   const profileSocialLogins = portalData?.socialLogins || {};
-  const profileCompanyFiles = portalData?.companyFiles || [];
-  const profileSpecialMenus = portalData?.specialMenus || [];
+  const profileCompanyFiles = useMemo(
+    () => portalData?.companyFiles ?? [],
+    [portalData?.companyFiles],
+  );
+  const profileSpecialMenus = useMemo(
+    () => portalData?.specialMenus ?? [],
+    [portalData?.specialMenus],
+  );
   const photoGalleryLink = portalData?.photoGalleryLink || '';
   const cards = useMemo(
     () => stripInternalCardsForClientPortal(portalData?.cards || []),

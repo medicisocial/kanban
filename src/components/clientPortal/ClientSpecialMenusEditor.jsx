@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { beginEditorFilePick, endEditorFilePick } from '../../utils/editorPickGuard';
+import {
+  beginEditorFilePick,
+  clearEditorUploadWork,
+  endEditorFilePick,
+  isEditorFilePickActive,
+  markEditorUploadWork,
+} from '../../utils/editorPickGuard';
 import {
   canUploadSpecialMenuToStorage,
   createSpecialMenuId,
@@ -118,6 +124,7 @@ function MenuPdfListEditor({ label, brand, items = [], onChange, disabled, onUpl
         added.push(await uploadSpecialMenuPdf(file, { brand }));
       }
       onChange([...(items || []), ...added]);
+      markEditorUploadWork();
     } catch (err) {
       setError(err.message || 'Could not upload PDF.');
     } finally {
@@ -234,7 +241,7 @@ export default function ClientSpecialMenusEditor({
   }, [draft]);
 
   useEffect(() => {
-    if (savingRef.current || uploadBusyRef.current) return;
+    if (savingRef.current || uploadBusyRef.current || isEditorFilePickActive()) return;
     // Don't discard an open draft when a background refresh hands us new props
     // (e.g. the portal refetches on window focus after the file picker closes).
     if (draftRef.current) return;
@@ -260,6 +267,7 @@ export default function ClientSpecialMenusEditor({
       setDraftGuarded(null);
       draftRef.current = null;
       setEditingId(null);
+      clearEditorUploadWork();
     } catch (err) {
       setError(err.message || 'Could not save special menus.');
       throw err;
@@ -323,6 +331,7 @@ export default function ClientSpecialMenusEditor({
   const startCreate = () => {
     setEditingId(null);
     setDraftGuarded({ ...EMPTY_DRAFT });
+    markEditorUploadWork();
     setError('');
   };
 
@@ -337,6 +346,7 @@ export default function ClientSpecialMenusEditor({
       hasFoodMenu: menu.hasFoodMenu,
       foodMenuPdfs: menu.foodMenuPdfs || [],
     });
+    markEditorUploadWork();
     setError('');
   };
 
@@ -521,6 +531,7 @@ export default function ClientSpecialMenusEditor({
                 setDraftGuarded(null);
                 draftRef.current = null;
                 uploadBusyRef.current = false;
+                clearEditorUploadWork();
                 setEditingId(null);
                 setError('');
               }}

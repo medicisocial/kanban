@@ -221,7 +221,7 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
     });
 
     const unsubscribeRefetch = subscribeWorkspaceRefetch(() => {
-      if (!active) return;
+      if (!active || isEditorFilePickActive()) return;
       applyRemote();
     });
 

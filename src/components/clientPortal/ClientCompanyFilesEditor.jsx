@@ -16,7 +16,13 @@ import {
   deleteBrandAssetFile,
   uploadBrandAssetToStorage,
 } from '../../utils/brandAssetStorage';
-import { beginEditorFilePick, endEditorFilePick } from '../../utils/editorPickGuard';
+import {
+  beginEditorFilePick,
+  clearEditorUploadWork,
+  endEditorFilePick,
+  isEditorFilePickActive,
+  markEditorUploadWork,
+} from '../../utils/editorPickGuard';
 import { incomingRecordsAreStale } from '../../utils/editorSyncGuard';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 import FilePreviewActions from './FilePreviewActions';
@@ -48,6 +54,7 @@ export default function ClientCompanyFilesEditor({
   const pickingFileRef = useRef(false);
   const localFilesRef = useRef(localFiles);
   const pendingUploadsRef = useRef(pendingUploads);
+  const clientKeyRef = useRef(client);
   const allowsMultiple = allowsMultipleCompanyFileUpload(activeFolder);
   const allowsGroups = allowsCompanyFileGroups(activeFolder);
   const existingGroups = getCompanyFileGroups(localFiles, activeFolder);
@@ -65,21 +72,28 @@ export default function ClientCompanyFilesEditor({
   }, [readOnly]);
 
   useEffect(() => {
-    if (savingRef.current || pickingFileRef.current) return;
-    // Don't discard an in-progress upload when a background refresh hands us new
-    // props (e.g. the portal refetches on window focus after the file picker closes).
+    if (client !== clientKeyRef.current) {
+      clientKeyRef.current = client;
+      setLocalFiles(normalizeClientCompanyFiles(files, stableBusinessType));
+      setPendingUploads([]);
+      pendingUploadsRef.current = [];
+      clearEditorUploadWork();
+      setMessage('');
+      setError('');
+      return;
+    }
+
+    if (savingRef.current || pickingFileRef.current || isEditorFilePickActive()) return;
     if (pendingUploadsRef.current.length > 0) return;
 
     const normalized = normalizeClientCompanyFiles(files, stableBusinessType);
-    // Keep local state when it is newer than a lagging props read after save.
     if (incomingRecordsAreStale(localFilesRef.current, normalized)) return;
 
     setLocalFiles(normalized);
     setMessage('');
     setError('');
-    setPendingUploads([]);
-    pendingUploadsRef.current = [];
-  }, [files, businessType]);
+    // Never clear pending uploads here — only user actions (cancel, folder tab, save).
+  }, [client, files, businessType, stableBusinessType]);
 
   useEffect(() => {
     if (savingRef.current || pickingFileRef.current || pendingUploadsRef.current.length > 0) return;
@@ -93,6 +107,7 @@ export default function ClientCompanyFilesEditor({
     pendingUploadsRef.current = [];
     setPendingUploads([]);
     setPendingGroup('');
+    clearEditorUploadWork();
     setActiveFolder(folderId);
   };
 
@@ -176,6 +191,7 @@ export default function ClientCompanyFilesEditor({
       // Update the ref synchronously — a focus refetch can land before React
       // commits state, and the props-sync effect must see pending work.
       pendingUploadsRef.current = nextPending;
+      markEditorUploadWork();
       setPendingUploads(nextPending);
     } catch (err) {
       setError(err.message || 'Could not upload file.');
@@ -231,6 +247,7 @@ export default function ClientCompanyFilesEditor({
       setPendingUploads([]);
       pendingUploadsRef.current = [];
       setPendingGroup('');
+      clearEditorUploadWork();
     } catch (err) {
       setError(err.message || 'Could not upload file.');
     } finally {
@@ -248,6 +265,7 @@ export default function ClientCompanyFilesEditor({
   const clearPendingUploads = () => {
     pendingUploadsRef.current = [];
     setPendingUploads([]);
+    clearEditorUploadWork();
   };
 
   const handleRename = async (fileId, name) => {
