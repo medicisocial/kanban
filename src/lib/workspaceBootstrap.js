@@ -11,7 +11,8 @@ import {
 import { SUPABASE_ENABLED } from './supabaseClient';
 import { getOrgId } from './orgSession';
 import { readOrgScopedJson } from './orgStorage';
-import { fetchStaffSyncRows, pushStaffSync, pushStaffSyncRows } from './staffSyncApi';
+import { fetchStaffSyncRows, pushStaffSyncRows } from './staffSyncApi';
+import { ensureStaffSupabaseSession } from './staffSupabaseAuth';
 import { localCollectionHasRecords } from './syncHelpers';
 import { loadStaffSession } from '../utils/staffAuth';
 import { reportSyncIssue, clearSyncIssue } from './workspaceSyncHealth';
@@ -42,23 +43,33 @@ export async function bootstrapLocalWorkspaceToCloud() {
     return { seeded: [], skipped: true };
   }
 
+  await ensureStaffSupabaseSession();
+
   const orgId = getOrgId();
   const seeded = [];
+  let cloudConfirmed = false;
+  let hadFetchFailure = false;
+  let hadPushFailure = false;
 
   for (const { table, load } of COLLECTION_LOADERS) {
     const local = load();
     if (!localCollectionHasRecords(local)) continue;
 
     const remote = await fetchStaffSyncRows(table, orgId);
-    if (remote?.length) continue;
+    if (remote === null) {
+      hadFetchFailure = true;
+    } else if (remote.length > 0) {
+      cloudConfirmed = true;
+      continue;
+    }
 
-    const ok = await pushStaffSync({
-      table,
-      changed: local,
-      removed: [],
-      orgId,
-    });
+    const rows = local.map((record) => ({
+      id: String(record.id),
+      data: record,
+    }));
+    const ok = await pushStaffSyncRows(table, rows, [], orgId);
     if (ok) seeded.push(table);
+    else hadPushFailure = true;
   }
 
   for (const { table, load } of MAP_LOADERS) {
@@ -66,11 +77,17 @@ export async function bootstrapLocalWorkspaceToCloud() {
     if (!local || typeof local !== 'object' || !Object.keys(local).length) continue;
 
     const remote = await fetchStaffSyncRows(table, orgId);
-    if (remote?.length) continue;
+    if (remote === null) {
+      hadFetchFailure = true;
+    } else if (remote.length > 0) {
+      cloudConfirmed = true;
+      continue;
+    }
 
     const rows = Object.entries(local).map(([id, data]) => ({ id, data }));
     const ok = await pushStaffSyncRows(table, rows, [], orgId);
     if (ok) seeded.push(table);
+    else hadPushFailure = true;
   }
 
   for (const { table, recordId, load } of SINGLETON_LOADERS) {
@@ -78,28 +95,34 @@ export async function bootstrapLocalWorkspaceToCloud() {
     if (!localCollectionHasRecords(local)) continue;
 
     const remote = await fetchStaffSyncRows(table, orgId);
-    if (remote?.length) continue;
+    if (remote === null) {
+      hadFetchFailure = true;
+    } else if (remote.length > 0) {
+      cloudConfirmed = true;
+      continue;
+    }
 
     const ok = await pushStaffSyncRows(table, [{ id: recordId, data: local }], [], orgId);
     if (ok) seeded.push(table);
+    else hadPushFailure = true;
   }
 
-  if (seeded.length) {
+  const hasLocal =
+    COLLECTION_LOADERS.some(({ load }) => localCollectionHasRecords(load())) ||
+    MAP_LOADERS.some(({ load }) => Object.keys(load() || {}).length > 0) ||
+    SINGLETON_LOADERS.some(({ load }) => localCollectionHasRecords(load()));
+
+  if (seeded.length || cloudConfirmed) {
     clearSyncIssue();
-  } else {
-    const hasLocal =
-      COLLECTION_LOADERS.some(({ load }) => localCollectionHasRecords(load())) ||
-      MAP_LOADERS.some(({ load }) => Object.keys(load() || {}).length > 0) ||
-      SINGLETON_LOADERS.some(({ load }) => localCollectionHasRecords(load()));
-
-    if (hasLocal) {
-      reportSyncIssue({
-        level: 'info',
-        message:
-          'Local workspace data is on this device. We could not confirm a cloud copy yet — stay signed in on desktop to finish uploading.',
-      });
-    }
+  } else if (hasLocal && (hadFetchFailure || hadPushFailure)) {
+    reportSyncIssue({
+      level: 'info',
+      message:
+        'Local workspace data is on this device. We could not confirm a cloud copy yet — stay signed in on desktop to finish uploading.',
+    });
+  } else if (!hasLocal) {
+    clearSyncIssue();
   }
 
-  return { seeded, skipped: false };
+  return { seeded, skipped: false, cloudConfirmed };
 }
