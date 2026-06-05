@@ -11,6 +11,10 @@ import {
   pendingRemovedKey,
   pendingCreatesKey,
 } from '../src/lib/syncHelpers.js';
+import {
+  mergePortalCredentialData,
+  filterAuthCriticalDeletes,
+} from '../api/_lib/authCriticalSync.mjs';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -173,6 +177,47 @@ if (typeof localStorage !== 'undefined') {
   } finally {
     localStorage.removeItem(pendingCreatesKey('test-org', 'client_portal_credentials'));
   }
+}
+
+// ---------------------------------------------------------------------------
+// Server-side auth-critical merge (the /api/staff-sync write path). These guard
+// the same login invariant the database triggers enforce, so a regression here
+// is caught before it ever reaches production.
+// ---------------------------------------------------------------------------
+
+// An empty incoming payload must never erase configured cloud logins.
+{
+  const existing = [{ id: 'u1', username: 'plumehtx', passwordHash: 'a'.repeat(64) }];
+  const merged = mergePortalCredentialData(existing, []);
+  assert(merged.length === 1, 'server merge: empty incoming must not wipe existing login');
+  assert(merged[0].passwordHash === 'a'.repeat(64), 'server merge: existing hash must survive empty write');
+}
+
+// A username-only edit (blanked hash) must inherit the existing password hash.
+{
+  const existing = [{ id: 'u1', username: 'plumehtx', passwordHash: 'b'.repeat(64) }];
+  const incoming = [{ id: 'u1', username: 'plumehtx', passwordHash: '' }];
+  const merged = mergePortalCredentialData(existing, incoming);
+  assert(merged.length === 1, 'server merge: blanked-hash edit should keep the user');
+  assert(merged[0].passwordHash === 'b'.repeat(64), 'server merge: blanked hash should inherit existing hash');
+}
+
+// A genuine password change must replace the stored hash.
+{
+  const existing = [{ id: 'u1', username: 'plumehtx', passwordHash: 'c'.repeat(64) }];
+  const incoming = [{ id: 'u1', username: 'plumehtx', passwordHash: 'd'.repeat(64) }];
+  const merged = mergePortalCredentialData(existing, incoming);
+  assert(merged[0].passwordHash === 'd'.repeat(64), 'server merge: real password change must persist');
+}
+
+// Auth-critical deletes are blocked unless explicitly confirmed.
+{
+  const blocked = filterAuthCriticalDeletes('client_portal_credentials', ['Plume'], false);
+  assert(blocked.length === 0, 'server: unconfirmed auth delete must be blocked');
+  const allowed = filterAuthCriticalDeletes('client_portal_credentials', ['Plume'], true);
+  assert(allowed.length === 1, 'server: confirmed auth delete must pass through');
+  const nonAuth = filterAuthCriticalDeletes('cards', ['card-1'], false);
+  assert(nonAuth.length === 1, 'server: non-auth deletes are unaffected');
 }
 
 console.log('Sync merge tests passed.');
