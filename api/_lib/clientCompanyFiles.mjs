@@ -28,10 +28,12 @@ export function normalizeClientCompanyFiles(files, businessType = '') {
   return files
     .map((file) => {
       if (!file || typeof file !== 'object') return null;
-      const dataUrl = String(file.dataUrl || '').trim();
-      if (!dataUrl.startsWith('data:')) return null;
+      // Either an inline data URL (legacy / portal) or a Supabase Storage URL.
+      const dataUrl = String(file.dataUrl || file.url || '').trim();
+      if (!dataUrl.startsWith('data:') && !/^https?:\/\//i.test(dataUrl)) return null;
 
       const folder = folderIds.has(file.folder) ? file.folder : 'general';
+      const storagePath = String(file.storagePath || '').trim();
       return {
         id: String(file.id || `file-${Date.now()}`),
         name: String(file.name || '').trim() || defaultDisplayName(file.fileName),
@@ -39,6 +41,7 @@ export function normalizeClientCompanyFiles(files, businessType = '') {
         fileName: String(file.fileName || '').trim() || 'file',
         mimeType: String(file.mimeType || '').trim() || 'application/octet-stream',
         dataUrl,
+        ...(storagePath ? { storagePath } : {}),
         size: Number(file.size) || 0,
         createdAt: Number(file.createdAt) || Date.now(),
         updatedAt: Number(file.updatedAt) || Date.now(),

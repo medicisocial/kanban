@@ -2,10 +2,14 @@ import { normalizeBusinessType } from './eventFormSchemas';
 import { MAX_PDF_BYTES } from './eventPdfUpload';
 
 const MAX_FILE_BYTES = MAX_PDF_BYTES;
+/** Files uploaded to Supabase Storage bypass the JSON body limit, so allow larger. */
+export const MAX_STORAGE_FILE_BYTES = 25 * 1024 * 1024;
 export const MAX_FILES_PER_CLIENT = 40;
 
+const MULTI_UPLOAD_FOLDERS = new Set(['general', 'drink-menu', 'food-menu']);
+
 export function allowsMultipleCompanyFileUpload(folderId) {
-  return folderId === 'general';
+  return MULTI_UPLOAD_FOLDERS.has(folderId);
 }
 
 export const CLIENT_FILE_FOLDERS_BASE = [
@@ -75,16 +79,23 @@ export function formatCompanyFileSize(bytes) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function isUsableFileSource(value) {
+  const url = String(value || '').trim();
+  return url.startsWith('data:') || /^https?:\/\//i.test(url);
+}
+
 export function normalizeClientCompanyFile(file, businessType) {
   if (!file || typeof file !== 'object') return null;
-  const dataUrl = String(file.dataUrl || '').trim();
-  if (!dataUrl.startsWith('data:')) return null;
+  // Either an inline data URL (legacy / portal) or a Supabase Storage URL.
+  const dataUrl = String(file.dataUrl || file.url || '').trim();
+  if (!isUsableFileSource(dataUrl)) return null;
 
   const folderIds = new Set(getClientFileFolders(businessType).map((folder) => folder.id));
   const folder = folderIds.has(file.folder) ? file.folder : 'general';
   const name = String(file.name || '').trim() || defaultDisplayName(file.fileName);
   const fileName = String(file.fileName || '').trim() || 'file';
   const mimeType = String(file.mimeType || '').trim() || 'application/octet-stream';
+  const storagePath = String(file.storagePath || '').trim();
 
   return {
     id: String(file.id || createClientCompanyFileId()),
@@ -93,6 +104,7 @@ export function normalizeClientCompanyFile(file, businessType) {
     fileName,
     mimeType,
     dataUrl,
+    ...(storagePath ? { storagePath } : {}),
     size: Number(file.size) || 0,
     createdAt: Number(file.createdAt) || Date.now(),
     updatedAt: Number(file.updatedAt) || Date.now(),
@@ -147,6 +159,39 @@ export async function readClientCompanyFileUpload(file, { name, folder, business
     mimeType: file.type || 'application/octet-stream',
     dataUrl,
     size: file.size,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+/** Validate a file for storage upload (larger cap, no base64 read). */
+export function assertCompanyFileUploadable(file, { existingCount = 0 } = {}) {
+  if (!file) throw new Error('No file selected.');
+  if (!isAllowedFile(file)) {
+    throw new Error('Upload a PDF, image (PNG/JPG/WebP/SVG), or ZIP file.');
+  }
+  if (file.size > MAX_STORAGE_FILE_BYTES) {
+    throw new Error('Files must be 25 MB or smaller.');
+  }
+  if (existingCount >= MAX_FILES_PER_CLIENT) {
+    throw new Error(`You can store up to ${MAX_FILES_PER_CLIENT} files. Remove one to add another.`);
+  }
+}
+
+/** Build a company-file entry that points at an already-uploaded storage object. */
+export function buildStorageCompanyFileEntry({ file, name, folder, url, storagePath, businessType }) {
+  const folderIds = new Set(getClientFileFolders(businessType).map((entry) => entry.id));
+  const resolvedFolder = folderIds.has(folder) ? folder : 'general';
+  const now = Date.now();
+  return {
+    id: createClientCompanyFileId(),
+    name: String(name || '').trim() || defaultDisplayName(file?.name),
+    folder: resolvedFolder,
+    fileName: file?.name || 'file',
+    mimeType: file?.type || 'application/octet-stream',
+    dataUrl: url,
+    storagePath: storagePath || '',
+    size: file?.size || 0,
     createdAt: now,
     updatedAt: now,
   };

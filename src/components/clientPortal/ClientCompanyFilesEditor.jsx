@@ -1,16 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   allowsMultipleCompanyFileUpload,
+  assertCompanyFileUploadable,
+  buildStorageCompanyFileEntry,
   formatCompanyFileSize,
   getClientFileFolders,
   MAX_FILES_PER_CLIENT,
   normalizeClientCompanyFiles,
   readClientCompanyFileUpload,
 } from '../../utils/clientCompanyFiles';
+import {
+  canUseBrandAssetStorage,
+  deleteBrandAssetFile,
+  uploadBrandAssetFile,
+} from '../../utils/brandAssetStorage';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 import FilePreviewActions from './FilePreviewActions';
 
 export default function ClientCompanyFilesEditor({
+  client = '',
   businessType = '',
   files = [],
   onSaveFiles,
@@ -23,9 +31,28 @@ export default function ClientCompanyFilesEditor({
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [pendingUploads, setPendingUploads] = useState([]);
+  const [storageReady, setStorageReady] = useState(false);
   const fileInputRef = useRef(null);
   const savingRef = useRef(false);
   const allowsMultiple = allowsMultipleCompanyFileUpload(activeFolder);
+
+  useEffect(() => {
+    let active = true;
+    if (readOnly) {
+      setStorageReady(false);
+      return undefined;
+    }
+    canUseBrandAssetStorage()
+      .then((ready) => {
+        if (active) setStorageReady(ready);
+      })
+      .catch(() => {
+        if (active) setStorageReady(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [readOnly]);
 
   useEffect(() => {
     if (savingRef.current) return;
@@ -87,11 +114,16 @@ export default function ClientCompanyFilesEditor({
       let existingCount = localFiles.length;
       const nextPending = [];
       for (const file of selected) {
-        await readClientCompanyFileUpload(file, {
-          folder: activeFolder,
-          businessType,
-          existingCount,
-        });
+        if (storageReady) {
+          assertCompanyFileUploadable(file, { existingCount });
+        } else {
+          // Validates type/size and ensures the file is readable before confirm.
+          await readClientCompanyFileUpload(file, {
+            folder: activeFolder,
+            businessType,
+            existingCount,
+          });
+        }
         nextPending.push({ key: `${file.name}-${file.size}-${file.lastModified}`, file, name: defaultUploadName(file) });
         existingCount += 1;
       }
@@ -106,29 +138,46 @@ export default function ClientCompanyFilesEditor({
     if (pendingUploads.some((entry) => !entry.name.trim())) return;
 
     setError('');
+    setSaving(true);
     try {
       const entries = [];
       let existingCount = localFiles.length;
+      const useStorage = storageReady && (await canUseBrandAssetStorage());
       for (const pending of pendingUploads) {
-        entries.push(
-          await readClientCompanyFileUpload(pending.file, {
-            name: pending.name,
+        if (useStorage) {
+          assertCompanyFileUploadable(pending.file, { existingCount });
+          const { url, path } = await uploadBrandAssetFile(pending.file, {
+            brand: client,
             folder: activeFolder,
-            businessType,
-            existingCount,
-          }),
-        );
+          });
+          entries.push(
+            buildStorageCompanyFileEntry({
+              file: pending.file,
+              name: pending.name,
+              folder: activeFolder,
+              url,
+              storagePath: path,
+              businessType,
+            }),
+          );
+        } else {
+          entries.push(
+            await readClientCompanyFileUpload(pending.file, {
+              name: pending.name,
+              folder: activeFolder,
+              businessType,
+              existingCount,
+            }),
+          );
+        }
         existingCount += 1;
       }
-      const replaceMenuFolder =
-        activeFolder === 'drink-menu' || activeFolder === 'food-menu';
-      const existingFiles = replaceMenuFolder
-        ? localFiles.filter((file) => file.folder !== activeFolder)
-        : localFiles;
-      await persist([...entries, ...existingFiles]);
+      await persist([...entries, ...localFiles]);
       setPendingUploads([]);
     } catch (err) {
       setError(err.message || 'Could not upload file.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -158,7 +207,11 @@ export default function ClientCompanyFilesEditor({
 
   const handleRemove = async (fileId) => {
     if (!window.confirm('Remove this file?')) return;
+    const target = localFiles.find((file) => file.id === fileId);
     await persist(localFiles.filter((file) => file.id !== fileId));
+    if (target?.storagePath) {
+      void deleteBrandAssetFile(target.storagePath);
+    }
   };
 
   const folderFiles = localFiles.filter((file) => file.folder === activeFolder);
@@ -261,8 +314,8 @@ export default function ClientCompanyFilesEditor({
             onChange={handlePickFile}
           />
           <p className="text-[11px] text-white/35">
-            PDF, PNG, JPG, WebP, SVG, or ZIP · 3 MB max per file
-            {allowsMultiple && ' · Select multiple files in General'}
+            PDF, PNG, JPG, WebP, SVG, or ZIP · {storageReady ? '25 MB' : '3 MB'} max per file
+            {allowsMultiple && ' · Select multiple files'}
           </p>
         </div>
       )}

@@ -27,6 +27,7 @@ export default function ClientCompanyFilesPage({
         </div>
         <div className="px-5 py-5 sm:px-6">
           <ClientCompanyFilesEditor
+            client={client}
             businessType={businessType}
             files={companyFiles}
             onSaveFiles={onSaveCompanyFiles}
