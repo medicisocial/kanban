@@ -1,71 +1,111 @@
 import { supabase, SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { getOrgId } from '../lib/orgSession';
-import {
-  ensureStaffSupabaseSession,
-  hasStaffSupabaseSession,
-} from '../lib/staffSupabaseAuth';
+import { loadStaffSession } from './staffAuth';
+import { loadUsableClientSession } from './clientPortalAuth';
 
 const BUCKET = 'brand-assets';
 
-/** True when this browser can upload directly to storage (staff Supabase session). */
-export async function canUseBrandAssetStorage() {
-  if (!SUPABASE_ENABLED || !supabase) return false;
-  if (await hasStaffSupabaseSession()) return true;
+function clientPortalSession() {
   try {
-    const ensured = await ensureStaffSupabaseSession();
-    if (!ensured?.ok) return false;
+    return loadUsableClientSession();
   } catch {
-    return false;
+    return null;
   }
-  return hasStaffSupabaseSession();
 }
 
-function sanitizeSegment(value, fallback) {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/[^a-zA-Z0-9._-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
-  return cleaned || fallback;
+/**
+ * Auth headers for the signed-upload endpoint. Works for both the staff (agency)
+ * app and the client portal — whichever session this browser holds.
+ */
+async function buildUploadAuthHeaders() {
+  const staff = loadStaffSession();
+  if (staff?.username && staff?.signature) {
+    return {
+      Authorization: `Bearer ${btoa(JSON.stringify(staff))}`,
+      'Content-Type': 'application/json',
+    };
+  }
+
+  const client = clientPortalSession();
+  if (client?.signature) {
+    return {
+      Authorization: `Bearer ${btoa(JSON.stringify(client))}`,
+      'Content-Type': 'application/json',
+    };
+  }
+
+  if (SUPABASE_ENABLED && supabase) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (token) {
+        return {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        };
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return null;
 }
 
-function fileExtension(fileName, mimeType) {
-  const match = String(fileName || '').toLowerCase().match(/\.([a-z0-9]+)$/);
-  if (match) return `.${match[1]}`;
-  if (mimeType === 'application/pdf') return '.pdf';
-  return '';
+/**
+ * Synchronous check for whether this browser can use storage uploads at all.
+ * Both staff and client-portal sessions qualify — the server signs the upload with
+ * the service role, so no Supabase auth session is required.
+ */
+export function canUploadBrandAssetToStorage() {
+  if (!SUPABASE_ENABLED || !supabase) return false;
+  const staff = loadStaffSession();
+  if (staff?.username && staff?.signature) return true;
+  return Boolean(clientPortalSession()?.signature);
 }
 
-function randomId() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-/** Upload one file to the brand-assets bucket; returns its public URL + storage path. */
-export async function uploadBrandAssetFile(file, { brand, folder }) {
+/**
+ * Upload a file to the brand-assets bucket via a server-issued signed URL. The file
+ * goes straight to Supabase Storage, bypassing the serverless body limit, and works
+ * for client-portal users who have no Supabase auth session.
+ */
+export async function uploadBrandAssetToStorage(file, { brand, folder }) {
   if (!SUPABASE_ENABLED || !supabase) {
     throw new Error('Cloud storage is not available.');
   }
-  const orgId = sanitizeSegment(getOrgId(), 'org');
-  const brandSegment = sanitizeSegment(brand, 'brand');
-  const folderSegment = sanitizeSegment(folder, 'general');
-  const ext = fileExtension(file?.name, file?.type);
-  const path = `${orgId}/${brandSegment}/${folderSegment}/${randomId()}${ext}`;
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
-    contentType: file?.type || 'application/octet-stream',
-    upsert: false,
+  const headers = await buildUploadAuthHeaders();
+  if (!headers) {
+    throw new Error('Please sign in again to upload files.');
+  }
+
+  const res = await fetch('/api/brand-asset-sign-upload', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      brand,
+      folder,
+      orgId: getOrgId(),
+      fileName: file?.name || 'file',
+      contentType: file?.type || 'application/octet-stream',
+    }),
   });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok || !payload?.token || !payload?.path) {
+    throw new Error(payload?.error || 'Could not upload file.');
+  }
+
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .uploadToSignedUrl(payload.path, payload.token, file, {
+      contentType: file?.type || 'application/octet-stream',
+    });
   if (error) {
     throw new Error(error.message || 'Could not upload file to storage.');
   }
 
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  const url = data?.publicUrl;
-  if (!url) {
-    throw new Error('Upload succeeded but no file URL was returned.');
-  }
-  return { url, path };
+  return { url: payload.publicUrl, path: payload.path };
 }
 
 /** Best-effort delete of a storage object by path. */

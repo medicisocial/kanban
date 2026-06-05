@@ -10,9 +10,9 @@ import {
   readClientCompanyFileUpload,
 } from '../../utils/clientCompanyFiles';
 import {
-  canUseBrandAssetStorage,
+  canUploadBrandAssetToStorage,
   deleteBrandAssetFile,
-  uploadBrandAssetFile,
+  uploadBrandAssetToStorage,
 } from '../../utils/brandAssetStorage';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 import FilePreviewActions from './FilePreviewActions';
@@ -37,21 +37,7 @@ export default function ClientCompanyFilesEditor({
   const allowsMultiple = allowsMultipleCompanyFileUpload(activeFolder);
 
   useEffect(() => {
-    let active = true;
-    if (readOnly) {
-      setStorageReady(false);
-      return undefined;
-    }
-    canUseBrandAssetStorage()
-      .then((ready) => {
-        if (active) setStorageReady(ready);
-      })
-      .catch(() => {
-        if (active) setStorageReady(false);
-      });
-    return () => {
-      active = false;
-    };
+    setStorageReady(!readOnly && canUploadBrandAssetToStorage());
   }, [readOnly]);
 
   useEffect(() => {
@@ -142,11 +128,11 @@ export default function ClientCompanyFilesEditor({
     try {
       const entries = [];
       let existingCount = localFiles.length;
-      const useStorage = storageReady && (await canUseBrandAssetStorage());
+      const useStorage = canUploadBrandAssetToStorage();
       for (const pending of pendingUploads) {
         if (useStorage) {
           assertCompanyFileUploadable(pending.file, { existingCount });
-          const { url, path } = await uploadBrandAssetFile(pending.file, {
+          const { url, path } = await uploadBrandAssetToStorage(pending.file, {
             brand: client,
             folder: activeFolder,
           });
