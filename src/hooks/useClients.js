@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   DEFAULT_CLIENTS,
   DEFAULT_CLIENT_COLORS,
@@ -122,23 +122,31 @@ async function syncClientsWorkspace() {
   return { ok: true };
 }
 
-function applyClientsWorkspaceUpdate(setState, updater) {
-  let nextState = null;
-  setState((prev) => {
-    nextState = updater(prev);
-    return nextState;
-  });
-  if (!nextState) {
-    return Promise.resolve({ ok: false, error: 'Could not update client data.' });
-  }
-  return syncClientsWorkspace(nextState);
-}
-
 export function useClients() {
   const { isLegacyOrg, planType, orgId } = useStaffAuth();
   const includeDefaults = isLegacyOrg;
   const [state, setState] = useState(() =>
     normalizeClientsState(loadClientsRaw(), { includeDefaults }),
+  );
+  const stateRef = useRef(state);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  const applyClientsWorkspaceUpdate = useCallback(
+    (updater) => {
+      const prev = normalizeClientsState(stateRef.current, { includeDefaults });
+      const nextState = updater(prev);
+      if (!nextState) {
+        return Promise.resolve({ ok: false, error: 'Could not update client data.' });
+      }
+      const normalized = normalizeClientsState(nextState, { includeDefaults });
+      stateRef.current = normalized;
+      setState(normalized);
+      return syncClientsWorkspace(normalized);
+    },
+    [includeDefaults],
   );
 
   const loadClientsForSync = useCallback(
@@ -252,7 +260,7 @@ export function useClients() {
 
   const setClientAccountManager = useCallback(async (client, accountManager) => {
     if (!client) return { ok: false, error: 'Missing client.' };
-    return applyClientsWorkspaceUpdate(setState, (prev) => ({
+    return applyClientsWorkspaceUpdate((prev) => ({
       ...prev,
       accountManagers: {
         ...prev.accountManagers,
@@ -264,7 +272,7 @@ export function useClients() {
   const setClientColor = useCallback(async (client, color) => {
     const hex = normalizeHexColor(color);
     if (!client || !hex) return { ok: false, error: 'Missing client or color.' };
-    return applyClientsWorkspaceUpdate(setState, (prev) => ({
+    return applyClientsWorkspaceUpdate((prev) => ({
       ...prev,
       colors: { ...prev.colors, [client]: hex },
     }));
@@ -272,7 +280,7 @@ export function useClients() {
 
   const setClientLogo = useCallback(async (client, logo) => {
     if (!client) return { ok: false, error: 'Missing client.' };
-    return applyClientsWorkspaceUpdate(setState, (prev) => {
+    return applyClientsWorkspaceUpdate((prev) => {
       const nextLogos = { ...prev.logos };
       if (logo) {
         nextLogos[client] = logo;
@@ -285,7 +293,7 @@ export function useClients() {
 
   const setClientBusinessType = useCallback(async (client, businessType) => {
     if (!client) return { ok: false, error: 'Missing client.' };
-    return applyClientsWorkspaceUpdate(setState, (prev) => ({
+    return applyClientsWorkspaceUpdate((prev) => ({
       ...prev,
       businessTypes: {
         ...prev.businessTypes,
@@ -298,7 +306,7 @@ export function useClients() {
     if (!client) return { ok: false, error: 'Missing client.' };
 
     const { color, businessType, logo, photoGalleryLink } = patch;
-    return applyClientsWorkspaceUpdate(setState, (prev) => {
+    return applyClientsWorkspaceUpdate((prev) => {
       const next = { ...prev };
       if (color) {
         const hex = normalizeHexColor(color);
@@ -342,7 +350,7 @@ export function useClients() {
   );
 
   const setContentTypeColor = useCallback(async (contentType, color) => {
-    return applyClientsWorkspaceUpdate(setState, (prev) => {
+    return applyClientsWorkspaceUpdate((prev) => {
       const current = normalizeContentTypeColors(prev.contentTypeColors || {});
       if (!color) {
         const next = { ...current };
@@ -360,7 +368,7 @@ export function useClients() {
   }, []);
 
   const resetContentTypeColors = useCallback(async () => {
-    return applyClientsWorkspaceUpdate(setState, (prev) => ({
+    return applyClientsWorkspaceUpdate((prev) => ({
       ...prev,
       contentTypeColors: {},
     }));
@@ -371,7 +379,7 @@ export function useClients() {
     if (!hex) return { ok: false, error: 'Invalid color.' };
 
     let atLimit = false;
-    const result = await applyClientsWorkspaceUpdate(setState, (prev) => {
+    const result = await applyClientsWorkspaceUpdate((prev) => {
       const current = normalizeCustomColorPalette(prev.customColorPalette);
       if (current.includes(hex)) return prev;
       if (current.length >= 24) {
@@ -391,7 +399,7 @@ export function useClients() {
     const hex = normalizeHexColor(color);
     if (!hex) return { ok: false, error: 'Invalid color.' };
 
-    return applyClientsWorkspaceUpdate(setState, (prev) => ({
+    return applyClientsWorkspaceUpdate((prev) => ({
       ...prev,
       customColorPalette: normalizeCustomColorPalette(prev.customColorPalette).filter(
         (entry) => entry !== hex,
@@ -402,7 +410,7 @@ export function useClients() {
   const syncPortalPasswordVault = useCallback(async (client, draftUsers, savedUsers) => {
     if (!client) return { ok: true };
 
-    return applyClientsWorkspaceUpdate(setState, (prev) => {
+    return applyClientsWorkspaceUpdate((prev) => {
       const nextVault = { ...(prev.portalPasswordVault || {}) };
       const clientVault = { ...(nextVault[client] || {}) };
 
@@ -440,7 +448,7 @@ export function useClients() {
     if (!client) return { ok: false, error: 'Missing client.' };
 
     const normalized = normalizeClientContacts(contacts);
-    return applyClientsWorkspaceUpdate(setState, (prev) => ({
+    return applyClientsWorkspaceUpdate((prev) => ({
       ...prev,
       contacts: {
         ...prev.contacts,
@@ -457,7 +465,7 @@ export function useClients() {
   const setClientSocialLogins = useCallback(async (client, logins) => {
     if (!client) return { ok: false, error: 'Missing client.' };
 
-    return applyClientsWorkspaceUpdate(setState, (prev) => ({
+    return applyClientsWorkspaceUpdate((prev) => ({
       ...prev,
       socialLogins: {
         ...prev.socialLogins,
@@ -477,7 +485,7 @@ export function useClients() {
 
   const setClientCompanyFiles = useCallback(async (client, files) => {
     if (!client) return { ok: false, error: 'Missing client.' };
-    return applyClientsWorkspaceUpdate(setState, (prev) => ({
+    return applyClientsWorkspaceUpdate((prev) => ({
       ...prev,
       companyFiles: {
         ...(prev.companyFiles || {}),
@@ -496,7 +504,7 @@ export function useClients() {
 
   const setClientSpecialMenus = useCallback(async (client, menus) => {
     if (!client) return { ok: false, error: 'Missing client.' };
-    return applyClientsWorkspaceUpdate(setState, (prev) => ({
+    return applyClientsWorkspaceUpdate((prev) => ({
       ...prev,
       specialMenus: {
         ...(prev.specialMenus || {}),
