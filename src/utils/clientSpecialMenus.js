@@ -12,8 +12,37 @@ export function createSpecialMenuId() {
   return `sm-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function normalizePdfAttachment(value) {
-  return normalizeEventPdfAttachment(value);
+export function createSpecialMenuPdfId() {
+  return `smp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+export function defaultSpecialMenuLabel(fileName) {
+  const base = String(fileName || '').replace(/\.[^.]+$/, '').trim();
+  return base || 'Menu';
+}
+
+/** Normalize one menu PDF entry (label + attachment). */
+function normalizeMenuPdf(value) {
+  const attachment = normalizeEventPdfAttachment(value);
+  if (!attachment) return null;
+  const label = String(value?.label || '').trim() || defaultSpecialMenuLabel(attachment.name);
+  return {
+    id: String(value?.id || createSpecialMenuPdfId()),
+    label,
+    name: attachment.name,
+    dataUrl: attachment.dataUrl,
+    size: attachment.size,
+    ...(attachment.storagePath ? { storagePath: attachment.storagePath } : {}),
+  };
+}
+
+/** Accept either the new array form or the legacy single-PDF field. */
+function normalizeMenuPdfList(value) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeMenuPdf(entry)).filter(Boolean);
+  }
+  const single = normalizeMenuPdf(value);
+  return single ? [single] : [];
 }
 
 export function normalizeClientSpecialMenu(entry) {
@@ -23,13 +52,12 @@ export function normalizeClientSpecialMenu(entry) {
   const endDate = String(entry.endDate || '').trim();
   if (!name || !startDate || !endDate) return null;
 
-  const hasDrinkMenu = Boolean(entry.hasDrinkMenu);
-  const hasFoodMenu = Boolean(entry.hasFoodMenu);
-  const drinkMenuPdf = hasDrinkMenu ? normalizePdfAttachment(entry.drinkMenuPdf) : null;
-  const foodMenuPdf = hasFoodMenu ? normalizePdfAttachment(entry.foodMenuPdf) : null;
+  const drinkMenuPdfs = normalizeMenuPdfList(entry.drinkMenuPdfs ?? entry.drinkMenuPdf);
+  const foodMenuPdfs = normalizeMenuPdfList(entry.foodMenuPdfs ?? entry.foodMenuPdf);
+  const hasDrinkMenu = drinkMenuPdfs.length > 0;
+  const hasFoodMenu = foodMenuPdfs.length > 0;
 
-  if (hasDrinkMenu && !drinkMenuPdf) return null;
-  if (hasFoodMenu && !foodMenuPdf) return null;
+  if (!hasDrinkMenu && !hasFoodMenu) return null;
 
   return {
     id: String(entry.id || createSpecialMenuId()),
@@ -37,9 +65,9 @@ export function normalizeClientSpecialMenu(entry) {
     startDate,
     endDate,
     hasDrinkMenu,
-    drinkMenuPdf,
+    drinkMenuPdfs,
     hasFoodMenu,
-    foodMenuPdf,
+    foodMenuPdfs,
     createdAt: Number(entry.createdAt) || Date.now(),
     updatedAt: Number(entry.updatedAt) || Date.now(),
   };
@@ -139,10 +167,22 @@ export async function uploadSpecialMenuPdf(file, { brand } = {}) {
       brand,
       folder: 'special-menus',
     });
-    return { name: file.name, dataUrl: url, size: file.size, storagePath: path };
+    return {
+      id: createSpecialMenuPdfId(),
+      label: defaultSpecialMenuLabel(file.name),
+      name: file.name,
+      dataUrl: url,
+      size: file.size,
+      storagePath: path,
+    };
   }
 
-  return readEventPdfUpload(file);
+  const attachment = await readEventPdfUpload(file);
+  return {
+    id: createSpecialMenuPdfId(),
+    label: defaultSpecialMenuLabel(attachment.name),
+    ...attachment,
+  };
 }
 
 export const MAX_SPECIAL_MENUS = 20;

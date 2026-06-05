@@ -7,9 +7,30 @@ export const MAX_STORAGE_FILE_BYTES = 25 * 1024 * 1024;
 export const MAX_FILES_PER_CLIENT = 40;
 
 const MULTI_UPLOAD_FOLDERS = new Set(['general', 'drink-menu', 'food-menu']);
+/** Folders where files can be organized into named sub-groups (e.g. "Cocktails"). */
+const GROUPED_FOLDERS = new Set(['general', 'drink-menu', 'food-menu']);
 
 export function allowsMultipleCompanyFileUpload(folderId) {
   return MULTI_UPLOAD_FOLDERS.has(folderId);
+}
+
+export function allowsCompanyFileGroups(folderId) {
+  return GROUPED_FOLDERS.has(folderId);
+}
+
+function normalizeGroupName(value) {
+  return String(value || '').trim().slice(0, 60);
+}
+
+/** Distinct, sorted group names present among files in a folder. */
+export function getCompanyFileGroups(files, folderId) {
+  const groups = new Set();
+  for (const file of Array.isArray(files) ? files : []) {
+    if (file?.folder !== folderId) continue;
+    const group = normalizeGroupName(file?.group);
+    if (group) groups.add(group);
+  }
+  return [...groups].sort((a, b) => a.localeCompare(b));
 }
 
 export const CLIENT_FILE_FOLDERS_BASE = [
@@ -96,11 +117,13 @@ export function normalizeClientCompanyFile(file, businessType) {
   const fileName = String(file.fileName || '').trim() || 'file';
   const mimeType = String(file.mimeType || '').trim() || 'application/octet-stream';
   const storagePath = String(file.storagePath || '').trim();
+  const group = allowsCompanyFileGroups(folder) ? normalizeGroupName(file.group) : '';
 
   return {
     id: String(file.id || createClientCompanyFileId()),
     name,
     folder,
+    ...(group ? { group } : {}),
     fileName,
     mimeType,
     dataUrl,
@@ -131,7 +154,7 @@ export function groupClientCompanyFilesByFolder(files, businessType) {
   return grouped;
 }
 
-export async function readClientCompanyFileUpload(file, { name, folder, businessType, existingCount = 0 } = {}) {
+export async function readClientCompanyFileUpload(file, { name, folder, group, businessType, existingCount = 0 } = {}) {
   if (!file) throw new Error('No file selected.');
   if (!isAllowedFile(file)) {
     throw new Error('Upload a PDF, image (PNG/JPG/WebP/SVG), or ZIP file.');
@@ -150,11 +173,13 @@ export async function readClientCompanyFileUpload(file, { name, folder, business
     throw new Error('Could not read file.');
   }
 
+  const resolvedGroup = allowsCompanyFileGroups(resolvedFolder) ? normalizeGroupName(group) : '';
   const now = Date.now();
   return {
     id: createClientCompanyFileId(),
     name: String(name || '').trim() || defaultDisplayName(file.name),
     folder: resolvedFolder,
+    ...(resolvedGroup ? { group: resolvedGroup } : {}),
     fileName: file.name,
     mimeType: file.type || 'application/octet-stream',
     dataUrl,
@@ -179,14 +204,16 @@ export function assertCompanyFileUploadable(file, { existingCount = 0 } = {}) {
 }
 
 /** Build a company-file entry that points at an already-uploaded storage object. */
-export function buildStorageCompanyFileEntry({ file, name, folder, url, storagePath, businessType }) {
+export function buildStorageCompanyFileEntry({ file, name, folder, group, url, storagePath, businessType }) {
   const folderIds = new Set(getClientFileFolders(businessType).map((entry) => entry.id));
   const resolvedFolder = folderIds.has(folder) ? folder : 'general';
+  const resolvedGroup = allowsCompanyFileGroups(resolvedFolder) ? normalizeGroupName(group) : '';
   const now = Date.now();
   return {
     id: createClientCompanyFileId(),
     name: String(name || '').trim() || defaultDisplayName(file?.name),
     folder: resolvedFolder,
+    ...(resolvedGroup ? { group: resolvedGroup } : {}),
     fileName: file?.name || 'file',
     mimeType: file?.type || 'application/octet-stream',
     dataUrl: url,

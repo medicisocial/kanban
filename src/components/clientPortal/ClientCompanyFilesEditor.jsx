@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  allowsCompanyFileGroups,
   allowsMultipleCompanyFileUpload,
   assertCompanyFileUploadable,
   buildStorageCompanyFileEntry,
   formatCompanyFileSize,
   getClientFileFolders,
+  getCompanyFileGroups,
   MAX_FILES_PER_CLIENT,
   normalizeClientCompanyFiles,
   readClientCompanyFileUpload,
@@ -31,10 +33,13 @@ export default function ClientCompanyFilesEditor({
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [pendingUploads, setPendingUploads] = useState([]);
+  const [pendingGroup, setPendingGroup] = useState('');
   const [storageReady, setStorageReady] = useState(false);
   const fileInputRef = useRef(null);
   const savingRef = useRef(false);
   const allowsMultiple = allowsMultipleCompanyFileUpload(activeFolder);
+  const allowsGroups = allowsCompanyFileGroups(activeFolder);
+  const existingGroups = getCompanyFileGroups(localFiles, activeFolder);
 
   useEffect(() => {
     setStorageReady(!readOnly && canUploadBrandAssetToStorage());
@@ -56,6 +61,7 @@ export default function ClientCompanyFilesEditor({
 
   useEffect(() => {
     setPendingUploads([]);
+    setPendingGroup('');
   }, [activeFolder]);
 
   const persist = async (nextFiles) => {
@@ -128,6 +134,7 @@ export default function ClientCompanyFilesEditor({
     try {
       const entries = [];
       let existingCount = localFiles.length;
+      const group = allowsGroups ? pendingGroup.trim() : '';
       const useStorage = canUploadBrandAssetToStorage();
       for (const pending of pendingUploads) {
         if (useStorage) {
@@ -141,6 +148,7 @@ export default function ClientCompanyFilesEditor({
               file: pending.file,
               name: pending.name,
               folder: activeFolder,
+              group,
               url,
               storagePath: path,
               businessType,
@@ -151,6 +159,7 @@ export default function ClientCompanyFilesEditor({
             await readClientCompanyFileUpload(pending.file, {
               name: pending.name,
               folder: activeFolder,
+              group,
               businessType,
               existingCount,
             }),
@@ -160,6 +169,7 @@ export default function ClientCompanyFilesEditor({
       }
       await persist([...entries, ...localFiles]);
       setPendingUploads([]);
+      setPendingGroup('');
     } catch (err) {
       setError(err.message || 'Could not upload file.');
     } finally {
@@ -186,7 +196,23 @@ export default function ClientCompanyFilesEditor({
 
   const handleMove = async (fileId, folder) => {
     const next = localFiles.map((file) =>
-      file.id === fileId ? { ...file, folder, updatedAt: Date.now() } : file,
+      file.id === fileId
+        ? {
+            ...file,
+            folder,
+            // Drop the group when moving to a folder that doesn't support groups.
+            group: allowsCompanyFileGroups(folder) ? file.group : '',
+            updatedAt: Date.now(),
+          }
+        : file,
+    );
+    await persist(next);
+  };
+
+  const handleSetGroup = async (fileId, group) => {
+    const trimmed = String(group || '').trim();
+    const next = localFiles.map((file) =>
+      file.id === fileId ? { ...file, group: trimmed, updatedAt: Date.now() } : file,
     );
     await persist(next);
   };
@@ -201,12 +227,96 @@ export default function ClientCompanyFilesEditor({
   };
 
   const folderFiles = localFiles.filter((file) => file.folder === activeFolder);
+  const activeFolderLabel =
+    folders.find((folder) => folder.id === activeFolder)?.label || 'folder';
+  const groupedFolderFiles = allowsGroups
+    ? (() => {
+        const map = new Map();
+        for (const file of folderFiles) {
+          const key = String(file.group || '').trim();
+          if (!map.has(key)) map.set(key, []);
+          map.get(key).push(file);
+        }
+        const named = [...map.keys()].filter(Boolean).sort((a, b) => a.localeCompare(b));
+        const ordered = [...named, ...(map.has('') ? [''] : [])];
+        return ordered.map((key) => ({ group: key, files: map.get(key) }));
+      })()
+    : null;
   const folderClass = (folderId) =>
     `px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.16em] transition ${
       activeFolder === folderId
         ? `${btnPrimaryClass} py-1.5`
         : 'text-white/45 hover:text-white/80'
     }`;
+
+  const renderFileRow = (file) => (
+    <li key={file.id} className={`${glassInsetClass} px-3 py-3`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {readOnly ? (
+            <p className="text-sm font-medium text-white">{file.name}</p>
+          ) : (
+            <input
+              type="text"
+              value={file.name}
+              onChange={(e) => {
+                const value = e.target.value;
+                setLocalFiles((prev) =>
+                  prev.map((entry) => (entry.id === file.id ? { ...entry, name: value } : entry)),
+                );
+              }}
+              onBlur={(e) => handleRename(file.id, e.target.value)}
+              className={`${inputClass} text-sm font-medium`}
+            />
+          )}
+          <p className="mt-1 truncate text-xs text-white/40">
+            {file.fileName} · {formatCompanyFileSize(file.size)}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <FilePreviewActions title={file.name} dataUrl={file.dataUrl} fileName={file.fileName} />
+          {!readOnly && (
+            <>
+              {allowsGroups && (
+                <input
+                  type="text"
+                  list="company-file-groups"
+                  defaultValue={file.group || ''}
+                  onBlur={(e) => {
+                    if (String(e.target.value).trim() !== String(file.group || '').trim()) {
+                      handleSetGroup(file.id, e.target.value);
+                    }
+                  }}
+                  placeholder="Group"
+                  aria-label="File group"
+                  className={`${inputClass} w-auto min-w-[7rem] py-1.5 text-[10px]`}
+                />
+              )}
+              <select
+                value={file.folder}
+                onChange={(e) => handleMove(file.id, e.target.value)}
+                className={`${inputClass} w-auto min-w-[9rem] py-1.5 text-[10px]`}
+                aria-label="Move file to folder"
+              >
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => handleRemove(file.id)}
+                className="text-[10px] font-medium uppercase tracking-wider text-white/40 transition-colors hover:text-rose-300"
+              >
+                Remove
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </li>
+  );
 
   return (
     <div className="space-y-4">
@@ -237,8 +347,8 @@ export default function ClientCompanyFilesEditor({
               className={`${btnSecondaryClass} w-full justify-center py-2 text-[11px] disabled:opacity-50`}
             >
               {allowsMultiple
-                ? 'Upload files to General'
-                : `Upload to ${folders.find((folder) => folder.id === activeFolder)?.label || 'folder'}`}
+                ? `Upload files to ${activeFolderLabel}`
+                : `Upload to ${activeFolderLabel}`}
             </button>
           ) : (
             <div className={`${glassInsetClass} space-y-3 p-3`}>
@@ -272,6 +382,21 @@ export default function ClientCompanyFilesEditor({
                   </li>
                 ))}
               </ul>
+              {allowsGroups && (
+                <label className="block">
+                  <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-wider text-white/45">
+                    Group (optional)
+                  </span>
+                  <input
+                    type="text"
+                    list="company-file-groups"
+                    value={pendingGroup}
+                    onChange={(e) => setPendingGroup(e.target.value)}
+                    placeholder="e.g. Cocktails, Wine, Brunch"
+                    className={inputClass}
+                  />
+                </label>
+              )}
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -310,68 +435,28 @@ export default function ClientCompanyFilesEditor({
         <p className={`${glassInsetClass} px-3 py-4 text-sm text-white/45`}>
           {readOnly ? 'No files in this folder yet.' : 'No files yet. Upload branding assets, menus, or other documents here.'}
         </p>
-      ) : (
-        <ul className="space-y-2">
-          {folderFiles.map((file) => (
-            <li key={file.id} className={`${glassInsetClass} px-3 py-3`}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  {readOnly ? (
-                    <p className="text-sm font-medium text-white">{file.name}</p>
-                  ) : (
-                    <input
-                      type="text"
-                      value={file.name}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setLocalFiles((prev) =>
-                          prev.map((entry) =>
-                            entry.id === file.id ? { ...entry, name: value } : entry,
-                          ),
-                        );
-                      }}
-                      onBlur={(e) => handleRename(file.id, e.target.value)}
-                      className={`${inputClass} text-sm font-medium`}
-                    />
-                  )}
-                  <p className="mt-1 truncate text-xs text-white/40">
-                    {file.fileName} · {formatCompanyFileSize(file.size)}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
-                  <FilePreviewActions
-                    title={file.name}
-                    dataUrl={file.dataUrl}
-                    fileName={file.fileName}
-                  />
-                  {!readOnly && (
-                    <>
-                      <select
-                        value={file.folder}
-                        onChange={(e) => handleMove(file.id, e.target.value)}
-                        className={`${inputClass} w-auto min-w-[9rem] py-1.5 text-[10px]`}
-                        aria-label="Move file to folder"
-                      >
-                        {folders.map((folder) => (
-                          <option key={folder.id} value={folder.id}>
-                            {folder.label}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => handleRemove(file.id)}
-                        className="text-[10px] font-medium uppercase tracking-wider text-white/40 transition-colors hover:text-rose-300"
-                      >
-                        Remove
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </li>
+      ) : groupedFolderFiles ? (
+        <div className="space-y-4">
+          {groupedFolderFiles.map(({ group, files: groupFiles }) => (
+            <div key={group || '__ungrouped'} className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
+                {group || 'Ungrouped'}
+                <span className="ml-1 opacity-60">({groupFiles.length})</span>
+              </p>
+              <ul className="space-y-2">{groupFiles.map(renderFileRow)}</ul>
+            </div>
           ))}
-        </ul>
+        </div>
+      ) : (
+        <ul className="space-y-2">{folderFiles.map(renderFileRow)}</ul>
+      )}
+
+      {allowsGroups && !readOnly && (
+        <datalist id="company-file-groups">
+          {existingGroups.map((group) => (
+            <option key={group} value={group} />
+          ))}
+        </datalist>
       )}
 
       {error && <p className="text-sm text-rose-300">{error}</p>}

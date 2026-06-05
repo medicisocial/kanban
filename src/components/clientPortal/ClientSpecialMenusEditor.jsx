@@ -76,21 +76,25 @@ function ToggleYesNo({ value, onChange, disabled }) {
   );
 }
 
-function PdfUploadRow({ label, pdf, onChange, disabled, brand }) {
+function MenuPdfListEditor({ label, brand, items = [], onChange, disabled }) {
   const fileInputRef = useRef(null);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const storageReady = canUploadSpecialMenuToStorage();
   const busy = disabled || uploading;
 
-  const handleFile = async (event) => {
-    const file = event.target.files?.[0];
+  const handleAddFiles = async (event) => {
+    const files = Array.from(event.target.files || []);
     event.target.value = '';
-    if (!file) return;
+    if (!files.length) return;
     setError('');
     setUploading(true);
     try {
-      onChange(await uploadSpecialMenuPdf(file, { brand }));
+      const added = [];
+      for (const file of files) {
+        added.push(await uploadSpecialMenuPdf(file, { brand }));
+      }
+      onChange([...(items || []), ...added]);
     } catch (err) {
       setError(err.message || 'Could not upload PDF.');
     } finally {
@@ -98,60 +102,69 @@ function PdfUploadRow({ label, pdf, onChange, disabled, brand }) {
     }
   };
 
+  const updateLabel = (id, value) =>
+    onChange(items.map((item) => (item.id === id ? { ...item, label: value } : item)));
+  const removeItem = (id) => onChange(items.filter((item) => item.id !== id));
+
   return (
     <div className="space-y-2">
       <p className="text-[10px] font-medium uppercase tracking-wider text-white/45">{label}</p>
-      {pdf ? (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <span className="min-w-0 truncate text-xs text-white/75">{pdf.name}</span>
-          <FilePreviewActions
-            title={pdf.name}
-            dataUrl={pdf.dataUrl}
-            fileName={pdf.name}
-          />
-          {!disabled && (
-            <>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={busy}
-                className="text-[10px] font-medium uppercase tracking-wider text-white/50 hover:text-white disabled:opacity-50"
-              >
-                {uploading ? 'Uploading…' : 'Replace'}
-              </button>
-              <button
-                type="button"
-                onClick={() => onChange(null)}
-                disabled={busy}
-                className="text-[10px] font-medium uppercase tracking-wider text-white/40 hover:text-rose-300 disabled:opacity-50"
-              >
-                Remove
-              </button>
-            </>
-          )}
-        </div>
-      ) : (
-        !disabled && (
-          <>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={busy}
-              className={`${btnSecondaryClass} w-full justify-center py-1.5 text-[10px] disabled:opacity-50`}
-            >
-              {uploading ? 'Uploading…' : 'Upload PDF'}
-            </button>
-            <p className="text-[10px] text-white/35">PDF · {storageReady ? '25 MB' : '3 MB'} max</p>
-          </>
-        )
+
+      {items.length > 0 && (
+        <ul className="space-y-2">
+          {items.map((item) => (
+            <li key={item.id} className="rounded border border-white/10 bg-white/[0.02] p-2.5">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <input
+                  type="text"
+                  value={item.label}
+                  onChange={(e) => updateLabel(item.id, e.target.value)}
+                  placeholder="Label (e.g. Cocktails)"
+                  disabled={disabled}
+                  className={`${inputClass} min-w-0 flex-1 py-1.5 text-xs`}
+                />
+                <FilePreviewActions title={item.label || item.name} dataUrl={item.dataUrl} fileName={item.name} />
+                {!disabled && (
+                  <button
+                    type="button"
+                    onClick={() => removeItem(item.id)}
+                    disabled={busy}
+                    className="text-[10px] font-medium uppercase tracking-wider text-white/40 hover:text-rose-300 disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <p className="mt-1 truncate text-[10px] text-white/35">{item.name}</p>
+            </li>
+          ))}
+        </ul>
       )}
+
+      {!disabled && (
+        <>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={busy}
+            className={`${btnSecondaryClass} w-full justify-center py-1.5 text-[10px] disabled:opacity-50`}
+          >
+            {uploading ? 'Uploading…' : items.length ? 'Add another PDF' : 'Upload PDF'}
+          </button>
+          <p className="text-[10px] text-white/35">
+            PDF · {storageReady ? '25 MB' : '3 MB'} max · Select multiple to add several
+          </p>
+        </>
+      )}
+
       {error && <p className="text-xs text-rose-300">{error}</p>}
       <input
         ref={fileInputRef}
         type="file"
         accept="application/pdf,.pdf"
+        multiple
         className="hidden"
-        onChange={handleFile}
+        onChange={handleAddFiles}
         disabled={busy}
       />
     </div>
@@ -163,9 +176,9 @@ const EMPTY_DRAFT = {
   startDate: '',
   endDate: '',
   hasDrinkMenu: false,
-  drinkMenuPdf: null,
+  drinkMenuPdfs: [],
   hasFoodMenu: false,
-  foodMenuPdf: null,
+  foodMenuPdfs: [],
 };
 
 export default function ClientSpecialMenusEditor({
@@ -217,10 +230,14 @@ export default function ClientSpecialMenusEditor({
     if (!entry.name.trim()) return 'Enter a name for this special menu.';
     if (!entry.startDate || !entry.endDate) return 'Start and end dates are required.';
     if (entry.endDate < entry.startDate) return 'End date must be on or after the start date.';
-    if (entry.hasDrinkMenu && !entry.drinkMenuPdf) return 'Upload a drink menu PDF or choose No.';
-    if (entry.hasFoodMenu && !entry.foodMenuPdf) return 'Upload a food menu PDF or choose No.';
-    if (!entry.hasDrinkMenu && !entry.hasFoodMenu) {
-      return 'Add at least a drink menu or food menu PDF for this special.';
+    if (entry.hasDrinkMenu && !entry.drinkMenuPdfs.length) {
+      return 'Add at least one drink menu PDF or choose No.';
+    }
+    if (entry.hasFoodMenu && !entry.foodMenuPdfs.length) {
+      return 'Add at least one food menu PDF or choose No.';
+    }
+    if (!entry.drinkMenuPdfs.length && !entry.foodMenuPdfs.length) {
+      return 'Add at least one drink or food menu PDF for this special.';
     }
     return '';
   };
@@ -273,9 +290,9 @@ export default function ClientSpecialMenusEditor({
       startDate: menu.startDate,
       endDate: menu.endDate,
       hasDrinkMenu: menu.hasDrinkMenu,
-      drinkMenuPdf: menu.drinkMenuPdf,
+      drinkMenuPdfs: menu.drinkMenuPdfs || [],
       hasFoodMenu: menu.hasFoodMenu,
-      foodMenuPdf: menu.foodMenuPdf,
+      foodMenuPdfs: menu.foodMenuPdfs || [],
     });
     setError('');
   };
@@ -285,7 +302,7 @@ export default function ClientSpecialMenusEditor({
       <div>
         <h3 className="text-sm font-semibold text-white">Special event menus</h3>
         <p className="mt-1 text-sm text-white/45">
-          Limited-time menus with run dates — upload separate drink and food PDFs when applicable.
+          Limited-time menus with run dates — add multiple labeled drink and food PDFs when applicable.
         </p>
       </div>
 
@@ -315,27 +332,31 @@ export default function ClientSpecialMenusEditor({
               </div>
             )}
           </div>
-          <div className="space-y-2 text-xs">
-            {menu.hasDrinkMenu && menu.drinkMenuPdf && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="text-white/55">Drink:</span>
-                <span className="text-white/80">{menu.drinkMenuPdf.name}</span>
-                <FilePreviewActions
-                  title={menu.drinkMenuPdf.name}
-                  dataUrl={menu.drinkMenuPdf.dataUrl}
-                  fileName={menu.drinkMenuPdf.name}
-                />
+          <div className="space-y-3 text-xs">
+            {menu.hasDrinkMenu && menu.drinkMenuPdfs?.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-white/45">
+                  Drink menus
+                </span>
+                {menu.drinkMenuPdfs.map((pdf) => (
+                  <div key={pdf.id} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="text-white/80">{pdf.label || pdf.name}</span>
+                    <FilePreviewActions title={pdf.label || pdf.name} dataUrl={pdf.dataUrl} fileName={pdf.name} />
+                  </div>
+                ))}
               </div>
             )}
-            {menu.hasFoodMenu && menu.foodMenuPdf && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="text-white/55">Food:</span>
-                <span className="text-white/80">{menu.foodMenuPdf.name}</span>
-                <FilePreviewActions
-                  title={menu.foodMenuPdf.name}
-                  dataUrl={menu.foodMenuPdf.dataUrl}
-                  fileName={menu.foodMenuPdf.name}
-                />
+            {menu.hasFoodMenu && menu.foodMenuPdfs?.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-white/45">
+                  Food menus
+                </span>
+                {menu.foodMenuPdfs.map((pdf) => (
+                  <div key={pdf.id} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="text-white/80">{pdf.label || pdf.name}</span>
+                    <FilePreviewActions title={pdf.label || pdf.name} dataUrl={pdf.dataUrl} fileName={pdf.name} />
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -396,18 +417,18 @@ export default function ClientSpecialMenusEditor({
                 setDraft((prev) => ({
                   ...prev,
                   hasDrinkMenu,
-                  drinkMenuPdf: hasDrinkMenu ? prev.drinkMenuPdf : null,
+                  drinkMenuPdfs: hasDrinkMenu ? prev.drinkMenuPdfs : [],
                 }))
               }
               disabled={saving}
             />
           </div>
           {draft.hasDrinkMenu && (
-            <PdfUploadRow
-              label="Drink menu PDF"
+            <MenuPdfListEditor
+              label="Drink menu PDFs"
               brand={client}
-              pdf={draft.drinkMenuPdf}
-              onChange={(drinkMenuPdf) => setDraft((prev) => ({ ...prev, drinkMenuPdf }))}
+              items={draft.drinkMenuPdfs}
+              onChange={(drinkMenuPdfs) => setDraft((prev) => ({ ...prev, drinkMenuPdfs }))}
               disabled={saving}
             />
           )}
@@ -421,18 +442,18 @@ export default function ClientSpecialMenusEditor({
                 setDraft((prev) => ({
                   ...prev,
                   hasFoodMenu,
-                  foodMenuPdf: hasFoodMenu ? prev.foodMenuPdf : null,
+                  foodMenuPdfs: hasFoodMenu ? prev.foodMenuPdfs : [],
                 }))
               }
               disabled={saving}
             />
           </div>
           {draft.hasFoodMenu && (
-            <PdfUploadRow
-              label="Food menu PDF"
+            <MenuPdfListEditor
+              label="Food menu PDFs"
               brand={client}
-              pdf={draft.foodMenuPdf}
-              onChange={(foodMenuPdf) => setDraft((prev) => ({ ...prev, foodMenuPdf }))}
+              items={draft.foodMenuPdfs}
+              onChange={(foodMenuPdfs) => setDraft((prev) => ({ ...prev, foodMenuPdfs }))}
               disabled={saving}
             />
           )}
