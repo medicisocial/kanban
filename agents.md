@@ -27,7 +27,7 @@ enforces the invariant (`supabase/migrations/007_protect_login_data.sql`):
 
 - `trg_protect_client_portal_credentials` re-attaches blanked password hashes from the
   existing row and refuses to reduce a configured row to zero valid logins.
-- `trg_protect_team_member_login` preserves `password`/`email`/`username` when an edit omits them.
+- `trg_protect_team_member_login` preserves `password`/`email`/`username`/`roles`/`name` when an edit omits them, so a staff (agency team) account can't be blanked or lose access.
 
 Rules when changing anything that touches these tables:
 
