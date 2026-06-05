@@ -16,6 +16,7 @@ import {
   deleteBrandAssetFile,
   uploadBrandAssetToStorage,
 } from '../../utils/brandAssetStorage';
+import { beginEditorFilePick, endEditorFilePick } from '../../utils/editorPickGuard';
 import { incomingRecordsAreStale } from '../../utils/editorSyncGuard';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 import FilePreviewActions from './FilePreviewActions';
@@ -27,7 +28,13 @@ export default function ClientCompanyFilesEditor({
   onSaveFiles,
   readOnly = false,
 }) {
-  const folders = getClientFileFolders(businessType);
+  // businessType can briefly clear during a background sync; keep the last known
+  // value so folder tabs (drink/food menu) do not collapse mid-upload.
+  const businessTypeRef = useRef(businessType);
+  if (businessType) businessTypeRef.current = businessType;
+  const stableBusinessType = businessType || businessTypeRef.current;
+
+  const folders = getClientFileFolders(stableBusinessType);
   const [activeFolder, setActiveFolder] = useState(folders[0]?.id || 'general');
   const [localFiles, setLocalFiles] = useState(() => normalizeClientCompanyFiles(files, businessType));
   const [message, setMessage] = useState('');
@@ -63,7 +70,7 @@ export default function ClientCompanyFilesEditor({
     // props (e.g. the portal refetches on window focus after the file picker closes).
     if (pendingUploadsRef.current.length > 0) return;
 
-    const normalized = normalizeClientCompanyFiles(files, businessType);
+    const normalized = normalizeClientCompanyFiles(files, stableBusinessType);
     // Keep local state when it is newer than a lagging props read after save.
     if (incomingRecordsAreStale(localFilesRef.current, normalized)) return;
 
@@ -75,18 +82,22 @@ export default function ClientCompanyFilesEditor({
   }, [files, businessType]);
 
   useEffect(() => {
+    if (savingRef.current || pickingFileRef.current || pendingUploadsRef.current.length > 0) return;
     if (!folders.some((folder) => folder.id === activeFolder)) {
       setActiveFolder(folders[0]?.id || 'general');
     }
   }, [folders, activeFolder]);
 
-  useEffect(() => {
+  const selectFolder = (folderId) => {
+    if (folderId === activeFolder) return;
+    pendingUploadsRef.current = [];
     setPendingUploads([]);
     setPendingGroup('');
-  }, [activeFolder]);
+    setActiveFolder(folderId);
+  };
 
   const persist = async (nextFiles) => {
-    const normalized = normalizeClientCompanyFiles(nextFiles, businessType);
+    const normalized = normalizeClientCompanyFiles(nextFiles, stableBusinessType);
     setLocalFiles(normalized);
     if (!onSaveFiles) return;
 
@@ -108,9 +119,21 @@ export default function ClientCompanyFilesEditor({
 
   const defaultUploadName = (file) => file.name.replace(/\.[^.]+$/, '').trim() || file.name;
 
+  const releaseFilePick = () => {
+    if (!pickingFileRef.current) return;
+    pickingFileRef.current = false;
+    endEditorFilePick();
+  };
+
   const openFilePicker = () => {
     if (readOnly || saving) return;
     pickingFileRef.current = true;
+    beginEditorFilePick();
+    // Cancel closes the picker without firing onChange — release on window focus.
+    const onWindowFocus = () => {
+      window.setTimeout(releaseFilePick, 750);
+    };
+    window.addEventListener('focus', onWindowFocus, { once: true });
     fileInputRef.current?.click();
   };
 
@@ -118,7 +141,7 @@ export default function ClientCompanyFilesEditor({
     const picked = Array.from(event.target.files || []);
     event.target.value = '';
     if (!picked.length || readOnly) {
-      pickingFileRef.current = false;
+      releaseFilePick();
       return;
     }
 
@@ -126,7 +149,7 @@ export default function ClientCompanyFilesEditor({
     setError('');
 
     if (localFiles.length + selected.length > MAX_FILES_PER_CLIENT) {
-      pickingFileRef.current = false;
+      releaseFilePick();
       setError(
         `You can store up to ${MAX_FILES_PER_CLIENT} files. Remove ${localFiles.length + selected.length - MAX_FILES_PER_CLIENT} before adding more.`,
       );
@@ -143,7 +166,7 @@ export default function ClientCompanyFilesEditor({
           // Validates type/size and ensures the file is readable before confirm.
           await readClientCompanyFileUpload(file, {
             folder: activeFolder,
-            businessType,
+            businessType: stableBusinessType,
             existingCount,
           });
         }
@@ -157,7 +180,7 @@ export default function ClientCompanyFilesEditor({
     } catch (err) {
       setError(err.message || 'Could not upload file.');
     } finally {
-      pickingFileRef.current = false;
+      releaseFilePick();
     }
   };
 
@@ -188,7 +211,7 @@ export default function ClientCompanyFilesEditor({
               group,
               url,
               storagePath: path,
-              businessType,
+              businessType: stableBusinessType,
             }),
           );
         } else {
@@ -197,7 +220,7 @@ export default function ClientCompanyFilesEditor({
               name: pending.name,
               folder: activeFolder,
               group,
-              businessType,
+              businessType: stableBusinessType,
               existingCount,
             }),
           );
@@ -369,7 +392,7 @@ export default function ClientCompanyFilesEditor({
             <button
               key={folder.id}
               type="button"
-              onClick={() => setActiveFolder(folder.id)}
+              onClick={() => selectFolder(folder.id)}
               className={folderClass(folder.id)}
             >
               {folder.label}

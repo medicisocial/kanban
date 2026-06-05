@@ -9,6 +9,7 @@ import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupa
 import { pushStaffSyncSingleton } from './staffSyncApi';
 import { reportSyncIssue } from './workspaceSyncHealth';
 import { seedRecordsToCloud } from './syncSeed';
+import { isEditorFilePickActive } from '../utils/editorPickGuard';
 import { subscribeWorkspaceRefetch } from '../utils/workspaceReload';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import {
@@ -79,6 +80,7 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
     let refetchTimer = null;
 
     const applyRemote = async () => {
+      if (isEditorFilePickActive()) return;
       try {
         const rows = await fetchRowsWithTimeout(store);
         if (!active) return;
@@ -157,6 +159,7 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
     };
 
     const applyRealtimePayload = (payload) => {
+      if (isEditorFilePickActive()) return;
       if (!active || !loadedRef.current || !payload?.eventType) {
         scheduleApplyRemote();
         return;
@@ -206,7 +209,7 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
     let lastFetchAt = 0;
 
     const onFocus = () => {
-      if (!active || !loadedRef.current) return;
+      if (!active || !loadedRef.current || isEditorFilePickActive()) return;
       const isEmpty = !localCollectionHasRecords(localValueRef.current);
       if (!isEmpty && Date.now() - lastFetchAt < FOCUS_REFETCH_MIN_MS) return;
       applyRemote();

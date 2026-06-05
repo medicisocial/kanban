@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { beginEditorFilePick, endEditorFilePick } from '../../utils/editorPickGuard';
 import {
   canUploadSpecialMenuToStorage,
   createSpecialMenuId,
@@ -88,15 +89,27 @@ function MenuPdfListEditor({ label, brand, items = [], onChange, disabled, onUpl
     onUploadBusyChange?.(next);
   };
 
+  const releaseFilePick = () => {
+    endEditorFilePick();
+  };
+
   const openFilePicker = () => {
     if (busy) return;
+    beginEditorFilePick();
+    const onWindowFocus = () => {
+      window.setTimeout(releaseFilePick, 750);
+    };
+    window.addEventListener('focus', onWindowFocus, { once: true });
     fileInputRef.current?.click();
   };
 
   const handleAddFiles = async (event) => {
     const files = Array.from(event.target.files || []);
     event.target.value = '';
-    if (!files.length) return;
+    if (!files.length) {
+      releaseFilePick();
+      return;
+    }
     setError('');
     setUploadBusy(true);
     try {
@@ -109,6 +122,7 @@ function MenuPdfListEditor({ label, brand, items = [], onChange, disabled, onUpl
       setError(err.message || 'Could not upload PDF.');
     } finally {
       setUploadBusy(false);
+      releaseFilePick();
     }
   };
 

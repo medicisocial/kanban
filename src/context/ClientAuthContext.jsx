@@ -12,6 +12,7 @@ import {
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { subscribeClientPortalChanges } from '../lib/clientPortalRealtime';
 import { normalizeContentTypeColors, setContentTypeColorOverrides } from '../utils/contentTypeColors';
+import { isEditorFilePickActive } from '../utils/editorPickGuard';
 import { mergeBrandCompanyFiles, mergeBrandSpecialMenus } from '../utils/clientsWorkspaceMerge';
 
 const PORTAL_POLL_MS = SUPABASE_ENABLED ? 45000 : 15000;
@@ -44,7 +45,12 @@ export function ClientAuthProvider({ children }) {
   const refreshPortalData = useCallback(async (activeSession = session, { silent = false } = {}) => {
     if (!activeSession) return;
     // A background refresh must never stomp on a save the user just made.
-    if (silent && (savingProfileRef.current > 0 || Date.now() < saveCooldownUntilRef.current)) {
+    if (
+      silent &&
+      (savingProfileRef.current > 0 ||
+        Date.now() < saveCooldownUntilRef.current ||
+        isEditorFilePickActive())
+    ) {
       return;
     }
     if (!silent) setLoadingData(true);
@@ -54,7 +60,12 @@ export function ClientAuthProvider({ children }) {
       if (!isMountedRef.current) return;
       // Re-check after the network round-trip: a save may have started while
       // this refresh was in flight.
-      if (silent && (savingProfileRef.current > 0 || Date.now() < saveCooldownUntilRef.current)) {
+      if (
+        silent &&
+        (savingProfileRef.current > 0 ||
+          Date.now() < saveCooldownUntilRef.current ||
+          isEditorFilePickActive())
+      ) {
         return;
       }
       // Merge files/menus against what we already have so a background refresh
@@ -63,7 +74,9 @@ export function ClientAuthProvider({ children }) {
       setPortalData((prev) => {
         if (!prev || prev.brand !== data.brand) return data;
         return {
+          ...prev,
           ...data,
+          businessType: data.businessType || prev.businessType,
           companyFiles: mergeBrandCompanyFiles(prev.companyFiles, data.companyFiles),
           specialMenus: mergeBrandSpecialMenus(prev.specialMenus, data.specialMenus),
         };
