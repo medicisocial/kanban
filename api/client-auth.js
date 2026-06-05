@@ -117,6 +117,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid username or password.' });
   }
 
-  const session = createClientSession(result.brand, result.user.username || username, result.orgId);
+  const orgId = result.orgId || 'medici';
+  const session = createClientSession(result.brand, result.user.username || username, orgId);
   return res.status(200).json({ session, brand: result.brand });
 }

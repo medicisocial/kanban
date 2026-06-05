@@ -1,14 +1,14 @@
 import { useEffect } from 'react';
-import { ClientsProvider } from './context/ClientsContext';
 import { ClientAuthProvider, useClientAuth } from './context/ClientAuthContext';
-import { loadClientSession } from './utils/clientPortalAuth';
+import { ClientPortalClientsBridge } from './context/ClientPortalClientsBridge';
+import { loadUsableClientSession } from './utils/clientPortalAuth';
 import ClientHubPortal from './components/ClientHubPortal';
 
 function ClientPortalShell({ onSignOut }) {
   const { ready, isAuthenticated } = useClientAuth();
 
   useEffect(() => {
-    if (ready && !isAuthenticated && !loadClientSession()) {
+    if (ready && !isAuthenticated && !loadUsableClientSession()) {
       onSignOut?.();
     }
   }, [ready, isAuthenticated, onSignOut]);
@@ -38,10 +38,10 @@ function ClientPortalShell({ onSignOut }) {
 
 export default function ClientPortalApp({ onSignOut }) {
   return (
-    <ClientsProvider>
-      <ClientAuthProvider>
+    <ClientAuthProvider>
+      <ClientPortalClientsBridge>
         <ClientPortalShell onSignOut={onSignOut} />
-      </ClientAuthProvider>
-    </ClientsProvider>
+      </ClientPortalClientsBridge>
+    </ClientAuthProvider>
   );
 }

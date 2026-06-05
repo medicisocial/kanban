@@ -3,7 +3,7 @@ import {
   clearClientSession,
   fetchClientPortalData,
   isClientHubPortal,
-  loadClientSession,
+  loadUsableClientSession,
   loginClientPortal,
   saveClientSession,
   submitClientPortalProfile,
@@ -19,8 +19,8 @@ const PORTAL_POLL_MS = SUPABASE_ENABLED ? 45000 : 15000;
 const ClientAuthContext = createContext(null);
 
 export function ClientAuthProvider({ children }) {
-  const [session, setSession] = useState(() => loadClientSession());
-  const [brand, setBrand] = useState(() => loadClientSession()?.brand || '');
+  const [session, setSession] = useState(() => loadUsableClientSession());
+  const [brand, setBrand] = useState(() => loadUsableClientSession()?.brand || '');
   const [ready, setReady] = useState(true);
   const [portalData, setPortalData] = useState(null);
   const [loadingData, setLoadingData] = useState(false);
@@ -47,7 +47,8 @@ export function ClientAuthProvider({ children }) {
     } catch (error) {
       if (!isMountedRef.current) return;
       setDataError(error.message || 'Could not load portal.');
-      if (error.message?.includes('Session expired')) {
+      if (error.message?.includes('Session expired') || error.message?.includes('Unauthorized')) {
+        clearClientSession();
         setSession(null);
         setBrand('');
         setPortalData(null);

@@ -54,6 +54,22 @@ export function loadClientSession() {
   }
 }
 
+/** Client-side gate before hitting /api/client-portal (signature is server-only). */
+export function isClientSessionUsable(session) {
+  if (session?.type !== 'client') return false;
+  if (!session.brand || !session.expires) return false;
+  return Date.now() < Number(session.expires);
+}
+
+export function loadUsableClientSession() {
+  const session = loadClientSession();
+  if (!isClientSessionUsable(session)) {
+    if (session) clearClientSession();
+    return null;
+  }
+  return session;
+}
+
 export function saveClientSession(session) {
   localStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(session));
 }

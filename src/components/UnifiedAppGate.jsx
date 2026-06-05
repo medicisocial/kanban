@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { normalizePlanType } from '../constants/plans';
-import { clearClientSession, loadClientSession } from '../utils/clientPortalAuth';
+import { clearClientSession, loadUsableClientSession } from '../utils/clientPortalAuth';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { StaffAuthProvider, useStaffAuth } from '../context/StaffAuthContext';
 import { ClientsProvider } from '../context/ClientsContext';
@@ -86,6 +86,7 @@ function UnifiedAppGateInner() {
   const [clientLogin, setClientLogin] = useState(initialGate.clientLogin);
   const [clientResetToken, setClientResetToken] = useState(initialGate.clientResetToken);
   const [agencyRecovery, setAgencyRecovery] = useState(initialGate.agencyRecovery);
+  const [preferredAuthMode, setPreferredAuthMode] = useState(null);
 
   const applyGate = useCallback((gate) => {
     setGateView(gate.view);
@@ -125,21 +126,31 @@ function UnifiedAppGateInner() {
   useEffect(() => {
     if (!ready) return;
 
+    if (preferredAuthMode === 'client') {
+      const client = loadUsableClientSession();
+      if (client?.brand) {
+        setMode('client');
+        return;
+      }
+      setPreferredAuthMode(null);
+    }
+
     if (session) {
       setMode('staff');
       return;
     }
 
-    const client = loadClientSession();
+    const client = loadUsableClientSession();
     if (client?.brand) {
       setMode('client');
       return;
     }
 
     setMode('login');
-  }, [ready, session]);
+  }, [ready, session, preferredAuthMode]);
 
   const handleSignOut = useCallback(() => {
+    setPreferredAuthMode(null);
     clearClientSession();
     setMode('login');
     const gate = {
@@ -242,7 +253,10 @@ function UnifiedAppGateInner() {
 
   return (
     <UnifiedLogin
-      onAuthenticated={setMode}
+      onAuthenticated={(authMode) => {
+        setPreferredAuthMode(authMode);
+        setMode(authMode);
+      }}
       checking={!ready}
       signupMode={gateView === 'signup'}
       selectedPlan={selectedPlan}
