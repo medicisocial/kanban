@@ -9,7 +9,8 @@
     "build": "node scripts/check-module-imports.mjs && node scripts/test-sync-merge.mjs && node scripts/test-brand-asset-upload.mjs && node scripts/test-company-file-pick.mjs && vite build",
     "preview": "vite preview",
     "setup:service-role": "node scripts/rotate-supabase-secret-key-playwright.mjs",
-    "setup:service-role:edge": "powershell -ExecutionPolicy Bypass -File scripts/launch-edge-debug.ps1; node scripts/sync-service-role-from-edge.mjs"
+    "setup:service-role:edge": "powershell -ExecutionPolicy Bypass -File scripts/launch-edge-debug.ps1; node scripts/sync-service-role-from-edge.mjs",
+    "setup:service-role:sync": "node scripts/sync-service-role-from-dotenv.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

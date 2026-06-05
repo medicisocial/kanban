@@ -1,4 +1,4 @@
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import { pathToFileURL } from 'url';
 import { loadEnv } from 'vite';
@@ -48,6 +48,16 @@ function createMockResponse(res) {
   };
 }
 
+const SERVER_ENV_FALLBACK_KEYS = ['SUPABASE_SERVICE_ROLE_KEY'];
+
+function readDotEnvValue(envDir, key) {
+  const envPath = resolve(envDir, '.env');
+  if (!existsSync(envPath)) return '';
+  const match = readFileSync(envPath, 'utf8').match(new RegExp(`^${key}=(.+)$`, 'm'));
+  if (!match) return '';
+  return match[1].trim().replace(/^["']|["']$/g, '');
+}
+
 function applyEnv(envDir, mode) {
   const env = loadEnv(mode, envDir, '');
   for (const [key, value] of Object.entries(env)) {
@@ -55,15 +65,11 @@ function applyEnv(envDir, mode) {
       process.env[key] = value;
     }
   }
-  // loadEnv skips empty strings; merge .env again so commented keys in .env can be set in .env.local.
-  const localPath = resolve(envDir, '.env.local');
-  if (existsSync(localPath)) {
-    const localEnv = loadEnv('development', envDir, '');
-    for (const [key, value] of Object.entries(localEnv)) {
-      if (value && process.env[key] === undefined) {
-        process.env[key] = value;
-      }
-    }
+
+  for (const key of SERVER_ENV_FALLBACK_KEYS) {
+    if (process.env[key]) continue;
+    const fallback = readDotEnvValue(envDir, key);
+    if (fallback) process.env[key] = fallback;
   }
 }
 
