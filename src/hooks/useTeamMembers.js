@@ -16,9 +16,9 @@ import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDe
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 
-function persistTeamMemberUpsert(member) {
-  if (!SUPABASE_ENABLED || !member) return;
-  void pushStaffSyncRecords('team_members', [member]);
+async function persistTeamMemberUpsert(member) {
+  if (!SUPABASE_ENABLED || !member) return true;
+  return pushStaffSyncRecords('team_members', [member]);
 }
 
 function persistTeamMemberDelete(id) {
@@ -108,8 +108,8 @@ export function useTeamMembers() {
     if (!addedId) {
       return { ok: false, error: 'A team member with that name already exists.' };
     }
-    if (addedMember) persistTeamMemberUpsert(addedMember);
-    return { ok: true, id: addedId };
+    if (addedMember) void persistTeamMemberUpsert(addedMember);
+    return { ok: true, id: addedId, member: addedMember };
   }, []);
 
   const updateTeamMember = useCallback((id, updates) => {
@@ -121,7 +121,20 @@ export function useTeamMembers() {
         return persisted;
       }),
     );
-    if (persisted) persistTeamMemberUpsert(persisted);
+    return persisted;
+  }, []);
+
+  const saveTeamMemberToCloud = useCallback(async (member) => {
+    if (!member) return { ok: false, error: 'Nothing to save.' };
+    const ok = await persistTeamMemberUpsert(member);
+    if (!ok) {
+      return {
+        ok: false,
+        error:
+          'Saved on this device but could not sync to the cloud. Stay signed in on desktop and try Save again.',
+      };
+    }
+    return { ok: true };
   }, []);
 
   const removeTeamMember = useCallback((id) => {
@@ -142,7 +155,7 @@ export function useTeamMembers() {
         return persisted;
       }),
     );
-    if (persisted) persistTeamMemberUpsert(persisted);
+    if (persisted) void persistTeamMemberUpsert(persisted);
   }, []);
 
   return {
@@ -153,6 +166,7 @@ export function useTeamMembers() {
     getAllTeamMemberNames,
     addTeamMember,
     updateTeamMember,
+    saveTeamMemberToCloud,
     removeTeamMember,
     toggleTeamMemberRole,
   };

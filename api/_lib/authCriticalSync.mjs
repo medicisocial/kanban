@@ -93,16 +93,48 @@ export async function sanitizeAuthCriticalUpserts(table, upserts, orgId) {
   }
 
   if (table === 'team_members') {
-    return upserts.filter((row) => {
-      const member = row?.data;
-      const email = member?.email?.trim() || member?.username?.trim();
-      const passwordHash = member?.passwordHash?.trim();
-      if (!email || !passwordHash) {
-        console.warn(`[auth-critical] blocked incomplete team member upsert for ${row?.id}`);
-        return false;
+    let existingMap = null;
+    try {
+      existingMap = (await fetchCollectionMap('team_members', orgId)) || {};
+    } catch (error) {
+      console.error('[auth-critical] team member fetch failed:', error?.message || error);
+    }
+
+    const sanitized = [];
+    for (const row of upserts) {
+      if (!row?.id) continue;
+      const incoming = row?.data && typeof row.data === 'object' ? row.data : {};
+      const name = incoming.name?.trim();
+      if (!name) {
+        console.warn(`[auth-critical] blocked team member without name: ${row.id}`);
+        continue;
       }
-      return true;
-    });
+
+      const existing =
+        existingMap?.[row.id] && typeof existingMap[row.id] === 'object'
+          ? existingMap[row.id]
+          : {};
+      const merged = { ...existing, ...incoming, name };
+
+      if (!merged.password && existing.password) {
+        merged.password = existing.password;
+      }
+      if (!merged.roles?.length && existing.roles?.length) {
+        merged.roles = existing.roles;
+      }
+
+      const email = (merged.email || merged.username || '').trim().toLowerCase();
+      if (email) {
+        merged.email = email;
+        merged.username = email;
+      } else if (existing.email || existing.username) {
+        merged.email = (existing.email || existing.username || '').trim().toLowerCase();
+        merged.username = merged.email || existing.username;
+      }
+
+      sanitized.push({ id: row.id, data: merged });
+    }
+    return sanitized;
   }
 
   return upserts;

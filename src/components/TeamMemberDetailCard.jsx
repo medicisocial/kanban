@@ -135,7 +135,11 @@ export default function TeamMemberDetailCard({
 
       draftDirtyRef.current = false;
       lastSnapshotRef.current = memberSnapshotKey({ ...member, ...payload });
-      onSave(member.id, payload);
+      const result = await onSave(member.id, payload);
+      if (result?.ok === false) {
+        setError(result.error || 'Could not save team member.');
+        return;
+      }
     } catch (err) {
       setError(err.message || 'Could not save photo.');
     } finally {

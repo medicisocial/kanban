@@ -34,6 +34,7 @@ export default function TeamManagementPage() {
     teamMembers,
     addTeamMember,
     updateTeamMember,
+    saveTeamMemberToCloud,
     removeTeamMember,
     getClientColor,
   } = useClientsContext();
@@ -62,8 +63,15 @@ export default function TeamManagementPage() {
     setTimeout(() => setMessage(''), 4000);
   };
 
-  const handleSaveMember = (id, draft) => {
-    updateTeamMember(id, draft);
+  const handleSaveMember = async (id, draft) => {
+    const persisted = updateTeamMember(id, draft);
+    if (!persisted) {
+      return { ok: false, error: 'Could not update team member.' };
+    }
+
+    const cloud = await saveTeamMemberToCloud(persisted);
+    if (!cloud.ok) return cloud;
+
     if (session) {
       window.setTimeout(async () => {
         try {
@@ -76,6 +84,7 @@ export default function TeamManagementPage() {
     setMessage('Team member saved.');
     setTimeout(() => setMessage(''), 3000);
     setSelectedMemberId(null);
+    return { ok: true };
   };
 
   const handleRemoveMember = (id) => {
