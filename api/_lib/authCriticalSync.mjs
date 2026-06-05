@@ -201,8 +201,18 @@ export async function sanitizeAuthCriticalUpserts(
   return upserts;
 }
 
+/**
+ * Restore a portal password hash from the staff vault ONLY when the stored hash is
+ * blank/missing. A login attempt must never override an existing valid hash —
+ * otherwise a stale vault value (e.g. password == username) silently rewrites the
+ * real password on every matching guess. This was the recurring failure where one
+ * brand's login kept "becoming invalid" while others were fine.
+ */
 export async function repairPortalCredentialFromVault({ brand, orgId, user, password }) {
   if (!brand || !orgId || !user?.id || !password) return null;
+
+  // Never touch a credential that already has a usable hash.
+  if (user.passwordHash && user.passwordHash.trim()) return null;
 
   const clients = await fetchRecord('clients', 'workspace', orgId);
   const vaultPassword = clients?.portalPasswordVault?.[brand]?.[user.id];
@@ -211,6 +221,10 @@ export async function repairPortalCredentialFromVault({ brand, orgId, user, pass
   const rows = await fetchCollectionMap('client_portal_credentials', orgId);
   const users = normalizeBrandUsers(rows?.[brand]);
   if (!users.length) return null;
+
+  // Only fill the specific user when their stored hash is still blank.
+  const target = users.find((entry) => entry.id === user.id);
+  if (!target || (target.passwordHash && target.passwordHash.trim())) return null;
 
   const passwordHash = hashValue(String(password).trim());
   const nextUsers = users.map((entry) =>

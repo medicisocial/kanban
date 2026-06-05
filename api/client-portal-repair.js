@@ -70,8 +70,10 @@ export default async function handler(req, res) {
       const nextUsers = users.map((user) => {
         const plainPassword = brandVault[user.id];
         if (!plainPassword) return user;
+        // Only restore a blank/missing hash — never override a configured password,
+        // so a stale vault value can't silently change a working login.
+        if (user.passwordHash && user.passwordHash.trim()) return user;
         const passwordHash = hashValue(String(plainPassword).trim());
-        if (passwordHash === user.passwordHash?.trim().toLowerCase()) return user;
         repairedUsers += 1;
         brandRepaired = true;
         return { ...user, passwordHash };
