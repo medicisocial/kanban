@@ -2,8 +2,11 @@ import { supabase, SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { getOrgId } from '../lib/orgSession';
 import { loadStaffSession } from './staffAuth';
 import { loadUsableClientSession } from './clientPortalAuth';
+import { fetchWithTimeout, withTimeout } from './withTimeout';
 
 const BUCKET = 'brand-assets';
+const SIGN_UPLOAD_TIMEOUT_MS = 30000;
+const STORAGE_UPLOAD_TIMEOUT_MS = 120000;
 
 function clientPortalSession() {
   try {
@@ -83,28 +86,38 @@ export async function uploadBrandAssetToStorage(file, { brand, folder }) {
   const staff = loadStaffSession();
   const orgId = client?.orgId || staff?.orgId || getOrgId();
 
-  const res = await fetch('/api/brand-asset-sign-upload', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      brand,
-      folder,
-      orgId,
-      fileName: file?.name || 'file',
-      contentType: file?.type || 'application/octet-stream',
-    }),
-  });
+  const res = await fetchWithTimeout(
+    '/api/brand-asset-sign-upload',
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        brand,
+        folder,
+        orgId,
+        fileName: file?.name || 'file',
+        contentType: file?.type || 'application/octet-stream',
+      }),
+    },
+    SIGN_UPLOAD_TIMEOUT_MS,
+  );
 
   const payload = await res.json().catch(() => ({}));
   if (!res.ok || !payload?.token || !payload?.path) {
     throw new Error(payload?.error || 'Could not upload file.');
   }
 
-  const { error } = await supabase.storage
+  const uploadPromise = supabase.storage
     .from(BUCKET)
     .uploadToSignedUrl(payload.path, payload.token, file, {
       contentType: file?.type || 'application/octet-stream',
     });
+
+  const { error } = await withTimeout(
+    uploadPromise,
+    STORAGE_UPLOAD_TIMEOUT_MS,
+    'File upload timed out. Please try again.',
+  );
   if (error) {
     throw new Error(error.message || 'Could not upload file to storage.');
   }

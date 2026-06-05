@@ -1,7 +1,47 @@
 /**
  * Merge clients workspace blobs so a stale staff-sync push cannot clobber
- * files a client just uploaded through the portal (companyFiles, specialMenus).
+ * files a client just uploaded through the portal (companyFiles, specialMenus)
+ * or profile fields (contacts, logos, social logins).
  */
+
+const SOCIAL_PLATFORMS = ['instagram', 'tiktok', 'facebook'];
+
+function emptySocialLogins() {
+  return {
+    instagram: { username: '', password: '' },
+    tiktok: { username: '', password: '' },
+    facebook: { username: '', password: '' },
+  };
+}
+
+function normalizeSocialLogins(logins) {
+  const base = emptySocialLogins();
+  if (!logins || typeof logins !== 'object') return base;
+  for (const platform of SOCIAL_PLATFORMS) {
+    const entry = logins[platform] || {};
+    base[platform] = {
+      username: entry.username?.trim() || '',
+      password: typeof entry.password === 'string' ? entry.password : '',
+    };
+  }
+  return base;
+}
+
+function mergeSocialLogins(existing, incoming) {
+  const prev = normalizeSocialLogins(existing);
+  const next = normalizeSocialLogins(incoming);
+  for (const platform of SOCIAL_PLATFORMS) {
+    const draftPassword = incoming?.[platform]?.password;
+    if (draftPassword === undefined || draftPassword === null) {
+      next[platform].password = prev[platform].password;
+      continue;
+    }
+    if (draftPassword === '' && prev[platform].password) {
+      next[platform].password = prev[platform].password;
+    }
+  }
+  return next;
+}
 
 function recordUpdatedAt(record) {
   return Number(record?.updatedAt) || 0;
@@ -99,6 +139,140 @@ function mergeBrandMap(storedMap = {}, incomingMap = {}, mergeList) {
   return merged;
 }
 
+function logoHasContent(logo) {
+  if (!logo) return false;
+  if (typeof logo === 'string') return logo.trim().length > 0;
+  return Boolean(logo?.src);
+}
+
+function socialLoginsHasContent(logins) {
+  const normalized = normalizeSocialLogins(logins);
+  return SOCIAL_PLATFORMS.some(
+    (platform) => normalized[platform].username || normalized[platform].password,
+  );
+}
+
+/** Union contacts by id; never let a stale empty list wipe stored contacts. */
+export function mergeBrandContacts(stored = [], incoming = []) {
+  const storedList = Array.isArray(stored) ? stored : [];
+  const incomingList = Array.isArray(incoming) ? incoming : [];
+  if (!incomingList.length && storedList.length) return storedList;
+
+  const byId = new Map();
+  for (const contact of storedList) {
+    if (contact?.id) byId.set(String(contact.id), contact);
+  }
+  for (const contact of incomingList) {
+    if (contact?.id) byId.set(String(contact.id), contact);
+  }
+  return [...byId.values()];
+}
+
+export function mergeBrandContactsMap(storedMap = {}, incomingMap = {}) {
+  return mergeBrandMap(storedMap, incomingMap, mergeBrandContacts);
+}
+
+/** Keep stored logos when a stale push omits them or sends an empty value. */
+export function mergeBrandLogoMap(stored = {}, incoming = {}) {
+  const base = stored && typeof stored === 'object' ? { ...stored } : {};
+  const inc = incoming && typeof incoming === 'object' ? incoming : {};
+
+  for (const [brand, logo] of Object.entries(inc)) {
+    if (!logoHasContent(logo)) {
+      if (Object.prototype.hasOwnProperty.call(inc, brand) && !logoHasContent(base[brand])) {
+        delete base[brand];
+      }
+      continue;
+    }
+    base[brand] = logo;
+  }
+
+  return base;
+}
+
+export function mergeBrandSocialLogins(stored, incoming) {
+  if (!socialLoginsHasContent(incoming) && socialLoginsHasContent(stored)) {
+    return normalizeSocialLogins(stored);
+  }
+  return mergeSocialLogins(stored, incoming);
+}
+
+export function mergeBrandSocialLoginsMap(storedMap = {}, incomingMap = {}) {
+  return mergeBrandMap(storedMap, incomingMap, mergeBrandSocialLogins);
+}
+
+/** Per-brand string map (e.g. photo gallery links) — same empty-wipe guard as logos. */
+export function mergeBrandStringMap(stored = {}, incoming = {}) {
+  const base = stored && typeof stored === 'object' ? { ...stored } : {};
+  const inc = incoming && typeof incoming === 'object' ? incoming : {};
+
+  for (const [brand, value] of Object.entries(inc)) {
+    const incomingValue = String(value || '').trim();
+    const storedValue = String(base[brand] || '').trim();
+    if (!incomingValue && storedValue) continue;
+    if (!incomingValue) delete base[brand];
+    else base[brand] = incomingValue;
+  }
+
+  return base;
+}
+
+/**
+ * Three-way merge for one brand's contact list during staff realtime sync.
+ * Honors admin edits while keeping contacts that only exist on the server.
+ */
+export function mergeClientsWorkspaceBrandContacts(remote = [], local = [], synced = []) {
+  const localList = Array.isArray(local) ? local : [];
+  const remoteList = Array.isArray(remote) ? remote : [];
+  const syncedList = Array.isArray(synced) ? synced : [];
+  const localChanged = JSON.stringify(localList) !== JSON.stringify(syncedList);
+
+  if (!localChanged) {
+    return mergeBrandContacts(syncedList, remoteList);
+  }
+
+  const byId = new Map();
+  for (const contact of localList) {
+    if (contact?.id) byId.set(String(contact.id), contact);
+  }
+
+  const syncedIds = new Set(
+    syncedList.filter((contact) => contact?.id).map((contact) => String(contact.id)),
+  );
+
+  for (const contact of remoteList) {
+    if (!contact?.id) continue;
+    const id = String(contact.id);
+    if (byId.has(id)) continue;
+    if (!syncedIds.has(id)) byId.set(id, contact);
+  }
+
+  return [...byId.values()];
+}
+
+export function mergeClientsWorkspaceContactsMap(
+  remoteMap = {},
+  localMap = {},
+  syncedMap = {},
+) {
+  const brands = new Set([
+    ...Object.keys(remoteMap || {}),
+    ...Object.keys(localMap || {}),
+    ...Object.keys(syncedMap || {}),
+  ]);
+  const merged = {};
+
+  for (const brand of brands) {
+    merged[brand] = mergeClientsWorkspaceBrandContacts(
+      remoteMap?.[brand],
+      localMap?.[brand],
+      syncedMap?.[brand],
+    );
+  }
+
+  return merged;
+}
+
 /**
  * Per-brand three-way merge for staff realtime sync.
  * Respects admin deletes while keeping client uploads that landed after the last sync baseline.
@@ -177,6 +351,10 @@ export function mergeClientsWorkspaceData(stored = {}, incoming = {}) {
   return {
     ...stored,
     ...incoming,
+    contacts: mergeBrandContactsMap(stored.contacts, incoming.contacts),
+    logos: mergeBrandLogoMap(stored.logos, incoming.logos),
+    socialLogins: mergeBrandSocialLoginsMap(stored.socialLogins, incoming.socialLogins),
+    photoGalleryLinks: mergeBrandStringMap(stored.photoGalleryLinks, incoming.photoGalleryLinks),
     companyFiles: mergeBrandMap(
       stored.companyFiles,
       incoming.companyFiles,

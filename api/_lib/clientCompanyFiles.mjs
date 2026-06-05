@@ -55,3 +55,28 @@ export function normalizeClientCompanyFiles(files, businessType = '') {
     .filter(Boolean)
     .sort((a, b) => b.updatedAt - a.updatedAt);
 }
+
+function publicBrandAssetUrl(storagePath) {
+  const base = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '')
+    .trim()
+    .replace(/\/$/, '');
+  if (!base || !storagePath) return '';
+  return `${base}/storage/v1/object/public/brand-assets/${storagePath}`;
+}
+
+/** Drop inline base64 from storage-backed files so saves stay under API body limits. */
+export function slimCompanyFilesForApiSave(files, businessType = '') {
+  const normalized = normalizeClientCompanyFiles(files, businessType);
+  return normalized.map((file) => {
+    const storagePath = String(file.storagePath || '').trim();
+    if (!storagePath) return file;
+
+    const dataUrl = String(file.dataUrl || '').trim();
+    if (dataUrl.startsWith('http://') || dataUrl.startsWith('https://')) {
+      return file;
+    }
+
+    const publicUrl = publicBrandAssetUrl(storagePath);
+    return publicUrl ? { ...file, dataUrl: publicUrl } : file;
+  });
+}

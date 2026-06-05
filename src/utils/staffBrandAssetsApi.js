@@ -1,6 +1,9 @@
 import { getOrgId } from '../lib/orgSession';
 import { loadStaffSession } from './staffAuth';
 import { SUPABASE_ENABLED, supabase } from '../lib/supabaseClient';
+import { fetchWithTimeout } from './withTimeout';
+
+const STAFF_BRAND_ASSETS_TIMEOUT_MS = 60000;
 
 async function buildAuthHeaders() {
   const session = loadStaffSession();
@@ -35,16 +38,20 @@ export async function saveStaffBrandAssets({ brand, companyFiles, specialMenus }
     return { ok: false, error: 'Staff sign-in required to save brand assets.' };
   }
 
-  const response = await fetch('/api/staff-brand-assets', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      brand,
-      orgId: getOrgId(),
-      ...(companyFiles !== undefined ? { companyFiles } : {}),
-      ...(specialMenus !== undefined ? { specialMenus } : {}),
-    }),
-  });
+  const response = await fetchWithTimeout(
+    '/api/staff-brand-assets',
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        brand,
+        orgId: getOrgId(),
+        ...(companyFiles !== undefined ? { companyFiles } : {}),
+        ...(specialMenus !== undefined ? { specialMenus } : {}),
+      }),
+    },
+    STAFF_BRAND_ASSETS_TIMEOUT_MS,
+  );
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {

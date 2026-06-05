@@ -274,6 +274,38 @@ if (typeof localStorage !== 'undefined') {
   );
 }
 
+// Stale staff-sync must not wipe contacts, logos, or social logins.
+{
+  const stored = {
+    contacts: {
+      Plume: [{ id: 'c1', name: 'Owner', role: 'Owner', phone: '555-0100' }],
+    },
+    logos: {
+      Plume: { src: 'data:image/png;base64,abc', zoom: 1, x: 50, y: 50 },
+    },
+    socialLogins: {
+      Plume: {
+        instagram: { username: 'plumehtx', password: 'secret' },
+        tiktok: { username: '', password: '' },
+        facebook: { username: '', password: '' },
+      },
+    },
+  };
+  const staleStaff = {
+    contacts: {},
+    logos: {},
+    socialLogins: {},
+  };
+  const merged = mergeClientsWorkspaceData(stored, staleStaff);
+  assert(merged.contacts?.Plume?.length === 1, 'stale staff push should keep Plume contacts');
+  assert(merged.contacts.Plume[0].id === 'c1', 'Plume contact id should survive');
+  assert(merged.logos?.Plume?.src === stored.logos.Plume.src, 'stale staff push should keep Plume logo');
+  assert(
+    merged.socialLogins?.Plume?.instagram?.username === 'plumehtx',
+    'stale staff push should keep Plume social logins',
+  );
+}
+
 // Per-brand file lists merge by id with newest updatedAt winning.
 {
   const merged = mergeBrandCompanyFiles(

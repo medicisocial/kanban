@@ -162,7 +162,9 @@ export function ClientAuthProvider({ children }) {
 
   const savePortalProfile = useCallback(
     async (profile) => {
-      if (!session) return;
+      if (!session) {
+        throw new Error('Session expired. Please sign in again.');
+      }
       // Block background refreshes for the duration of the save (and a short
       // cooldown after) so a stale read can't revert what we just wrote.
       savingProfileRef.current += 1;
@@ -170,43 +172,45 @@ export function ClientAuthProvider({ children }) {
       try {
         // A real save failure must surface to the caller (editors show it).
         await submitClientPortalProfile(session, profile);
-        try {
-          const data = await fetchClientPortalData(session);
-          if (!isMountedRef.current) return;
-          setPortalData((prev) => {
-            if (!prev || prev.brand !== data.brand) {
-              const merged = { ...data };
-              if (profile.companyFiles) {
-                merged.companyFiles = mergeBrandCompanyFiles(data.companyFiles, profile.companyFiles);
-              }
-              if (profile.specialMenus) {
-                merged.specialMenus = mergeBrandSpecialMenus(data.specialMenus, profile.specialMenus);
-              }
-              return merged;
-            }
-            const merged = { ...data };
-            // Triple-merge: server read + what we just wrote + what was already on screen.
-            merged.companyFiles = mergeBrandCompanyFiles(
-              mergeBrandCompanyFiles(data.companyFiles, profile.companyFiles ?? prev.companyFiles),
-              prev.companyFiles,
-            );
-            merged.specialMenus = mergeBrandSpecialMenus(
-              mergeBrandSpecialMenus(data.specialMenus, profile.specialMenus ?? prev.specialMenus),
-              prev.specialMenus,
-            );
-            return merged;
-          });
-          setBrand((current) => data.brand || current);
-          if (isClientHubPortal()) {
-            setContentTypeColorOverrides(normalizeContentTypeColors(data.contentTypeColors || {}));
-          }
-        } catch (error) {
-          // The write already succeeded; a failed re-read shouldn't look like a
-          // save error or revert the optimistic update.
-          if (isMountedRef.current) setDataError(error.message || 'Could not refresh portal.');
-        }
-      } finally {
         saveCooldownUntilRef.current = Date.now() + SAVE_REFRESH_COOLDOWN_MS;
+        // Re-read in the background — waiting here left the editor stuck on "Saving…".
+        void (async () => {
+          try {
+            const data = await fetchClientPortalData(session);
+            if (!isMountedRef.current) return;
+            setPortalData((prev) => {
+              if (!prev || prev.brand !== data.brand) {
+                const merged = { ...data };
+                if (profile.companyFiles) {
+                  merged.companyFiles = mergeBrandCompanyFiles(data.companyFiles, profile.companyFiles);
+                }
+                if (profile.specialMenus) {
+                  merged.specialMenus = mergeBrandSpecialMenus(data.specialMenus, profile.specialMenus);
+                }
+                return merged;
+              }
+              const merged = { ...data };
+              // Triple-merge: server read + what we just wrote + what was already on screen.
+              merged.companyFiles = mergeBrandCompanyFiles(
+                mergeBrandCompanyFiles(data.companyFiles, profile.companyFiles ?? prev.companyFiles),
+                prev.companyFiles,
+              );
+              merged.specialMenus = mergeBrandSpecialMenus(
+                mergeBrandSpecialMenus(data.specialMenus, profile.specialMenus ?? prev.specialMenus),
+                prev.specialMenus,
+              );
+              return merged;
+            });
+            setBrand((current) => data.brand || current);
+            if (isClientHubPortal()) {
+              setContentTypeColorOverrides(normalizeContentTypeColors(data.contentTypeColors || {}));
+            }
+          } catch (error) {
+            // The write already succeeded; a failed re-read shouldn't look like a save error.
+            if (isMountedRef.current) setDataError(error.message || 'Could not refresh portal.');
+          }
+        })();
+      } finally {
         savingProfileRef.current = Math.max(0, savingProfileRef.current - 1);
       }
     },

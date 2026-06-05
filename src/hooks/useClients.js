@@ -18,7 +18,7 @@ import {
   normalizeClientContacts,
   normalizeClientSocialLogins,
 } from '../utils/clientProfile';
-import { normalizeClientCompanyFiles } from '../utils/clientCompanyFiles';
+import { normalizeClientCompanyFiles, slimCompanyFilesForApiSave } from '../utils/clientCompanyFiles';
 import { normalizeClientSpecialMenus } from '../utils/clientSpecialMenus';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
@@ -492,9 +492,10 @@ export function useClients() {
 
       const businessType = normalizeBusinessType(stateRef.current.businessTypes?.[client] || '');
       const normalized = normalizeClientCompanyFiles(files, businessType);
+      const payload = slimCompanyFilesForApiSave(normalized, businessType);
 
       if (SUPABASE_ENABLED) {
-        const apiResult = await saveStaffBrandAssets({ brand: client, companyFiles: normalized });
+        const apiResult = await saveStaffBrandAssets({ brand: client, companyFiles: payload });
         if (!apiResult.ok) return apiResult;
       }
 

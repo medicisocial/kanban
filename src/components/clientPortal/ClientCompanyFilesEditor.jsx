@@ -9,6 +9,7 @@ import {
   getCompanyFileGroups,
   MAX_FILES_PER_CLIENT,
   normalizeClientCompanyFiles,
+  slimCompanyFilesForApiSave,
   readClientCompanyFileUpload,
 } from '../../utils/clientCompanyFiles';
 import {
@@ -120,7 +121,7 @@ export default function ClientCompanyFilesEditor({
     savingRef.current = true;
     setError('');
     try {
-      await onSaveFiles(normalized);
+      await onSaveFiles(slimCompanyFilesForApiSave(normalized, stableBusinessType));
       setMessage('Files saved.');
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
@@ -247,12 +248,12 @@ export default function ClientCompanyFilesEditor({
       setPendingUploads([]);
       pendingUploadsRef.current = [];
       setPendingGroup('');
-      clearEditorUploadWork();
     } catch (err) {
       setError(err.message || 'Could not upload file.');
     } finally {
       savingRef.current = false;
       setSaving(false);
+      clearEditorUploadWork();
     }
   };
 

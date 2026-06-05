@@ -142,6 +142,30 @@ export function normalizeClientCompanyFiles(files, businessType) {
     .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
+const SUPABASE_PUBLIC_BASE = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '');
+
+function publicBrandAssetUrl(storagePath) {
+  if (!SUPABASE_PUBLIC_BASE || !storagePath) return '';
+  return `${SUPABASE_PUBLIC_BASE}/storage/v1/object/public/brand-assets/${storagePath}`;
+}
+
+/** Drop inline base64 from storage-backed files so saves stay under API body limits. */
+export function slimCompanyFilesForApiSave(files, businessType) {
+  const normalized = normalizeClientCompanyFiles(files, businessType);
+  return normalized.map((file) => {
+    const storagePath = String(file.storagePath || '').trim();
+    if (!storagePath) return file;
+
+    const dataUrl = String(file.dataUrl || '').trim();
+    if (dataUrl.startsWith('http://') || dataUrl.startsWith('https://')) {
+      return file;
+    }
+
+    const publicUrl = publicBrandAssetUrl(storagePath);
+    return publicUrl ? { ...file, dataUrl: publicUrl } : file;
+  });
+}
+
 export function groupClientCompanyFilesByFolder(files, businessType) {
   const folders = getClientFileFolders(businessType);
   const grouped = Object.fromEntries(folders.map((folder) => [folder.id, []]));

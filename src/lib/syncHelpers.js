@@ -1,6 +1,9 @@
 import {
   mergeBrandCompanyFiles,
   mergeBrandSpecialMenus,
+  mergeBrandLogoMap,
+  mergeBrandSocialLoginsMap,
+  mergeClientsWorkspaceContactsMap,
   mergeClientsWorkspaceFileMap,
   mergePortalPasswordVault,
 } from '../utils/clientsWorkspaceMerge.js';
@@ -576,6 +579,21 @@ function mergeClientsWorkspaceField(key, remote, local, synced) {
     return mergePortalPasswordVault(
       mergePortalPasswordVault(remote?.portalPasswordVault, local?.portalPasswordVault),
       synced?.portalPasswordVault,
+    );
+  }
+  if (key === 'contacts') {
+    return mergeClientsWorkspaceContactsMap(remote?.contacts, local?.contacts, synced?.contacts);
+  }
+  if (key === 'logos') {
+    return mergeBrandLogoMap(
+      mergeBrandLogoMap(remote?.logos, local?.logos),
+      synced?.logos,
+    );
+  }
+  if (key === 'socialLogins') {
+    return mergeBrandSocialLoginsMap(
+      mergeBrandSocialLoginsMap(remote?.socialLogins, local?.socialLogins),
+      synced?.socialLogins,
     );
   }
   return undefined;
