@@ -12,6 +12,7 @@ import {
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { subscribeClientPortalChanges } from '../lib/clientPortalRealtime';
 import { normalizeContentTypeColors, setContentTypeColorOverrides } from '../utils/contentTypeColors';
+import { mergeBrandCompanyFiles, mergeBrandSpecialMenus } from '../utils/clientsWorkspaceMerge';
 
 const PORTAL_POLL_MS = SUPABASE_ENABLED ? 45000 : 15000;
 
@@ -120,10 +121,29 @@ export function ClientAuthProvider({ children }) {
   const savePortalProfile = useCallback(
     async (profile) => {
       if (!session) return;
+      setPortalData((prev) => (prev ? { ...prev, ...profile } : prev));
       await submitClientPortalProfile(session, profile);
-      await refreshPortalData(session);
+      try {
+        const data = await fetchClientPortalData(session);
+        if (!isMountedRef.current) return;
+        const merged = { ...data };
+        if (profile.companyFiles) {
+          merged.companyFiles = mergeBrandCompanyFiles(data.companyFiles, profile.companyFiles);
+        }
+        if (profile.specialMenus) {
+          merged.specialMenus = mergeBrandSpecialMenus(data.specialMenus, profile.specialMenus);
+        }
+        setPortalData(merged);
+        setBrand(merged.brand);
+        if (isClientHubPortal()) {
+          setContentTypeColorOverrides(normalizeContentTypeColors(merged.contentTypeColors || {}));
+        }
+      } catch (error) {
+        if (!isMountedRef.current) return;
+        setDataError(error.message || 'Could not refresh portal.');
+      }
     },
-    [session, refreshPortalData],
+    [session],
   );
 
   const value = useMemo(

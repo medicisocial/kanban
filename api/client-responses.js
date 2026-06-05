@@ -9,6 +9,10 @@ import { normalizeClientContacts, mergeClientSocialLogins } from './_lib/clientP
 import { normalizeClientCompanyFiles } from './_lib/clientCompanyFiles.mjs';
 import { normalizeClientSpecialMenus } from './_lib/clientSpecialMenus.mjs';
 import {
+  mergeBrandCompanyFiles,
+  mergeBrandSpecialMenus,
+} from './_lib/clientsWorkspaceMerge.mjs';
+import {
   isSupabaseConfigured,
   fetchRecord,
   upsertRecord,
@@ -261,13 +265,18 @@ async function applyResponseToSupabase(res, session, type, response) {
     }
     if (hasOwn(response, 'companyFiles')) {
       const businessType = nextStore.businessTypes?.[brand] || '';
-      nextStore.companyFiles[brand] = normalizeClientCompanyFiles(
-        response.companyFiles,
-        businessType,
+      const normalized = normalizeClientCompanyFiles(response.companyFiles, businessType);
+      nextStore.companyFiles[brand] = mergeBrandCompanyFiles(
+        store.companyFiles?.[brand],
+        normalized,
       );
     }
     if (hasOwn(response, 'specialMenus')) {
-      nextStore.specialMenus[brand] = normalizeClientSpecialMenus(response.specialMenus);
+      const normalized = normalizeClientSpecialMenus(response.specialMenus);
+      nextStore.specialMenus[brand] = mergeBrandSpecialMenus(
+        store.specialMenus?.[brand],
+        normalized,
+      );
     }
 
     await upsertRecord(CLIENTS_TABLE, CLIENTS_RECORD_ID, nextStore, orgId);
@@ -484,14 +493,22 @@ export default async function handler(req, res) {
     }
 
     if (Object.prototype.hasOwnProperty.call(response, 'companyFiles')) {
-      nextStore.companyFiles[brand] = normalizeClientCompanyFiles(
+      const normalized = normalizeClientCompanyFiles(
         response.companyFiles,
         nextStore.businessTypes[brand] || '',
+      );
+      nextStore.companyFiles[brand] = mergeBrandCompanyFiles(
+        clientStore.companyFiles?.[brand],
+        normalized,
       );
     }
 
     if (Object.prototype.hasOwnProperty.call(response, 'specialMenus')) {
-      nextStore.specialMenus[brand] = normalizeClientSpecialMenus(response.specialMenus);
+      const normalized = normalizeClientSpecialMenus(response.specialMenus);
+      nextStore.specialMenus[brand] = mergeBrandSpecialMenus(
+        clientStore.specialMenus?.[brand],
+        normalized,
+      );
     }
 
     workspace.data[CLIENTS_STORAGE_KEY] = nextStore;

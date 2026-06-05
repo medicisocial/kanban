@@ -1,4 +1,5 @@
 import { normalizeBrandUsers, hashValue } from './clientPortalAuth.mjs';
+import { mergeClientsWorkspaceData } from './clientsWorkspaceMerge.mjs';
 import { fetchCollectionMap, fetchRecord, upsertRecord } from './supabase.mjs';
 
 export const AUTH_CRITICAL_SYNC_TABLES = new Set([
@@ -133,6 +134,27 @@ export async function sanitizeAuthCriticalUpserts(table, upserts, orgId) {
       }
 
       sanitized.push({ id: row.id, data: merged });
+    }
+    return sanitized;
+  }
+
+  if (table === 'clients') {
+    let existingMap = null;
+    try {
+      existingMap = (await fetchCollectionMap('clients', orgId)) || {};
+    } catch (error) {
+      console.error('[auth-critical] clients workspace fetch failed:', error?.message || error);
+    }
+
+    const sanitized = [];
+    for (const row of upserts) {
+      if (!row?.id) continue;
+      const existing =
+        existingMap?.[row.id] && typeof existingMap[row.id] === 'object' ? existingMap[row.id] : {};
+      sanitized.push({
+        id: row.id,
+        data: mergeClientsWorkspaceData(existing, row.data),
+      });
     }
     return sanitized;
   }

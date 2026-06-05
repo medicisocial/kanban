@@ -24,9 +24,11 @@ export default function ClientCompanyFilesEditor({
   const [saving, setSaving] = useState(false);
   const [pendingUploads, setPendingUploads] = useState([]);
   const fileInputRef = useRef(null);
+  const savingRef = useRef(false);
   const allowsMultiple = allowsMultipleCompanyFileUpload(activeFolder);
 
   useEffect(() => {
+    if (savingRef.current) return;
     setLocalFiles(normalizeClientCompanyFiles(files, businessType));
     setMessage('');
     setError('');
@@ -49,6 +51,7 @@ export default function ClientCompanyFilesEditor({
     if (!onSaveFiles) return;
 
     setSaving(true);
+    savingRef.current = true;
     setError('');
     try {
       await onSaveFiles(normalized);
@@ -58,6 +61,7 @@ export default function ClientCompanyFilesEditor({
       setError(err.message || 'Could not save files.');
       throw err;
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

@@ -15,6 +15,10 @@ import {
   mergePortalCredentialData,
   filterAuthCriticalDeletes,
 } from '../api/_lib/authCriticalSync.mjs';
+import {
+  mergeBrandCompanyFiles,
+  mergeClientsWorkspaceData,
+} from '../api/_lib/clientsWorkspaceMerge.mjs';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -218,6 +222,39 @@ if (typeof localStorage !== 'undefined') {
   assert(allowed.length === 1, 'server: confirmed auth delete must pass through');
   const nonAuth = filterAuthCriticalDeletes('cards', ['card-1'], false);
   assert(nonAuth.length === 1, 'server: non-auth deletes are unaffected');
+}
+
+// Stale staff-sync must not drop a client upload with a newer updatedAt.
+{
+  const clientFile = {
+    id: 'file-1',
+    name: 'Menu',
+    dataUrl: 'data:application/pdf;base64,abc',
+    updatedAt: 200,
+  };
+  const staleStaff = {
+    companyFiles: {
+      Plume: [],
+    },
+  };
+  const stored = {
+    companyFiles: {
+      Plume: [clientFile],
+    },
+  };
+  const merged = mergeClientsWorkspaceData(stored, staleStaff);
+  assert(merged.companyFiles.Plume.length === 1, 'stale staff push should keep client upload');
+  assert(merged.companyFiles.Plume[0].id === 'file-1', 'client upload id should survive');
+}
+
+// Per-brand file lists merge by id with newest updatedAt winning.
+{
+  const merged = mergeBrandCompanyFiles(
+    [{ id: 'a', name: 'Old', updatedAt: 10 }],
+    [{ id: 'a', name: 'New', updatedAt: 20 }],
+  );
+  assert(merged.length === 1, 'merge should keep one file');
+  assert(merged[0].name === 'New', 'incoming newer file should win');
 }
 
 console.log('Sync merge tests passed.');

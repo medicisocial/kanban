@@ -166,8 +166,10 @@ export default function ClientSpecialMenusEditor({
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   useEffect(() => {
+    if (savingRef.current) return;
     setMenus(normalizeClientSpecialMenus(specialMenus));
     setDraft(null);
     setEditingId(null);
@@ -180,6 +182,7 @@ export default function ClientSpecialMenusEditor({
     if (!onSaveSpecialMenus) return;
 
     setSaving(true);
+    savingRef.current = true;
     setError('');
     try {
       await onSaveSpecialMenus(normalized);
@@ -191,6 +194,7 @@ export default function ClientSpecialMenusEditor({
       setError(err.message || 'Could not save special menus.');
       throw err;
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

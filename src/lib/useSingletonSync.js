@@ -17,6 +17,7 @@ import {
   mergeRemoteSingletonWithLocal,
   singletonMatchesSnapshot,
 } from './syncHelpers';
+import { mergeClientsWorkspaceData } from '../utils/clientsWorkspaceMerge';
 
 /**
  * Like useCollectionSync, but for a single composite object stored as one row
@@ -267,10 +268,21 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
       }
 
       try {
+        let dataToWrite = value;
+        if (table === 'clients') {
+          try {
+            const rows = await fetchRowsWithTimeout(store);
+            const existing = rows.find((entry) => String(entry.id) === recordId)?.data;
+            dataToWrite = mergeClientsWorkspaceData(existing, value);
+          } catch (mergeErr) {
+            console.warn(`[supabase:${table}] merge-before-write failed:`, mergeErr?.message || mergeErr);
+          }
+        }
+
         if (canWrite) {
-          await store.upsertRecords([{ id: recordId, data: value }]);
+          await store.upsertRecords([{ id: recordId, data: dataToWrite }]);
         } else {
-          const ok = await pushStaffSyncSingleton(table, recordId, value);
+          const ok = await pushStaffSyncSingleton(table, recordId, dataToWrite);
           if (!ok) {
             pendingWriteRef.current = true;
             console.warn(
