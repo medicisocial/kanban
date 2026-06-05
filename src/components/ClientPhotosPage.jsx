@@ -29,9 +29,9 @@ export default function ClientPhotosPage({ photoGalleryLink, brand, embedded = f
   return (
     <div className={embedded ? '' : 'mx-auto max-w-2xl px-4 py-8 sm:px-6'}>
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-white">Photos</h2>
+        <h2 className="text-xl font-semibold text-white">Content Library</h2>
         <p className="mt-1 text-sm text-white/45">
-          Access your photo library shared by your team.
+          Access your content library shared by your team.
         </p>
       </div>
 

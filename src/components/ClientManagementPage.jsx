@@ -367,7 +367,7 @@ export default function ClientManagementPage({
 
               <label className="block">
                 <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
-                  Photo gallery link
+                  Content library link
                 </span>
                 <input
                   type="url"
@@ -383,11 +383,11 @@ export default function ClientManagementPage({
                     rel="noopener noreferrer"
                     className="mt-1.5 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
                   >
-                    Open gallery →
+                    Open content library →
                   </a>
                 ) : (
                   <p className="mt-1.5 text-[10px] text-white/35">
-                    Clients see this on the Photos tab in their portal.
+                    Clients see this on the Content Library tab in their portal.
                   </p>
                 )}
               </label>

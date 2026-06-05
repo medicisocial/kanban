@@ -33,7 +33,7 @@ const NAV_SECTIONS = [
     label: 'Resources',
     items: [
       { id: 'files', label: 'Brand assets', Icon: IconFiles },
-      { id: 'photos', label: 'Photos', Icon: IconPhotos },
+      { id: 'photos', label: 'Content Library', Icon: IconPhotos },
     ],
   },
 ];
