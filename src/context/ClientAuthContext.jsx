@@ -15,6 +15,8 @@ import { normalizeContentTypeColors, setContentTypeColorOverrides } from '../uti
 import { mergeBrandCompanyFiles, mergeBrandSpecialMenus } from '../utils/clientsWorkspaceMerge';
 
 const PORTAL_POLL_MS = SUPABASE_ENABLED ? 45000 : 15000;
+/** Skip background refreshes for a moment after a save so a stale read can't revert it. */
+const SAVE_REFRESH_COOLDOWN_MS = 5000;
 
 const ClientAuthContext = createContext(null);
 
@@ -32,13 +34,29 @@ export function ClientAuthProvider({ children }) {
     return () => { isMountedRef.current = false; };
   }, []);
 
+  // Guards background refreshes (focus/poll/realtime) from clobbering an
+  // in-flight or just-completed save. Without this, closing the file picker
+  // re-focuses the window, fires a refetch, and a stale read overwrites the
+  // upload the user just made — it flashes on screen then disappears.
+  const savingProfileRef = useRef(0);
+  const saveCooldownUntilRef = useRef(0);
+
   const refreshPortalData = useCallback(async (activeSession = session, { silent = false } = {}) => {
     if (!activeSession) return;
+    // A background refresh must never stomp on a save the user just made.
+    if (silent && (savingProfileRef.current > 0 || Date.now() < saveCooldownUntilRef.current)) {
+      return;
+    }
     if (!silent) setLoadingData(true);
     setDataError('');
     try {
       const data = await fetchClientPortalData(activeSession);
       if (!isMountedRef.current) return;
+      // Re-check after the network round-trip: a save may have started while
+      // this refresh was in flight.
+      if (silent && (savingProfileRef.current > 0 || Date.now() < saveCooldownUntilRef.current)) {
+        return;
+      }
       // Merge files/menus against what we already have so a background refresh
       // that resolves just after an upload (before the read reflects it) can't
       // drop a file the client just added — it would otherwise flash then vanish.
@@ -132,26 +150,39 @@ export function ClientAuthProvider({ children }) {
   const savePortalProfile = useCallback(
     async (profile) => {
       if (!session) return;
+      // Block background refreshes for the duration of the save (and a short
+      // cooldown after) so a stale read can't revert what we just wrote.
+      savingProfileRef.current += 1;
       setPortalData((prev) => (prev ? { ...prev, ...profile } : prev));
-      await submitClientPortalProfile(session, profile);
       try {
-        const data = await fetchClientPortalData(session);
-        if (!isMountedRef.current) return;
-        const merged = { ...data };
-        if (profile.companyFiles) {
-          merged.companyFiles = mergeBrandCompanyFiles(data.companyFiles, profile.companyFiles);
+        // A real save failure must surface to the caller (editors show it).
+        await submitClientPortalProfile(session, profile);
+        try {
+          const data = await fetchClientPortalData(session);
+          if (!isMountedRef.current) return;
+          const merged = { ...data };
+          // Keep locally-newer entries in case the read hasn't caught up yet.
+          merged.companyFiles = mergeBrandCompanyFiles(
+            data.companyFiles,
+            profile.companyFiles ?? data.companyFiles,
+          );
+          merged.specialMenus = mergeBrandSpecialMenus(
+            data.specialMenus,
+            profile.specialMenus ?? data.specialMenus,
+          );
+          setPortalData(merged);
+          setBrand(merged.brand);
+          if (isClientHubPortal()) {
+            setContentTypeColorOverrides(normalizeContentTypeColors(merged.contentTypeColors || {}));
+          }
+        } catch (error) {
+          // The write already succeeded; a failed re-read shouldn't look like a
+          // save error or revert the optimistic update.
+          if (isMountedRef.current) setDataError(error.message || 'Could not refresh portal.');
         }
-        if (profile.specialMenus) {
-          merged.specialMenus = mergeBrandSpecialMenus(data.specialMenus, profile.specialMenus);
-        }
-        setPortalData(merged);
-        setBrand(merged.brand);
-        if (isClientHubPortal()) {
-          setContentTypeColorOverrides(normalizeContentTypeColors(merged.contentTypeColors || {}));
-        }
-      } catch (error) {
-        if (!isMountedRef.current) return;
-        setDataError(error.message || 'Could not refresh portal.');
+      } finally {
+        saveCooldownUntilRef.current = Date.now() + SAVE_REFRESH_COOLDOWN_MS;
+        savingProfileRef.current = Math.max(0, savingProfileRef.current - 1);
       }
     },
     [session],
