@@ -194,9 +194,17 @@ export default function ClientSpecialMenusEditor({
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  const draftRef = useRef(draft);
+
+  useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
 
   useEffect(() => {
     if (savingRef.current) return;
+    // Don't discard an open draft when a background refresh hands us new props
+    // (e.g. the portal refetches on window focus after the file picker closes).
+    if (draftRef.current) return;
     setMenus(normalizeClientSpecialMenus(specialMenus));
     setDraft(null);
     setEditingId(null);

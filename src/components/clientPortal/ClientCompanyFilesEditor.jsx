@@ -37,9 +37,14 @@ export default function ClientCompanyFilesEditor({
   const [storageReady, setStorageReady] = useState(false);
   const fileInputRef = useRef(null);
   const savingRef = useRef(false);
+  const pendingUploadsRef = useRef(pendingUploads);
   const allowsMultiple = allowsMultipleCompanyFileUpload(activeFolder);
   const allowsGroups = allowsCompanyFileGroups(activeFolder);
   const existingGroups = getCompanyFileGroups(localFiles, activeFolder);
+
+  useEffect(() => {
+    pendingUploadsRef.current = pendingUploads;
+  }, [pendingUploads]);
 
   useEffect(() => {
     setStorageReady(!readOnly && canUploadBrandAssetToStorage());
@@ -47,6 +52,9 @@ export default function ClientCompanyFilesEditor({
 
   useEffect(() => {
     if (savingRef.current) return;
+    // Don't discard an in-progress upload when a background refresh hands us new
+    // props (e.g. the portal refetches on window focus after the file picker closes).
+    if (pendingUploadsRef.current.length > 0) return;
     setLocalFiles(normalizeClientCompanyFiles(files, businessType));
     setMessage('');
     setError('');
