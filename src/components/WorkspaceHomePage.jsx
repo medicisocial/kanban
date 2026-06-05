@@ -6,6 +6,7 @@ import OverviewTodayPanel from './clientPortal/OverviewTodayPanel';
 import { buildWorkspaceHomeSummary, buildMyWorkGreeting } from '../utils/workspaceHome';
 import { buildTodayTimeline } from '../utils/todayTimeline';
 import { useClientsContext } from '../context/ClientsContext';
+import { useStaffWorkspaceScope } from '../hooks/useStaffWorkspaceScope';
 import { surfacePanelClass } from './clientPortal/clientPortalUi';
 import { useWorkspaceSync } from '../context/WorkspaceSyncContext';
 
@@ -31,6 +32,7 @@ export default function WorkspaceHomePage({
 }) {
   const { clients } = useClientsContext();
   const { syncIssue } = useWorkspaceSync();
+  const { visibleCompanyTaskTabs } = useStaffWorkspaceScope();
 
   const summary = buildWorkspaceHomeSummary({
     cards,
@@ -81,8 +83,10 @@ export default function WorkspaceHomePage({
 
   const showAmQueue = !myWorkOnly || summaryWithToday.showAccountManagerQueue;
 
-  const pipelineRoles = [
-    {
+  const pipelineRoles = [];
+
+  if (visibleCompanyTaskTabs.includes('creator')) {
+    pipelineRoles.push({
       label: 'Content creator',
       count: summary.toCreateCount + summary.shootsTodayCount,
       details: [
@@ -90,25 +94,36 @@ export default function WorkspaceHomePage({
         { label: 'Shoots today', value: summary.shootsTodayCount },
       ],
       onClick: () => onNavigate('todo', { tasksRole: 'creator' }),
-    },
-    {
-      label: 'Editor',
-      count: summary.editingCount,
-      details: [{ label: 'Editing', value: summary.editingCount }],
-      onClick: () => onNavigate('todo', { tasksRole: 'editor' }),
-    },
-  ];
+    });
+  }
 
-  if (showAmQueue) {
+  if (visibleCompanyTaskTabs.includes('editor')) {
+    const editorTotal = summary.editingCount + (summary.editorInReviewCount || 0);
+    pipelineRoles.push({
+      label: 'Editor',
+      count: editorTotal,
+      details: [
+        { label: 'Editing', value: summary.editingCount },
+        { label: 'In review', value: summary.editorInReviewCount || 0 },
+      ],
+      onClick: () => onNavigate('todo', { tasksRole: 'editor' }),
+    });
+  }
+
+  if (showAmQueue && visibleCompanyTaskTabs.includes('account')) {
     const amTotal =
+      summary.accountManagerTaskCount ??
       summary.inReviewCount + summary.needsSchedulingCount + summary.needPostDateCount;
     pipelineRoles.push({
       label: 'Account manager',
       count: amTotal,
       details: [
         { label: 'In review', value: summary.inReviewCount },
-        { label: 'Scheduling', value: summary.needsSchedulingCount },
         { label: 'Post date', value: summary.needPostDateCount },
+        { label: 'To schedule', value: summary.needsSchedulingCount },
+        ...(summary.storiesTodayCount > 0
+          ? [{ label: 'Stories today', value: summary.storiesTodayCount }]
+          : []),
       ],
       onClick: () => onNavigate('todo', { tasksRole: 'account' }),
     });

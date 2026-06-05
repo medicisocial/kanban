@@ -780,6 +780,7 @@ export default function AppShell({ onSignOut }) {
     myWorkOnly,
     companyWideView,
     personalTaskScope,
+    visibleCompanyTaskTabs,
     clientAccountManagers: scopeClientAccountManagers,
   } = useStaffWorkspaceScope();
   const workspaceCards = useMemo(
@@ -824,7 +825,7 @@ export default function AppShell({ onSignOut }) {
 
   const navBadges = useMemo(() => {
     const summary = buildWorkspaceHomeSummary({
-      cards: workspaceCards,
+      cards,
       ideas,
       adminTasks: workspaceAdminTasks,
       clientFilter: 'all',
@@ -835,9 +836,13 @@ export default function AppShell({ onSignOut }) {
       companyWideView,
       showAccountManagerQueue,
     });
-    return buildNavBadgeCounts(summary, syncTotal);
+    return buildNavBadgeCounts(
+      summary,
+      syncTotal,
+      personalTaskScope ? visibleCompanyTaskTabs : null,
+    );
   }, [
-    workspaceCards,
+    cards,
     ideas,
     workspaceAdminTasks,
     syncTotal,
@@ -846,6 +851,8 @@ export default function AppShell({ onSignOut }) {
     myWorkOnly,
     companyWideView,
     showAccountManagerQueue,
+    personalTaskScope,
+    visibleCompanyTaskTabs,
   ]);
 
   useEffect(() => {
@@ -960,7 +967,7 @@ export default function AppShell({ onSignOut }) {
     >
       {activeView === "home" && (
         <WorkspaceHomePage
-          cards={workspaceCards}
+          cards={cards}
           ideas={ideas}
           adminTasks={workspaceAdminTasks}
           meetings={meetings}

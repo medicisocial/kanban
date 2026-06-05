@@ -4,8 +4,24 @@ import {
   cardIsAssignedToStaff,
   cardIsAssignedToAccountManager,
 } from './staffMembers';
-import { getToCreateQueueCards } from './contentCreatorTodo';
-import { getCardsNeedingPostDate } from './accountManagerTodo';
+import {
+  buildContentCreatorTasks,
+  cardIsAssignedToContentCreator,
+  getToCreateQueueCards,
+} from './contentCreatorTodo';
+import {
+  buildInReviewTasks,
+  buildPostsTodoTasks,
+  buildSetPostDateTasks,
+  buildStoryTasksToday,
+  filterAccountManagerTasks,
+  getCardsNeedingPostDate,
+} from './accountManagerTodo';
+import {
+  buildBoardEditorTasks,
+  filterEditorTasks,
+  splitEditorTasksByQueue,
+} from './editorTodo';
 
 function isToday(dateKey) {
   return dateKey === toDateKey(new Date());
@@ -40,6 +56,105 @@ function matchesAccountManagerQueue(card, staffName, clientAccountManagers, pers
   return cardIsAssignedToAccountManager(card, staffName, clientAccountManagers);
 }
 
+function matchesClientFilter(item, clientFilter) {
+  return clientFilter === 'all' || item.client === clientFilter;
+}
+
+/** Overview counts that use the same rules as Team tasks tabs (per-role assignee fields). */
+function buildPersonalWorkspaceHomeSummary({
+  cards,
+  ideas,
+  adminTasks,
+  clientFilter,
+  syncTotal,
+  staffName,
+  clientAccountManagers,
+  showAccountManagerQueue,
+}) {
+  const assignee = staffName;
+  const amFilter = { client: clientFilter, assignee };
+  const editorFilter = { client: clientFilter, assignee, includeCompleted: false };
+
+  const toCreateCount = buildContentCreatorTasks(cards, {
+    client: clientFilter,
+    staffName,
+  }).length;
+
+  const shootsTodayCount = cards.filter(
+    (card) =>
+      card.shootDate &&
+      isToday(card.shootDate) &&
+      card.contentType !== 'Story' &&
+      matchesClientFilter(card, clientFilter) &&
+      cardIsAssignedToContentCreator(card, staffName),
+  ).length;
+
+  const editorTasks = filterEditorTasks(buildBoardEditorTasks(cards), editorFilter);
+  const { editing, inReview: editorInReview } = splitEditorTasksByQueue(editorTasks);
+  const editingCount = editing.length;
+  const editorInReviewCount = editorInReview.length;
+
+  const inReviewTasks = filterAccountManagerTasks(
+    buildInReviewTasks(cards, clientAccountManagers),
+    amFilter,
+  );
+  const needPostDateTasks = filterAccountManagerTasks(
+    buildSetPostDateTasks(cards, clientAccountManagers),
+    amFilter,
+  );
+  const needsSchedulingTasks = filterAccountManagerTasks(
+    buildPostsTodoTasks(cards, clientAccountManagers),
+    amFilter,
+  );
+  const storiesTodayTasks = filterAccountManagerTasks(
+    buildStoryTasksToday(cards, toDateKey(new Date()), clientAccountManagers),
+    amFilter,
+  );
+
+  const inReviewCount = inReviewTasks.length;
+  const needPostDateCount = needPostDateTasks.length;
+  const needsSchedulingCount = needsSchedulingTasks.length;
+  const storiesTodayCount = storiesTodayTasks.length;
+  const accountManagerTaskCount =
+    inReviewCount + needPostDateCount + needsSchedulingCount + storiesTodayCount;
+
+  const scheduledThisWeek = cards.filter(
+    (card) =>
+      card.columnId === 'scheduled' &&
+      card.dueDate &&
+      isThisWeek(card.dueDate) &&
+      matchesClientFilter(card, clientFilter) &&
+      cardIsAssignedToStaff(card, staffName, clientAccountManagers),
+  );
+
+  const openAdminTasks = (adminTasks || []).filter((t) => !t.completed);
+
+  return {
+    syncTotal,
+    staffName,
+    myWorkOnly: true,
+    companyWideView: false,
+    showAccountManagerQueue,
+    inReviewCount,
+    toCreateCount,
+    editingCount,
+    editorInReviewCount,
+    pendingIdeasCount: 0,
+    shootsTodayCount,
+    scheduledThisWeekCount: scheduledThisWeek.length,
+    needsSchedulingCount,
+    needPostDateCount,
+    storiesTodayCount,
+    accountManagerTaskCount,
+    openAdminTasksCount: openAdminTasks.length,
+    shootsToday: [],
+    inReview: inReviewTasks.slice(0, 5).map((t) => t.card),
+    needsScheduling: needsSchedulingTasks.slice(0, 5).map((t) => t.card),
+    needPostDate: needPostDateTasks.slice(0, 5).map((t) => t.card),
+    scheduledThisWeek: scheduledThisWeek.slice(0, 5),
+  };
+}
+
 export function buildWorkspaceHomeSummary({
   cards,
   ideas,
@@ -55,8 +170,20 @@ export function buildWorkspaceHomeSummary({
   const personalScope = myWorkOnly && !companyWideView;
   const companyMetrics = companyWideView || !myWorkOnly;
 
-  const matchesClient = (item) =>
-    clientFilter === 'all' || item.client === clientFilter;
+  if (personalScope && staffName) {
+    return buildPersonalWorkspaceHomeSummary({
+      cards,
+      ideas,
+      adminTasks,
+      clientFilter,
+      syncTotal,
+      staffName,
+      clientAccountManagers,
+      showAccountManagerQueue,
+    });
+  }
+
+  const matchesClient = (item) => matchesClientFilter(item, clientFilter);
 
   const scopedCards = cards.filter(matchesClient);
   const scopedIdeas = ideas.filter(matchesClient);
@@ -158,28 +285,47 @@ export function buildWorkspaceHomeSummary({
   };
 }
 
-export function buildNavBadgeCounts(summary, syncTotal = 0) {
+export function buildNavBadgeCounts(summary, syncTotal = 0, visibleTaskTabs = null) {
+  const todo = visibleTaskTabs
+    ? countTodoBadgeForVisibleTabs(summary, visibleTaskTabs)
+    : summary.toCreateCount +
+      summary.editingCount +
+      (summary.editorInReviewCount || 0) +
+      summary.needPostDateCount +
+      summary.needsSchedulingCount +
+      summary.inReviewCount +
+      (summary.storiesTodayCount || 0);
+
   const home =
-    summary.inReviewCount +
-    summary.needPostDateCount +
-    summary.needsSchedulingCount +
-    summary.toCreateCount +
-    summary.editingCount +
+    todo +
     summary.pendingIdeasCount +
     summary.openAdminTasksCount +
     syncTotal;
-  const todo =
-    summary.toCreateCount +
-    summary.editingCount +
-    summary.needPostDateCount +
-    summary.needsSchedulingCount +
-    summary.inReviewCount;
 
   const badges = {};
   if (home > 0) badges.home = home;
   if (todo > 0) badges.todo = todo;
   if (summary.pendingIdeasCount > 0) badges.ideas = summary.pendingIdeasCount;
   return badges;
+}
+
+function countTodoBadgeForVisibleTabs(summary, visibleTaskTabs) {
+  let total = 0;
+  if (visibleTaskTabs.includes('creator')) {
+    total += summary.toCreateCount + summary.shootsTodayCount;
+  }
+  if (visibleTaskTabs.includes('editor')) {
+    total += summary.editingCount + (summary.editorInReviewCount || 0);
+  }
+  if (visibleTaskTabs.includes('account')) {
+    total +=
+      summary.accountManagerTaskCount ??
+      summary.inReviewCount + summary.needsSchedulingCount + summary.needPostDateCount;
+  }
+  if (visibleTaskTabs.includes('admin')) {
+    total += summary.openAdminTasksCount;
+  }
+  return total;
 }
 
 function getTimeOfDayGreeting(date = new Date()) {
@@ -194,7 +340,12 @@ export function buildMyWorkGreeting(firstName, summary) {
   const title = firstName ? `${timeGreeting}, ${firstName}.` : `${timeGreeting}.`;
 
   const pipelineCount =
-    summary.toCreateCount + summary.editingCount + summary.inReviewCount + summary.needsSchedulingCount;
+    summary.toCreateCount +
+    summary.shootsTodayCount +
+    summary.editingCount +
+    (summary.editorInReviewCount || 0) +
+    (summary.accountManagerTaskCount ??
+      summary.inReviewCount + summary.needsSchedulingCount + summary.needPostDateCount);
   const activeCount = pipelineCount + summary.pendingIdeasCount;
 
   if (summary.companyWideView) {
