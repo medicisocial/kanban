@@ -39,7 +39,17 @@ export function ClientAuthProvider({ children }) {
     try {
       const data = await fetchClientPortalData(activeSession);
       if (!isMountedRef.current) return;
-      setPortalData(data);
+      // Merge files/menus against what we already have so a background refresh
+      // that resolves just after an upload (before the read reflects it) can't
+      // drop a file the client just added — it would otherwise flash then vanish.
+      setPortalData((prev) => {
+        if (!prev || prev.brand !== data.brand) return data;
+        return {
+          ...data,
+          companyFiles: mergeBrandCompanyFiles(prev.companyFiles, data.companyFiles),
+          specialMenus: mergeBrandSpecialMenus(prev.specialMenus, data.specialMenus),
+        };
+      });
       setBrand(data.brand);
       if (isClientHubPortal()) {
         setContentTypeColorOverrides(normalizeContentTypeColors(data.contentTypeColors || {}));
