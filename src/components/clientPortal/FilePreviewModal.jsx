@@ -1,11 +1,35 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { btnPrimaryClass, btnSecondaryClass } from './clientPortalUi';
 import { downloadDataUrl, getFilePreviewKind } from '../../utils/filePreview';
+import { createPreviewBlobUrl, revokePreviewBlobUrl } from '../../utils/filePreviewWindow';
 
 const PdfDocumentViewer = lazy(() => import('./PdfDocumentViewer'));
 
 export default function FilePreviewModal({ open, title, dataUrl, fileName, onClose }) {
+  const [pdfSource, setPdfSource] = useState('');
+
+  useEffect(() => {
+    if (!open || !dataUrl) {
+      setPdfSource('');
+      return undefined;
+    }
+    if (getFilePreviewKind(dataUrl, fileName) !== 'pdf') {
+      setPdfSource('');
+      return undefined;
+    }
+    if (/^https?:\/\//i.test(dataUrl)) {
+      setPdfSource(dataUrl);
+      return undefined;
+    }
+
+    const blobUrl = createPreviewBlobUrl({ dataUrl }) || dataUrl;
+    setPdfSource(blobUrl);
+    return () => {
+      if (blobUrl.startsWith('blob:')) revokePreviewBlobUrl(blobUrl);
+    };
+  }, [open, dataUrl, fileName]);
+
   useEffect(() => {
     if (!open) return;
     const handleKey = (event) => {
@@ -55,7 +79,7 @@ export default function FilePreviewModal({ open, title, dataUrl, fileName, onClo
             }
           >
             <div className="flex h-full min-h-0 flex-col">
-              <PdfDocumentViewer dataUrl={dataUrl} fullWindow />
+              {pdfSource && <PdfDocumentViewer source={pdfSource} fullWindow />}
             </div>
           </Suspense>
         )}

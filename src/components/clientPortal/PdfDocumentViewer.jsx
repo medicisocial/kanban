@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { isPdfRenderCancelled, loadPdfFromSource, releasePdfDocument, cancelPdfRenderTask, startPdfPageRender } from '../../utils/pdfDocument';
+import {
+  isPdfRenderCancelled,
+  loadPdfFromSource,
+  previewDevicePixelRatio,
+  releasePdfDocument,
+  cancelPdfRenderTask,
+  startPdfPageRender,
+} from '../../utils/pdfDocument';
 
 const THUMB_WIDTH = 72;
 const FULL_WINDOW_DEFAULT_ZOOM = 1;
@@ -38,7 +45,7 @@ export default function PdfDocumentViewer({ dataUrl, source, fullWindow = false 
   const [thumbsReady, setThumbsReady] = useState(false);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [zoom, setZoom] = useState(fullWindow ? FULL_WINDOW_DEFAULT_ZOOM : 1);
-  const [showThumbs, setShowThumbs] = useState(!fullWindow);
+  const [showThumbs, setShowThumbs] = useState(false);
 
   const canvasRef = useRef(null);
   const stageRef = useRef(null);
@@ -127,7 +134,7 @@ export default function PdfDocumentViewer({ dataUrl, source, fullWindow = false 
           padding: fullWindow ? 4 : 24,
           fitMode: fullWindow ? 'width' : 'contain',
           zoom,
-          devicePixelRatio: fullWindow ? window.devicePixelRatio || 1 : 1,
+          devicePixelRatio: fullWindow ? previewDevicePixelRatio() : 1,
         });
         mainRenderTaskRef.current = renderTask;
         await renderTask.promise;
@@ -152,12 +159,22 @@ export default function PdfDocumentViewer({ dataUrl, source, fullWindow = false 
   }, [pdfDoc, pageNum, stageSize, zoom, fullWindow]);
 
   useEffect(() => {
-    if (!pdfDoc || !pageCount) return undefined;
+    if (!showThumbs || !pdfDoc || !pageCount) {
+      thumbRenderTasksRef.current.forEach((task) => task.cancel());
+      thumbRenderTasksRef.current = [];
+      setThumbsReady(false);
+      return undefined;
+    }
 
     let cancelled = false;
     thumbRenderTasksRef.current.forEach((task) => task.cancel());
     thumbRenderTasksRef.current = [];
     setThumbsReady(false);
+
+    const yieldToMain = () =>
+      new Promise((resolve) => {
+        window.requestAnimationFrame(() => resolve());
+      });
 
     const renderThumbs = async () => {
       for (let index = 1; index <= pageCount; index += 1) {
@@ -178,6 +195,7 @@ export default function PdfDocumentViewer({ dataUrl, source, fullWindow = false 
           const renderTask = page.render({ canvasContext: context, viewport, canvas });
           thumbRenderTasksRef.current.push(renderTask);
           await renderTask.promise;
+          if (index < pageCount) await yieldToMain();
         } catch (err) {
           if (!cancelled && !isPdfRenderCancelled(err)) {
             setError(err.message || 'Could not render thumbnails.');
@@ -195,7 +213,7 @@ export default function PdfDocumentViewer({ dataUrl, source, fullWindow = false 
       thumbRenderTasksRef.current.forEach((task) => task.cancel());
       thumbRenderTasksRef.current = [];
     };
-  }, [pdfDoc, pageCount]);
+  }, [showThumbs, pdfDoc, pageCount]);
 
   useEffect(() => {
     const activeThumb = thumbRefs.current[pageNum - 1];
@@ -298,7 +316,7 @@ export default function PdfDocumentViewer({ dataUrl, source, fullWindow = false 
             +
           </button>
         </div>
-        {fullWindow && pageCount > 1 && (
+        {pageCount > 1 && (
           <button
             type="button"
             onClick={() => setShowThumbs((current) => !current)}
@@ -328,6 +346,11 @@ export default function PdfDocumentViewer({ dataUrl, source, fullWindow = false 
 
       {showThumbs && (
         <div className="border-t border-white/[0.08] bg-[#0d0d0d] px-4 py-3">
+        {!thumbsReady && (
+          <p className="mb-2 text-center text-[10px] font-medium uppercase tracking-wider text-white/35">
+            Loading page thumbnails…
+          </p>
+        )}
         <div
           ref={thumbStripRef}
           className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]"

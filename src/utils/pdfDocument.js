@@ -1,36 +1,57 @@
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+import {
+  capDevicePixelRatio,
+  classifyPdfSource,
+  previewDevicePixelRatio,
+  PREVIEW_MAX_DEVICE_PIXEL_RATIO,
+} from './pdfDocumentHelpers';
+
+export {
+  capDevicePixelRatio,
+  classifyPdfSource,
+  previewDevicePixelRatio,
+  PREVIEW_MAX_DEVICE_PIXEL_RATIO,
+};
 
 pdfjs.GlobalWorkerOptions.workerPort = new Worker(
   new URL('pdfjs-dist/legacy/build/pdf.worker.mjs', import.meta.url),
   { type: 'module' },
 );
 
-function dataUrlToUint8Array(dataUrl) {
-  const base64 = String(dataUrl).split(',')[1];
-  if (!base64) throw new Error('Invalid file data.');
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
+async function dataUrlToUint8Array(dataUrl) {
+  const response = await fetch(dataUrl);
+  if (!response.ok) throw new Error('Invalid file data.');
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+function buildRemotePdfLoadingTask(source) {
+  return pdfjs.getDocument({
+    url: source,
+    withCredentials: false,
+    disableRange: false,
+    disableStream: false,
+    useSystemFonts: true,
+  });
 }
 
 export async function loadPdfFromDataUrl(dataUrl) {
-  const loadingTask = pdfjs.getDocument({ data: dataUrlToUint8Array(dataUrl) });
-  return loadingTask.promise;
+  const bytes = await dataUrlToUint8Array(dataUrl);
+  return pdfjs.getDocument({ data: bytes, useSystemFonts: true }).promise;
 }
 
 export async function loadPdfFromSource(source) {
   const url = String(source || '').trim();
   if (!url) throw new Error('No file to preview.');
-  if (url.startsWith('data:')) return loadPdfFromDataUrl(url);
 
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('Could not load PDF preview.');
-  const buffer = await response.arrayBuffer();
-  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
-  return loadingTask.promise;
+  const kind = classifyPdfSource(url);
+  if (kind === 'remote' || kind === 'blob') {
+    return buildRemotePdfLoadingTask(url).promise;
+  }
+  if (kind === 'data') {
+    return loadPdfFromDataUrl(url);
+  }
+
+  throw new Error('No file to preview.');
 }
 
 export function isPdfRenderCancelled(error) {
@@ -74,7 +95,7 @@ export function startPdfPageRender(
   scale *= Math.max(zoom, 0.25);
   if (scaleCap) scale = Math.min(scale, scaleCap);
 
-  const dpr = Math.max(devicePixelRatio, 1);
+  const dpr = capDevicePixelRatio(devicePixelRatio);
   const viewport = page.getViewport({ scale: scale * dpr });
   const context = canvas.getContext('2d');
   canvas.width = viewport.width;
