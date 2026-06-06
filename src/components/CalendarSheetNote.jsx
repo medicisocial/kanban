@@ -72,29 +72,36 @@ export function CalendarSheetNoteAnchor({ note, children }) {
 export function CalendarSheetNoteEditor({
   initialNote = '',
   onSave,
+  onDelete,
   busy = false,
   readOnly = false,
 }) {
   const [draft, setDraft] = useState(initialNote);
   const [error, setError] = useState('');
-  const [saved, setSaved] = useState(false);
-  const savedTimerRef = useRef(null);
+  const [status, setStatus] = useState('');
+  const statusTimerRef = useRef(null);
   const lastSavedRef = useRef(initialNote);
 
   useEffect(() => {
     setDraft(initialNote);
     lastSavedRef.current = initialNote;
-    setSaved(false);
+    setStatus('');
     setError('');
   }, [initialNote]);
 
   useEffect(() => {
     return () => {
-      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
     };
   }, []);
 
-  const persist = async () => {
+  const flashStatus = (message) => {
+    setStatus(message);
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+    statusTimerRef.current = setTimeout(() => setStatus(''), 2400);
+  };
+
+  const handleSave = async () => {
     const trimmed = draft.trim();
     if (readOnly || busy) return;
     if (!trimmed) {
@@ -107,13 +114,28 @@ export function CalendarSheetNoteEditor({
     try {
       await onSave(trimmed);
       lastSavedRef.current = trimmed;
-      setSaved(true);
-      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
-      savedTimerRef.current = setTimeout(() => setSaved(false), 2400);
+      flashStatus('Saved');
     } catch (err) {
       setError(err?.message || 'Could not save note.');
     }
   };
+
+  const handleDelete = async () => {
+    if (readOnly || busy || !onDelete) return;
+    if (!lastSavedRef.current.trim()) return;
+
+    setError('');
+    try {
+      await onDelete();
+      setDraft('');
+      lastSavedRef.current = '';
+      flashStatus('Deleted');
+    } catch (err) {
+      setError(err?.message || 'Could not delete note.');
+    }
+  };
+
+  const canDelete = Boolean(onDelete && lastSavedRef.current.trim());
 
   return (
     <div className="space-y-1.5">
@@ -123,10 +145,7 @@ export function CalendarSheetNoteEditor({
           onChange={(e) => {
             setDraft(e.target.value);
             if (error) setError('');
-            if (saved) setSaved(false);
-          }}
-          onBlur={() => {
-            void persist();
+            if (status) setStatus('');
           }}
           readOnly={readOnly || busy}
           rows={4}
@@ -136,9 +155,37 @@ export function CalendarSheetNoteEditor({
         />
       </div>
       <div className="flex items-center justify-between gap-2 px-0.5">
-        <p className="text-[10px] text-[#5f6368]">Click outside to save · your team is notified</p>
-        {busy && <span className="text-[10px] text-[#5f6368]">Saving…</span>}
-        {!busy && saved && <span className="text-[10px] text-[#188038]">Saved</span>}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              void handleSave();
+            }}
+            disabled={readOnly || busy || !draft.trim()}
+            className="rounded-[2px] border border-[#dadce0] bg-white px-2.5 py-1 text-[11px] font-medium text-[#1a73e8] transition hover:bg-[#f8f9fa] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {busy ? 'Saving…' : 'Save'}
+          </button>
+          {canDelete && (
+            <button
+              type="button"
+              onClick={() => {
+                void handleDelete();
+              }}
+              disabled={readOnly || busy}
+              className="rounded-[2px] border border-transparent px-2 py-1 text-[11px] font-medium text-[#d93025] transition hover:bg-[#fce8e6] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Delete
+            </button>
+          )}
+        </div>
+        {status && (
+          <span
+            className={`text-[10px] ${status === 'Deleted' ? 'text-[#5f6368]' : 'text-[#188038]'}`}
+          >
+            {status}
+          </span>
+        )}
       </div>
       {error && <p className="text-[11px] text-[#d93025]">{error}</p>}
     </div>

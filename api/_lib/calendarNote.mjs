@@ -57,3 +57,29 @@ export function buildCalendarNoteUpdates(
 
   return updates;
 }
+
+export function buildCalendarNoteDeleteUpdates(
+  card,
+  { occurrenceDate, timestamp = Date.now() } = {},
+) {
+  const stamp = new Date(timestamp).toLocaleDateString();
+  const noteAppend = `\n\nClient calendar note removed (${stamp})`;
+  const updates = {
+    clientComment: '',
+    calendarNoteAt: 0,
+    updatedAt: timestamp,
+    notes: `${card.notes || ''}${noteAppend}`.trim(),
+  };
+
+  const dateKey = String(occurrenceDate || '').trim();
+  if (card.contentType === 'Story' && /^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    const existing =
+      card.storyOccurrenceNotes && typeof card.storyOccurrenceNotes === 'object'
+        ? { ...card.storyOccurrenceNotes }
+        : {};
+    delete existing[dateKey];
+    updates.storyOccurrenceNotes = existing;
+  }
+
+  return updates;
+}

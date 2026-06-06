@@ -29,6 +29,7 @@ import {
 import {
   isPortalContentCalendarCard,
   buildCalendarNoteUpdates,
+  buildCalendarNoteDeleteUpdates,
 } from '../api/_lib/calendarNote.mjs';
 import { buildCalendarNoteResponse } from '../src/utils/calendarNote.js';
 import { getCalendarClientNote } from '../src/utils/calendarClientNote.js';
@@ -530,6 +531,26 @@ if (typeof localStorage !== 'undefined') {
   );
 }
 
+// Calendar note delete clears client fields and occurrence overrides.
+{
+  const card = {
+    contentType: 'Story',
+    clientComment: 'Remove me',
+    calendarNoteAt: 1_700_000_000_000,
+    storyOccurrenceNotes: { '2026-06-12': 'Remove me', '2026-06-05': 'Keep' },
+    notes: 'Staff context',
+  };
+  const updates = buildCalendarNoteDeleteUpdates(card, {
+    occurrenceDate: '2026-06-12',
+    timestamp: 1_700_000_100_000,
+  });
+  assert(updates.clientComment === '', 'delete should clear clientComment');
+  assert(updates.calendarNoteAt === 0, 'delete should clear calendarNoteAt');
+  assert(!updates.storyOccurrenceNotes['2026-06-12'], 'delete should remove occurrence note');
+  assert(updates.storyOccurrenceNotes['2026-06-05'] === 'Keep', 'other occurrence notes should remain');
+  assert(updates.notes.includes('removed'), 'delete should append audit line');
+}
+
 // Client note display respects story occurrence date.
 {
   const note = getCalendarClientNote({
@@ -552,6 +573,14 @@ if (typeof localStorage !== 'undefined') {
   assert(payload.comment === 'Looks great', 'comment should be trimmed');
   assert(payload.occurrenceDate === '2026-06-12', 'occurrenceDate should pass through');
   assert(payload.client === 'Plume', 'client should pass through');
+
+  const deleted = buildCalendarNoteResponse({
+    card: { id: 'c9', occurrenceDate: '2026-06-12' },
+    client: 'Plume',
+    action: 'delete',
+  });
+  assert(deleted.action === 'delete', 'delete action should pass through');
+  assert(deleted.comment === '', 'delete payload should omit comment');
 }
 
 console.log('Sync merge tests passed.');

@@ -126,6 +126,9 @@ function ClientCalendarDetail({
               onSave={async (comment) => {
                 await onSubmitNote(buildCalendarNoteResponse({ card, comment, client }));
               }}
+              onDelete={async () => {
+                await onSubmitNote(buildCalendarNoteResponse({ card, client, action: 'delete' }));
+              }}
             />
           </div>
         )}
@@ -160,13 +163,27 @@ export default function ClientCalendarPortal({
         const timestamp = response.timestamp || Date.now();
         setSelectedCard((prev) => {
           if (!prev || prev.id !== response.cardId) return prev;
+          const dateKey = response.occurrenceDate;
+          if (response.action === 'delete') {
+            const next = {
+              ...prev,
+              clientComment: '',
+              calendarNoteAt: 0,
+              updatedAt: timestamp,
+            };
+            if (prev.contentType === 'Story' && dateKey) {
+              const storyNotes = { ...(prev.storyOccurrenceNotes || {}) };
+              delete storyNotes[dateKey];
+              next.storyOccurrenceNotes = storyNotes;
+            }
+            return next;
+          }
           const next = {
             ...prev,
             clientComment: response.comment,
             calendarNoteAt: timestamp,
             updatedAt: timestamp,
           };
-          const dateKey = response.occurrenceDate;
           if (prev.contentType === 'Story' && dateKey) {
             next.storyOccurrenceNotes = {
               ...(prev.storyOccurrenceNotes || {}),

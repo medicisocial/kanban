@@ -10,6 +10,7 @@ import { normalizeClientCompanyFiles } from './_lib/clientCompanyFiles.mjs';
 import { normalizeClientSpecialMenus } from './_lib/clientSpecialMenus.mjs';
 import {
   buildCalendarNoteUpdates,
+  buildCalendarNoteDeleteUpdates,
   isPortalContentCalendarCard,
 } from './_lib/calendarNote.mjs';
 import {
@@ -163,11 +164,18 @@ async function applyResponseToSupabase(res, session, type, response) {
 
     let updates;
     try {
-      updates = buildCalendarNoteUpdates(card, {
-        comment: response.comment,
-        occurrenceDate: response.occurrenceDate,
-        timestamp: response.timestamp,
-      });
+      if (response.action === 'delete') {
+        updates = buildCalendarNoteDeleteUpdates(card, {
+          occurrenceDate: response.occurrenceDate,
+          timestamp: response.timestamp,
+        });
+      } else {
+        updates = buildCalendarNoteUpdates(card, {
+          comment: response.comment,
+          occurrenceDate: response.occurrenceDate,
+          timestamp: response.timestamp,
+        });
+      }
     } catch (error) {
       return res.status(400).json({ error: error.message || 'Invalid note.' });
     }
