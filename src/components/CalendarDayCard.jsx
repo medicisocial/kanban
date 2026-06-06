@@ -1,5 +1,6 @@
 import CardTitleLink from './CardTitleLink';
 import { accentCardStyle } from '../utils/contentTypeColors';
+import { CalendarSheetNoteAnchor } from './CalendarSheetNote';
 
 function withoutLeftAccentLine(style) {
   if (!style) return style;
@@ -31,6 +32,7 @@ export default function CalendarDayCard({
   relaxed = false,
   clientPortal = false,
   footerContent = null,
+  sheetNote = '',
 }) {
   const handleClick = (event) => {
     event.stopPropagation();
@@ -117,7 +119,9 @@ export default function CalendarDayCard({
     </div>
   );
 
-  return (
+  const hasSheetNote = Boolean(String(sheetNote || '').trim());
+
+  const cardShell = (
     <div
       role="button"
       tabIndex={0}
@@ -134,7 +138,7 @@ export default function CalendarDayCard({
         ...withoutLeftAccentLine(surfaceStyle || accentCardStyle(accentColor)),
         opacity,
       }}
-      title={titleAttr}
+      title={hasSheetNote ? undefined : titleAttr}
     >
       {clientPortal ? (
         clientPortalBody
@@ -187,4 +191,8 @@ export default function CalendarDayCard({
       )}
     </div>
   );
+
+  if (!hasSheetNote) return cardShell;
+
+  return <CalendarSheetNoteAnchor note={sheetNote}>{cardShell}</CalendarSheetNoteAnchor>;
 }

@@ -9,6 +9,10 @@ import { normalizeClientContacts, mergeClientSocialLogins } from './_lib/clientP
 import { normalizeClientCompanyFiles } from './_lib/clientCompanyFiles.mjs';
 import { normalizeClientSpecialMenus } from './_lib/clientSpecialMenus.mjs';
 import {
+  buildCalendarNoteUpdates,
+  isPortalContentCalendarCard,
+} from './_lib/calendarNote.mjs';
+import {
   isSupabaseConfigured,
   fetchRecord,
   upsertRecord,
@@ -17,6 +21,7 @@ import {
 
 const CLIENT_RESPONSES_STORAGE_KEY = 'medici-social-client-responses';
 const CONTENT_REVIEW_RESPONSES_KEY = 'medici-social-content-review-responses';
+const CALENDAR_NOTE_RESPONSES_KEY = 'medici-social-calendar-note-responses';
 const VIDEO_IDEAS_STORAGE_KEY = 'medici-social-video-ideas';
 const EVENTS_STORAGE_KEY = 'medici-social-events';
 const MEETINGS_STORAGE_KEY = 'medici-social-meetings';
@@ -139,6 +144,32 @@ async function applyResponseToSupabase(res, session, type, response) {
       updates = buildContentReviewDenyUpdates(card, comment, response.timestamp);
     } else {
       return res.status(400).json({ error: 'Unknown content action.' });
+    }
+
+    await upsertRecord(CARDS_TABLE, cardId, { ...card, ...updates }, orgId);
+    return res.status(200).json({ ok: true });
+  }
+
+  if (type === 'calendar-note') {
+    const cardId = response.cardId;
+    if (!cardId) return res.status(400).json({ error: 'Missing cardId.' });
+
+    const card = await fetchRecord(CARDS_TABLE, cardId, orgId);
+    if (!card) return res.status(404).json({ error: 'Card not found.' });
+    if (card.client !== brand) return res.status(403).json({ error: 'Forbidden.' });
+    if (!isPortalContentCalendarCard(card)) {
+      return res.status(400).json({ error: 'This item is not on your content calendar.' });
+    }
+
+    let updates;
+    try {
+      updates = buildCalendarNoteUpdates(card, {
+        comment: response.comment,
+        occurrenceDate: response.occurrenceDate,
+        timestamp: response.timestamp,
+      });
+    } catch (error) {
+      return res.status(400).json({ error: error.message || 'Invalid note.' });
     }
 
     await upsertRecord(CARDS_TABLE, cardId, { ...card, ...updates }, orgId);
@@ -368,6 +399,13 @@ export default async function handler(req, res) {
       'cardId',
     );
     workspace.data[CONTENT_REVIEW_RESPONSES_KEY] = next;
+  } else if (type === 'calendar-note') {
+    const next = appendResponse(
+      workspace.data[CALENDAR_NOTE_RESPONSES_KEY] || [],
+      { ...response, client: session.brand, timestamp: response.timestamp || Date.now() },
+      'cardId',
+    );
+    workspace.data[CALENDAR_NOTE_RESPONSES_KEY] = next;
   } else if (type === 'event') {
     let events = Array.isArray(workspace.data[EVENTS_STORAGE_KEY])
       ? [...workspace.data[EVENTS_STORAGE_KEY]]

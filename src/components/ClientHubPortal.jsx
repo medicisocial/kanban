@@ -105,6 +105,7 @@ export default function ClientHubPortal({ onSignOut }) {
 
   const handleIdeaResponse = (response) => queueCloudResponse('idea', response);
   const handleContentResponse = (response) => queueCloudResponse('content', response);
+  const handleCalendarNote = (response) => queueCloudResponse('calendar-note', response);
 
   const handleAddEvent = async (data) => {
     await queueCloudResponse('event', {
@@ -250,6 +251,7 @@ export default function ClientHubPortal({ onSignOut }) {
           onAddMeeting={handleAddMeeting}
           onUpdateMeeting={handleUpdateMeeting}
           onDeleteMeeting={handleDeleteMeeting}
+          onCalendarNote={handleCalendarNote}
         />
       )}
 

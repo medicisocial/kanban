@@ -87,6 +87,23 @@ export function buildWorkspaceAlerts({
     });
   }
 
+  const calendarNoteWindowMs = 14 * 24 * 60 * 60 * 1000;
+  const recentCalendarNotes = scopedCards.filter(
+    (c) =>
+      cardScope(c) &&
+      Number(c.calendarNoteAt) > 0 &&
+      Date.now() - Number(c.calendarNoteAt) <= calendarNoteWindowMs,
+  );
+  if (recentCalendarNotes.length > 0) {
+    alerts.push({
+      id: 'calendar-notes',
+      tone: 'info',
+      title: `${recentCalendarNotes.length} client calendar note${recentCalendarNotes.length === 1 ? '' : 's'}`,
+      detail: 'A client left feedback on scheduled content.',
+      view: 'calendars',
+    });
+  }
+
   const pendingIdeas = scopedIdeas.filter((i) => i.status === 'pending');
   if (pendingIdeas.length > 0) {
     alerts.push({

@@ -18,6 +18,7 @@ export default function ClientUnifiedCalendarsPortal({
   onAddMeeting,
   onUpdateMeeting,
   onDeleteMeeting,
+  onCalendarNote,
 }) {
   const [tab, setTab] = useState(initialTab);
 
@@ -50,7 +51,14 @@ export default function ClientUnifiedCalendarsPortal({
       </div>
 
       {tab === 'content' && (
-        <ClientCalendarPortal client={client} cards={cards} embedded hideSectionHeader />
+        <ClientCalendarPortal
+          client={client}
+          cards={cards}
+          embedded
+          hideSectionHeader
+          useCloudSync={Boolean(onCalendarNote)}
+          onCloudQueueResponse={onCalendarNote}
+        />
       )}
 
       {tab === 'events' && (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import {
@@ -22,9 +22,25 @@ import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader'
 import SharePortalShell from './clientPortal/SharePortalShell';
 import CalendarZoomControls, { CalendarZoomViewport } from './CalendarZoomControls';
 import { useCalendarZoom, CALENDAR_ZOOM_STORAGE_KEYS } from '../hooks/useCalendarZoom';
-import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass, glassSegmentClass } from './clientPortal/clientPortalUi';
+import { buildCalendarNoteResponse } from '../utils/calendarNote';
+import { getCalendarClientNote } from '../utils/calendarClientNote';
+import { CalendarSheetNoteEditor } from './CalendarSheetNote';
+import {
+  btnPrimaryClass,
+  btnSecondaryClass,
+  surfacePanelClass,
+  glassSegmentClass,
+} from './clientPortal/clientPortalUi';
 
-function ClientCalendarDetail({ card, onClose }) {
+function ClientCalendarDetail({
+  card,
+  client,
+  onClose,
+  onSubmitNote,
+  noteBusy = false,
+}) {
+  const existingNote = getCalendarClientNote(card);
+
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === 'Escape') onClose();
@@ -98,20 +114,73 @@ function ClientCalendarDetail({ card, onClose }) {
           </div>
         </dl>
 
-        {card.notes && (
-          <p className="mt-4 rounded-lg bg-white/5 px-3 py-2 text-sm text-gray-400">{card.notes}</p>
+        {onSubmitNote && (
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-white/40">
+              Note
+            </p>
+            <CalendarSheetNoteEditor
+              key={`${card.id}-${card.occurrenceDate || ''}-${existingNote}`}
+              initialNote={existingNote}
+              busy={noteBusy}
+              onSave={async (comment) => {
+                await onSubmitNote(buildCalendarNoteResponse({ card, comment, client }));
+              }}
+            />
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-export default function ClientCalendarPortal({ client, cards, embedded = false, hideSectionHeader = false }) {
+export default function ClientCalendarPortal({
+  client,
+  cards,
+  embedded = false,
+  hideSectionHeader = false,
+  useCloudSync = false,
+  onCloudQueueResponse,
+}) {
   const { getClientColor } = useClientsContext();
   const [focusDate, setFocusDate] = useState(() => getDefaultCalendarDate());
   const [viewMode, setViewMode] = useState('month');
   const [selectedCard, setSelectedCard] = useState(null);
+  const [noteBusy, setNoteBusy] = useState(false);
   const { zoom, defaultZoom, setZoom } = useCalendarZoom(CALENDAR_ZOOM_STORAGE_KEYS.content);
+
+  const handleSubmitNote = useCallback(
+    async (response) => {
+      if (!useCloudSync || !onCloudQueueResponse) {
+        throw new Error('Sign in to the client portal to leave notes.');
+      }
+      setNoteBusy(true);
+      try {
+        await onCloudQueueResponse(response);
+        const timestamp = response.timestamp || Date.now();
+        setSelectedCard((prev) => {
+          if (!prev || prev.id !== response.cardId) return prev;
+          const next = {
+            ...prev,
+            clientComment: response.comment,
+            calendarNoteAt: timestamp,
+            updatedAt: timestamp,
+          };
+          const dateKey = response.occurrenceDate;
+          if (prev.contentType === 'Story' && dateKey) {
+            next.storyOccurrenceNotes = {
+              ...(prev.storyOccurrenceNotes || {}),
+              [dateKey]: response.comment,
+            };
+          }
+          return next;
+        });
+      } finally {
+        setNoteBusy(false);
+      }
+    },
+    [useCloudSync, onCloudQueueResponse],
+  );
 
   const visibleCards = useMemo(() => {
     const snapshot = parseCalendarShareHash();
@@ -242,7 +311,13 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
       <>
         {calendarBody}
         {selectedCard && (
-          <ClientCalendarDetail card={selectedCard} onClose={() => setSelectedCard(null)} />
+          <ClientCalendarDetail
+            card={selectedCard}
+            client={client}
+            onClose={() => setSelectedCard(null)}
+            onSubmitNote={useCloudSync ? handleSubmitNote : undefined}
+            noteBusy={noteBusy}
+          />
         )}
       </>
     );
@@ -266,7 +341,13 @@ export default function ClientCalendarPortal({ client, cards, embedded = false, 
     <SharePortalShell title="Content calendar" client={client} clientColor={clientColor}>
       {calendarBody}
       {selectedCard && (
-        <ClientCalendarDetail card={selectedCard} onClose={() => setSelectedCard(null)} />
+        <ClientCalendarDetail
+          card={selectedCard}
+          client={client}
+          onClose={() => setSelectedCard(null)}
+          onSubmitNote={useCloudSync ? handleSubmitNote : undefined}
+          noteBusy={noteBusy}
+        />
       )}
     </SharePortalShell>
   );

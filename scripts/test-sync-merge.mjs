@@ -26,6 +26,12 @@ import {
   mergeBrandCompanyFilesPortalRefresh,
   mergeClientsWorkspaceBrandFiles,
 } from '../src/utils/clientsWorkspaceMerge.js';
+import {
+  isPortalContentCalendarCard,
+  buildCalendarNoteUpdates,
+} from '../api/_lib/calendarNote.mjs';
+import { buildCalendarNoteResponse } from '../src/utils/calendarNote.js';
+import { getCalendarClientNote } from '../src/utils/calendarClientNote.js';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -457,6 +463,95 @@ if (typeof localStorage !== 'undefined') {
   });
   assert(merged.companyFiles.Plume.length === 1, 'stale remote should not revert admin upload');
   assert(merged.companyFiles.Plume[0].id === 'f1', 'admin upload id should survive realtime merge');
+}
+
+// Calendar notes: only scheduled pipeline cards are eligible.
+{
+  assert(
+    isPortalContentCalendarCard({
+      columnId: 'scheduled',
+      contentType: 'Reel',
+      dueDate: '2026-06-10',
+    }),
+    'scheduled reel with due date should be eligible',
+  );
+  assert(
+    !isPortalContentCalendarCard({
+      columnId: 'ideas',
+      contentType: 'Reel',
+      dueDate: '2026-06-10',
+    }),
+    'ideas column should not be eligible',
+  );
+  assert(
+    !isPortalContentCalendarCard({
+      columnId: 'scheduled',
+      contentType: 'Reel',
+    }),
+    'post without due date should not be eligible',
+  );
+}
+
+// Calendar notes: append history and stamp calendarNoteAt.
+{
+  const card = {
+    id: 'c1',
+    contentType: 'Static Post',
+    notes: 'Existing',
+  };
+  const updates = buildCalendarNoteUpdates(card, {
+    comment: 'Please move to Friday',
+    timestamp: 1_700_000_000_000,
+  });
+  assert(updates.clientComment === 'Please move to Friday', 'clientComment should be set');
+  assert(updates.calendarNoteAt === 1_700_000_000_000, 'calendarNoteAt should be set');
+  assert(updates.notes.includes('Existing'), 'existing notes should be preserved');
+  assert(updates.notes.includes('Please move to Friday'), 'note should be appended');
+}
+
+// Story occurrence notes keyed by date.
+{
+  const card = {
+    contentType: 'Story',
+    storyOccurrenceNotes: { '2026-06-05': 'Old note' },
+  };
+  const updates = buildCalendarNoteUpdates(card, {
+    comment: 'Use alternate CTA',
+    occurrenceDate: '2026-06-12',
+    timestamp: 1_700_000_000_000,
+  });
+  assert(
+    updates.storyOccurrenceNotes['2026-06-12'] === 'Use alternate CTA',
+    'story occurrence note should be stored by date',
+  );
+  assert(
+    updates.storyOccurrenceNotes['2026-06-05'] === 'Old note',
+    'other occurrence notes should be preserved',
+  );
+}
+
+// Client note display respects story occurrence date.
+{
+  const note = getCalendarClientNote({
+    contentType: 'Story',
+    occurrenceDate: '2026-06-12',
+    clientComment: 'General',
+    storyOccurrenceNotes: { '2026-06-12': 'For this day only' },
+  });
+  assert(note === 'For this day only', 'occurrence note should win over clientComment');
+}
+
+// Portal payload shape for client-responses API.
+{
+  const payload = buildCalendarNoteResponse({
+    card: { id: 'c9', occurrenceDate: '2026-06-12' },
+    comment: 'Looks great',
+    client: 'Plume',
+  });
+  assert(payload.cardId === 'c9', 'cardId should be included');
+  assert(payload.comment === 'Looks great', 'comment should be trimmed');
+  assert(payload.occurrenceDate === '2026-06-12', 'occurrenceDate should pass through');
+  assert(payload.client === 'Plume', 'client should pass through');
 }
 
 console.log('Sync merge tests passed.');

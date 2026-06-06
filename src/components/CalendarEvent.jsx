@@ -3,6 +3,7 @@ import { contentTypeCardStyle, contentTypeLabelProps } from "../utils/contentTyp
 import { useClientsContext } from "../context/ClientsContext";
 import { formatTime } from "../utils";
 import { formatStoryScheduleSummary, hasStoryDailyRange, hasStoryRecurrence, isCalendarEventPosted } from "../utils/calendar";
+import { getCalendarClientNote } from "../utils/calendarClientNote";
 import CalendarDayCard from "./CalendarDayCard";
 
 export default function CalendarEvent({
@@ -49,6 +50,7 @@ export default function CalendarEvent({
   const eventTitle = hideClient
     ? card.title
     : `${card.client}: ${card.title}${scheduleSummary ? ` (${scheduleSummary})` : ""}`;
+  const sheetNote = getCalendarClientNote(card);
 
   const canDrag =
     Boolean(onMove) &&
@@ -97,6 +99,7 @@ export default function CalendarEvent({
         dense
         relaxed={relaxed}
         clientPortal={clientPortal}
+        sheetNote={sheetNote}
       />
     );
   }
@@ -155,6 +158,7 @@ export default function CalendarEvent({
           canDrag ? 'cursor-grab active:cursor-grabbing' : ''
         } ${onRemove ? (relaxed ? 'pr-6' : 'pr-5') : ''}`}
         dragProps={dragProps}
+        sheetNote={sheetNote}
       />
     </div>
   );
