@@ -10,7 +10,7 @@ import { createHash } from 'crypto';
 import { loadEnv } from 'vite';
 
 const url = process.argv[2] || 'https://portal.medicisocial.com/';
-const brand = process.argv[3] || 'Plume';
+const brand = process.argv[3] || 'ZZ_VaultTest';
 const env = loadEnv('development', process.cwd(), '');
 const staffPassword = (env.VITE_SUPABASE_STAFF_PASSWORD || process.env.VITE_SUPABASE_STAFF_PASSWORD || '').trim();
 const STAFF_USER = 'info@medicisocial.com';
@@ -99,7 +99,7 @@ try {
         elapsedMs: elapsed,
         savingStillVisible: savingVisible,
         hasSuccess: /portal access saved/i.test(bodyText),
-        hasTimeoutError: /timed out|supabase fetch timed out/i.test(bodyText),
+        hasTimeoutError: /timed out|supabase fetch timed out|saving timed out/i.test(bodyText),
         hasSaveError: /could not save portal/i.test(bodyText),
       },
       null,

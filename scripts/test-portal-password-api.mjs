@@ -9,7 +9,7 @@ import { createHash } from 'crypto';
 import { loadEnv } from 'vite';
 
 const baseUrl = (process.argv[2] || 'https://portal.medicisocial.com').replace(/\/$/, '');
-const brand = process.argv[3] || 'Plume';
+const brand = process.argv[3] || 'ZZ_VaultTest';
 const STAFF_USER = 'info@medicisocial.com';
 const STAFF_HASH = '288a74dd35327615ef98b375a2445d9ebd4c570a5e5d413181986ebf127f45e1';
 
