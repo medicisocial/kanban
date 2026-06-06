@@ -26,7 +26,7 @@ import { useSingletonSync } from '../lib/useSingletonSync';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { shouldPersistSyncedState } from '../lib/syncInitialState';
 import { registerPortalCredentialBrand } from '../lib/syncHelpers';
-import { savePortalPasswordVault } from '../utils/clientPortalPasswordVault';
+import { loadPortalPasswordVault, savePortalPasswordVault } from '../utils/clientPortalPasswordVault';
 import { saveStaffBrandAssets } from '../utils/staffBrandAssetsApi';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
 
@@ -346,7 +346,11 @@ export function useClients() {
   const getPortalPasswordForUser = useCallback(
     (client, userId) => {
       if (!client || !userId) return '';
-      return state.portalPasswordVault?.[client]?.[userId] || '';
+      const fromState = state.portalPasswordVault?.[client]?.[userId];
+      if (fromState) return fromState;
+      // Fall back to the local write-through cache so a just-saved password
+      // re-displays before cloud sync refreshes the in-memory vault.
+      return loadPortalPasswordVault()?.[client]?.[userId] || '';
     },
     [state.portalPasswordVault],
   );
