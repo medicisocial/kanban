@@ -5,7 +5,6 @@ import {
   isClientHubPortal,
   loadUsableClientSession,
   loginClientPortal,
-  saveClientSession,
   submitClientPortalProfile,
   submitClientPortalResponse,
 } from '../utils/clientPortalAuth';
@@ -14,7 +13,11 @@ import { subscribeClientPortalChanges } from '../lib/clientPortalRealtime';
 import { normalizeContentTypeColors, setContentTypeColorOverrides } from '../utils/contentTypeColors';
 import { isEditorFilePickActive } from '../utils/editorPickGuard';
 import {
-  filterSuppressedBrandFiles,
+  companyFilesIncludeDeleted,
+  filterDeletedCompanyFiles,
+  recordDeletedCompanyFiles,
+} from '../utils/brandFileTombstones';
+import {
   mergeBrandCompanyFiles,
   mergeBrandCompanyFilesPortalRefresh,
   mergeBrandSpecialMenus,
@@ -23,33 +26,16 @@ import {
 const PORTAL_POLL_MS = SUPABASE_ENABLED ? 45000 : 15000;
 /** Skip background refreshes for a moment after a save so a stale read can't revert it. */
 const SAVE_REFRESH_COOLDOWN_MS = 10000;
-const SUPPRESSED_FILE_MS = 5 * 60 * 1000;
-
-function trackSuppressedBrandFileDeletes(prevFiles, nextFiles, suppressedUntilById) {
-  if (!Array.isArray(nextFiles)) return;
-  const nextIds = new Set(nextFiles.filter((file) => file?.id).map((file) => String(file.id)));
-  for (const file of Array.isArray(prevFiles) ? prevFiles : []) {
-    const id = String(file?.id || '');
-    if (id && !nextIds.has(id)) {
-      suppressedUntilById.set(id, Date.now() + SUPPRESSED_FILE_MS);
-    }
-  }
-}
-
-function clearConfirmedSuppressions(serverFiles, suppressedUntilById) {
-  const serverIds = new Set(
-    (Array.isArray(serverFiles) ? serverFiles : [])
-      .filter((file) => file?.id)
-      .map((file) => String(file.id)),
-  );
-  for (const id of [...suppressedUntilById.keys()]) {
-    if (!serverIds.has(id)) {
-      suppressedUntilById.delete(id);
-    }
-  }
-}
+const HEAL_COOLDOWN_MS = 15000;
 
 const ClientAuthContext = createContext(null);
+
+function resolvePortalCompanyFiles({ brand, prevFiles, serverFiles }) {
+  const merged = prevFiles?.length
+    ? mergeBrandCompanyFilesPortalRefresh(prevFiles, serverFiles)
+    : (serverFiles ?? []);
+  return filterDeletedCompanyFiles(brand, merged);
+}
 
 export function ClientAuthProvider({ children }) {
   const [session, setSession] = useState(() => loadUsableClientSession());
@@ -65,17 +51,28 @@ export function ClientAuthProvider({ children }) {
     return () => { isMountedRef.current = false; };
   }, []);
 
-  // Guards background refreshes (focus/poll/realtime) from clobbering an
-  // in-flight or just-completed save. Without this, closing the file picker
-  // re-focuses the window, fires a refetch, and a stale read overwrites the
-  // upload the user just made — it flashes on screen then disappears.
   const savingProfileRef = useRef(0);
   const saveCooldownUntilRef = useRef(0);
-  const suppressedCompanyFileIdsRef = useRef(new Map());
+  const healInFlightRef = useRef(false);
+  const lastHealAtRef = useRef(0);
+
+  const maybeHealDeletedCompanyFiles = useCallback(async (activeSession, activeBrand, canonicalFiles) => {
+    if (!activeSession || !activeBrand || !Array.isArray(canonicalFiles)) return;
+    if (healInFlightRef.current) return;
+    if (Date.now() - lastHealAtRef.current < HEAL_COOLDOWN_MS) return;
+    healInFlightRef.current = true;
+    lastHealAtRef.current = Date.now();
+    try {
+      await submitClientPortalProfile(activeSession, { companyFiles: canonicalFiles });
+    } catch {
+      /* background repair — ignore */
+    } finally {
+      healInFlightRef.current = false;
+    }
+  }, []);
 
   const refreshPortalData = useCallback(async (activeSession = session, { silent = false } = {}) => {
     if (!activeSession) return;
-    // A background refresh must never stomp on a save the user just made.
     if (
       silent &&
       (savingProfileRef.current > 0 ||
@@ -89,8 +86,6 @@ export function ClientAuthProvider({ children }) {
     try {
       const data = await fetchClientPortalData(activeSession);
       if (!isMountedRef.current) return;
-      // Re-check after the network round-trip: a save may have started while
-      // this refresh was in flight.
       if (
         silent &&
         (savingProfileRef.current > 0 ||
@@ -99,21 +94,33 @@ export function ClientAuthProvider({ children }) {
       ) {
         return;
       }
-      // Merge files/menus against what we already have so a background refresh
-      // that resolves just after an upload (before the read reflects it) can't
-      // drop a file the client just added — it would otherwise flash then vanish.
+
+      const activeBrand = data.brand || activeSession.brand;
+      if (companyFilesIncludeDeleted(activeBrand, data.companyFiles)) {
+        const canonical = filterDeletedCompanyFiles(activeBrand, data.companyFiles);
+        void maybeHealDeletedCompanyFiles(activeSession, activeBrand, canonical);
+      }
+
       setPortalData((prev) => {
-        if (!prev || prev.brand !== data.brand) return data;
-        clearConfirmedSuppressions(data.companyFiles, suppressedCompanyFileIdsRef.current);
-        const companyFiles = filterSuppressedBrandFiles(
-          mergeBrandCompanyFilesPortalRefresh(prev.companyFiles, data.companyFiles),
-          suppressedCompanyFileIdsRef.current,
-        );
+        if (!prev || prev.brand !== data.brand) {
+          return {
+            ...data,
+            companyFiles: resolvePortalCompanyFiles({
+              brand: activeBrand,
+              prevFiles: null,
+              serverFiles: data.companyFiles,
+            }),
+          };
+        }
         return {
           ...prev,
           ...data,
           businessType: data.businessType || prev.businessType,
-          companyFiles,
+          companyFiles: resolvePortalCompanyFiles({
+            brand: activeBrand,
+            prevFiles: prev.companyFiles,
+            serverFiles: data.companyFiles,
+          }),
           specialMenus: mergeBrandSpecialMenus(prev.specialMenus, data.specialMenus),
         };
       });
@@ -136,7 +143,7 @@ export function ClientAuthProvider({ children }) {
     } finally {
       if (isMountedRef.current) setLoadingData(false);
     }
-  }, [session]);
+  }, [session, maybeHealDeletedCompanyFiles]);
 
   useEffect(() => {
     if (!session) return;
@@ -201,37 +208,44 @@ export function ClientAuthProvider({ children }) {
       if (!session) {
         throw new Error('Session expired. Please sign in again.');
       }
-      // Block background refreshes for the duration of the save (and a short
-      // cooldown after) so a stale read can't revert what we just wrote.
       savingProfileRef.current += 1;
       let prevCompanyFiles;
+      let activeBrand = brand;
       setPortalData((prev) => {
         prevCompanyFiles = prev?.companyFiles;
+        activeBrand = prev?.brand || session.brand;
         return prev ? { ...prev, ...profile } : prev;
       });
       try {
-        // A real save failure must surface to the caller (editors show it).
         await submitClientPortalProfile(session, profile);
         if (profile.companyFiles) {
-          trackSuppressedBrandFileDeletes(
-            prevCompanyFiles,
-            profile.companyFiles,
-            suppressedCompanyFileIdsRef.current,
-          );
+          recordDeletedCompanyFiles(activeBrand, prevCompanyFiles, profile.companyFiles);
         }
         saveCooldownUntilRef.current = Date.now() + SAVE_REFRESH_COOLDOWN_MS;
-        // Re-read in the background — waiting here left the editor stuck on "Saving…".
         void (async () => {
           try {
             const data = await fetchClientPortalData(session);
             if (!isMountedRef.current) return;
+            const resolvedBrand = data.brand || activeBrand;
             setPortalData((prev) => {
               const merged = { ...data };
               if (profile.companyFiles) {
-                // Authoritative — union merge resurrects deleted files with high updatedAt.
-                merged.companyFiles = profile.companyFiles;
+                merged.companyFiles = filterDeletedCompanyFiles(
+                  resolvedBrand,
+                  profile.companyFiles,
+                );
               } else if (prev?.brand === data.brand) {
-                merged.companyFiles = mergeBrandCompanyFiles(prev.companyFiles, data.companyFiles);
+                merged.companyFiles = resolvePortalCompanyFiles({
+                  brand: resolvedBrand,
+                  prevFiles: prev.companyFiles,
+                  serverFiles: data.companyFiles,
+                });
+              } else {
+                merged.companyFiles = resolvePortalCompanyFiles({
+                  brand: resolvedBrand,
+                  prevFiles: null,
+                  serverFiles: data.companyFiles,
+                });
               }
               if (profile.specialMenus) {
                 merged.specialMenus = profile.specialMenus;
@@ -245,7 +259,6 @@ export function ClientAuthProvider({ children }) {
               setContentTypeColorOverrides(normalizeContentTypeColors(data.contentTypeColors || {}));
             }
           } catch (error) {
-            // The write already succeeded; a failed re-read shouldn't look like a save error.
             if (isMountedRef.current) setDataError(error.message || 'Could not refresh portal.');
           }
         })();
@@ -253,7 +266,7 @@ export function ClientAuthProvider({ children }) {
         savingProfileRef.current = Math.max(0, savingProfileRef.current - 1);
       }
     },
-    [session],
+    [session, brand],
   );
 
   const value = useMemo(
@@ -267,9 +280,9 @@ export function ClientAuthProvider({ children }) {
       dataError,
       login,
       logout,
-      refreshPortalData,
       queueCloudResponse,
       savePortalProfile,
+      refreshPortalData,
     }),
     [
       ready,
@@ -280,9 +293,9 @@ export function ClientAuthProvider({ children }) {
       dataError,
       login,
       logout,
-      refreshPortalData,
       queueCloudResponse,
       savePortalProfile,
+      refreshPortalData,
     ],
   );
 
@@ -290,9 +303,9 @@ export function ClientAuthProvider({ children }) {
 }
 
 export function useClientAuth() {
-  const ctx = useContext(ClientAuthContext);
-  if (!ctx) {
+  const context = useContext(ClientAuthContext);
+  if (!context) {
     throw new Error('useClientAuth must be used within ClientAuthProvider');
   }
-  return ctx;
+  return context;
 }

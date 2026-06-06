@@ -291,28 +291,21 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
               syncedParsed = null;
             }
 
-            if (syncedParsed) {
+            if (value?.companyFiles) {
               dataToWrite.companyFiles = mergeClientsWorkspaceFileMap(
                 existing?.companyFiles,
                 value?.companyFiles,
-                syncedParsed?.companyFiles,
+                syncedParsed?.companyFiles ?? existing?.companyFiles,
                 mergeBrandCompanyFiles,
               );
+            }
+            if (value?.specialMenus) {
               dataToWrite.specialMenus = mergeClientsWorkspaceFileMap(
                 existing?.specialMenus,
                 value?.specialMenus,
-                syncedParsed?.specialMenus,
+                syncedParsed?.specialMenus ?? existing?.specialMenus,
                 mergeBrandSpecialMenus,
               );
-            } else if (value?.companyFiles || value?.specialMenus) {
-              dataToWrite.companyFiles = {
-                ...(existing?.companyFiles || {}),
-                ...(value?.companyFiles || {}),
-              };
-              dataToWrite.specialMenus = {
-                ...(existing?.specialMenus || {}),
-                ...(value?.specialMenus || {}),
-              };
             }
           } catch (mergeErr) {
             console.warn(`[supabase:${table}] merge-before-write failed:`, mergeErr?.message || mergeErr);

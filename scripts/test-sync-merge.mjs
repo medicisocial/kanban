@@ -21,8 +21,8 @@ import {
   mergeBrandCompanyFiles,
   mergeClientsWorkspaceData,
 } from '../api/_lib/clientsWorkspaceMerge.mjs';
+import { filterIdsFromCompanyFiles } from '../src/utils/brandFileTombstones.js';
 import {
-  filterSuppressedBrandFiles,
   mergeBrandCompanyFilesPortalRefresh,
   mergeClientsWorkspaceBrandFiles,
 } from '../src/utils/clientsWorkspaceMerge.js';
@@ -368,18 +368,30 @@ if (typeof localStorage !== 'undefined') {
   assert(merged[0].id === 'f1', 'portal refresh should keep on-screen file');
 }
 
-// Suppressed ids stay hidden during background refresh.
+// Tombstoned ids never render again during this session.
 {
-  const suppressed = new Map([['f2', Date.now() + 60000]]);
-  const files = filterSuppressedBrandFiles(
+  const files = filterIdsFromCompanyFiles(
     [
       { id: 'f1', updatedAt: 10 },
       { id: 'f2', updatedAt: 500 },
     ],
-    suppressed,
+    ['f2'],
   );
-  assert(files.length === 1, 'suppressed file should stay hidden');
-  assert(files[0].id === 'f1', 'non-suppressed file should remain');
+  assert(files.length === 1, 'tombstoned file should stay hidden');
+  assert(files[0].id === 'f1', 'non-tombstoned file should remain');
+}
+
+// Stale staff local must not repush files the server already deleted.
+{
+  const synced = [
+    { id: 'f1', updatedAt: 10 },
+    { id: 'f2', updatedAt: 500 },
+  ];
+  const local = [...synced];
+  const remote = [{ id: 'f1', updatedAt: 10 }];
+  const merged = mergeClientsWorkspaceBrandFiles(remote, local, synced);
+  assert(merged.length === 1, 'stale staff local should not repush deleted file');
+  assert(merged[0].id === 'f1', 'remaining server file should stay');
 }
 
 // Portal delete must not be resurrected when staff sync has not changed locally.

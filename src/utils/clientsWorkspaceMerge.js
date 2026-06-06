@@ -424,6 +424,13 @@ export function mergeClientsWorkspaceBrandFiles(
     }
   }
 
+  // Drop stale local ghosts that the server already removed (portal/staff delete).
+  for (const [id] of [...byId.keys()]) {
+    if (!remoteById.has(id) && syncedById.has(id)) {
+      byId.delete(id);
+    }
+  }
+
   return [...byId.values()].sort((a, b) => recordUpdatedAt(b) - recordUpdatedAt(a));
 }
 

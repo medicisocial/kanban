@@ -25,6 +25,7 @@ import {
   isEditorFilePickActive,
   markEditorUploadWork,
 } from '../../utils/editorPickGuard';
+import { filterDeletedCompanyFiles } from '../../utils/brandFileTombstones';
 import { incomingRecordsAreStale } from '../../utils/editorSyncGuard';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 import FilePreviewActions from './FilePreviewActions';
@@ -44,7 +45,12 @@ export default function ClientCompanyFilesEditor({
 
   const folders = getClientFileFolders(stableBusinessType);
   const [activeFolder, setActiveFolder] = useState(folders[0]?.id || 'general');
-  const [localFiles, setLocalFiles] = useState(() => normalizeClientCompanyFiles(files, businessType));
+  const [localFiles, setLocalFiles] = useState(() =>
+    filterDeletedCompanyFiles(
+      client,
+      normalizeClientCompanyFiles(files, businessType),
+    ),
+  );
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -83,7 +89,12 @@ export default function ClientCompanyFilesEditor({
   useEffect(() => {
     if (client !== clientKeyRef.current) {
       clientKeyRef.current = client;
-      setLocalFiles(normalizeClientCompanyFiles(files, stableBusinessType));
+      setLocalFiles(
+        filterDeletedCompanyFiles(
+          client,
+          normalizeClientCompanyFiles(files, stableBusinessType),
+        ),
+      );
       setPendingUploads([]);
       pendingUploadsRef.current = [];
       clearEditorUploadWork();
@@ -95,7 +106,10 @@ export default function ClientCompanyFilesEditor({
     if (savingRef.current || pickingFileRef.current || isEditorFilePickActive()) return;
     if (pendingUploadsRef.current.length > 0) return;
 
-    const normalized = normalizeClientCompanyFiles(files, stableBusinessType);
+    const normalized = filterDeletedCompanyFiles(
+      client,
+      normalizeClientCompanyFiles(files, stableBusinessType),
+    );
     if (incomingRecordsAreStale(localFilesRef.current, normalized)) return;
 
     setLocalFiles(normalized);
