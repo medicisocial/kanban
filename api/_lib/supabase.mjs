@@ -80,6 +80,7 @@ export function isSupabaseAuthMisconfigured() {
 }
 
 const SERVER_FETCH_TIMEOUT_MS = 10000;
+const SERVER_WRITE_TIMEOUT_MS = 25000;
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = SERVER_FETCH_TIMEOUT_MS) {
   const controller = new AbortController();
@@ -229,14 +230,18 @@ export async function fetchClientPortalCredentialsRows() {
 }
 
 /** Returns a single record's `data` payload (or null if missing / not configured). */
-export async function fetchRecord(table, id, orgIdOverride) {
+export async function fetchRecord(table, id, orgIdOverride, timeoutMs = SERVER_FETCH_TIMEOUT_MS) {
   const { url, key, orgId } = getReadConfig(orgIdOverride);
   if (!url || !key) return null;
 
   const endpoint = `${url}/rest/v1/${table}?select=data&id=eq.${encodeURIComponent(id)}&org_id=eq.${encodeURIComponent(orgId)}`;
-  const response = await fetchWithTimeout(endpoint, {
-    headers: { apikey: key, Authorization: `Bearer ${key}` },
-  });
+  const response = await fetchWithTimeout(
+    endpoint,
+    {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    },
+    timeoutMs,
+  );
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
     throw new Error(`Supabase ${table} fetchRecord failed: ${response.status} ${detail}`.trim());
@@ -252,20 +257,24 @@ export async function patchClientsPortalPasswordVault(brand, brandVault, orgIdOv
   if (!brand) throw new Error('Missing brand for portal password vault patch.');
 
   const endpoint = `${url}/rest/v1/rpc/patch_clients_portal_password_vault`;
-  const response = await fetchWithTimeout(endpoint, {
-    method: 'POST',
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=minimal',
+  const response = await fetchWithTimeout(
+    endpoint,
+    {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        p_org_id: orgId,
+        p_brand: brand,
+        p_brand_vault: brandVault && typeof brandVault === 'object' ? brandVault : {},
+      }),
     },
-    body: JSON.stringify({
-      p_org_id: orgId,
-      p_brand: brand,
-      p_brand_vault: brandVault && typeof brandVault === 'object' ? brandVault : {},
-    }),
-  });
+    SERVER_WRITE_TIMEOUT_MS,
+  );
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
     throw new Error(`Supabase portal vault patch failed: ${response.status} ${detail}`.trim());
@@ -278,16 +287,20 @@ export async function upsertRecord(table, id, data, orgIdOverride) {
   if (!url || !key) throw new Error('Supabase is not configured.');
 
   const endpoint = `${url}/rest/v1/${table}`;
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates,return=minimal',
+  const response = await fetchWithTimeout(
+    endpoint,
+    {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify([{ id, org_id: orgId, data, updated_at: new Date().toISOString() }]),
     },
-    body: JSON.stringify([{ id, org_id: orgId, data, updated_at: new Date().toISOString() }]),
-  });
+    SERVER_WRITE_TIMEOUT_MS,
+  );
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
     throw new Error(`Supabase ${table} upsert failed: ${response.status} ${detail}`.trim());

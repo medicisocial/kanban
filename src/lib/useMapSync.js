@@ -379,23 +379,26 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
         const skipPushBrandIds = new Set();
 
         if (table === 'client_portal_credentials' && rowsToWrite.length) {
-          const existingRows = await fetchRowsWithTimeout(store);
-          const existingByBrand = Object.fromEntries(existingRows.map((row) => [row.id, row.data]));
-          rowsToWrite = rowsToWrite
-            .map((row) => {
-              if (serverSavedBrands.has(String(row.id))) {
-                skipPushBrandIds.add(String(row.id));
-                return null;
-              }
-              return {
-                id: row.id,
-                data: mergePortalCredentialDataForPush(existingByBrand[row.id], row.data, {
-                  allowPasswordChange: passwordChangeBrands.includes(String(row.id)),
-                }),
-              };
-            })
-            .filter(Boolean);
-          rowsToWrite = filterProtectedSyncUpserts(table, rowsToWrite);
+          for (const row of rowsToWrite) {
+            if (serverSavedBrands.has(String(row.id))) {
+              skipPushBrandIds.add(String(row.id));
+            }
+          }
+          rowsToWrite = rowsToWrite.filter((row) => !serverSavedBrands.has(String(row.id)));
+
+          if (rowsToWrite.length) {
+            const existingRows = await fetchRowsWithTimeout(store);
+            const existingByBrand = Object.fromEntries(
+              existingRows.map((row) => [row.id, row.data]),
+            );
+            rowsToWrite = rowsToWrite.map((row) => ({
+              id: row.id,
+              data: mergePortalCredentialDataForPush(existingByBrand[row.id], row.data, {
+                allowPasswordChange: passwordChangeBrands.includes(String(row.id)),
+              }),
+            }));
+            rowsToWrite = filterProtectedSyncUpserts(table, rowsToWrite);
+          }
         }
 
         if (canWrite) {

@@ -1,9 +1,8 @@
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
 import {
-  fetchCollectionMap,
+  fetchRecord,
   isSupabaseConfigured,
-  patchClientsPortalPasswordVault,
   upsertRecord,
 } from './_lib/supabase.mjs';
 import { hashValue, normalizeBrandUsers } from './_lib/clientPortalAuth.mjs';
@@ -100,15 +99,18 @@ export default async function handler(req, res) {
   const resolvedOrgId = orgCheck.orgId;
 
   try {
-    const credentialMap = await fetchCollectionMap('client_portal_credentials', resolvedOrgId);
-
-    const existingUsers = normalizeBrandUsers(credentialMap?.[brand]);
+    const needsExistingRow = users.some((draft) => !String(draft?.password || '').trim());
+    let existingUsers = [];
+    if (needsExistingRow) {
+      existingUsers = normalizeBrandUsers(
+        await fetchRecord('client_portal_credentials', brand, resolvedOrgId),
+      );
+    }
     const existingById = new Map(existingUsers.map((user) => [user.id, user]));
     const existingByUsername = new Map(
       existingUsers.map((user) => [user.username.trim().toLowerCase(), user]),
     );
 
-    const brandVault = {};
     const nextUsers = [];
 
     for (const draft of users) {
@@ -149,10 +151,6 @@ export default async function handler(req, res) {
       }
 
       nextUsers.push(nextUser);
-
-      if (plainPassword) {
-        brandVault[id] = plainPassword;
-      }
     }
 
     if (!hasConfiguredPortalUsers(nextUsers)) {
@@ -161,22 +159,8 @@ export default async function handler(req, res) {
 
     await upsertRecord('client_portal_credentials', brand, nextUsers, resolvedOrgId);
 
-    let vaultWarning = null;
-    if (Object.keys(brandVault).length) {
-      try {
-        await patchClientsPortalPasswordVault(brand, brandVault, resolvedOrgId);
-      } catch (vaultError) {
-        console.warn(
-          '[client-portal-set-password] vault patch failed:',
-          vaultError?.message || vaultError,
-        );
-        vaultWarning =
-          'Portal logins saved. Password vault could not sync to cloud — try again or wait for workspace sync.';
-      }
-    }
-
     const usersForClient = nextUsers.map(({ _passwordChangeAuthorized: _ignored, ...user }) => user);
-    return res.status(200).json({ ok: true, users: usersForClient, vaultWarning });
+    return res.status(200).json({ ok: true, users: usersForClient });
   } catch (error) {
     const detail = String(error?.message || error || '').trim();
     console.error('[client-portal-set-password] failed:', detail);

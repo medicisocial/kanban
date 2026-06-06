@@ -20,6 +20,8 @@ import {
   markCredentialServerSaved,
   registerPortalCredentialBrand,
 } from '../lib/syncHelpers';
+import { hasStaffSupabaseSession } from '../lib/staffSupabaseAuth';
+import { saveClientPortalCredentialsDirect } from '../utils/saveClientPortalCredentialsDirect';
 import { saveClientPortalPasswords } from '../utils/setPortalPasswordApi';
 
 function loadCredentials() {
@@ -93,32 +95,53 @@ export function useClientPortalCredentials() {
 
     let vaultWarning = null;
     if (SUPABASE_ENABLED) {
-      if (hasPasswordChange) {
-        markCredentialPasswordChanges(getOrgId(), [client]);
-      }
-      const apiResult = await saveClientPortalPasswords({
-        brand: client,
-        users: draftUsers.map((draft) => ({
-          id: draft.id,
-          username: draft.username,
-          password: draft.password,
-          displayName: draft.displayName,
-          avatar: draft.pendingAvatar !== undefined ? draft.pendingAvatar : draft.avatar,
-        })),
-      });
-      if (!apiResult.ok) {
-        if (hasPasswordChange) {
-          clearCredentialPasswordChanges(getOrgId(), [client]);
-        }
-        return { ok: false, error: apiResult.error || 'Could not save portal passwords.', users: activeUsers };
-      }
-      activeUsers = normalizeBrandUsers(apiResult.users);
       const orgId = getOrgId();
+      if (hasPasswordChange) {
+        markCredentialPasswordChanges(orgId, [client]);
+      }
+
+      const canWriteDirect = await hasStaffSupabaseSession();
+      let saveResult = null;
+
+      if (canWriteDirect) {
+        saveResult = await saveClientPortalCredentialsDirect({
+          brand: client,
+          users: activeUsers,
+          existingData: existingUsers,
+          allowPasswordChange: hasPasswordChange,
+        });
+      }
+
+      if (!saveResult?.ok) {
+        saveResult = await saveClientPortalPasswords({
+          brand: client,
+          users: draftUsers.map((draft) => ({
+            id: draft.id,
+            username: draft.username,
+            password: draft.password,
+            displayName: draft.displayName,
+            avatar: draft.pendingAvatar !== undefined ? draft.pendingAvatar : draft.avatar,
+          })),
+        });
+      }
+
+      if (!saveResult?.ok) {
+        if (hasPasswordChange) {
+          clearCredentialPasswordChanges(orgId, [client]);
+        }
+        return {
+          ok: false,
+          error: saveResult.error || 'Could not save portal passwords.',
+          users: activeUsers,
+        };
+      }
+
+      activeUsers = normalizeBrandUsers(saveResult.users);
       markCredentialServerSaved(orgId, [client]);
       if (hasPasswordChange) {
         clearCredentialPasswordChanges(orgId, [client]);
       }
-      vaultWarning = apiResult.vaultWarning || null;
+      vaultWarning = saveResult.vaultWarning || null;
     }
 
     setCredentials((prev) => {
