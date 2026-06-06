@@ -31,7 +31,7 @@ import {
   buildCalendarNoteUpdates,
   buildCalendarNoteDeleteUpdates,
 } from '../api/_lib/calendarNote.mjs';
-import { buildCalendarNoteResponse } from '../src/utils/calendarNote.js';
+import { buildCalendarNoteResponse, buildCalendarNoteDeletePatch } from '../src/utils/calendarNote.js';
 import { getCalendarClientNote } from '../src/utils/calendarClientNote.js';
 
 function assert(condition, message) {
@@ -549,6 +549,14 @@ if (typeof localStorage !== 'undefined') {
   assert(!updates.storyOccurrenceNotes['2026-06-12'], 'delete should remove occurrence note');
   assert(updates.storyOccurrenceNotes['2026-06-05'] === 'Keep', 'other occurrence notes should remain');
   assert(updates.notes.includes('removed'), 'delete should append audit line');
+}
+
+// Staff delete patch mirrors server delete updates.
+{
+  const card = { contentType: 'Reel', clientComment: 'Old', calendarNoteAt: 99, notes: '' };
+  const patch = buildCalendarNoteDeletePatch(card, { timestamp: 50 });
+  assert(patch.clientComment === '', 'staff patch should clear clientComment');
+  assert(patch.calendarNoteAt === 0, 'staff patch should clear calendarNoteAt');
 }
 
 // Client note display respects story occurrence date.

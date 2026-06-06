@@ -1,3 +1,15 @@
+const STAFF_CALENDAR_COLUMN_IDS = ['editing', 'in-review', 'approved', 'scheduled'];
+const SCHEDULED_POST_TYPES = new Set(['Reel', 'Carousel', 'Static Post']);
+
+function parseRecurrenceDays(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((day) => Number.isInteger(day) && day >= 0 && day <= 6);
+}
+
+function hasStoryDailyRange(card) {
+  return Boolean(card?.storyDailyStart && card?.storyDailyEnd);
+}
+
 function parseStoryOccurrenceNotes(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   const notes = {};
@@ -22,4 +34,17 @@ export function getCalendarClientNote(card) {
 
 export function hasCalendarClientNote(card) {
   return Boolean(getCalendarClientNote(card));
+}
+
+export function isContentCalendarCard(card) {
+  if (!card || card.isOneOffProject || card.contentType === 'One-off Project') return false;
+  if (!STAFF_CALENDAR_COLUMN_IDS.includes(card.columnId)) return false;
+  if (card.contentType === 'Story') {
+    return Boolean(
+      card.dueDate ||
+        parseRecurrenceDays(card.storyRecurrenceDays).length ||
+        hasStoryDailyRange(card),
+    );
+  }
+  return Boolean(card.dueDate && SCHEDULED_POST_TYPES.has(card.contentType));
 }

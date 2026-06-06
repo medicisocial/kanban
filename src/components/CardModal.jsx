@@ -21,6 +21,9 @@ import DateInput from './DateInput';
 import ClientNameInput from './ClientNameInput';
 import { btnPrimaryClass } from './clientPortal/clientPortalUi';
 import ReferenceVideoLink, { ReferenceMusicLink } from './clientPortal/ReferenceVideoLink';
+import { CalendarSheetNoteEditor } from './CalendarSheetNote';
+import { getCalendarClientNote, hasCalendarClientNote, isContentCalendarCard } from '../utils/calendarClientNote';
+import { buildCalendarNoteDeletePatch } from '../utils/calendarNote';
 
 const CARD_TABS = [
   { id: 'details', label: 'Details' },
@@ -48,6 +51,9 @@ export default function CardModal({
   const { clients, getClientAccountManager, getMemberNamesForRole } = useClientsContext();
   const editors = getMemberNamesForRole('Editor');
   const contentCreators = getMemberNamesForRole('Content Creator');
+  const calendarClientNote = getCalendarClientNote(card);
+  const showCalendarClientNote =
+    isContentCalendarCard(card) && hasCalendarClientNote(card);
   const accountManagers = getMemberNamesForRole('Account Manager');
 
   useEffect(() => {
@@ -426,7 +432,26 @@ export default function CardModal({
             />
           </Field>
 
-          {card.clientComment && (
+          {showCalendarClientNote && (
+            <div>
+              <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-white/40">
+                Client calendar note
+              </p>
+              <CalendarSheetNoteEditor
+                key={`${card.id}-${card.occurrenceDate || ''}-${calendarClientNote}`}
+                initialNote={calendarClientNote}
+                readOnly
+                onDelete={() => {
+                  onUpdate(
+                    card.id,
+                    buildCalendarNoteDeletePatch(card, { occurrenceDate: card.occurrenceDate }),
+                  );
+                }}
+              />
+            </div>
+          )}
+
+          {card.clientComment && !showCalendarClientNote && (
             <div
               className={`rounded-lg border px-3 py-2.5 ${
                 card.columnId === 'not-approved'
