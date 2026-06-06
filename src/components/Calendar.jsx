@@ -69,11 +69,6 @@ export default function Calendar({
 
   const goToday = () => setFocusDate(new Date());
 
-  const handleDayClick = (day) => {
-    setFocusDate(day);
-    setViewMode('week');
-  };
-
   const openAddModal = (dueDate = toDateKey(focusDate)) => {
     setAddDefaults({ dueDate });
     setShowAddModal(true);
@@ -166,7 +161,7 @@ export default function Calendar({
         <p className="mb-4 text-xs text-gray-500">
           {isStories
             ? 'Stories live on the calendar only — removing one deletes it entirely.'
-            : 'Plan reels, carousels, and static posts by month — items in Editing or Scheduled appear here.'}
+            : 'Plan reels, carousels, and static posts by month — dated items in To Create, Editing, or Scheduled appear here. Click a day to add a post.'}
         </p>
       )}
 
@@ -187,7 +182,7 @@ export default function Calendar({
               focusDate={focusDate}
               cardsByDate={cardsByDate}
               onCardClick={handleCalendarClick}
-              onDayClick={handleDayClick}
+              onAddPost={openAddModal}
               onRemoveFromCalendar={onRemoveFromCalendar}
               onMoveCalendarPost={onMoveCalendarPost}
               overviewLabel={overviewLabel}
@@ -217,7 +212,7 @@ export default function Calendar({
           description={
             isStories
               ? 'Schedule and manage recurring stories across all clients.'
-              : 'Plan reels, carousels, and static posts — items in Editing or Scheduled appear here.'
+              : 'Plan reels, carousels, and static posts — dated items in To Create, Editing, or Scheduled appear here. Click a day to add a post.'
           }
         />
         {calendarBody}

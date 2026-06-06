@@ -424,7 +424,10 @@ export function isStaffCalendarCard(card) {
     return Boolean(card.dueDate || card.shootDate) && ONE_OFF_CALENDAR_COLUMNS.includes(card.columnId);
   }
   if (card.isOneOffProject || card.contentType === 'One-off Project') return false;
-  return STAFF_CALENDAR_COLUMN_IDS.includes(card.columnId);
+  if (STAFF_CALENDAR_COLUMN_IDS.includes(card.columnId)) return true;
+  // To Create — show on the content calendar once a publish date is set.
+  if (card.columnId === 'shoot' && card.dueDate) return true;
+  return false;
 }
 
 export function getCalendarCards(cards) {

@@ -14,6 +14,7 @@ export default function CalendarMonthView({
   cardsByDate,
   onCardClick,
   onDayClick,
+  onAddPost,
   onSelectDate,
   selectedDateKey = '',
   onRemoveFromCalendar,
@@ -73,6 +74,8 @@ export default function CalendarMonthView({
                   onClick={() => {
                     if (onSelectDate) {
                       onSelectDate(day);
+                    } else if (onAddPost) {
+                      onAddPost(key);
                     } else {
                       onDayClick?.(day);
                     }
@@ -119,6 +122,9 @@ export default function CalendarMonthView({
                   <div className="space-y-1.5">
                     {dayCards.length === 0 && markedLabel && inMonth && (
                       <p className="px-1 text-[10px] font-medium text-[#fca5a5]/80">{markedLabel}</p>
+                    )}
+                    {dayCards.length === 0 && onAddPost && inMonth && !markedLabel && (
+                      <p className="px-1 text-[10px] text-gray-600">Click to add</p>
                     )}
                     {visibleCards.map((card) => (
                       <CalendarEvent
