@@ -1,7 +1,7 @@
 import { CLIENT_PORTAL_PASSWORD_VAULT_KEY, CLIENTS_STORAGE_KEY } from '../constants';
 import { readOrgScopedJson } from '../lib/orgStorage';
 
-export function loadPortalPasswordVault() {
+function readCloudVault() {
   try {
     const clients = readOrgScopedJson(CLIENTS_STORAGE_KEY, null);
     if (clients?.portalPasswordVault && typeof clients.portalPasswordVault === 'object') {
@@ -10,7 +10,10 @@ export function loadPortalPasswordVault() {
   } catch {
     /* ignore */
   }
+  return {};
+}
 
+function readLocalVault() {
   try {
     const raw = localStorage.getItem(CLIENT_PORTAL_PASSWORD_VAULT_KEY);
     if (raw) {
@@ -21,6 +24,25 @@ export function loadPortalPasswordVault() {
     /* ignore */
   }
   return {};
+}
+
+/**
+ * Merge the cloud-synced vault (clients workspace) with the local write-through
+ * cache. Local entries win so a password saved on this device always re-displays
+ * after refresh, even before the cloud workspace finishes syncing.
+ */
+export function loadPortalPasswordVault() {
+  const cloud = readCloudVault();
+  const local = readLocalVault();
+  const merged = {};
+  const brands = new Set([...Object.keys(cloud), ...Object.keys(local)]);
+  for (const brand of brands) {
+    merged[brand] = {
+      ...(cloud[brand] && typeof cloud[brand] === 'object' ? cloud[brand] : {}),
+      ...(local[brand] && typeof local[brand] === 'object' ? local[brand] : {}),
+    };
+  }
+  return merged;
 }
 
 export function savePortalPasswordVault(vault) {

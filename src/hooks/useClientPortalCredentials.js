@@ -109,11 +109,26 @@ export function useClientPortalCredentials() {
       const canWriteDirect = await hasStaffSupabaseSession();
       let saveResult = null;
 
+      const brandVault = {};
+      for (const draft of draftUsers) {
+        const plain = String(draft.password || '').trim();
+        if (!plain) continue;
+        const saved =
+          activeUsers.find((user) => user.id === draft.id) ||
+          activeUsers.find(
+            (user) =>
+              user.username.toLowerCase() === String(draft.username || '').trim().toLowerCase(),
+          );
+        const userId = saved?.id || draft.id;
+        if (userId) brandVault[userId] = plain;
+      }
+
       if (canWriteDirect) {
         saveResult = await saveClientPortalCredentialsDirect({
           brand: client,
           users: activeUsers,
           existingData: existingUsers,
+          brandVault,
           allowPasswordChange: hasPasswordChange,
         });
       }
