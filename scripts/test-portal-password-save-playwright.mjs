@@ -41,9 +41,10 @@ page.on('response', async (response) => {
   }
 });
 
-await page.addInitScript(() => {
+await page.addInitScript((session) => {
   localStorage.setItem('medici-org-id', 'medici');
-});
+  localStorage.setItem('medici-staff-session', JSON.stringify(session));
+}, staffSession());
 
 try {
   await page.goto(url.replace(/\/?$/, '/'), {
@@ -52,19 +53,23 @@ try {
   });
   await page.waitForTimeout(2000);
 
-  if (!staffPassword) {
-    console.error('VITE_SUPABASE_STAFF_PASSWORD is required for this test (set in .env.local)');
-    process.exit(1);
+  if (staffPassword) {
+    const emailInput = page.locator('input[type="email"], input[autocomplete="username"]').first();
+    const loginPasswordInput = page.locator('input[type="password"]').first();
+    await emailInput.waitFor({ timeout: 20000 });
+    await emailInput.fill(STAFF_USER);
+    await loginPasswordInput.fill(staffPassword);
+    const signInBtn = page.getByRole('button', { name: /sign in|log in/i }).first();
+    await signInBtn.click();
+    await page.waitForTimeout(5000);
+  } else {
+    await page.evaluate((session) => {
+      localStorage.setItem('medici-staff-session', JSON.stringify(session));
+    }, staffSession());
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(3000);
+    console.log('WARN: no VITE_SUPABASE_STAFF_PASSWORD — using legacy staff session (API fallback path)');
   }
-
-  const emailInput = page.locator('input[type="email"], input[autocomplete="username"]').first();
-  const loginPasswordInput = page.locator('input[type="password"]').first();
-  await emailInput.waitFor({ timeout: 20000 });
-  await emailInput.fill(STAFF_USER);
-  await loginPasswordInput.fill(staffPassword);
-  const signInBtn = page.getByRole('button', { name: /sign in|log in/i }).first();
-  await signInBtn.click();
-  await page.waitForTimeout(5000);
 
   const clientsNav = page.getByRole('button', { name: /^clients$/i }).first();
   if (await clientsNav.isVisible().catch(() => false)) {

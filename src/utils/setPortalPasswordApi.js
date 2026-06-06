@@ -3,7 +3,7 @@ import { loadStaffSession } from './staffAuth';
 import { SUPABASE_ENABLED, supabase } from '../lib/supabaseClient';
 import { fetchWithTimeout } from './withTimeout';
 
-const SAVE_PASSWORD_TIMEOUT_MS = 30000;
+const SAVE_PASSWORD_TIMEOUT_MS = 60000;
 const SESSION_LOOKUP_TIMEOUT_MS = 3000;
 
 async function getSupabaseAccessToken() {

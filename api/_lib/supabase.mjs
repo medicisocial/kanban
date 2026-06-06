@@ -80,7 +80,7 @@ export function isSupabaseAuthMisconfigured() {
 }
 
 const SERVER_FETCH_TIMEOUT_MS = 10000;
-const SERVER_WRITE_TIMEOUT_MS = 25000;
+const SERVER_WRITE_TIMEOUT_MS = 55000;
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = SERVER_FETCH_TIMEOUT_MS) {
   const controller = new AbortController();
