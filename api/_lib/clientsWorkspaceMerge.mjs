@@ -237,6 +237,24 @@ export function mergeClientsWorkspaceContactsMap(
   return merged;
 }
 
+/**
+ * Replace one brand's file/menu lists on an explicit API save (staff-brand-assets,
+ * portal profile). Does not union-merge — admin deletes must stick.
+ */
+export function applyAuthoritativeBrandAssets(
+  workspace = {},
+  { companyFilesByBrand, specialMenusByBrand } = {},
+) {
+  const next = { ...workspace };
+  if (companyFilesByBrand && typeof companyFilesByBrand === 'object') {
+    next.companyFiles = { ...(workspace.companyFiles || {}), ...companyFilesByBrand };
+  }
+  if (specialMenusByBrand && typeof specialMenusByBrand === 'object') {
+    next.specialMenus = { ...(workspace.specialMenus || {}), ...specialMenusByBrand };
+  }
+  return next;
+}
+
 /** Three-way-safe merge for the clients singleton workspace row. */
 export function mergeClientsWorkspaceData(stored = {}, incoming = {}) {
   if (!incoming || typeof incoming !== 'object') return stored || {};

@@ -1,7 +1,7 @@
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
 import { fetchRecord, isSupabaseConfigured, upsertRecord } from './_lib/supabase.mjs';
-import { mergeClientsWorkspaceData } from './_lib/clientsWorkspaceMerge.mjs';
+import { applyAuthoritativeBrandAssets } from './_lib/clientsWorkspaceMerge.mjs';
 import { normalizeClientCompanyFiles } from './_lib/clientCompanyFiles.mjs';
 import { normalizeClientSpecialMenus } from './_lib/clientSpecialMenus.mjs';
 
@@ -98,7 +98,10 @@ export default async function handler(req, res) {
       };
     }
 
-    const nextWorkspace = mergeClientsWorkspaceData(workspace, patch);
+    const nextWorkspace = applyAuthoritativeBrandAssets(workspace, {
+      companyFilesByBrand: patch.companyFiles,
+      specialMenusByBrand: patch.specialMenus,
+    });
     await upsertRecord('clients', 'workspace', nextWorkspace, resolvedOrgId);
 
     return res.status(200).json({

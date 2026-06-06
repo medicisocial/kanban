@@ -19,7 +19,12 @@ import {
   mergeRemoteSingletonWithLocal,
   singletonMatchesSnapshot,
 } from './syncHelpers';
-import { mergeClientsWorkspaceData } from '../utils/clientsWorkspaceMerge';
+import {
+  mergeBrandCompanyFiles,
+  mergeBrandSpecialMenus,
+  mergeClientsWorkspaceData,
+  mergeClientsWorkspaceFileMap,
+} from '../utils/clientsWorkspaceMerge';
 
 /**
  * Like useCollectionSync, but for a single composite object stored as one row
@@ -278,6 +283,37 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
             const rows = await fetchRowsWithTimeout(store);
             const existing = rows.find((entry) => String(entry.id) === recordId)?.data;
             dataToWrite = mergeClientsWorkspaceData(existing, value);
+
+            let syncedParsed = null;
+            try {
+              syncedParsed = syncedRef.current ? JSON.parse(syncedRef.current) : null;
+            } catch {
+              syncedParsed = null;
+            }
+
+            if (syncedParsed) {
+              dataToWrite.companyFiles = mergeClientsWorkspaceFileMap(
+                existing?.companyFiles,
+                value?.companyFiles,
+                syncedParsed?.companyFiles,
+                mergeBrandCompanyFiles,
+              );
+              dataToWrite.specialMenus = mergeClientsWorkspaceFileMap(
+                existing?.specialMenus,
+                value?.specialMenus,
+                syncedParsed?.specialMenus,
+                mergeBrandSpecialMenus,
+              );
+            } else if (value?.companyFiles || value?.specialMenus) {
+              dataToWrite.companyFiles = {
+                ...(existing?.companyFiles || {}),
+                ...(value?.companyFiles || {}),
+              };
+              dataToWrite.specialMenus = {
+                ...(existing?.specialMenus || {}),
+                ...(value?.specialMenus || {}),
+              };
+            }
           } catch (mergeErr) {
             console.warn(`[supabase:${table}] merge-before-write failed:`, mergeErr?.message || mergeErr);
           }

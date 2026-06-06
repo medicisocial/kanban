@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "setup:service-role": "node scripts/rotate-supabase-secret-key-playwright.mjs",
     "setup:service-role:edge": "powershell -ExecutionPolicy Bypass -File scripts/launch-edge-debug.ps1; node scripts/sync-service-role-from-edge.mjs",
-    "setup:service-role:sync": "node scripts/sync-service-role-from-dotenv.mjs"
+    "setup:service-role:sync": "node scripts/sync-service-role-from-dotenv.mjs",
+    "cleanup:playwright": "powershell -ExecutionPolicy Bypass -File scripts/cleanup-playwright-profiles.ps1",
+    "purge:e2e-brand-assets": "node scripts/purge-e2e-brand-assets.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

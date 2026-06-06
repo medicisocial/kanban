@@ -17,6 +17,7 @@ import {
   filterAuthCriticalDeletes,
 } from '../api/_lib/authCriticalSync.mjs';
 import {
+  applyAuthoritativeBrandAssets,
   mergeBrandCompanyFiles,
   mergeClientsWorkspaceData,
 } from '../api/_lib/clientsWorkspaceMerge.mjs';
@@ -314,6 +315,23 @@ if (typeof localStorage !== 'undefined') {
   );
   assert(merged.length === 1, 'merge should keep one file');
   assert(merged[0].name === 'New', 'incoming newer file should win');
+}
+
+// Explicit API save must not resurrect a deleted file (e.g. Playwright e2e-test uploads).
+{
+  const stored = {
+    companyFiles: {
+      Plume: [
+        { id: 'file-e2e-1', name: 'e2e-test', updatedAt: 500 },
+        { id: 'file-real', name: 'Spring menu', updatedAt: 100 },
+      ],
+    },
+  };
+  const workspace = { companyFiles: { Plume: [] } };
+  const patch = { companyFiles: { Plume: [{ id: 'file-real', name: 'Spring menu', updatedAt: 100 }] } };
+  const merged = applyAuthoritativeBrandAssets(workspace, { companyFilesByBrand: patch.companyFiles });
+  assert(merged.companyFiles.Plume.length === 1, 'authoritative save should drop deleted file');
+  assert(merged.companyFiles.Plume[0].id === 'file-real', 'authoritative save should keep remaining file');
 }
 
 // Admin delete should stick when staff removes a file locally.

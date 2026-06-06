@@ -13,6 +13,11 @@ for (const [key, value] of Object.entries(env)) {
 }
 
 const BASE = process.argv[2] || 'http://localhost:5173';
+const IS_PRODUCTION = /medicisocial\.com/i.test(BASE);
+if (IS_PRODUCTION && process.env.ALLOW_PRODUCTION_E2E !== '1') {
+  console.error('Refusing production E2E without ALLOW_PRODUCTION_E2E=1');
+  process.exit(1);
+}
 const STAFF_USERNAME = (process.env.STAFF_USERNAME || process.env.VITE_STAFF_USERNAME || 'info@medicisocial.com').trim();
 const STAFF_PASSWORD_HASH = (
   process.env.STAFF_PASSWORD_HASH || process.env.VITE_STAFF_PASSWORD_HASH || ''
@@ -149,3 +154,25 @@ if (!saveRes.ok) {
 }
 
 console.log('PASS: full brand asset save chain completed');
+
+if (saveRes.ok && companyFile?.id) {
+  const cleanupFiles = (saveJson.companyFiles || []).filter((f) => f.id !== companyFile.id);
+  const { res: cleanRes } = await fetchJson(
+    `${BASE}/api/staff-brand-assets`,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        brand: 'Plume',
+        orgId: 'medici',
+        companyFiles: cleanupFiles,
+      }),
+    },
+    60000,
+  );
+  if (cleanRes.ok) {
+    console.log('Cleaned up E2E test file from Plume.');
+  } else {
+    console.warn('Could not auto-cleanup E2E test file — run: node scripts/purge-e2e-brand-assets.mjs');
+  }
+}
