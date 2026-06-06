@@ -20,7 +20,7 @@ import {
   markCredentialServerSaved,
   registerPortalCredentialBrand,
 } from '../lib/syncHelpers';
-import { hasStaffSupabaseSession } from '../lib/staffSupabaseAuth';
+import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from '../lib/staffSupabaseAuth';
 import { saveClientPortalCredentialsDirect } from '../utils/saveClientPortalCredentialsDirect';
 import { saveClientPortalPasswords } from '../utils/setPortalPasswordApi';
 
@@ -100,6 +100,7 @@ export function useClientPortalCredentials() {
         markCredentialPasswordChanges(orgId, [client]);
       }
 
+      await ensureStaffSupabaseSession();
       const canWriteDirect = await hasStaffSupabaseSession();
       let saveResult = null;
 

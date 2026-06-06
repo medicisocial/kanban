@@ -31,16 +31,19 @@ const browser = await chromium.launch();
 const page = await browser.newPage();
 
 page.on('response', async (response) => {
-  if (response.url().includes('/api/client-portal-set-password')) {
+  const reqUrl = response.url();
+  if (reqUrl.includes('/api/client-portal-set-password')) {
     const body = await response.text().catch(() => '');
     console.log('[api]', response.status(), body.slice(0, 240));
   }
+  if (reqUrl.includes('/rest/v1/client_portal_credentials')) {
+    console.log('[supabase-credentials]', response.request().method(), response.status());
+  }
 });
 
-await page.addInitScript((session) => {
-  localStorage.setItem('medici-staff-session', JSON.stringify(session));
+await page.addInitScript(() => {
   localStorage.setItem('medici-org-id', 'medici');
-}, staffSession());
+});
 
 try {
   await page.goto(url.replace(/\/?$/, '/'), {
@@ -48,6 +51,20 @@ try {
     timeout: 60000,
   });
   await page.waitForTimeout(2000);
+
+  if (!staffPassword) {
+    console.error('VITE_SUPABASE_STAFF_PASSWORD is required for this test (set in .env.local)');
+    process.exit(1);
+  }
+
+  const emailInput = page.locator('input[type="email"], input[autocomplete="username"]').first();
+  const loginPasswordInput = page.locator('input[type="password"]').first();
+  await emailInput.waitFor({ timeout: 20000 });
+  await emailInput.fill(STAFF_USER);
+  await loginPasswordInput.fill(staffPassword);
+  const signInBtn = page.getByRole('button', { name: /sign in|log in/i }).first();
+  await signInBtn.click();
+  await page.waitForTimeout(5000);
 
   const clientsNav = page.getByRole('button', { name: /^clients$/i }).first();
   if (await clientsNav.isVisible().catch(() => false)) {
@@ -77,7 +94,7 @@ try {
     await passwordInput.fill(testPassword);
   }
 
-  const saveBtn = page.getByRole('button', { name: /^save$/i }).first();
+  const saveBtn = page.getByRole('button', { name: /save portal access/i }).first();
   const started = Date.now();
   await saveBtn.click();
 
