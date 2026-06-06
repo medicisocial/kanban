@@ -121,8 +121,8 @@ export function CalendarSheetNoteEditor({
   };
 
   const handleDelete = async () => {
-    if (readOnly || busy || !onDelete) return;
-    if (!lastSavedRef.current.trim()) return;
+    if (busy || !onDelete) return;
+    if (!lastSavedRef.current.trim() && !draft.trim()) return;
 
     setError('');
     try {
@@ -135,7 +135,7 @@ export function CalendarSheetNoteEditor({
     }
   };
 
-  const canDelete = Boolean(onDelete && lastSavedRef.current.trim());
+  const canDelete = Boolean(onDelete && (initialNote.trim() || draft.trim()));
 
   return (
     <div className="space-y-1.5">
@@ -156,23 +156,25 @@ export function CalendarSheetNoteEditor({
       </div>
       <div className="flex items-center justify-between gap-2 px-0.5">
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              void handleSave();
-            }}
-            disabled={readOnly || busy || !draft.trim()}
-            className="rounded-[2px] border border-[#dadce0] bg-white px-2.5 py-1 text-[11px] font-medium text-[#1a73e8] transition hover:bg-[#f8f9fa] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {busy ? 'Saving…' : 'Save'}
-          </button>
+          {onSave && (
+            <button
+              type="button"
+              onClick={() => {
+                void handleSave();
+              }}
+              disabled={readOnly || busy || !draft.trim()}
+              className="rounded-[2px] border border-[#dadce0] bg-white px-2.5 py-1 text-[11px] font-medium text-[#1a73e8] transition hover:bg-[#f8f9fa] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {busy ? 'Saving…' : 'Save'}
+            </button>
+          )}
           {canDelete && (
             <button
               type="button"
               onClick={() => {
                 void handleDelete();
               }}
-              disabled={readOnly || busy}
+              disabled={busy}
               className="rounded-[2px] border border-transparent px-2 py-1 text-[11px] font-medium text-[#d93025] transition hover:bg-[#fce8e6] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Delete
