@@ -13,11 +13,41 @@ import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { subscribeClientPortalChanges } from '../lib/clientPortalRealtime';
 import { normalizeContentTypeColors, setContentTypeColorOverrides } from '../utils/contentTypeColors';
 import { isEditorFilePickActive } from '../utils/editorPickGuard';
-import { mergeBrandCompanyFiles, mergeBrandSpecialMenus } from '../utils/clientsWorkspaceMerge';
+import {
+  filterSuppressedBrandFiles,
+  mergeBrandCompanyFiles,
+  mergeBrandCompanyFilesPortalRefresh,
+  mergeBrandSpecialMenus,
+} from '../utils/clientsWorkspaceMerge';
 
 const PORTAL_POLL_MS = SUPABASE_ENABLED ? 45000 : 15000;
 /** Skip background refreshes for a moment after a save so a stale read can't revert it. */
 const SAVE_REFRESH_COOLDOWN_MS = 10000;
+const SUPPRESSED_FILE_MS = 5 * 60 * 1000;
+
+function trackSuppressedBrandFileDeletes(prevFiles, nextFiles, suppressedUntilById) {
+  if (!Array.isArray(nextFiles)) return;
+  const nextIds = new Set(nextFiles.filter((file) => file?.id).map((file) => String(file.id)));
+  for (const file of Array.isArray(prevFiles) ? prevFiles : []) {
+    const id = String(file?.id || '');
+    if (id && !nextIds.has(id)) {
+      suppressedUntilById.set(id, Date.now() + SUPPRESSED_FILE_MS);
+    }
+  }
+}
+
+function clearConfirmedSuppressions(serverFiles, suppressedUntilById) {
+  const serverIds = new Set(
+    (Array.isArray(serverFiles) ? serverFiles : [])
+      .filter((file) => file?.id)
+      .map((file) => String(file.id)),
+  );
+  for (const id of [...suppressedUntilById.keys()]) {
+    if (!serverIds.has(id)) {
+      suppressedUntilById.delete(id);
+    }
+  }
+}
 
 const ClientAuthContext = createContext(null);
 
@@ -41,6 +71,7 @@ export function ClientAuthProvider({ children }) {
   // upload the user just made — it flashes on screen then disappears.
   const savingProfileRef = useRef(0);
   const saveCooldownUntilRef = useRef(0);
+  const suppressedCompanyFileIdsRef = useRef(new Map());
 
   const refreshPortalData = useCallback(async (activeSession = session, { silent = false } = {}) => {
     if (!activeSession) return;
@@ -73,11 +104,16 @@ export function ClientAuthProvider({ children }) {
       // drop a file the client just added — it would otherwise flash then vanish.
       setPortalData((prev) => {
         if (!prev || prev.brand !== data.brand) return data;
+        clearConfirmedSuppressions(data.companyFiles, suppressedCompanyFileIdsRef.current);
+        const companyFiles = filterSuppressedBrandFiles(
+          mergeBrandCompanyFilesPortalRefresh(prev.companyFiles, data.companyFiles),
+          suppressedCompanyFileIdsRef.current,
+        );
         return {
           ...prev,
           ...data,
           businessType: data.businessType || prev.businessType,
-          companyFiles: mergeBrandCompanyFiles(prev.companyFiles, data.companyFiles),
+          companyFiles,
           specialMenus: mergeBrandSpecialMenus(prev.specialMenus, data.specialMenus),
         };
       });
@@ -168,10 +204,21 @@ export function ClientAuthProvider({ children }) {
       // Block background refreshes for the duration of the save (and a short
       // cooldown after) so a stale read can't revert what we just wrote.
       savingProfileRef.current += 1;
-      setPortalData((prev) => (prev ? { ...prev, ...profile } : prev));
+      let prevCompanyFiles;
+      setPortalData((prev) => {
+        prevCompanyFiles = prev?.companyFiles;
+        return prev ? { ...prev, ...profile } : prev;
+      });
       try {
         // A real save failure must surface to the caller (editors show it).
         await submitClientPortalProfile(session, profile);
+        if (profile.companyFiles) {
+          trackSuppressedBrandFileDeletes(
+            prevCompanyFiles,
+            profile.companyFiles,
+            suppressedCompanyFileIdsRef.current,
+          );
+        }
         saveCooldownUntilRef.current = Date.now() + SAVE_REFRESH_COOLDOWN_MS;
         // Re-read in the background — waiting here left the editor stuck on "Saving…".
         void (async () => {

@@ -52,6 +52,29 @@ function maxUpdatedAt(records) {
   return records.reduce((max, record) => Math.max(max, recordUpdatedAt(record)), 0);
 }
 
+/**
+ * When staff has not edited locally, server membership wins — portal/staff deletes
+ * must not be resurrected from the last sync baseline.
+ */
+export function mergeBrandCompanyFilesRemoteAuthoritative(remote = [], baseline = []) {
+  const remoteList = Array.isArray(remote) ? remote : [];
+  const baselineList = Array.isArray(baseline) ? baseline : [];
+  const baselineById = new Map(
+    baselineList.filter((file) => file?.id).map((file) => [String(file.id), file]),
+  );
+
+  return remoteList
+    .filter((file) => file?.id)
+    .map((file) => {
+      const id = String(file.id);
+      const baselineFile = baselineById.get(id);
+      return baselineFile && recordUpdatedAt(baselineFile) > recordUpdatedAt(file)
+        ? baselineFile
+        : file;
+    })
+    .sort((a, b) => recordUpdatedAt(b) - recordUpdatedAt(a));
+}
+
 /** Union file lists by id; keep the entry with the newest updatedAt. */
 export function mergeBrandCompanyFiles(stored = [], incoming = []) {
   const storedList = Array.isArray(stored) ? stored : [];
@@ -79,6 +102,79 @@ export function mergeBrandCompanyFiles(stored = [], incoming = []) {
   }
 
   return [...byId.values()].sort((a, b) => recordUpdatedAt(b) - recordUpdatedAt(a));
+}
+
+/** Portal background refresh — keep on-screen membership; drop server-only ghosts after deletes. */
+export function mergeBrandCompanyFilesPortalRefresh(screen = [], server = []) {
+  const screenList = Array.isArray(screen) ? screen : [];
+  const serverList = Array.isArray(server) ? server : [];
+  if (!screenList.length) return serverList;
+
+  const screenIds = new Set(screenList.filter((file) => file?.id).map((file) => String(file.id)));
+  const serverById = new Map(
+    serverList.filter((file) => file?.id).map((file) => [String(file.id), file]),
+  );
+  const screenMaxTs = maxUpdatedAt(screenList);
+  const screenIsServerSubset =
+    screenIds.size > 0 && [...screenIds].every((id) => serverById.has(id));
+  const serverHasExtras = serverList.some((file) => file?.id && !screenIds.has(String(file.id)));
+  const byId = new Map();
+
+  for (const file of screenList) {
+    if (!file?.id) continue;
+    const id = String(file.id);
+    const serverFile = serverById.get(id);
+    byId.set(
+      id,
+      serverFile && recordUpdatedAt(serverFile) >= recordUpdatedAt(file) ? serverFile : file,
+    );
+  }
+
+  if (!(screenIsServerSubset && serverHasExtras)) {
+    for (const file of serverList) {
+      const id = String(file?.id);
+      if (!id || byId.has(id)) continue;
+      if (recordUpdatedAt(file) > screenMaxTs) {
+        byId.set(id, file);
+      }
+    }
+  }
+
+  return [...byId.values()].sort((a, b) => recordUpdatedAt(b) - recordUpdatedAt(a));
+}
+
+export function filterSuppressedBrandFiles(files = [], suppressedUntilById = new Map()) {
+  if (!suppressedUntilById?.size) return files;
+  const now = Date.now();
+  return (Array.isArray(files) ? files : []).filter((file) => {
+    const id = String(file?.id || '');
+    const until = suppressedUntilById.get(id);
+    if (!until) return true;
+    if (now >= until) {
+      suppressedUntilById.delete(id);
+      return true;
+    }
+    return false;
+  });
+}
+
+export function mergeBrandSpecialMenusRemoteAuthoritative(remote = [], baseline = []) {
+  const remoteList = Array.isArray(remote) ? remote : [];
+  const baselineList = Array.isArray(baseline) ? baseline : [];
+  const baselineById = new Map(
+    baselineList.filter((menu) => menu?.id).map((menu) => [String(menu.id), menu]),
+  );
+
+  return remoteList
+    .filter((menu) => menu?.id)
+    .map((menu) => {
+      const id = String(menu.id);
+      const baselineMenu = baselineById.get(id);
+      return baselineMenu && recordUpdatedAt(baselineMenu) > recordUpdatedAt(menu)
+        ? baselineMenu
+        : menu;
+    })
+    .sort((a, b) => recordUpdatedAt(b) - recordUpdatedAt(a));
 }
 
 /** Union special menus by id; keep the entry with the newest updatedAt. */
@@ -289,7 +385,11 @@ export function mergeClientsWorkspaceBrandFiles(
   const localChanged = JSON.stringify(localList) !== JSON.stringify(syncedList);
 
   if (!localChanged) {
-    return mergeList(syncedList, remoteList);
+    return mergeList === mergeBrandCompanyFiles
+      ? mergeBrandCompanyFilesRemoteAuthoritative(remoteList, syncedList)
+      : mergeList === mergeBrandSpecialMenus
+        ? mergeBrandSpecialMenusRemoteAuthoritative(remoteList, syncedList)
+        : mergeList(syncedList, remoteList);
   }
 
   const byId = new Map();
@@ -299,6 +399,9 @@ export function mergeClientsWorkspaceBrandFiles(
 
   const syncedById = new Map(
     syncedList.filter((entry) => entry?.id).map((entry) => [String(entry.id), entry]),
+  );
+  const remoteById = new Map(
+    remoteList.filter((entry) => entry?.id).map((entry) => [String(entry.id), entry]),
   );
 
   for (const entry of remoteList) {
@@ -312,6 +415,12 @@ export function mergeClientsWorkspaceBrandFiles(
     const syncedEntry = syncedById.get(id);
     if (recordUpdatedAt(entry) > recordUpdatedAt(syncedEntry)) {
       byId.set(id, entry);
+    }
+  }
+
+  for (const [id] of syncedById.keys()) {
+    if (!remoteById.has(id)) {
+      byId.delete(id);
     }
   }
 

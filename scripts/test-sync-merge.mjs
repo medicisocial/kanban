@@ -21,7 +21,11 @@ import {
   mergeBrandCompanyFiles,
   mergeClientsWorkspaceData,
 } from '../api/_lib/clientsWorkspaceMerge.mjs';
-import { mergeClientsWorkspaceBrandFiles } from '../src/utils/clientsWorkspaceMerge.js';
+import {
+  filterSuppressedBrandFiles,
+  mergeBrandCompanyFilesPortalRefresh,
+  mergeClientsWorkspaceBrandFiles,
+} from '../src/utils/clientsWorkspaceMerge.js';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -350,6 +354,45 @@ if (typeof localStorage !== 'undefined') {
     saved.length === 1 && saved[0].id === 'f1',
     'authoritative saved list should keep only remaining file',
   );
+}
+
+// Portal refresh should drop server-only ghosts after a local delete.
+{
+  const screen = [{ id: 'f1', name: 'Keep', updatedAt: 10 }];
+  const server = [
+    { id: 'f1', name: 'Keep', updatedAt: 10 },
+    { id: 'f2', name: 'Removed', updatedAt: 500 },
+  ];
+  const merged = mergeBrandCompanyFilesPortalRefresh(screen, server);
+  assert(merged.length === 1, 'portal refresh should drop resurrected server file');
+  assert(merged[0].id === 'f1', 'portal refresh should keep on-screen file');
+}
+
+// Suppressed ids stay hidden during background refresh.
+{
+  const suppressed = new Map([['f2', Date.now() + 60000]]);
+  const files = filterSuppressedBrandFiles(
+    [
+      { id: 'f1', updatedAt: 10 },
+      { id: 'f2', updatedAt: 500 },
+    ],
+    suppressed,
+  );
+  assert(files.length === 1, 'suppressed file should stay hidden');
+  assert(files[0].id === 'f1', 'non-suppressed file should remain');
+}
+
+// Portal delete must not be resurrected when staff sync has not changed locally.
+{
+  const synced = [
+    { id: 'f1', name: 'Keep', updatedAt: 10 },
+    { id: 'f2', name: 'Removed', updatedAt: 500 },
+  ];
+  const local = [...synced];
+  const remote = [{ id: 'f1', name: 'Keep', updatedAt: 10 }];
+  const merged = mergeClientsWorkspaceBrandFiles(remote, local, synced);
+  assert(merged.length === 1, 'portal delete should not be resurrected by unchanged staff sync');
+  assert(merged[0].id === 'f1', 'portal delete should keep remaining file');
 }
 
 // Admin delete should stick when staff removes a file locally.
