@@ -12,6 +12,7 @@ import {
 } from '../../utils/clientCompanyFiles';
 import {
   canUploadBrandAssetToStorage,
+  deleteBrandAssetFile,
   isStorageSignUnavailableError,
   probeBrandAssetStorageReady,
   uploadBrandAssetToStorage,
@@ -299,6 +300,15 @@ export default function ClientCompanyFilesEditor({
     await persist(next);
   };
 
+  const handleRemove = async (fileId) => {
+    if (!window.confirm('Remove this file?')) return;
+    const target = localFiles.find((file) => file.id === fileId);
+    await persist(localFiles.filter((file) => file.id !== fileId));
+    if (target?.storagePath) {
+      void deleteBrandAssetFile(target.storagePath);
+    }
+  };
+
   const folderFiles = localFiles.filter((file) => file.folder === activeFolder);
   const activeFolderLabel =
     folders.find((folder) => folder.id === activeFolder)?.label || 'folder';
@@ -311,7 +321,7 @@ export default function ClientCompanyFilesEditor({
 
   const renderFileRow = (file) => (
     <li key={file.id} className={`${glassInsetClass} px-3 py-3`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           {readOnly ? (
             <p className="text-sm font-medium text-white">{file.name}</p>
@@ -333,7 +343,12 @@ export default function ClientCompanyFilesEditor({
             {file.fileName} · {formatCompanyFileSize(file.size)}
           </p>
         </div>
-        <FilePreviewActions title={file.name} dataUrl={file.dataUrl} fileName={file.fileName} />
+        <FilePreviewActions
+          title={file.name}
+          dataUrl={file.dataUrl}
+          fileName={file.fileName}
+          onRemove={readOnly ? undefined : () => handleRemove(file.id)}
+        />
       </div>
     </li>
   );
