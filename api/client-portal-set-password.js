@@ -165,22 +165,19 @@ export default async function handler(req, res) {
 
     await upsertRecord('client_portal_credentials', brand, nextUsers, resolvedOrgId);
 
-    let vaultWarning = null;
+    // Vault patch is best-effort and must not block the response — the large
+    // clients workspace row is often locked by background staff sync.
     if (Object.keys(brandVault).length) {
-      try {
-        await patchClientsPortalPasswordVault(brand, brandVault, resolvedOrgId);
-      } catch (vaultError) {
+      void patchClientsPortalPasswordVault(brand, brandVault, resolvedOrgId).catch((vaultError) => {
         console.warn(
-          '[client-portal-set-password] vault patch failed:',
+          '[client-portal-set-password] background vault patch failed:',
           vaultError?.message || vaultError,
         );
-        vaultWarning =
-          'Portal logins saved. The saved password may not show on other devices until the next sync.';
-      }
+      });
     }
 
     const usersForClient = nextUsers.map(({ _passwordChangeAuthorized: _ignored, ...user }) => user);
-    return res.status(200).json({ ok: true, users: usersForClient, vaultWarning });
+    return res.status(200).json({ ok: true, users: usersForClient });
   } catch (error) {
     const detail = String(error?.message || error || '').trim();
     console.error('[client-portal-set-password] failed:', detail);

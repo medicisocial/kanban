@@ -100,13 +100,16 @@ export function useClientPortalCredentials() {
         markCredentialPasswordChanges(orgId, [client]);
       }
 
-      await Promise.race([
-        ensureStaffSupabaseSession(),
-        new Promise((resolve) => {
-          setTimeout(resolve, 5000);
-        }),
-      ]);
-      const canWriteDirect = await hasStaffSupabaseSession();
+      let canWriteDirect = await hasStaffSupabaseSession();
+      if (!canWriteDirect) {
+        await Promise.race([
+          ensureStaffSupabaseSession(),
+          new Promise((resolve) => {
+            setTimeout(resolve, 2000);
+          }),
+        ]);
+        canWriteDirect = await hasStaffSupabaseSession();
+      }
       let saveResult = null;
 
       const brandVault = {};
