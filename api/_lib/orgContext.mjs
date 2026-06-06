@@ -34,22 +34,33 @@ async function getUserIdFromJwt(token) {
   return user?.id ?? null;
 }
 
+const ORG_FETCH_TIMEOUT_MS = 8000;
+
 async function fetchMemberOrgId(userId) {
   const url = getSupabaseUrl();
   const key = getServerKey();
   if (!url || !key || !userId) return null;
 
   const endpoint = `${url}/rest/v1/organization_members?select=org_id&user_id=eq.${encodeURIComponent(userId)}&limit=1`;
-  const response = await fetch(endpoint, {
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-    },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), ORG_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(endpoint, {
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+      },
+      signal: controller.signal,
+    });
 
-  if (!response.ok) return null;
-  const rows = await response.json();
-  return rows?.[0]?.org_id ?? null;
+    if (!response.ok) return null;
+    const rows = await response.json();
+    return rows?.[0]?.org_id ?? null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export function getDefaultOrgId() {

@@ -4,6 +4,8 @@ import { useClientPortalCredentials } from '../hooks/useClientPortalCredentials'
 import { useTeamMembers } from '../hooks/useTeamMembers';
 import { setContentTypeColorOverrides } from '../utils/contentTypeColors';
 import { isClientHubPortal } from '../utils/clientPortalAuth';
+import { updatePortalPasswordVault } from '../utils/clientPortalPasswordVault';
+import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 
 export const ClientsContext = createContext(null);
 
@@ -16,6 +18,12 @@ export function ClientsProvider({ children }) {
     async (client, draftUsers) => {
       const result = await portalCredentials.setClientPortalUsers(client, draftUsers);
       if (!result?.ok) return result;
+
+      // set-password API already writes credentials + vault to Supabase — only refresh local vault cache.
+      if (SUPABASE_ENABLED) {
+        updatePortalPasswordVault(client, draftUsers, result.users || []);
+        return { ...result, vaultSynced: true };
+      }
 
       const vaultResult = await clientsState.syncPortalPasswordVault(
         client,

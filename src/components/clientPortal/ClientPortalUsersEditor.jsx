@@ -16,6 +16,9 @@ import ProfilePhotoEditor from './ProfilePhotoEditor';
 import PortalInviteTemplate from './PortalInviteTemplate';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 import { SUPABASE_ENABLED } from '../../lib/supabaseClient';
+import { withTimeout } from '../../utils/withTimeout';
+
+const SAVE_PORTAL_ACCESS_TIMEOUT_MS = 45000;
 
 function buildDraftUsers(client, getClientUsers, getClientContacts, getPortalPasswordForUser) {
   const users = getClientUsers(client);
@@ -169,15 +172,19 @@ export default function ClientPortalUsersEditor({
         return;
       }
 
-      const saveResult = await onSaveClientUsers(
-        client,
-        users.map((user) => ({
-          id: user.id,
-          displayName: user.displayName,
-          username: normalizePortalLogin(user.username),
-          password: user.password,
-          avatar: user.pendingAvatar !== undefined ? user.pendingAvatar : undefined,
-        })),
+      const saveResult = await withTimeout(
+        onSaveClientUsers(
+          client,
+          users.map((user) => ({
+            id: user.id,
+            displayName: user.displayName,
+            username: normalizePortalLogin(user.username),
+            password: user.password,
+            avatar: user.pendingAvatar !== undefined ? user.pendingAvatar : undefined,
+          })),
+        ),
+        SAVE_PORTAL_ACCESS_TIMEOUT_MS,
+        'Saving timed out. Check your connection and try again.',
       );
 
       if (saveResult?.ok === false) {

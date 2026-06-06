@@ -22,6 +22,8 @@ function isLikelyJwt(token) {
   return typeof token === 'string' && token.split('.').length === 3;
 }
 
+const AUTH_FETCH_TIMEOUT_MS = 8000;
+
 async function verifySupabaseAccessToken(token) {
   const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '')
     .trim()
@@ -29,10 +31,19 @@ async function verifySupabaseAccessToken(token) {
   const anonKey = (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '').trim();
   if (!url || !anonKey || !token) return false;
 
-  const response = await fetch(`${url}/auth/v1/user`, {
-    headers: { apikey: anonKey, Authorization: `Bearer ${token}` },
-  });
-  return response.ok;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), AUTH_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${url}/auth/v1/user`, {
+      headers: { apikey: anonKey, Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function isAuthorized(req) {
