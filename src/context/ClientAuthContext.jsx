@@ -179,26 +179,18 @@ export function ClientAuthProvider({ children }) {
             const data = await fetchClientPortalData(session);
             if (!isMountedRef.current) return;
             setPortalData((prev) => {
-              if (!prev || prev.brand !== data.brand) {
-                const merged = { ...data };
-                if (profile.companyFiles) {
-                  merged.companyFiles = mergeBrandCompanyFiles(data.companyFiles, profile.companyFiles);
-                }
-                if (profile.specialMenus) {
-                  merged.specialMenus = mergeBrandSpecialMenus(data.specialMenus, profile.specialMenus);
-                }
-                return merged;
-              }
               const merged = { ...data };
-              // Triple-merge: server read + what we just wrote + what was already on screen.
-              merged.companyFiles = mergeBrandCompanyFiles(
-                mergeBrandCompanyFiles(data.companyFiles, profile.companyFiles ?? prev.companyFiles),
-                prev.companyFiles,
-              );
-              merged.specialMenus = mergeBrandSpecialMenus(
-                mergeBrandSpecialMenus(data.specialMenus, profile.specialMenus ?? prev.specialMenus),
-                prev.specialMenus,
-              );
+              if (profile.companyFiles) {
+                // Authoritative — union merge resurrects deleted files with high updatedAt.
+                merged.companyFiles = profile.companyFiles;
+              } else if (prev?.brand === data.brand) {
+                merged.companyFiles = mergeBrandCompanyFiles(prev.companyFiles, data.companyFiles);
+              }
+              if (profile.specialMenus) {
+                merged.specialMenus = profile.specialMenus;
+              } else if (prev?.brand === data.brand) {
+                merged.specialMenus = mergeBrandSpecialMenus(prev.specialMenus, data.specialMenus);
+              }
               return merged;
             });
             setBrand((current) => data.brand || current);

@@ -2,6 +2,14 @@ import { useState } from 'react';
 import { canPreviewFile, downloadDataUrl } from '../../utils/filePreview';
 import FilePreviewModal from './FilePreviewModal';
 
+async function runDownload(dataUrl, fileName, title, onError) {
+  try {
+    await downloadDataUrl(dataUrl, fileName || title);
+  } catch (err) {
+    onError?.(err?.message || 'Could not download file.');
+  }
+}
+
 const actionBtnClass =
   'px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-wider transition-colors duration-200';
 
@@ -16,9 +24,11 @@ export default function FilePreviewActions({
   downloadLabel = 'Download',
   removeLabel = 'Remove',
   onRemove,
+  onDownloadError,
   className = '',
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const showPreview = canPreviewFile(dataUrl, fileName);
 
   return (
@@ -33,10 +43,16 @@ export default function FilePreviewActions({
         )}
         <button
           type="button"
-          onClick={() => downloadDataUrl(dataUrl, fileName || title)}
-          className={primaryActionClass}
+          disabled={downloading}
+          onClick={() => {
+            setDownloading(true);
+            void runDownload(dataUrl, fileName, title, onDownloadError).finally(() => {
+              setDownloading(false);
+            });
+          }}
+          className={`${primaryActionClass} disabled:opacity-40`}
         >
-          {downloadLabel}
+          {downloading ? 'Downloading…' : downloadLabel}
         </button>
         {onRemove && (
           <button type="button" onClick={onRemove} className={removeActionClass}>

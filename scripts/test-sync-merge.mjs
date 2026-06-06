@@ -334,6 +334,24 @@ if (typeof localStorage !== 'undefined') {
   assert(merged.companyFiles.Plume[0].id === 'file-real', 'authoritative save should keep remaining file');
 }
 
+// Portal delete must not resurrect removed files via union merge on post-save refresh.
+{
+  const saved = [{ id: 'f1', name: 'Keep', updatedAt: 10 }];
+  const staleServer = [
+    { id: 'f1', name: 'Keep', updatedAt: 10 },
+    { id: 'f2', name: 'Removed', updatedAt: 500 },
+  ];
+  const resurrected = mergeBrandCompanyFiles(
+    mergeBrandCompanyFiles(staleServer, saved),
+    saved,
+  );
+  assert(resurrected.length === 2, 'union merge resurrects deleted file');
+  assert(
+    saved.length === 1 && saved[0].id === 'f1',
+    'authoritative saved list should keep only remaining file',
+  );
+}
+
 // Admin delete should stick when staff removes a file locally.
 {
   const synced = [

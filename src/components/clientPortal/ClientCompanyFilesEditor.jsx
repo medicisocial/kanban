@@ -347,6 +347,7 @@ export default function ClientCompanyFilesEditor({
           title={file.name}
           dataUrl={file.dataUrl}
           fileName={file.fileName}
+          onDownloadError={setError}
           onRemove={readOnly ? undefined : () => handleRemove(file.id)}
         />
       </div>
