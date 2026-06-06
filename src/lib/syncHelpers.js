@@ -52,6 +52,25 @@ function resolvePortalCredentialPasswordHash(previous, incomingUser, allowPasswo
   return previousHash;
 }
 
+function attachPortalPasswordChangeMarkers(users, previousUsers, allowPasswordChange) {
+  if (!allowPasswordChange || !users.length) return users;
+  const prevById = new Map(previousUsers.map((user) => [user.id, user]));
+  const prevByUsername = new Map(
+    previousUsers.map((user) => [user.username.trim().toLowerCase(), user]),
+  );
+
+  return users.map((user) => {
+    const previous =
+      prevById.get(user.id) || prevByUsername.get(user.username.trim().toLowerCase());
+    const prevHash = previous?.passwordHash?.trim().toLowerCase() || '';
+    const nextHash = user.passwordHash?.trim().toLowerCase() || '';
+    if (nextHash && prevHash && nextHash !== prevHash) {
+      return { ...user, _passwordChangeAuthorized: true };
+    }
+    return user;
+  });
+}
+
 /** Client-side mirror of server mergePortalCredentialData for direct Supabase upserts. */
 export function mergePortalCredentialDataForPush(
   existingData,
@@ -101,7 +120,7 @@ export function mergePortalCredentialDataForPush(
     if (user.username && user.passwordHash) merged.push(user);
   }
 
-  return merged;
+  return attachPortalPasswordChangeMarkers(merged, existing, allowPasswordChange);
 }
 
 function resolveClientPortalPasswordHash(localUser, remoteUser, allowPasswordChange) {
@@ -230,6 +249,33 @@ export function pendingCreatesKey(orgId, table) {
 
 export function credentialPasswordChangesKey(orgId) {
   return `medici-credential-password-changes:${orgId}`;
+}
+
+/** Brands whose credentials were just saved via /api/client-portal-set-password (skip stale re-push). */
+export function credentialServerSavedKey(orgId) {
+  return `medici-credential-server-saved:${orgId}`;
+}
+
+export function markCredentialServerSaved(orgId, brands = []) {
+  if (!orgId || !brands.length) return;
+  const pending = loadCredentialServerSaved(orgId);
+  for (const brand of brands) pending.add(String(brand));
+  writeStringSetStorage(credentialServerSavedKey(orgId), pending);
+}
+
+export function loadCredentialServerSaved(orgId) {
+  return new Set(readStringSetStorage(credentialServerSavedKey(orgId)));
+}
+
+export function clearCredentialServerSaved(orgId, brands = []) {
+  if (!orgId) return;
+  const pending = loadCredentialServerSaved(orgId);
+  if (!brands.length) {
+    localStorage.removeItem(credentialServerSavedKey(orgId));
+    return;
+  }
+  for (const brand of brands) pending.delete(String(brand));
+  writeStringSetStorage(credentialServerSavedKey(orgId), pending);
 }
 
 export function loadCredentialPasswordChanges(orgId) {

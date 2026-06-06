@@ -11,6 +11,7 @@ import {
   pendingRemovedKey,
   pendingCreatesKey,
   mergeClientsWorkspaceState,
+  mergePortalCredentialDataForPush,
 } from '../src/lib/syncHelpers.js';
 import {
   mergePortalCredentialData,
@@ -234,6 +235,22 @@ if (typeof localStorage !== 'undefined') {
   const incoming = [{ id: 'u1', username: 'plumehtx', passwordHash: 'd'.repeat(64) }];
   const merged = mergePortalCredentialData(existing, incoming, { allowPasswordChange: true });
   assert(merged[0].passwordHash === 'd'.repeat(64), 'server merge: real password change must persist');
+  assert(
+    merged[0]._passwordChangeAuthorized === true,
+    'server merge: authorized password change should include DB marker',
+  );
+}
+
+// Client push merge should attach the same authorization marker for password edits.
+{
+  const existing = [{ id: 'u1', username: 'clientx', passwordHash: 'e'.repeat(64) }];
+  const incoming = [{ id: 'u1', username: 'clientx', passwordHash: 'f'.repeat(64) }];
+  const merged = mergePortalCredentialDataForPush(existing, incoming, { allowPasswordChange: true });
+  assert(merged[0].passwordHash === 'f'.repeat(64), 'client push merge: password change must persist');
+  assert(
+    merged[0]._passwordChangeAuthorized === true,
+    'client push merge: authorized password change should include DB marker',
+  );
 }
 
 // Auth-critical deletes are blocked unless explicitly confirmed.

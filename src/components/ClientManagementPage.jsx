@@ -5,6 +5,8 @@ import { INTERNAL_TEAM_CLIENT } from '../constants';
 import { BUSINESS_TYPES } from '../utils/eventFormSchemas';
 import { getClientPortalBrands } from '../utils/clients';
 import { syncClientPortalCredentialsToCloud } from '../utils/clientPortalAdmin';
+import { getOrgId } from '../lib/orgSession';
+import { registerPortalCredentialBrand } from '../lib/syncHelpers';
 import { readClientProfileImage } from '../utils/clientImage';
 import { normalizeLink } from '../utils/links';
 import {
@@ -98,6 +100,11 @@ export default function ClientManagementPage({
       setSelectedClient(profileClients[0]);
     }
   }, [profileClients, selectedClient]);
+
+  useEffect(() => {
+    if (activeTab !== 'users' || !selectedClient) return;
+    registerPortalCredentialBrand(getOrgId(), selectedClient);
+  }, [activeTab, selectedClient]);
 
   useEffect(() => {
     if (!selectedClient) return;

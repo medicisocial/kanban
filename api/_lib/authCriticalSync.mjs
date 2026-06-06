@@ -30,6 +30,25 @@ function resolvePortalPasswordHash(previous, incomingUser, allowPasswordChange) 
   return previousHash;
 }
 
+function attachPortalPasswordChangeMarkers(users, previousUsers, allowPasswordChange) {
+  if (!allowPasswordChange || !users.length) return users;
+  const prevById = new Map(previousUsers.map((user) => [user.id, user]));
+  const prevByUsername = new Map(
+    previousUsers.map((user) => [user.username.trim().toLowerCase(), user]),
+  );
+
+  return users.map((user) => {
+    const previous =
+      prevById.get(user.id) || prevByUsername.get(user.username.trim().toLowerCase());
+    const prevHash = previous?.passwordHash?.trim().toLowerCase() || '';
+    const nextHash = user.passwordHash?.trim().toLowerCase() || '';
+    if (nextHash && prevHash && nextHash !== prevHash) {
+      return { ...user, _passwordChangeAuthorized: true };
+    }
+    return user;
+  });
+}
+
 /** Never replace configured portal users with an empty payload. */
 export function mergePortalCredentialData(
   existingData,
@@ -81,7 +100,7 @@ export function mergePortalCredentialData(
     if (user.username && user.passwordHash) merged.push(user);
   }
 
-  return merged;
+  return attachPortalPasswordChangeMarkers(merged, existing, allowPasswordChange);
 }
 
 export function filterAuthCriticalDeletes(table, deleteIds, authDeleteConfirmed = false) {

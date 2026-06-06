@@ -17,6 +17,7 @@ import {
   hasConfiguredPortalUsers,
   clearCredentialPasswordChanges,
   markCredentialPasswordChanges,
+  markCredentialServerSaved,
   registerPortalCredentialBrand,
 } from '../lib/syncHelpers';
 import { saveClientPortalPasswords } from '../utils/setPortalPasswordApi';
@@ -111,8 +112,10 @@ export function useClientPortalCredentials() {
         return { ok: false, error: apiResult.error || 'Could not save portal passwords.', users: activeUsers };
       }
       activeUsers = normalizeBrandUsers(apiResult.users);
+      const orgId = getOrgId();
+      markCredentialServerSaved(orgId, [client]);
       if (hasPasswordChange) {
-        clearCredentialPasswordChanges(getOrgId(), [client]);
+        clearCredentialPasswordChanges(orgId, [client]);
       }
     }
 

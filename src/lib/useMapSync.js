@@ -20,7 +20,9 @@ import {
   loadPendingRemoved,
   localCollectionHasRecords,
   clearCredentialPasswordChanges,
+  clearCredentialServerSaved,
   loadCredentialPasswordChanges,
+  loadCredentialServerSaved,
   markPendingCreates,
   markPendingRemoved,
   mapMatchesSnapshot,
@@ -372,23 +374,34 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
         let rowsToWrite = safeChanged;
         const passwordChangeBrands =
           table === 'client_portal_credentials' ? [...loadCredentialPasswordChanges(orgId)] : [];
+        const serverSavedBrands =
+          table === 'client_portal_credentials' ? loadCredentialServerSaved(orgId) : new Set();
+        const skipPushBrandIds = new Set();
 
         if (table === 'client_portal_credentials' && rowsToWrite.length) {
           const existingRows = await fetchRowsWithTimeout(store);
           const existingByBrand = Object.fromEntries(existingRows.map((row) => [row.id, row.data]));
-          rowsToWrite = rowsToWrite.map((row) => ({
-            id: row.id,
-            data: mergePortalCredentialDataForPush(existingByBrand[row.id], row.data, {
-              allowPasswordChange: passwordChangeBrands.includes(String(row.id)),
-            }),
-          }));
+          rowsToWrite = rowsToWrite
+            .map((row) => {
+              if (serverSavedBrands.has(String(row.id))) {
+                skipPushBrandIds.add(String(row.id));
+                return null;
+              }
+              return {
+                id: row.id,
+                data: mergePortalCredentialDataForPush(existingByBrand[row.id], row.data, {
+                  allowPasswordChange: passwordChangeBrands.includes(String(row.id)),
+                }),
+              };
+            })
+            .filter(Boolean);
           rowsToWrite = filterProtectedSyncUpserts(table, rowsToWrite);
         }
 
         if (canWrite) {
           if (rowsToWrite.length) await store.upsertRecords(rowsToWrite);
           if (removed.length) await store.deleteRecords(removed);
-        } else {
+        } else if (rowsToWrite.length || removed.length) {
           const ok = await pushStaffSyncRows(table, rowsToWrite, removed, orgId, {
             credentialPasswordChanges: passwordChangeBrands,
           });
@@ -405,8 +418,13 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
         }
 
         if (!cancelled) {
-          if (table === 'client_portal_credentials' && passwordChangeBrands.length) {
-            clearCredentialPasswordChanges(orgId, passwordChangeBrands);
+          if (table === 'client_portal_credentials') {
+            if (passwordChangeBrands.length) {
+              clearCredentialPasswordChanges(orgId, passwordChangeBrands);
+            }
+            if (skipPushBrandIds.size) {
+              clearCredentialServerSaved(orgId, [...skipPushBrandIds]);
+            }
           }
           for (const id of removed) pendingRemovedRef.current.delete(id);
           for (const key of [...pendingLocalCreatesRef.current]) {
