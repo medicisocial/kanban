@@ -36,13 +36,10 @@ export function buildCalendarNoteUpdates(
     throw new Error('Note is required.');
   }
 
-  const stamp = new Date(timestamp).toLocaleDateString();
-  const noteAppend = `\n\nClient calendar note (${stamp}): ${trimmed}`;
   const updates = {
     clientComment: trimmed,
     calendarNoteAt: timestamp,
     updatedAt: timestamp,
-    notes: `${card.notes || ''}${noteAppend}`.trim(),
   };
 
   const dateKey = String(occurrenceDate || '').trim();
@@ -62,13 +59,10 @@ export function buildCalendarNoteDeleteUpdates(
   card,
   { occurrenceDate, timestamp = Date.now() } = {},
 ) {
-  const stamp = new Date(timestamp).toLocaleDateString();
-  const noteAppend = `\n\nClient calendar note removed (${stamp})`;
   const updates = {
     clientComment: '',
     calendarNoteAt: 0,
     updatedAt: timestamp,
-    notes: `${card.notes || ''}${noteAppend}`.trim(),
   };
 
   const dateKey = String(occurrenceDate || '').trim();

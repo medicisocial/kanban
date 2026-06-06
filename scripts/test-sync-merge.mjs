@@ -506,8 +506,7 @@ if (typeof localStorage !== 'undefined') {
   });
   assert(updates.clientComment === 'Please move to Friday', 'clientComment should be set');
   assert(updates.calendarNoteAt === 1_700_000_000_000, 'calendarNoteAt should be set');
-  assert(updates.notes.includes('Existing'), 'existing notes should be preserved');
-  assert(updates.notes.includes('Please move to Friday'), 'note should be appended');
+  assert(!('notes' in updates), 'calendar note save should not touch staff notes');
 }
 
 // Story occurrence notes keyed by date.
@@ -548,7 +547,7 @@ if (typeof localStorage !== 'undefined') {
   assert(updates.calendarNoteAt === 0, 'delete should clear calendarNoteAt');
   assert(!updates.storyOccurrenceNotes['2026-06-12'], 'delete should remove occurrence note');
   assert(updates.storyOccurrenceNotes['2026-06-05'] === 'Keep', 'other occurrence notes should remain');
-  assert(updates.notes.includes('removed'), 'delete should append audit line');
+  assert(!('notes' in updates), 'calendar note delete should not touch staff notes');
 }
 
 // Staff delete patch mirrors server delete updates.
