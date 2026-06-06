@@ -338,6 +338,7 @@ export default function UnifiedLogin({
             );
           }),
         ]);
+        window.history.replaceState({}, '', window.location.pathname);
         onAuthenticated('client');
       } catch (err) {
         setError(err.message || 'Invalid username or password.');

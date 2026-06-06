@@ -3,7 +3,8 @@ import { encodeSharePayload, decodeSharePayload, decodeShareQueryParam } from '.
 export function getClientPortalClient() {
   const params = new URLSearchParams(window.location.search);
   const client = params.get('client');
-  return client ? decodeURIComponent(client) : null;
+  if (!client || client === '1') return null;
+  return decodeURIComponent(client);
 }
 
 export function isClientPortal() {

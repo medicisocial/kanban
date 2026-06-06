@@ -28,9 +28,22 @@ export function isStaffAuthRequired() {
   return import.meta.env.PROD;
 }
 
-export function isPublicShareLink() {
+function isAppGateRoute() {
   const params = new URLSearchParams(window.location.search);
-  if (params.get('client')) return true;
+  return (
+    params.get('login') === '1' ||
+    params.get('signup') === '1' ||
+    params.get('pricing') === '1'
+  );
+}
+
+export function isPublicShareLink() {
+  if (isAppGateRoute()) return false;
+
+  const params = new URLSearchParams(window.location.search);
+  const client = params.get('client');
+  // `client=1` is the client-login flag (?login=1&client=1), not a brand share link.
+  if (client && client !== '1') return true;
   if (params.get('calendar')) return true;
   if (params.get('content')) return true;
   if (params.get('shoot') && params.get('date')) return true;

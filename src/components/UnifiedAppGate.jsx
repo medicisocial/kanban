@@ -129,6 +129,9 @@ function UnifiedAppGateInner() {
     if (preferredAuthMode === 'client') {
       const client = loadUsableClientSession();
       if (client?.brand) {
+        if (window.location.search) {
+          window.history.replaceState({}, '', window.location.pathname);
+        }
         setMode('client');
         return;
       }
@@ -142,6 +145,9 @@ function UnifiedAppGateInner() {
 
     const client = loadUsableClientSession();
     if (client?.brand) {
+      if (window.location.search) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
       setMode('client');
       return;
     }
