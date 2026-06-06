@@ -3,6 +3,7 @@ import {
   mergeBrandSpecialMenus,
   mergeBrandLogoMap,
   mergeBrandSocialLoginsMap,
+  mergeBrandStringMap,
   mergeClientsWorkspaceContactsMap,
   mergeClientsWorkspaceFileMap,
   mergePortalPasswordVault,
@@ -640,6 +641,12 @@ function mergeClientsWorkspaceField(key, remote, local, synced) {
     return mergeBrandSocialLoginsMap(
       mergeBrandSocialLoginsMap(remote?.socialLogins, local?.socialLogins),
       synced?.socialLogins,
+    );
+  }
+  if (key === 'photoGalleryLinks') {
+    return mergeBrandStringMap(
+      mergeBrandStringMap(remote?.photoGalleryLinks, local?.photoGalleryLinks),
+      synced?.photoGalleryLinks,
     );
   }
   return undefined;

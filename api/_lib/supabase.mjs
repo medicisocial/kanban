@@ -6,7 +6,7 @@
 //   SUPABASE_SERVICE_ROLE_KEY  (required in production when Supabase URL is set)
 //   SUPABASE_URL / SUPABASE_ANON_KEY / ORG_ID  (optional overrides)
 
-function getSupabaseUrl() {
+export function getSupabaseUrl() {
   return (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '')
     .trim()
     .replace(/\/$/, '');
@@ -25,7 +25,7 @@ function resolveAnonKey() {
 }
 
 /** Key for server reads (client login, etc.). Prefers service role, falls back to anon. */
-function resolveAuthReadKey() {
+export function resolveAuthReadKey() {
   const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (serviceRole) return serviceRole;
   return resolveAnonKey();

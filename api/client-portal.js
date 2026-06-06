@@ -19,6 +19,10 @@ import {
   VIDEO_IDEAS_STORAGE_KEY,
   loadPortalWorkspace,
 } from './_lib/portalWorkspace.mjs';
+import {
+  fetchPortalBrandProfile,
+  resolveBrandProfileFromStore,
+} from './_lib/portalBrandProfile.mjs';
 import { normalizeHexColor } from './_lib/colorHex.mjs';
 import { normalizeContentTypeColors } from './_lib/contentTypeColors.mjs';
 
@@ -57,6 +61,16 @@ function normalizeBusinessType(businessType) {
   return businessType || '';
 }
 
+async function loadBrandProfile(orgId, brand, clientStore) {
+  try {
+    const profile = await fetchPortalBrandProfile(orgId, brand);
+    if (profile) return profile;
+  } catch (error) {
+    console.error('[client-portal] profile RPC failed:', error?.message || error);
+  }
+  return resolveBrandProfileFromStore(clientStore, brand);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -79,15 +93,9 @@ export default async function handler(req, res) {
   const data = workspace?.data || {};
   const brand = session.brand;
   const clientStore = data[CLIENTS_STORAGE_KEY] || {};
-  const colors = clientStore.colors || {};
-  const logos = clientStore.logos || {};
-  const businessTypes = clientStore.businessTypes || {};
-  const contacts = clientStore.contacts || {};
-  const socialLogins = clientStore.socialLogins || {};
-  const companyFiles = clientStore.companyFiles || {};
-  const specialMenus = clientStore.specialMenus || {};
-  const photoGalleryLinks = clientStore.photoGalleryLinks || {};
-  const contentTypeColors = normalizeContentTypeColors(clientStore.contentTypeColors || {});
+  const profile = await loadBrandProfile(session.orgId, brand, clientStore);
+  const businessType = normalizeBusinessType(profile.businessType || '');
+  const contentTypeColors = normalizeContentTypeColors(profile.contentTypeColors || {});
   const authMap = getClientPortalAuthMap(workspace);
   const brandUsers = normalizeBrandUsers(authMap[brand]);
   const sessionUsername = session.username.trim().toLowerCase();
@@ -99,17 +107,14 @@ export default async function handler(req, res) {
     brand,
     orgId: session.orgId || null,
     exportedAt: workspace?.exportedAt || null,
-    clientColor: normalizeHexColor(colors[brand]) || colors[brand] || null,
-    clientLogo: logos[brand] || null,
-    businessType: normalizeBusinessType(businessTypes[brand] || '') || null,
-    contacts: normalizeClientContacts(contacts[brand]),
-    socialLogins: normalizeClientSocialLogins(socialLogins[brand]),
-    companyFiles: normalizeClientCompanyFiles(
-      companyFiles[brand],
-      normalizeBusinessType(businessTypes[brand] || ''),
-    ),
-    specialMenus: normalizeClientSpecialMenus(specialMenus[brand]),
-    photoGalleryLink: photoGalleryLinks[brand] || null,
+    clientColor: normalizeHexColor(profile.clientColor) || profile.clientColor || null,
+    clientLogo: profile.clientLogo || null,
+    businessType: businessType || null,
+    contacts: normalizeClientContacts(profile.contacts),
+    socialLogins: normalizeClientSocialLogins(profile.socialLogins),
+    companyFiles: normalizeClientCompanyFiles(profile.companyFiles, businessType),
+    specialMenus: normalizeClientSpecialMenus(profile.specialMenus),
+    photoGalleryLink: profile.photoGalleryLink || null,
     contentTypeColors,
     userAvatar: currentUser?.avatar || null,
     userDisplayName: currentUser?.displayName || session.username,
