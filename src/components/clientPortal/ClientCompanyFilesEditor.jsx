@@ -55,6 +55,7 @@ export default function ClientCompanyFilesEditor({
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [pendingUploads, setPendingUploads] = useState([]);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [storageReady, setStorageReady] = useState(false);
   const fileInputRef = useRef(null);
   const savingRef = useRef(false);
@@ -314,12 +315,25 @@ export default function ClientCompanyFilesEditor({
     await persist(next);
   };
 
-  const handleRemove = async (fileId) => {
-    if (!window.confirm('Remove this file?')) return;
-    const target = localFiles.find((file) => file.id === fileId);
-    await persist(localFiles.filter((file) => file.id !== fileId));
-    if (target?.storagePath) {
-      void deleteBrandAssetFile(target.storagePath);
+  const requestRemove = (file) => {
+    if (!file || readOnly || saving) return;
+    setDeleteTarget(file);
+  };
+
+  const cancelRemove = () => setDeleteTarget(null);
+
+  const confirmRemove = async () => {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    setError('');
+    try {
+      await persist(localFiles.filter((file) => file.id !== target.id));
+      if (target.storagePath) {
+        void deleteBrandAssetFile(target.storagePath);
+      }
+    } catch {
+      /* persist surfaces save errors */
     }
   };
 
@@ -362,7 +376,7 @@ export default function ClientCompanyFilesEditor({
           dataUrl={file.dataUrl}
           fileName={file.fileName}
           onDownloadError={setError}
-          onRemove={readOnly ? undefined : () => handleRemove(file.id)}
+          onRemove={readOnly ? undefined : () => requestRemove(file)}
         />
       </div>
     </li>
@@ -476,6 +490,43 @@ export default function ClientCompanyFilesEditor({
 
       {error && <p className="text-sm text-rose-300">{error}</p>}
       {message && !error && <p className="text-sm text-emerald-300">{message}</p>}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div
+            className={`${glassInsetClass} w-full max-w-sm space-y-4 p-4`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-file-title"
+          >
+            <div className="space-y-1.5">
+              <p id="delete-file-title" className="text-sm font-medium text-white">
+                Delete this file?
+              </p>
+              <p className="text-sm text-white/70">
+                Are you sure you want to delete{' '}
+                <span className="font-medium text-white">
+                  {deleteTarget.name || deleteTarget.fileName || 'this file'}
+                </span>
+                ? This cannot be undone.
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button type="button" onClick={cancelRemove} className={btnSecondaryClass}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmRemove()}
+                disabled={saving}
+                className={`${btnPrimaryClass} !bg-rose-600 !text-white hover:!opacity-90 disabled:opacity-40`}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
