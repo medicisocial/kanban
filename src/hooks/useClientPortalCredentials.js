@@ -100,7 +100,12 @@ export function useClientPortalCredentials() {
         markCredentialPasswordChanges(orgId, [client]);
       }
 
-      await ensureStaffSupabaseSession();
+      await Promise.race([
+        ensureStaffSupabaseSession(),
+        new Promise((resolve) => {
+          setTimeout(resolve, 5000);
+        }),
+      ]);
       const canWriteDirect = await hasStaffSupabaseSession();
       let saveResult = null;
 

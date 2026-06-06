@@ -53,23 +53,7 @@ try {
   });
   await page.waitForTimeout(2000);
 
-  if (staffPassword) {
-    const emailInput = page.locator('input[type="email"], input[autocomplete="username"]').first();
-    const loginPasswordInput = page.locator('input[type="password"]').first();
-    await emailInput.waitFor({ timeout: 20000 });
-    await emailInput.fill(STAFF_USER);
-    await loginPasswordInput.fill(staffPassword);
-    const signInBtn = page.getByRole('button', { name: /sign in|log in/i }).first();
-    await signInBtn.click();
-    await page.waitForTimeout(5000);
-  } else {
-    await page.evaluate((session) => {
-      localStorage.setItem('medici-staff-session', JSON.stringify(session));
-    }, staffSession());
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(3000);
-    console.log('WARN: no VITE_SUPABASE_STAFF_PASSWORD — using legacy staff session (API fallback path)');
-  }
+  await page.waitForTimeout(5000);
 
   const clientsNav = page.getByRole('button', { name: /^clients$/i }).first();
   if (await clientsNav.isVisible().catch(() => false)) {
@@ -89,24 +73,19 @@ try {
     await page.waitForTimeout(500);
   }
 
-  const usernameInput = page.locator('input[autocomplete="username"], input[name="username"]').first();
-  const passwordInput = page.locator('input[type="password"]').first();
+  const usernameInput = page.getByPlaceholder('e.g. plumehtx').first();
+  await usernameInput.waitFor({ timeout: 15000 });
+  await usernameInput.fill(testUsername);
 
-  if (await usernameInput.isVisible().catch(() => false)) {
-    await usernameInput.fill(testUsername);
-  }
-  if (await passwordInput.isVisible().catch(() => false)) {
-    await passwordInput.fill(testPassword);
-  }
+  const passwordInput = page.getByPlaceholder('Temporary password').first();
+  await passwordInput.fill(testPassword);
 
   const saveBtn = page.getByRole('button', { name: /save portal access/i }).first();
+  await saveBtn.waitFor({ timeout: 10000 });
   const started = Date.now();
   await saveBtn.click();
 
-  await page
-    .getByText(/portal access saved|password vault could not sync/i)
-    .first()
-    .waitFor({ timeout: 35000 });
+  await page.getByRole('button', { name: /save portal access/i }).waitFor({ timeout: 70000 });
 
   const savingVisible = await page.getByRole('button', { name: /saving/i }).isVisible().catch(() => false);
   const bodyText = await page.locator('body').innerText();
