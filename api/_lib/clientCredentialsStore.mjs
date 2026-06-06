@@ -1,6 +1,12 @@
 import { getRedis, loadWorkspace, saveWorkspace } from './redis.mjs';
 import { getClientPortalAuthMap, hashValue, mergeClientPortalAuth, normalizeBrandUsers } from './clientPortalAuth.mjs';
-import { fetchCollectionMap, fetchRecord, isSupabaseConfigured, upsertRecord, deleteRecord } from './supabase.mjs';
+import {
+  fetchCollectionMap,
+  isSupabaseConfigured,
+  patchClientsPortalPasswordVault,
+  upsertRecord,
+  deleteRecord,
+} from './supabase.mjs';
 import { hasConfiguredPortalUsers, mergePortalCredentialData } from './authCriticalSync.mjs';
 
 const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
@@ -11,18 +17,8 @@ async function updatePortalPasswordVaultInClientsWorkspace({ orgId, brand, userI
   const trimmedPassword = String(password).trim();
 
   if (isSupabaseConfigured()) {
-    const existing = (await fetchRecord('clients', CLIENTS_WORKSPACE_ID, orgId)) || {};
-    const vault = { ...(existing.portalPasswordVault || {}) };
-    const brandVault = { ...(vault[brand] || {}) };
-    brandVault[userId] = trimmedPassword;
-    vault[brand] = brandVault;
-
-    await upsertRecord(
-      'clients',
-      CLIENTS_WORKSPACE_ID,
-      { ...existing, portalPasswordVault: vault },
-      orgId,
-    );
+    const brandVault = { [userId]: trimmedPassword };
+    await patchClientsPortalPasswordVault(brand, brandVault, orgId);
     return;
   }
 

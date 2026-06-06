@@ -2,13 +2,12 @@ import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
 import {
   fetchCollectionMap,
-  fetchRecord,
   isSupabaseConfigured,
+  patchClientsPortalPasswordVault,
   upsertRecord,
 } from './_lib/supabase.mjs';
 import { hashValue, normalizeBrandUsers } from './_lib/clientPortalAuth.mjs';
 import { hasConfiguredPortalUsers } from './_lib/authCriticalSync.mjs';
-import { mergeClientsWorkspaceData } from './_lib/clientsWorkspaceMerge.mjs';
 
 function unauthorized(res) {
   return res.status(401).json({ error: 'Unauthorized' });
@@ -101,10 +100,7 @@ export default async function handler(req, res) {
   const resolvedOrgId = orgCheck.orgId;
 
   try {
-    const [credentialMap, clientsWorkspace] = await Promise.all([
-      fetchCollectionMap('client_portal_credentials', resolvedOrgId),
-      fetchRecord('clients', 'workspace', resolvedOrgId),
-    ]);
+    const credentialMap = await fetchCollectionMap('client_portal_credentials', resolvedOrgId);
 
     const existingUsers = normalizeBrandUsers(credentialMap?.[brand]);
     const existingById = new Map(existingUsers.map((user) => [user.id, user]));
@@ -112,8 +108,7 @@ export default async function handler(req, res) {
       existingUsers.map((user) => [user.username.trim().toLowerCase(), user]),
     );
 
-    const nextVault = { ...(clientsWorkspace?.portalPasswordVault || {}) };
-    const brandVault = { ...(nextVault[brand] || {}) };
+    const brandVault = {};
     const nextUsers = [];
 
     for (const draft of users) {
@@ -166,18 +161,31 @@ export default async function handler(req, res) {
 
     await upsertRecord('client_portal_credentials', brand, nextUsers, resolvedOrgId);
 
-    nextVault[brand] = brandVault;
-    await upsertRecord(
-      'clients',
-      'workspace',
-      mergeClientsWorkspaceData(clientsWorkspace || {}, { portalPasswordVault: nextVault }),
-      resolvedOrgId,
-    );
+    let vaultWarning = null;
+    if (Object.keys(brandVault).length) {
+      try {
+        await patchClientsPortalPasswordVault(brand, brandVault, resolvedOrgId);
+      } catch (vaultError) {
+        console.warn(
+          '[client-portal-set-password] vault patch failed:',
+          vaultError?.message || vaultError,
+        );
+        vaultWarning =
+          'Portal logins saved. Password vault could not sync to cloud — try again or wait for workspace sync.';
+      }
+    }
 
     const usersForClient = nextUsers.map(({ _passwordChangeAuthorized: _ignored, ...user }) => user);
-    return res.status(200).json({ ok: true, users: usersForClient });
+    return res.status(200).json({ ok: true, users: usersForClient, vaultWarning });
   } catch (error) {
-    console.error('[client-portal-set-password] failed:', error?.message || error);
-    return res.status(500).json({ error: 'Could not save portal passwords.' });
+    const detail = String(error?.message || error || '').trim();
+    console.error('[client-portal-set-password] failed:', detail);
+    const safeDetail = detail.replace(/Bearer\s+\S+/gi, 'Bearer [redacted]');
+    return res.status(500).json({
+      error: safeDetail.includes('Supabase')
+        ? 'Could not save portal passwords. Cloud database is busy — try again in a moment.'
+        : 'Could not save portal passwords.',
+      detail: process.env.NODE_ENV !== 'production' ? safeDetail : undefined,
+    });
   }
 }

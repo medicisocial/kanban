@@ -91,6 +91,7 @@ export function useClientPortalCredentials() {
 
     registerPortalCredentialBrand(getOrgId(), client);
 
+    let vaultWarning = null;
     if (SUPABASE_ENABLED) {
       if (hasPasswordChange) {
         markCredentialPasswordChanges(getOrgId(), [client]);
@@ -117,6 +118,7 @@ export function useClientPortalCredentials() {
       if (hasPasswordChange) {
         clearCredentialPasswordChanges(orgId, [client]);
       }
+      vaultWarning = apiResult.vaultWarning || null;
     }
 
     setCredentials((prev) => {
@@ -125,7 +127,7 @@ export function useClientPortalCredentials() {
       return next;
     });
 
-    return { ok: true, users: activeUsers };
+    return { ok: true, users: activeUsers, vaultWarning };
   }, []);
 
   const setClientPortalCredential = useCallback(async (client, username, password) => {

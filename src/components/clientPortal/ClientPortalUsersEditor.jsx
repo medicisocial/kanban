@@ -213,7 +213,7 @@ export default function ClientPortalUsersEditor({
             : 'Saved locally — cloud sync returned no active logins. Check your connection and try again.',
         );
       } else if (SUPABASE_ENABLED) {
-        setMessage('Portal access saved.');
+        setMessage(saveResult?.vaultWarning || 'Portal access saved.');
       } else {
         setMessage('Portal access saved locally.');
       }

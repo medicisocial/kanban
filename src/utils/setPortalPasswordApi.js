@@ -66,7 +66,7 @@ export async function saveClientPortalPasswords({ brand, users }) {
       return { ok: false, error: payload.error || 'Could not save portal passwords.' };
     }
 
-    return { ok: true, users: payload.users || [] };
+    return { ok: true, users: payload.users || [], vaultWarning: payload.vaultWarning || null };
   } catch (error) {
     return {
       ok: false,
