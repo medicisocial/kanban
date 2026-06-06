@@ -12,7 +12,6 @@ import {
 } from '../../utils/clientCompanyFiles';
 import {
   canUploadBrandAssetToStorage,
-  deleteBrandAssetFile,
   isStorageSignUnavailableError,
   probeBrandAssetStorageReady,
   uploadBrandAssetToStorage,
@@ -300,22 +299,6 @@ export default function ClientCompanyFilesEditor({
     await persist(next);
   };
 
-  const handleMove = async (fileId, folder) => {
-    const next = localFiles.map((file) =>
-      file.id === fileId ? { ...file, folder, updatedAt: Date.now() } : file,
-    );
-    await persist(next);
-  };
-
-  const handleRemove = async (fileId) => {
-    if (!window.confirm('Remove this file?')) return;
-    const target = localFiles.find((file) => file.id === fileId);
-    await persist(localFiles.filter((file) => file.id !== fileId));
-    if (target?.storagePath) {
-      void deleteBrandAssetFile(target.storagePath);
-    }
-  };
-
   const folderFiles = localFiles.filter((file) => file.folder === activeFolder);
   const activeFolderLabel =
     folders.find((folder) => folder.id === activeFolder)?.label || 'folder';
@@ -350,32 +333,7 @@ export default function ClientCompanyFilesEditor({
             {file.fileName} · {formatCompanyFileSize(file.size)}
           </p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <FilePreviewActions title={file.name} dataUrl={file.dataUrl} fileName={file.fileName} />
-          {!readOnly && (
-            <>
-              <select
-                value={file.folder}
-                onChange={(e) => handleMove(file.id, e.target.value)}
-                className={`${inputClass} w-auto min-w-[9rem] py-1.5 text-[10px]`}
-                aria-label="Move file to folder"
-              >
-                {folders.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => handleRemove(file.id)}
-                className="text-[10px] font-medium uppercase tracking-wider text-white/40 transition-colors hover:text-rose-300"
-              >
-                Remove
-              </button>
-            </>
-          )}
-        </div>
+        <FilePreviewActions title={file.name} dataUrl={file.dataUrl} fileName={file.fileName} />
       </div>
     </li>
   );
