@@ -279,10 +279,12 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
 
       try {
         let dataToWrite = value;
+        let existingData;
         if (table === 'clients') {
           try {
             const rows = await fetchRowsWithTimeout(store);
-            const existing = rows.find((entry) => String(entry.id) === recordId)?.data;
+            existingData = rows.find((entry) => String(entry.id) === recordId)?.data;
+            const existing = existingData;
             let syncedParsed = null;
             try {
               syncedParsed = syncedRef.current ? JSON.parse(syncedRef.current) : null;
@@ -317,6 +319,20 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
             }
           } catch (mergeErr) {
             console.warn(`[supabase:${table}] merge-before-write failed:`, mergeErr?.message || mergeErr);
+          }
+        }
+
+        // Redundant-write guard: if the merged result already matches the cloud row,
+        // skip rewriting the (large) workspace blob. This breaks realtime echo loops
+        // that otherwise rewrite ~1MB+ every cycle and bloat the table, causing the
+        // statement timeouts that surface as "Could not add client".
+        if (table === 'clients' && existingData !== undefined) {
+          if (JSON.stringify(dataToWrite) === JSON.stringify(existingData)) {
+            if (!cancelled) {
+              syncedRef.current = JSON.stringify(dataToWrite);
+              pendingWriteRef.current = false;
+            }
+            return;
           }
         }
 
