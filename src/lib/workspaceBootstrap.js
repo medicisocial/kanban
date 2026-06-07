@@ -31,7 +31,7 @@ const MAP_LOADERS = [
 ];
 
 const SINGLETON_LOADERS = [
-  { table: 'clients', recordId: 'state', load: () => readOrgScopedJson(CLIENTS_STORAGE_KEY, null) },
+  { table: 'clients', recordId: 'workspace', load: () => readOrgScopedJson(CLIENTS_STORAGE_KEY, null) },
 ];
 
 /**

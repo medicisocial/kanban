@@ -24,6 +24,7 @@ import {
   mergeBrandSpecialMenus,
   mergeClientsWorkspaceData,
   mergeClientsWorkspaceFileMap,
+  mergeClientsWorkspaceNames,
 } from '../utils/clientsWorkspaceMerge';
 
 /**
@@ -282,13 +283,20 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
           try {
             const rows = await fetchRowsWithTimeout(store);
             const existing = rows.find((entry) => String(entry.id) === recordId)?.data;
-            dataToWrite = mergeClientsWorkspaceData(existing, value);
-
             let syncedParsed = null;
             try {
               syncedParsed = syncedRef.current ? JSON.parse(syncedRef.current) : null;
             } catch {
               syncedParsed = null;
+            }
+
+            dataToWrite = mergeClientsWorkspaceData(existing, value);
+            if (Array.isArray(value?.names) || Array.isArray(existing?.names)) {
+              dataToWrite.names = mergeClientsWorkspaceNames(
+                existing?.names,
+                value?.names,
+                syncedParsed?.names,
+              );
             }
 
             if (value?.companyFiles) {
@@ -329,7 +337,8 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
         }
 
         if (!cancelled) {
-          syncedRef.current = json;
+          syncedRef.current =
+            table === 'clients' ? JSON.stringify(dataToWrite) : json;
           pendingWriteRef.current = false;
         }
       } catch (err) {

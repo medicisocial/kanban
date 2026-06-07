@@ -12,6 +12,39 @@ function workspaceNameKeys(names) {
   return new Set((Array.isArray(names) ? names : []).map((name) => clientBrandNameKey(name)));
 }
 
+/** Union client names on write so a stale push cannot drop a brand the server just added. */
+export function mergeClientsWorkspaceNamesOnWrite(stored = [], incoming = []) {
+  const storedList = Array.isArray(stored) ? stored : [];
+  const incomingList = Array.isArray(incoming) ? incoming : [];
+  const seen = new Set();
+  const merged = [];
+
+  for (const name of incomingList) {
+    const key = clientBrandNameKey(name);
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(name);
+    }
+  }
+  for (const name of storedList) {
+    const key = clientBrandNameKey(name);
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(name);
+    }
+  }
+  return merged;
+}
+
+function mergeBrandScalarMap(stored = {}, incoming = {}) {
+  return {
+    ...(stored && typeof stored === 'object' ? stored : {}),
+    ...(incoming && typeof incoming === 'object' ? incoming : {}),
+  };
+}
+
+export { mergeBrandScalarMap };
+
 /** Remote refresh must not drop clients still present in the local/synced baseline. */
 export function mergeClientsWorkspaceNames(remote = [], local = [], synced = []) {
   const remoteList = Array.isArray(remote) ? remote : [];
@@ -544,6 +577,10 @@ export function mergeClientsWorkspaceData(stored = {}, incoming = {}) {
   return {
     ...stored,
     ...incoming,
+    names: mergeClientsWorkspaceNamesOnWrite(stored.names, incoming.names),
+    colors: mergeBrandScalarMap(stored.colors, incoming.colors),
+    accountManagers: mergeBrandScalarMap(stored.accountManagers, incoming.accountManagers),
+    businessTypes: mergeBrandScalarMap(stored.businessTypes, incoming.businessTypes),
     contacts: mergeBrandContactsMap(stored.contacts, incoming.contacts),
     logos: mergeBrandLogoMap(stored.logos, incoming.logos),
     socialLogins: mergeBrandSocialLoginsMap(stored.socialLogins, incoming.socialLogins),

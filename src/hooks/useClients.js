@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import {
   DEFAULT_CLIENTS,
   DEFAULT_CLIENT_COLORS,
@@ -26,7 +27,6 @@ import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useSingletonSync } from '../lib/useSingletonSync';
 import { useStaffAuth } from '../context/StaffAuthContext';
-import { shouldPersistSyncedState } from '../lib/syncInitialState';
 import { registerPortalCredentialBrand } from '../lib/syncHelpers';
 import { loadPortalPasswordVault, savePortalPasswordVault } from '../utils/clientPortalPasswordVault';
 import { saveStaffBrandAssets } from '../utils/staffBrandAssetsApi';
@@ -173,9 +173,8 @@ export function useClients() {
   });
 
   useEffect(() => {
-    if (!shouldPersistSyncedState(syncLoaded)) return;
     writeOrgScopedJson(CLIENTS_STORAGE_KEY, state);
-  }, [state, syncLoaded]);
+  }, [state]);
 
   const addClient = useCallback(async (name, color, logo = null, businessType = '') => {
     const trimmed = normalizeClientName(name);
@@ -215,18 +214,23 @@ export function useClients() {
 
       const resolvedName = apiResult.name || trimmed;
       const patch = apiResult.clientsPatch || {};
-      setState((prev) =>
-        normalizeClientsState(
-          {
-            ...prev,
-            names: Array.isArray(patch.names) ? patch.names : [...prev.names, resolvedName],
-            colors: { ...prev.colors, ...(patch.colors || {}) },
-            logos: { ...prev.logos, ...(patch.logos || {}) },
-            businessTypes: { ...prev.businessTypes, ...(patch.businessTypes || {}) },
-          },
-          { includeDefaults },
-        ),
+      const prev = normalizeClientsState(stateRef.current, { includeDefaults });
+      const nextState = normalizeClientsState(
+        {
+          ...prev,
+          names: Array.isArray(patch.names) ? patch.names : [...prev.names, resolvedName],
+          colors: { ...prev.colors, ...(patch.colors || {}) },
+          logos: { ...prev.logos, ...(patch.logos || {}) },
+          businessTypes: { ...prev.businessTypes, ...(patch.businessTypes || {}) },
+        },
+        { includeDefaults },
       );
+      // Flush before realtime handlers run so sync merge sees the new client immediately.
+      flushSync(() => {
+        stateRef.current = nextState;
+        setState(nextState);
+      });
+      writeOrgScopedJson(CLIENTS_STORAGE_KEY, nextState);
       registerPortalCredentialBrand(orgId, resolvedName);
       return { ok: true, name: resolvedName };
     }
@@ -274,6 +278,61 @@ export function useClients() {
     registerPortalCredentialBrand(orgId, trimmed);
     return { ok: true, name: trimmed };
   }, [orgId, planType, state.names, state.colors, includeDefaults]);
+
+  const removeClient = useCallback(async (name) => {
+    const trimmed = normalizeClientName(name);
+    if (!trimmed) return { ok: false, error: 'Missing client.' };
+    if (isInternalClientName(trimmed)) {
+      return { ok: false, error: 'That client is reserved and cannot be removed.' };
+    }
+    if (includeDefaults && DEFAULT_CLIENTS.some((client) => clientNamesConflict(client, trimmed))) {
+      return { ok: false, error: 'Built-in demo clients cannot be removed.' };
+    }
+
+    const current = normalizeClientsState(stateRef.current, { includeDefaults });
+    if (!current.names.some((client) => clientNamesConflict(client, trimmed))) {
+      return { ok: false, error: 'Client not found in your workspace.' };
+    }
+
+    const stripBrand = (map) => {
+      if (!map || typeof map !== 'object') return {};
+      const next = {};
+      for (const [key, value] of Object.entries(map)) {
+        if (!clientNamesConflict(key, trimmed)) next[key] = value;
+      }
+      return next;
+    };
+
+    const nextState = normalizeClientsState(
+      {
+        ...current,
+        names: current.names.filter((client) => !clientNamesConflict(client, trimmed)),
+        colors: stripBrand(current.colors),
+        logos: stripBrand(current.logos),
+        accountManagers: stripBrand(current.accountManagers),
+        businessTypes: stripBrand(current.businessTypes),
+        contacts: stripBrand(current.contacts),
+        socialLogins: stripBrand(current.socialLogins),
+        companyFiles: stripBrand(current.companyFiles),
+        specialMenus: stripBrand(current.specialMenus),
+        photoGalleryLinks: stripBrand(current.photoGalleryLinks),
+        portalPasswordVault: stripBrand(current.portalPasswordVault),
+      },
+      { includeDefaults },
+    );
+
+    // Flush before sync handlers run so the removal reaches the singleton push.
+    flushSync(() => {
+      stateRef.current = nextState;
+      setState(nextState);
+    });
+    writeOrgScopedJson(CLIENTS_STORAGE_KEY, nextState);
+
+    if (SUPABASE_ENABLED && orgId) {
+      await releaseClientBrandName(trimmed, orgId).catch(() => {});
+    }
+    return { ok: true, name: trimmed };
+  }, [orgId, includeDefaults]);
 
   const getClientColor = useCallback(
     (client) => state.colors[client] || '#9ca3af',
@@ -593,6 +652,7 @@ export function useClients() {
     clientBusinessTypes: state.businessTypes,
     defaultClient: state.names[0] || DEFAULT_CLIENTS[0],
     addClient,
+    removeClient,
     getClientColor,
     getClientLogo,
     getClientAccountManager,

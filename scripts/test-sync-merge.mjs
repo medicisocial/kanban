@@ -26,6 +26,7 @@ import {
   mergeBrandCompanyFilesPortalRefresh,
   mergeClientsWorkspaceBrandFiles,
   mergeClientsWorkspaceNames,
+  mergeClientsWorkspaceNamesOnWrite,
 } from '../src/utils/clientsWorkspaceMerge.js';
 import {
   isPortalContentCalendarCard,
@@ -421,6 +422,91 @@ if (typeof localStorage !== 'undefined') {
   const merged = mergeClientsWorkspaceNames(remote, local, synced);
   assert(merged.length === 2, 'stale remote should not drop newly added client');
   assert(merged.includes('Casalu'), 'newly added client should survive stale remote');
+}
+
+// Stale staff-sync push must not drop a client the server just added.
+{
+  const stored = {
+    names: ['Plume', 'Casalu'],
+    colors: { Plume: '#111', Casalu: '#222' },
+  };
+  const incoming = {
+    names: ['Plume'],
+    colors: { Plume: '#111' },
+  };
+  const merged = mergeClientsWorkspaceData(stored, incoming);
+  assert(merged.names.length === 2, 'stale push should not drop server-added client');
+  assert(merged.names.includes('Casalu'), 'server-added client should survive stale push');
+  assert(merged.colors.Casalu === '#222', 'stale push should keep server-added client color');
+}
+
+// Push-path three-way merge: stale local must not drop a server-added client.
+{
+  const existing = ['Plume', 'Casalu'];
+  const local = ['Plume'];
+  const synced = ['Plume'];
+  const merged = mergeClientsWorkspaceNames(existing, local, synced);
+  assert(merged.length === 2, 'push merge should keep server-added client');
+  assert(merged.includes('Casalu'), 'push merge should include Casalu');
+}
+
+// Union write merge keeps both sides when lists diverge.
+{
+  const merged = mergeClientsWorkspaceNamesOnWrite(['Plume'], ['Plume', 'Casalu']);
+  assert(merged.length === 2, 'union write should include both clients');
+  assert(merged.includes('Casalu'), 'union write should include incoming-only client');
+}
+
+// Cold load without sync baseline must union local and remote client lists.
+{
+  const local = {
+    names: ['Plume', 'Casalu'],
+    colors: { Plume: '#111', Casalu: '#222' },
+  };
+  const remote = { names: ['Plume'], colors: { Plume: '#111' } };
+  const merged = mergeClientsWorkspaceState({ remote, local, syncedStr: null });
+  assert(merged.names.includes('Casalu'), 'cold load should keep local-only client');
+  assert(merged.colors.Casalu === '#222', 'cold load should keep local-only client color');
+}
+
+// Full workspace state stays stable through stale remote after local add.
+{
+  const synced = { names: ['Plume'] };
+  const local = {
+    names: ['Plume', 'Casalu'],
+    colors: { Plume: '#111', Casalu: '#222' },
+  };
+  const remote = { names: ['Plume'], colors: { Plume: '#111' } };
+  const merged = mergeClientsWorkspaceState({
+    remote,
+    local,
+    syncedStr: JSON.stringify(synced),
+  });
+  assert(merged.names.includes('Casalu'), 'local add should survive stale remote refresh');
+  assert(merged.colors.Casalu === '#222', 'local add color should survive stale remote refresh');
+}
+
+// Removing a client locally must propagate through the names three-way merge (push path).
+{
+  const synced = ['Plume', 'Casalu'];
+  const local = ['Plume'];
+  const remote = ['Plume', 'Casalu'];
+  const merged = mergeClientsWorkspaceNames(remote, local, synced);
+  assert(!merged.includes('Casalu'), 'local removal should drop the client on push');
+  assert(merged.length === 1, 'push merge should keep only remaining client after removal');
+}
+
+// Removing a client locally must propagate through the full realtime state merge.
+{
+  const synced = { names: ['Plume', 'Casalu'] };
+  const local = { names: ['Plume'], colors: { Plume: '#111' } };
+  const remote = { names: ['Plume', 'Casalu'], colors: { Plume: '#111', Casalu: '#222' } };
+  const merged = mergeClientsWorkspaceState({
+    remote,
+    local,
+    syncedStr: JSON.stringify(synced),
+  });
+  assert(!merged.names.includes('Casalu'), 'realtime merge should honor local removal');
 }
 
 // Tombstoned ids never render again during this session.

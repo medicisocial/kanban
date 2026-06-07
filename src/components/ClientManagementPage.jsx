@@ -51,6 +51,7 @@ export default function ClientManagementPage({
   const {
     clients,
     addClient,
+    removeClient,
     getClientColor,
     getClientLogo,
     getClientBusinessType,
@@ -82,6 +83,9 @@ export default function ClientManagementPage({
   const [profileMessage, setProfileMessage] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removingClient, setRemovingClient] = useState(false);
+  const [removeError, setRemoveError] = useState('');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -211,6 +215,37 @@ export default function ClientManagementPage({
       onClientAdded?.(result.name);
     }
     return result;
+  };
+
+  const openRemoveClient = () => {
+    setRemoveError('');
+    setConfirmRemove(true);
+  };
+
+  const closeRemoveClient = () => {
+    if (removingClient) return;
+    setConfirmRemove(false);
+    setRemoveError('');
+  };
+
+  const handleRemoveClient = async () => {
+    if (!selectedClient) return;
+    setRemovingClient(true);
+    setRemoveError('');
+    try {
+      const result = await removeClient(selectedClient);
+      if (result?.ok === false) {
+        setRemoveError(result.error || 'Could not remove client.');
+        return;
+      }
+      const remaining = profileClients.filter((client) => client !== selectedClient);
+      setSelectedClient(remaining[0] || '');
+      setConfirmRemove(false);
+    } catch (err) {
+      setRemoveError(err.message || 'Could not remove client.');
+    } finally {
+      setRemovingClient(false);
+    }
   };
 
   if (profileClients.length === 0) {
@@ -416,6 +451,19 @@ export default function ClientManagementPage({
               >
                 {savingProfile ? 'Saving…' : 'Save profile'}
               </button>
+
+              <div className="mt-2 border-t border-white/[0.06] pt-4">
+                <button
+                  type="button"
+                  onClick={openRemoveClient}
+                  className="text-[11px] font-medium uppercase tracking-[0.18em] text-rose-300/75 transition-colors duration-300 hover:text-rose-300"
+                >
+                  Remove this client
+                </button>
+                <p className="mt-1.5 text-[10px] text-white/35">
+                  Removes {selectedClient} from the pipeline, calendars, and client filters.
+                </p>
+              </div>
             </div>
           )}
 
@@ -506,6 +554,59 @@ export default function ClientManagementPage({
           onClose={() => setShowAddClient(false)}
           onAdd={handleAddClient}
         />
+      )}
+
+      {confirmRemove && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeRemoveClient();
+          }}
+        >
+          <div className="w-full max-w-md border border-white/10 bg-[#111111] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+              <h2 className="text-lg font-semibold text-white">Remove client</h2>
+              <button
+                type="button"
+                onClick={closeRemoveClient}
+                className="text-white/45 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 px-5 py-4">
+              <p className="text-sm text-white/70">
+                Remove <span className="font-semibold text-white">{selectedClient}</span> from your
+                workspace? The brand disappears from the pipeline, calendars, and client filters.
+              </p>
+              <p className="text-[11px] text-white/40">
+                Existing cards and portal logins are not deleted. You can re-add this client later
+                with the same name.
+              </p>
+              {removeError && <p className="text-sm text-rose-300">{removeError}</p>}
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-white/10 px-5 py-4">
+              <button
+                type="button"
+                onClick={closeRemoveClient}
+                disabled={removingClient}
+                className={`${btnSecondaryClass} disabled:opacity-40`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveClient}
+                disabled={removingClient}
+                className="inline-flex items-center justify-center rounded-sm bg-rose-500/90 px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition-opacity duration-300 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {removingClient ? 'Removing…' : 'Remove client'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </section>
   );

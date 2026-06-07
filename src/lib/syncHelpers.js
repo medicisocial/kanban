@@ -7,6 +7,8 @@ import {
   mergeClientsWorkspaceContactsMap,
   mergeClientsWorkspaceFileMap,
   mergeClientsWorkspaceNames,
+  mergeBrandScalarMap,
+  mergeClientsWorkspaceData,
   mergePortalPasswordVault,
 } from '../utils/clientsWorkspaceMerge.js';
 export const FETCH_TIMEOUT_MS = 12000;
@@ -610,9 +612,20 @@ const CLIENTS_WORKSPACE_KEYS = [
   'customColorPalette',
 ];
 
+const CLIENTS_SCALAR_MAP_KEYS = new Set([
+  'colors',
+  'accountManagers',
+  'businessTypes',
+  'contentTypeColors',
+  'customColorPalette',
+]);
+
 function mergeClientsWorkspaceField(key, remote, local, synced) {
   if (key === 'names') {
     return mergeClientsWorkspaceNames(remote?.names, local?.names, synced?.names);
+  }
+  if (CLIENTS_SCALAR_MAP_KEYS.has(key)) {
+    return mergeBrandScalarMap(remote?.[key], local?.[key]);
   }
   if (key === 'companyFiles') {
     return mergeClientsWorkspaceFileMap(
@@ -674,6 +687,12 @@ export function mergeClientsWorkspaceState({ remote, local, syncedStr }) {
     }
   }
 
+  // First pull this session — union-merge so a client saved locally while cloud
+  // was stale (e.g. right after add-client) is not dropped on refresh.
+  if (syncedStr == null) {
+    return mergeClientsWorkspaceData(remote, local);
+  }
+
   const merged = { ...remote };
   for (const key of CLIENTS_WORKSPACE_KEYS) {
     if (local[key] === undefined) continue;
@@ -683,6 +702,10 @@ export function mergeClientsWorkspaceState({ remote, local, syncedStr }) {
       synced && synced[key] !== undefined ? JSON.stringify(synced[key]) : undefined;
 
     if (syncedKeyStr === undefined) {
+      if (CLIENTS_SCALAR_MAP_KEYS.has(key)) {
+        merged[key] = mergeBrandScalarMap(remote[key], local[key]);
+        continue;
+      }
       // No sync baseline for this field. Remote is authoritative (cloud wins)
       // so stale localStorage on a new device does not overwrite fresh cloud data.
       // Local wins only if local was modified after the remote record's timestamp.
@@ -704,9 +727,11 @@ export function mergeClientsWorkspaceState({ remote, local, syncedStr }) {
       merged[key] =
         fileField !== undefined
           ? fileField
-          : remote[key] !== undefined
-            ? remote[key]
-            : local[key];
+          : CLIENTS_SCALAR_MAP_KEYS.has(key)
+            ? mergeBrandScalarMap(remote[key], local[key])
+            : remote[key] !== undefined
+              ? remote[key]
+              : local[key];
     } else {
       merged[key] = local[key];
     }

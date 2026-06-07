@@ -1,10 +1,42 @@
 import { mergeClientSocialLogins } from './clientProfile.mjs';
+import { normalizeClientBrandName } from './clientBrandNames.mjs';
 
 /**
  * Merge clients workspace blobs so a stale staff-sync push cannot clobber
  * files a client just uploaded through the portal (companyFiles, specialMenus)
  * or profile fields (contacts, logos, social logins).
  */
+
+/** Union client names on write so a stale push cannot drop a brand the server just added. */
+export function mergeClientsWorkspaceNamesOnWrite(stored = [], incoming = []) {
+  const storedList = Array.isArray(stored) ? stored : [];
+  const incomingList = Array.isArray(incoming) ? incoming : [];
+  const seen = new Set();
+  const merged = [];
+
+  for (const name of incomingList) {
+    const key = normalizeClientBrandName(name);
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(name);
+    }
+  }
+  for (const name of storedList) {
+    const key = normalizeClientBrandName(name);
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(name);
+    }
+  }
+  return merged;
+}
+
+function mergeBrandScalarMap(stored = {}, incoming = {}) {
+  return {
+    ...(stored && typeof stored === 'object' ? stored : {}),
+    ...(incoming && typeof incoming === 'object' ? incoming : {}),
+  };
+}
 
 function recordUpdatedAt(record) {
   return Number(record?.updatedAt) || 0;
@@ -263,6 +295,10 @@ export function mergeClientsWorkspaceData(stored = {}, incoming = {}) {
   return {
     ...stored,
     ...incoming,
+    names: mergeClientsWorkspaceNamesOnWrite(stored.names, incoming.names),
+    colors: mergeBrandScalarMap(stored.colors, incoming.colors),
+    accountManagers: mergeBrandScalarMap(stored.accountManagers, incoming.accountManagers),
+    businessTypes: mergeBrandScalarMap(stored.businessTypes, incoming.businessTypes),
     contacts: mergeBrandContactsMap(stored.contacts, incoming.contacts),
     logos: mergeBrandLogoMap(stored.logos, incoming.logos),
     socialLogins: mergeBrandSocialLoginsMap(stored.socialLogins, incoming.socialLogins),
