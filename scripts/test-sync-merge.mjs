@@ -32,7 +32,8 @@ import {
   stripSuppressedClientNames,
   mergeBrandLogoMap,
 } from '../src/utils/clientsWorkspaceMerge.js';
-import { isTestClientName } from '../src/utils/clients.js';
+import { isTestClientName, clientNamesConflict } from '../src/utils/clients.js';
+import { normalizePortalLogin } from '../src/utils/portalLogin.js';
 import {
   isPortalContentCalendarCard,
   buildCalendarNoteUpdates,
@@ -853,6 +854,27 @@ if (typeof localStorage !== 'undefined') {
   const stored = { Plume: { src: 'https://cdn.example.com/keep.png', updatedAt: 10 } };
   const merged = mergeBrandLogoMap(stored, { Plume: null });
   assert(merged.Plume?.src?.endsWith('keep.png'), 'empty incoming logo must not wipe a stored logo');
+}
+
+// Portal credential keys are lowercase in Supabase but the UI uses display names.
+// Saving must not treat the same brand's existing username as "another brand".
+{
+  const credentials = {
+    plume: [{ id: '1', username: 'plumehtx', passwordHash: 'abc123' }],
+    'arco fit': [{ id: '2', username: 'arcofitgym', passwordHash: 'def456' }],
+  };
+  const taken = new Set();
+  for (const [brandKey, entry] of Object.entries(credentials)) {
+    if (clientNamesConflict(brandKey, 'Plume')) continue;
+    for (const user of entry) {
+      const login = normalizePortalLogin(user.username);
+      if (login) taken.add(login);
+    }
+  }
+  assert(!taken.has('plumehtx'), 'current brand username must not count as taken');
+  assert(taken.has('arcofitgym'), 'other brand usernames should still be reserved');
+  const plumeKey = Object.keys(credentials).find((key) => clientNamesConflict(key, 'Plume'));
+  assert(plumeKey === 'plume', 'case-insensitive brand key should resolve to stored row id');
 }
 
 console.log('Sync merge tests passed.');

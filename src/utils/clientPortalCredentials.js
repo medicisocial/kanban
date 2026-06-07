@@ -1,4 +1,5 @@
 import { bakeLogoCrop, normalizeClientLogo, serializeClientLogo } from './clientLogo';
+import { clientNamesConflict } from './clients';
 import { normalizePortalLogin } from './portalLogin';
 
 export function createClientPortalUserId() {
@@ -42,9 +43,45 @@ export function normalizeBrandUsers(entry) {
   return [];
 }
 
+/** Resolve the map key used in credentials (may differ in casing from display name). */
+export function resolveCredentialBrandKey(credentials, client) {
+  if (!credentials || typeof credentials !== 'object' || !client) return client;
+
+  const matchingKeys = Object.keys(credentials).filter((brand) => clientNamesConflict(brand, client));
+  if (!matchingKeys.length) return client;
+
+  if (matchingKeys.includes(client) && normalizeBrandUsers(credentials[client]).length) {
+    return client;
+  }
+
+  const withUsers = matchingKeys.filter((key) => normalizeBrandUsers(credentials[key]).length > 0);
+  if (withUsers.length === 1) return withUsers[0];
+  if (withUsers.length > 1) {
+    if (withUsers.includes(client)) return client;
+    return withUsers[0];
+  }
+
+  if (matchingKeys.includes(client)) return client;
+  return matchingKeys[0];
+}
+
+/** Usernames registered on brands other than `client` (case-insensitive brand match). */
+export function collectTakenPortalUsernamesForOtherBrands(credentials, client) {
+  const taken = new Set();
+  for (const [brandKey, entry] of Object.entries(credentials || {})) {
+    if (clientNamesConflict(brandKey, client)) continue;
+    for (const user of normalizeBrandUsers(entry)) {
+      const login = normalizePortalLogin(user.username);
+      if (login) taken.add(login);
+    }
+  }
+  return taken;
+}
+
 export function getClientUsersFromStore(credentials, client) {
   if (!credentials || typeof credentials !== 'object') return [];
-  return normalizeBrandUsers(credentials[client]);
+  const brandKey = resolveCredentialBrandKey(credentials, client);
+  return normalizeBrandUsers(credentials[brandKey]);
 }
 
 export function countConfiguredClientLogins(credentials) {

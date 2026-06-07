@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   createClientPortalUserId,
+  collectTakenPortalUsernamesForOtherBrands,
   getClientUsersFromStore,
+  resolveCredentialBrandKey,
 } from '../../utils/clientPortalCredentials';
+import { clientNamesConflict } from '../../utils/clients';
 import {
   isValidPortalUsername,
   normalizePortalLogin,
@@ -138,14 +141,12 @@ export default function ClientPortalUsersEditor({
 
     try {
       const credentials = { ...liveCredentials };
-      const takenUsernames = new Set();
-
-      for (const [brand, brandUsers] of Object.entries(credentials)) {
-        if (brand === client) continue;
-        for (const user of getClientUsersFromStore(credentials, brand)) {
-          takenUsernames.add(normalizePortalLogin(user.username));
-        }
-      }
+      const takenUsernames = collectTakenPortalUsernamesForOtherBrands(credentials, client);
+      const currentBrandUsernames = new Set(
+        getClientUsersFromStore(credentials, client).map((user) =>
+          normalizePortalLogin(user.username),
+        ),
+      );
 
       const seen = new Set();
       for (const user of users) {
@@ -163,7 +164,7 @@ export default function ClientPortalUsersEditor({
           setError(`"${raw}" is used more than once for ${client}.`);
           return;
         }
-        if (takenUsernames.has(username)) {
+        if (takenUsernames.has(username) && !currentBrandUsernames.has(username)) {
           setError(`"${raw}" is already registered to another brand.`);
           return;
         }
@@ -206,7 +207,13 @@ export default function ClientPortalUsersEditor({
         }
       }
 
-      credentials[client] = savedUsers;
+      const credentialBrandKey = resolveCredentialBrandKey(credentials, client);
+      credentials[credentialBrandKey] = savedUsers;
+      for (const brand of Object.keys(credentials)) {
+        if (brand !== credentialBrandKey && clientNamesConflict(brand, client)) {
+          delete credentials[brand];
+        }
+      }
 
       if (onSyncToCloud && !SUPABASE_ENABLED) {
         const result = await onSyncToCloud(credentials);
