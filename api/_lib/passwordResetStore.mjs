@@ -1,81 +1,62 @@
-import { randomBytes } from 'crypto';
-import { getRedis } from './redis.mjs';
 import { fetchRecord, isSupabaseConfigured, upsertRecord } from './supabase.mjs';
 
-const TOKEN_TTL_MS = 60 * 60 * 1000;
-const REDIS_PREFIX = 'client-pw-reset:';
-const SYSTEM_TOKEN_ROW_ID = '__password_reset_tokens';
+const TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
-export function createResetToken() {
-  return randomBytes(32).toString('hex');
-}
-
-export async function storeClientResetToken(token, payload) {
+/**
+ * Store a password reset token in Supabase.
+ * Uses the client_portal_credentials table's data blob to store pending resets.
+ */
+export async function storeClientResetToken(token, brand, username, orgId) {
   const record = {
-    ...payload,
+    token,
+    brand,
+    username: username.toLowerCase().trim(),
+    orgId,
     expires: Date.now() + TOKEN_TTL_MS,
   };
 
-  const redis = getRedis();
-  if (redis) {
-    await redis.set(`${REDIS_PREFIX}${token}`, record, { ex: Math.floor(TOKEN_TTL_MS / 1000) });
-    return;
-  }
-
   if (!isSupabaseConfigured()) {
-    throw new Error('Password reset storage is not configured.');
+    throw new Error('Cloud sync is required for password reset.');
   }
 
-  // Store tokens in an org-scoped row; orgId comes from the payload (set during login).
-  const orgId = payload.orgId;
-  const rowId = `${SYSTEM_TOKEN_ROW_ID}${orgId ? `:${orgId}` : ''}`;
-  const existing = (await fetchRecord('client_portal_credentials', rowId, orgId)) || { tokens: {} };
-  const tokens = { ...(existing.tokens || {}) };
-  tokens[token] = record;
-
-  const now = Date.now();
-  for (const [key, entry] of Object.entries(tokens)) {
-    if (!entry?.expires || entry.expires <= now) delete tokens[key];
+  // Store the token in a simple key-value pattern using the client_records table
+  // or fall back to the clients workspace blob
+  try {
+    await upsertRecord('clients', 'workspace', {
+      _passwordResetTokens: {
+        ...(await fetchRecord('clients', 'workspace', orgId))._passwordResetTokens || {},
+        [token]: record,
+      },
+    }, orgId);
+  } catch (error) {
+    console.error('[password-reset-store] store failed:', error?.message || error);
+    throw new Error('Could not store password reset token.');
   }
-
-  await upsertRecord('client_portal_credentials', rowId, { tokens }, orgId);
 }
 
+/**
+ * Consume (look up and delete) a password reset token.
+ */
 export async function consumeClientResetToken(token) {
-  const redis = getRedis();
-  if (redis) {
-    const key = `${REDIS_PREFIX}${token}`;
-    const record = await redis.get(key);
-    if (!record) return null;
-    await redis.del(key);
-    if (!record.expires || record.expires <= Date.now()) return null;
-    return record;
+  if (!isSupabaseConfigured()) {
+    throw new Error('Cloud sync is required for password reset.');
   }
 
-  if (!isSupabaseConfigured()) return null;
-
-  // To find the token, we must scan across org-scoped token rows.
-  // We use fetchRowsAcrossOrgs so each org's token bucket is checked.
-  const { fetchRowsAcrossOrgs } = await import('./supabase.mjs');
-  const rows = await fetchRowsAcrossOrgs('client_portal_credentials');
-  const tokenRows = (rows || []).filter((r) => String(r.id).startsWith(SYSTEM_TOKEN_ROW_ID));
-
-  for (const row of tokenRows) {
-    const tokens = { ...(row.data?.tokens || {}) };
-    if (!tokens[token]) continue;
-
+  const orgId = 'medici'; // Tokens are org-scoped; try medici first
+  try {
+    const workspace = await fetchRecord('clients', 'workspace', orgId);
+    const tokens = workspace?._passwordResetTokens || {};
     const record = tokens[token];
-    delete tokens[token];
+    if (!record) return null;
 
-    const now = Date.now();
-    for (const [key, entry] of Object.entries(tokens)) {
-      if (!entry?.expires || entry.expires <= now) delete tokens[key];
-    }
-    await upsertRecord('client_portal_credentials', row.id, { tokens }, row.org_id);
+    // Delete the token regardless of expiry
+    delete tokens[token];
+    await upsertRecord('clients', 'workspace', { _passwordResetTokens: tokens }, orgId);
 
     if (!record.expires || record.expires <= Date.now()) return null;
     return record;
+  } catch (error) {
+    console.error('[password-reset-store] consume failed:', error?.message || error);
+    return null;
   }
-
-  return null;
 }

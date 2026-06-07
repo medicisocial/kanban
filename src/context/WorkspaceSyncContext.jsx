@@ -1,21 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { isPublicClientPortal } from '../utils/staffAuth';
-import {
-  buildBackupPayloadForPush,
-  getLocalSyncMeta,
-  getWorkspaceDataSnapshot,
-} from '../utils/dataBackup';
-import {
-  LOCAL_PUSH_DEBOUNCE_MS,
-  pullIfRemoteNewer,
-  pushWorkspace,
-  REMOTE_POLL_MS,
-  syncWorkspace,
-} from '../utils/cloudSync';
-import {
-  notifyWorkspaceRefetch,
-  notifyWorkspaceReload,
-} from '../utils/workspaceReload';
+import { notifyWorkspaceRefetch, notifyWorkspaceReload } from '../utils/workspaceReload';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { bootstrapLocalWorkspaceToCloud } from '../lib/workspaceBootstrap';
 import { subscribeSyncIssues } from '../lib/workspaceSyncHealth';
@@ -23,25 +8,19 @@ import { useStaffAuth } from './StaffAuthContext';
 
 const WorkspaceSyncContext = createContext(null);
 
-function applyRemoteWorkspaceUpdate(lastPushedRef) {
-  lastPushedRef.current = getLocalSyncMeta().snapshot || getWorkspaceDataSnapshot();
-  notifyWorkspaceReload();
-}
-
 export function WorkspaceSyncProvider({ children }) {
   const { authRequired, ready, isAuthenticated, session, orgId } = useStaffAuth();
   const [syncReady, setSyncReady] = useState(true);
   const [syncStatus, setSyncStatus] = useState('idle');
-  const [syncError, setSyncError] = useState('');
-  const [remoteUpdating, setRemoteUpdating] = useState(false);
   const [syncIssue, setSyncIssue] = useState(null);
   const [bootstrapNote, setBootstrapNote] = useState('');
-  const lastPushedRef = useRef(getLocalSyncMeta().snapshot || getWorkspaceDataSnapshot());
-  const pushInFlightRef = useRef(false);
   const bootstrapRanRef = useRef(false);
 
-  const shouldUseRedisSync =
-    !SUPABASE_ENABLED && authRequired && isAuthenticated && !isPublicClientPortal();
+  // The legacy Redis/Upstash sync path has been removed.
+  // All cloud sync now goes through Supabase via staff-sync API.
+  // The sync hooks (useCollectionSync, useMapSync, useSingletonSync) handle
+  // real-time data flow through the Supabase client.
+  // This context only manages the initial workspace bootstrap and sync health monitoring.
 
   const shouldBootstrapSupabase =
     SUPABASE_ENABLED && authRequired && isAuthenticated && !isPublicClientPortal();
@@ -82,138 +61,30 @@ export function WorkspaceSyncProvider({ children }) {
     };
   }, [ready, shouldBootstrapSupabase, session, orgId, runSupabaseBootstrap]);
 
-  const runInitialSync = useCallback(async () => {
-    if (!session) return;
-
-    setSyncStatus('syncing');
-    setSyncError('');
-
-    try {
-      const result = await syncWorkspace(session);
-      if (result.rehydrate) {
-        applyRemoteWorkspaceUpdate(lastPushedRef);
-      }
-
-      if (result.status === 'unavailable') {
-        setSyncStatus('unavailable');
-      } else if (result.status === 'error') {
-        setSyncError('Could not apply workspace data from cloud.');
-        setSyncStatus('error');
-      } else {
-        setSyncStatus(result.status);
-        lastPushedRef.current = getLocalSyncMeta().snapshot || getWorkspaceDataSnapshot();
-      }
-    } catch (error) {
-      setSyncError(error.message || 'Cloud sync failed.');
-      setSyncStatus('error');
-    } finally {
-      setSyncReady(true);
-    }
-  }, [session]);
-
-  const checkRemoteUpdates = useCallback(async () => {
-    if (!session) return;
-
-    try {
-      const result = await pullIfRemoteNewer(session);
-      if (result.updated) {
-        applyRemoteWorkspaceUpdate(lastPushedRef);
-        setRemoteUpdating(true);
-        window.setTimeout(() => setRemoteUpdating(false), 2000);
-      }
-    } catch {
-      /* ignore background poll errors */
-    }
-  }, [session]);
-
+  // When Supabase is not enabled, mark as local_only
   useEffect(() => {
     if (!ready) return;
 
-    if (!shouldUseRedisSync) {
+    if (!SUPABASE_ENABLED) {
       setSyncReady(true);
-      if (!shouldBootstrapSupabase) {
-        setSyncStatus('local_only');
-      }
+      setSyncStatus('local_only');
       return;
     }
 
-    if (!session) {
+    if (shouldBootstrapSupabase) {
       setSyncReady(true);
-      return;
+      // Bootstrap will set the status to 'in_sync' when done
     }
-
-    runInitialSync();
-  }, [ready, shouldUseRedisSync, shouldBootstrapSupabase, session, runInitialSync]);
-
-  useEffect(() => {
-    if (!shouldUseRedisSync || !syncReady || !session || syncStatus === 'unavailable') return;
-
-    let pushTimer;
-    let cancelled = false;
-
-    const watchLocalChanges = () => {
-      if (cancelled || pushInFlightRef.current) return;
-
-      const snapshot = getWorkspaceDataSnapshot();
-      if (snapshot === lastPushedRef.current) return;
-
-      clearTimeout(pushTimer);
-      pushTimer = setTimeout(async () => {
-        if (cancelled || pushInFlightRef.current) return;
-
-        pushInFlightRef.current = true;
-        try {
-          const payload = buildBackupPayloadForPush();
-          await pushWorkspace(session, payload);
-          lastPushedRef.current = getLocalSyncMeta().snapshot || snapshot;
-          if (!cancelled) {
-            setSyncError('');
-            setSyncStatus('in_sync');
-          }
-        } catch (error) {
-          if (!cancelled) {
-            setSyncError(error.message || 'Could not save changes to cloud.');
-            setSyncStatus('error');
-          }
-        } finally {
-          pushInFlightRef.current = false;
-        }
-      }, LOCAL_PUSH_DEBOUNCE_MS);
-    };
-
-    const changeInterval = setInterval(watchLocalChanges, 1000);
-    const pollRemote = setInterval(checkRemoteUpdates, REMOTE_POLL_MS);
-
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        checkRemoteUpdates();
-      }
-    };
-
-    window.addEventListener('focus', checkRemoteUpdates);
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      cancelled = true;
-      clearInterval(changeInterval);
-      clearInterval(pollRemote);
-      clearTimeout(pushTimer);
-      window.removeEventListener('focus', checkRemoteUpdates);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, [shouldUseRedisSync, syncReady, session, syncStatus, checkRemoteUpdates]);
+  }, [ready, shouldBootstrapSupabase]);
 
   const value = useMemo(
     () => ({
       syncReady,
       syncStatus,
-      syncError,
       syncIssue,
-      cloudSyncEnabled:
-        shouldBootstrapSupabase ||
-        (syncStatus !== 'unavailable' && syncStatus !== 'local_only'),
+      cloudSyncEnabled: SUPABASE_ENABLED && syncStatus !== 'local_only',
     }),
-    [syncReady, syncStatus, syncError, syncIssue, shouldBootstrapSupabase],
+    [syncReady, syncStatus, syncIssue],
   );
 
   const issueBannerClass =
@@ -225,32 +96,15 @@ export function WorkspaceSyncProvider({ children }) {
 
   return (
     <WorkspaceSyncContext.Provider value={value}>
-      {syncStatus === 'syncing' && shouldUseRedisSync && (
-        <div className="border-b border-white/10 bg-black px-4 py-2 text-center text-xs text-white/70">
-          Syncing workspace…
-        </div>
-      )}
       {bootstrapNote && shouldBootstrapSupabase && (
         <div className="border-b border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-center text-xs text-emerald-100">
           {bootstrapNote}
         </div>
       )}
-      {remoteUpdating && (
-        <div className="pointer-events-none fixed inset-x-0 top-0 z-[100] flex justify-center px-4 pt-3">
-          <div className="rounded-full border border-white/10 bg-black/90 px-4 py-2 text-xs text-white/75 shadow-lg backdrop-blur-sm">
-            Updated from cloud
-          </div>
-        </div>
-      )}
-      {syncStatus === 'unavailable' && shouldUseRedisSync && (
+      {syncStatus === 'local_only' && !SUPABASE_ENABLED && (
         <div className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-200">
-          Cloud sync is not set up yet — cards stay on this browser only. Use Export backup on one
-          computer and Import backup on another, or add Upstash Redis in Vercel Storage.
-        </div>
-      )}
-      {syncError && (
-        <div className="border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-center text-xs text-red-200">
-          {syncError}
+          Running in local-only mode — data stays on this device. Set VITE_USE_SUPABASE=true and add
+          Supabase environment variables to enable cloud sync.
         </div>
       )}
       {syncIssue?.message && shouldBootstrapSupabase && (

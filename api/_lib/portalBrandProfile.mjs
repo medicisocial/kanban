@@ -75,32 +75,167 @@ export function resolveBrandProfileFromStore(clientStore, brand) {
   };
 }
 
-/** Lightweight profile read — avoids downloading the full clients workspace JSON. */
+/**
+ * Lightweight brand profile read using the normalized get_brand_profile RPC.
+ * Avoids downloading the full clients workspace JSON or the legacy blob.
+ */
 export async function fetchPortalBrandProfile(orgId, brand) {
   const url = getSupabaseUrl();
   const key = resolveAuthReadKey();
   if (!url || !key || !orgId || !brand) return null;
 
-  const response = await fetchWithTimeout(
-    `${url}/rest/v1/rpc/get_portal_brand_profile`,
-    {
-      method: 'POST',
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=representation',
+  // Try the new normalized get_brand_profile RPC first (from migration 018).
+  try {
+    const response = await fetchWithTimeout(
+      `${url}/rest/v1/rpc/get_brand_profile`,
+      {
+        method: 'POST',
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({ p_org_id: orgId, p_brand_key: brand }),
       },
-      body: JSON.stringify({ p_org_id: orgId, p_brand: brand }),
-    },
-  );
+    );
 
-  if (!response.ok) {
-    const detail = await response.text().catch(() => '');
-    throw new Error(`Portal profile fetch failed: ${response.status} ${detail}`.trim());
+    if (response.ok) {
+      const payload = await response.json();
+      if (payload && typeof payload === 'object' && payload.brandId) {
+        return payload;
+      }
+    }
+  } catch (error) {
+    console.warn('[portal-brand-profile] get_brand_profile RPC not available yet, falling back to legacy:', error?.message || error);
   }
 
-  const payload = await response.json();
-  if (!payload || typeof payload !== 'object') return null;
-  return payload;
+  // Fall back to legacy get_portal_brand_profile RPC (pre-018 clients blob).
+  try {
+    const response = await fetchWithTimeout(
+      `${url}/rest/v1/rpc/get_portal_brand_profile`,
+      {
+        method: 'POST',
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({ p_org_id: orgId, p_brand: brand }),
+      },
+    );
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      throw new Error(`Portal profile fetch failed: ${response.status} ${detail}`.trim());
+    }
+
+    const payload = await response.json();
+    if (!payload || typeof payload !== 'object') return null;
+    return payload;
+  } catch (error) {
+    console.warn('[portal-brand-profile] legacy RPC also failed:', error?.message || error);
+    return null;
+  }
+}
+
+/**
+ * Fetch portal users for a brand from the normalized portal_users table.
+ */
+export async function fetchBrandPortalUsers(orgId, brand) {
+  const url = getSupabaseUrl();
+  const key = resolveAuthReadKey();
+  if (!url || !key || !orgId || !brand) return [];
+
+  try {
+    const response = await fetchWithTimeout(
+      `${url}/rest/v1/rpc/get_brand_portal_users`,
+      {
+        method: 'POST',
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({ p_org_id: orgId, p_brand_key: brand }),
+      },
+    );
+
+    if (response.ok) {
+      const payload = await response.json();
+      if (Array.isArray(payload)) return payload;
+      return [];
+    }
+  } catch (error) {
+    console.warn('[portal-brand-profile] get_brand_portal_users failed:', error?.message || error);
+  }
+
+  return [];
+}
+
+/**
+ * Fetch brand-scoped content (cards, events, meetings, ideas) directly
+ * from Supabase by brand_id instead of filtering the full workspace.
+ */
+export async function fetchBrandContent(orgId, brand) {
+  const url = getSupabaseUrl();
+  const key = resolveAuthReadKey();
+  if (!url || !key || !orgId || !brand) return null;
+
+  // First resolve the brand_id
+  let brandId = null;
+  try {
+    const brandResponse = await fetchWithTimeout(
+      `${url}/rest/v1/brands?org_id=eq.${encodeURIComponent(orgId)}&brand_key=eq.${encodeURIComponent(brand.toLowerCase().trim())}&select=id`,
+      {
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+        },
+      },
+    );
+    if (brandResponse.ok) {
+      const brandRows = await brandResponse.json();
+      if (brandRows?.length > 0) {
+        brandId = brandRows[0].id;
+      }
+    }
+  } catch (error) {
+    console.warn('[portal-brand-profile] brand lookup failed:', error?.message || error);
+  }
+
+  if (!brandId) return null;
+
+  // Now query each content table by brand_id
+  const queryByBrand = async (table) => {
+    const response = await fetchWithTimeout(
+      `${url}/rest/v1/${table}?select=id,data&brand_id=eq.${encodeURIComponent(brandId)}`,
+      {
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+        },
+      },
+    );
+    if (!response.ok) return [];
+    return response.json();
+  };
+
+  const [cards, ideas, events, meetings, plans] = await Promise.all([
+    queryByBrand('cards'),
+    queryByBrand('video_ideas'),
+    queryByBrand('events'),
+    queryByBrand('meetings'),
+    queryByBrand('shoot_plans'),
+  ]);
+
+  return {
+    cards: (cards || []).map(r => r.data).filter(Boolean),
+    ideas: (ideas || []).map(r => r.data).filter(Boolean),
+    events: (events || []).map(r => r.data).filter(Boolean),
+    meetings: (meetings || []).map(r => r.data).filter(Boolean),
+    plans: (plans || []).reduce((acc, r) => { acc[r.id] = r.data; return acc; }, {}),
+  };
 }

@@ -1,6 +1,6 @@
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
-import { fetchRecord, isSupabaseConfigured, upsertRecord } from './_lib/supabase.mjs';
+import { fetchRecord, getSupabaseUrl, isSupabaseConfigured, upsertRecord } from './_lib/supabase.mjs';
 import { applyAuthoritativeBrandAssets } from './_lib/clientsWorkspaceMerge.mjs';
 import { normalizeClientCompanyFiles } from './_lib/clientCompanyFiles.mjs';
 import { normalizeClientSpecialMenus } from './_lib/clientSpecialMenus.mjs';
@@ -102,7 +102,40 @@ export default async function handler(req, res) {
       companyFilesByBrand: patch.companyFiles,
       specialMenusByBrand: patch.specialMenus,
     });
-    await upsertRecord('clients', 'workspace', nextWorkspace, resolvedOrgId);
+    // Legacy `clients` blob write has been removed — triggers keep it in sync during transition.
+    // Write to the new normalized client_records typed columns.
+    const brandKey = String(brand).trim().toLowerCase();
+    const baseUrl = getSupabaseUrl();
+    const apiKey = (
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.VITE_SUPABASE_ANON_KEY ||
+      ''
+    ).trim();
+    if (baseUrl && apiKey && brandKey) {
+      const headers = {
+        apikey: apiKey,
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      };
+      const payload = {};
+      if (companyFiles !== undefined) {
+        payload.company_files = nextWorkspace.companyFiles?.[brand] || [];
+      }
+      if (specialMenus !== undefined) {
+        payload.special_menus = nextWorkspace.specialMenus?.[brand] || [];
+      }
+      if (Object.keys(payload).length > 0) {
+        payload.org_id = resolvedOrgId;
+        payload.brand_key = brandKey;
+        await fetch(`${baseUrl}/rest/v1/client_records`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify([payload]),
+        }).catch((e) => console.warn('[staff-brand-assets] client_records sync error:', e?.message || e));
+      }
+    }
 
     return res.status(200).json({
       ok: true,

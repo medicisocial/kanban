@@ -38,56 +38,84 @@ async function fetchAllViaRest(table, orgId) {
 }
 
 /**
+ * Build a Supabase query filter string.
+ * If brandId is provided, adds a brand_id filter for brand-scoped queries.
+ */
+function buildFilters(orgId, brandId) {
+  const filters = [`org_id=eq.${encodeURIComponent(orgId)}`];
+  if (brandId) {
+    filters.push(`brand_id=eq.${encodeURIComponent(brandId)}`);
+  }
+  return filters.join(',');
+}
+
+/**
  * A thin per-record store for one workspace collection (table).
  * Each record is stored as { id, org_id, data: <full record>, updated_at }.
  *
- * org_id is resolved at call time so legacy (medici) and SaaS workspaces share
- * the same sync layer without duplicating hooks.
+ * When brandId is provided, queries are scoped to that brand (migration 018+).
  */
-async function fetchAllWithFallbacks(table, orgId) {
-  // Direct browser read when a Supabase session exists — fastest path and avoids
-  // routing every table load through Vercel /api/staff-sync.
-  if (supabase && (await hasStaffSupabaseSession())) {
-    const { data, error } = await supabase
-      .from(table)
-      .select('id, data, updated_at')
-      .eq('org_id', orgId);
-    if (!error) return data || [];
-    console.warn(`[supabase:${table}] client fetch failed:`, error.message);
-  }
+function buildTableStore(table, orgId, brandId) {
+  const filters = buildFilters(orgId, brandId);
 
-  // Fallback: authenticated server read (mobile / no browser DB session).
-  const staffRows = await fetchStaffSyncRows(table, orgId);
-  if (staffRows !== null) return staffRows;
-
-  if (supabase) {
-    const { data, error } = await supabase
-      .from(table)
-      .select('id, data, updated_at')
-      .eq('org_id', orgId);
-    if (!error) return data || [];
-    console.warn(`[supabase:${table}] anon client fetch failed:`, error.message);
-  }
-
-  const restRows = await fetchAllViaRest(table, orgId);
-  if (restRows !== null) return restRows;
-
-  const blobRows = await fetchLegacyWorkspaceBlobRows(table);
-  if (blobRows?.length) return blobRows;
-
-  return [];
-}
-
-export function createCollectionStore(table) {
   return {
     async fetchAll() {
-      const orgId = getOrgId();
-      return fetchAllWithFallbacks(table, orgId);
+      if (supabase && (await hasStaffSupabaseSession())) {
+        let query = supabase
+          .from(table)
+          .select('id, data, updated_at')
+          .eq('org_id', orgId);
+        if (brandId) {
+          query = query.eq('brand_id', brandId);
+        }
+        const { data, error } = await query;
+        if (!error) return data || [];
+        console.warn(`[supabase:${table}] client fetch failed:`, error.message);
+      }
+
+      // Fallback: authenticated server read (mobile / no browser DB session).
+      const staffRows = await fetchStaffSyncRows(table, orgId);
+      if (staffRows !== null) return staffRows;
+
+      if (supabase) {
+        let query = supabase
+          .from(table)
+          .select('id, data, updated_at')
+          .eq('org_id', orgId);
+        if (brandId) {
+          query = query.eq('brand_id', brandId);
+        }
+        const { data, error } = await query;
+        if (!error) return data || [];
+        console.warn(`[supabase:${table}] anon client fetch failed:`, error.message);
+      }
+
+      const restRows = await fetchAllViaRest(table, orgId);
+      if (restRows !== null) return restRows;
+
+      // Legacy Upstash blob fallback — now always returns null (removed).
+      const blobRows = await fetchLegacyWorkspaceBlobRows(table);
+      if (blobRows?.length) return blobRows;
+
+      return [];
+    },
+
+    async fetchByBrandId(brandIdValue) {
+      if (!brandIdValue || !supabase) return [];
+      const { data, error } = await supabase
+        .from(table)
+        .select('id, data, updated_at')
+        .eq('org_id', orgId)
+        .eq('brand_id', brandIdValue);
+      if (error) {
+        console.warn(`[supabase:${table}] brand-scoped fetch failed:`, error.message);
+        return [];
+      }
+      return data || [];
     },
 
     async upsertRecords(records) {
       if (!records.length) return;
-      const orgId = getOrgId();
       const rows = records.map((record) => ({
         id: String(record.id),
         org_id: orgId,
@@ -100,7 +128,6 @@ export function createCollectionStore(table) {
 
     async deleteRecords(ids) {
       if (!ids.length) return;
-      const orgId = getOrgId();
       const { error } = await supabase
         .from(table)
         .delete()
@@ -110,12 +137,11 @@ export function createCollectionStore(table) {
     },
 
     subscribe(onChange) {
-      const orgId = getOrgId();
       const channel = supabase
-        .channel(`${table}_${orgId}_changes`)
+        .channel(`${table}_${orgId}_${brandId || 'all'}_changes`)
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table, filter: `org_id=eq.${orgId}` },
+          { event: '*', schema: 'public', table, filter: filters },
           (payload) => onChange(payload),
         )
         .subscribe();
@@ -124,4 +150,13 @@ export function createCollectionStore(table) {
       };
     },
   };
+}
+
+export function createCollectionStore(table, brandId) {
+  return buildTableStore(table, getOrgId(), brandId);
+}
+
+export function createBrandScopedStore(table, brandId) {
+  if (!brandId) return createCollectionStore(table);
+  return buildTableStore(table, getOrgId(), brandId);
 }

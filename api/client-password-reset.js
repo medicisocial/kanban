@@ -1,8 +1,6 @@
 import { findClientLoginAcrossOrgs } from './_lib/clientPortalAuth.mjs';
 import { updateClientUserPassword } from './_lib/clientCredentialsStore.mjs';
 import { isSupabaseConfigured, fetchRowsAcrossOrgs } from './_lib/supabase.mjs';
-import { getRedis, loadWorkspace } from './_lib/redis.mjs';
-import { getClientPortalAuthMap, findClientLogin } from './_lib/clientPortalAuth.mjs';
 import {
   consumeClientResetToken,
   createResetToken,
@@ -42,31 +40,21 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Username is required.' });
     }
 
+    if (!isSupabaseConfigured()) {
+      return res.status(503).json({ error: 'Client portal is not available yet. Contact your agency for help.' });
+    }
+
     let login = null;
-    if (isSupabaseConfigured()) {
-      try {
-        const rows = await fetchRowsAcrossOrgs('client_portal_credentials');
-        if (!rows) {
-          return res.status(503).json({ error: 'Client portal is not available yet. Contact your agency for help.' });
-        }
-        const match = findClientLoginAcrossOrgs(rows, username);
-        if (match) login = { brand: match.brand, user: match.user, orgId: match.org_id };
-      } catch (error) {
-        console.error('[client-password-reset] Supabase lookup failed:', error?.message || error);
-        return res.status(503).json({ error: 'Client portal is temporarily unavailable. Try again shortly.' });
-      }
-    } else {
-      const redis = getRedis();
-      if (!redis) {
+    try {
+      const rows = await fetchRowsAcrossOrgs('client_portal_credentials');
+      if (!rows) {
         return res.status(503).json({ error: 'Client portal is not available yet. Contact your agency for help.' });
       }
-      const workspace = await loadWorkspace(redis);
-      const authMap = getClientPortalAuthMap(workspace);
-      if (!authMap) {
-        return res.status(503).json({ error: 'Client portal is not available yet. Contact your agency for help.' });
-      }
-      const match = findClientLogin(authMap, username);
-      if (match) login = { brand: match.brand, user: match.user, orgId: undefined };
+      const match = findClientLoginAcrossOrgs(rows, username);
+      if (match) login = { brand: match.brand, user: match.user, orgId: match.org_id };
+    } catch (error) {
+      console.error('[client-password-reset] Supabase lookup failed:', error?.message || error);
+      return res.status(503).json({ error: 'Client portal is temporarily unavailable. Try again shortly.' });
     }
 
     if (!login) {

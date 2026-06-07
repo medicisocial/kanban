@@ -21,8 +21,10 @@ import {
 } from './_lib/portalWorkspace.mjs';
 import {
   fetchPortalBrandProfile,
-  resolveBrandProfileFromStore,
+  fetchBrandPortalUsers,
+  fetchBrandContent,
 } from './_lib/portalBrandProfile.mjs';
+import { isSupabaseConfigured } from './_lib/supabase.mjs';
 import { normalizeHexColor } from './_lib/colorHex.mjs';
 import { normalizeContentTypeColors } from './_lib/contentTypeColors.mjs';
 
@@ -34,18 +36,11 @@ function unavailable(res) {
   return res.status(503).json({ error: 'Cloud sync is not configured.' });
 }
 
-function filterForBrand(items, brand) {
-  if (!Array.isArray(items)) return [];
-  return items.filter((item) => item?.client === brand);
-}
-
-function filterPlansForBrand(plans, brand) {
-  if (!plans || typeof plans !== 'object') return {};
-  const filtered = {};
-  for (const [key, plan] of Object.entries(plans)) {
-    if (plan?.client === brand) filtered[key] = plan;
+function normalizeBusinessType(businessType) {
+  if (businessType === 'Cocktail Lounge' || businessType === 'Sports Bar') {
+    return 'Hospitality';
   }
-  return filtered;
+  return businessType || '';
 }
 
 function stripInternalCardFields(card) {
@@ -54,21 +49,66 @@ function stripInternalCardFields(card) {
   return clientSafe;
 }
 
-function normalizeBusinessType(businessType) {
-  if (businessType === 'Cocktail Lounge' || businessType === 'Sports Bar') {
-    return 'Hospitality';
-  }
-  return businessType || '';
-}
-
-async function loadBrandProfile(orgId, brand, clientStore) {
+/**
+ * Load the brand profile using the new normalized architecture.
+ * Prefers get_brand_profile RPC → legacy get_portal_brand_profile → blob fallback.
+ */
+async function loadBrandProfile(orgId, brand) {
   try {
     const profile = await fetchPortalBrandProfile(orgId, brand);
     if (profile) return profile;
   } catch (error) {
     console.error('[client-portal] profile RPC failed:', error?.message || error);
   }
-  return resolveBrandProfileFromStore(clientStore, brand);
+
+  // Legacy fallback: resolve from the clients workspace blob
+  try {
+    const workspace = await loadPortalWorkspace(orgId);
+    if (!workspace) return null;
+    const data = workspace?.data || {};
+    const clientStore = data[CLIENTS_STORAGE_KEY] || {};
+    const { resolveBrandProfileFromStore } = await import('./_lib/portalBrandProfile.mjs');
+    return resolveBrandProfileFromStore(clientStore, brand);
+  } catch (error) {
+    console.error('[client-portal] blob profile fallback failed:', error?.message || error);
+    return null;
+  }
+}
+
+/**
+ * Load brand-scoped content (cards, ideas, plans, events, meetings) using
+ * the normalized brand_id FK. Falls back to filtering the workspace blob.
+ */
+async function loadBrandContent(orgId, brand) {
+  // Try brand-scoped query first (migration 018+)
+  const scoped = await fetchBrandContent(orgId, brand);
+  if (scoped && scoped.cards) {
+    return scoped;
+  }
+
+  // Fall back to loading + filtering the full workspace
+  const workspace = await loadPortalWorkspace(orgId);
+  if (!workspace) return null;
+
+  const data = workspace?.data || {};
+  const filterForBrand = (items, b) =>
+    Array.isArray(items) ? items.filter((item) => item?.client === b) : [];
+  const filterPlansForBrand = (plans, b) => {
+    if (!plans || typeof plans !== 'object') return {};
+    const filtered = {};
+    for (const [key, plan] of Object.entries(plans)) {
+      if (plan?.client === b) filtered[key] = plan;
+    }
+    return filtered;
+  };
+
+  return {
+    cards: filterForBrand(data[STORAGE_KEY], brand).map(stripInternalCardFields),
+    ideas: filterForBrand(data[VIDEO_IDEAS_STORAGE_KEY] || data.video_ideas, brand),
+    plans: filterPlansForBrand(data[SHOOT_PLANS_STORAGE_KEY] || data.shoot_plans, brand),
+    events: filterForBrand(data[EVENTS_STORAGE_KEY] || data.events, brand),
+    meetings: filterForBrand(data[MEETINGS_STORAGE_KEY] || data.meetings, brand),
+  };
 }
 
 export default async function handler(req, res) {
@@ -80,48 +120,84 @@ export default async function handler(req, res) {
   const session = getClientSessionFromRequest(req);
   if (!isClientSessionValid(session)) return unauthorized(res);
 
-  // For Supabase-backed deployments, sessions created without an orgId (issued
-  // before multi-tenant support) cannot target the correct tenant. Force re-login.
-  const { isSupabaseConfigured } = await import('./_lib/supabase.mjs');
+  // For Supabase-backed deployments, sessions created without an orgId cannot
+  // target the correct tenant. Force re-login.
   if (isSupabaseConfigured() && !session.orgId) {
     return res.status(401).json({ error: 'Session expired. Please sign in again.' });
   }
 
-  const workspace = await loadPortalWorkspace(session.orgId);
-  if (!workspace) return unavailable(res);
-
-  const data = workspace?.data || {};
   const brand = session.brand;
-  const clientStore = data[CLIENTS_STORAGE_KEY] || {};
-  const profile = await loadBrandProfile(session.orgId, brand, clientStore);
-  const businessType = normalizeBusinessType(profile.businessType || '');
-  const contentTypeColors = normalizeContentTypeColors(profile.contentTypeColors || {});
-  const authMap = getClientPortalAuthMap(workspace);
-  const brandUsers = normalizeBrandUsers(authMap[brand]);
-  const sessionUsername = session.username.trim().toLowerCase();
-  const currentUser =
-    brandUsers.find((user) => user.username.toLowerCase() === sessionUsername) || null;
+
+  // Load brand profile and content in parallel
+  const [profile, content] = await Promise.all([
+    loadBrandProfile(session.orgId, brand),
+    loadBrandContent(session.orgId, brand),
+  ]);
+
+  if (!profile && !content) {
+    return unavailable(res);
+  }
+
+  const businessType = normalizeBusinessType(profile?.businessType || '');
+  const contentTypeColors = normalizeContentTypeColors(profile?.contentTypeColors || {});
+
+  // Resolve the current user's display info from portal_users via the new RPC
+  let userAvatar = null;
+  let userDisplayName = session.username;
+  try {
+    const portalUsers = await fetchBrandPortalUsers(session.orgId, brand);
+    if (portalUsers.length > 0) {
+      const sessionUsername = session.username.trim().toLowerCase();
+      const currentUser = portalUsers.find(
+        (user) => user.username.toLowerCase() === sessionUsername,
+      );
+      if (currentUser) {
+        userAvatar = currentUser.avatar || null;
+        userDisplayName = currentUser.displayName || session.username;
+      }
+    }
+  } catch (error) {
+    console.warn('[client-portal] portal user lookup failed:', error?.message || error);
+    // Fall back to legacy auth map lookup
+    try {
+      const workspace = await loadPortalWorkspace(session.orgId);
+      if (workspace) {
+        const authMap = getClientPortalAuthMap(workspace);
+        const brandUsers = normalizeBrandUsers(authMap[brand]);
+        const sessionUsername = session.username.trim().toLowerCase();
+        const currentUser = brandUsers.find(
+          (user) => user.username.toLowerCase() === sessionUsername,
+        ) || null;
+        if (currentUser) {
+          userAvatar = currentUser.avatar || null;
+          userDisplayName = currentUser.displayName || session.username;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   res.setHeader('Cache-Control', 'private, no-store, max-age=0');
   return res.status(200).json({
     brand,
     orgId: session.orgId || null,
-    exportedAt: workspace?.exportedAt || null,
-    clientColor: normalizeHexColor(profile.clientColor) || profile.clientColor || null,
-    clientLogo: profile.clientLogo || null,
+    exportedAt: new Date().toISOString(),
+    clientColor: normalizeHexColor(profile?.clientColor) || profile?.clientColor || null,
+    clientLogo: profile?.clientLogo || null,
     businessType: businessType || null,
-    contacts: normalizeClientContacts(profile.contacts),
-    socialLogins: normalizeClientSocialLogins(profile.socialLogins),
-    companyFiles: normalizeClientCompanyFiles(profile.companyFiles, businessType),
-    specialMenus: normalizeClientSpecialMenus(profile.specialMenus),
-    photoGalleryLink: profile.photoGalleryLink || null,
+    contacts: normalizeClientContacts(profile?.contacts),
+    socialLogins: normalizeClientSocialLogins(profile?.socialLogins),
+    companyFiles: normalizeClientCompanyFiles(profile?.companyFiles, businessType),
+    specialMenus: normalizeClientSpecialMenus(profile?.specialMenus),
+    photoGalleryLink: profile?.photoGalleryLink || null,
     contentTypeColors,
-    userAvatar: currentUser?.avatar || null,
-    userDisplayName: currentUser?.displayName || session.username,
-    cards: filterForBrand(data[STORAGE_KEY], brand).map(stripInternalCardFields),
-    ideas: filterForBrand(data[VIDEO_IDEAS_STORAGE_KEY], brand),
-    plans: filterPlansForBrand(data[SHOOT_PLANS_STORAGE_KEY], brand),
-    events: filterForBrand(data[EVENTS_STORAGE_KEY], brand),
-    meetings: filterForBrand(data[MEETINGS_STORAGE_KEY], brand),
+    userAvatar,
+    userDisplayName,
+    cards: content?.cards || [],
+    ideas: content?.ideas || [],
+    plans: content?.plans || {},
+    events: content?.events || [],
+    meetings: content?.meetings || [],
   });
 }

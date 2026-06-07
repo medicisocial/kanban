@@ -5,7 +5,9 @@ import {
   getClientUsersFromStore,
   mergeBrandUserDrafts,
   normalizeBrandUsers,
+  resolveCredentialBrandKey,
 } from '../utils/clientPortalCredentials';
+import { clientNamesConflict } from '../utils/clients';
 import { hashPassword } from '../utils/staffAuth';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
@@ -76,7 +78,9 @@ export function useClientPortalCredentials() {
   );
 
   const setClientPortalUsers = useCallback(async (client, draftUsers) => {
-    const existingUsers = normalizeBrandUsers(loadCredentials()[client]);
+    const storedCredentials = loadCredentials();
+    const credentialBrandKey = resolveCredentialBrandKey(storedCredentials, client);
+    const existingUsers = normalizeBrandUsers(storedCredentials[credentialBrandKey]);
     const hasPasswordChange = draftUsers.some((draft) => String(draft.password || '').trim());
 
     let activeUsers = (
@@ -91,13 +95,13 @@ export function useClientPortalCredentials() {
       };
     }
 
-    registerPortalCredentialBrand(getOrgId(), client);
+    registerPortalCredentialBrand(getOrgId(), credentialBrandKey);
 
     let vaultWarning = null;
     if (SUPABASE_ENABLED) {
       const orgId = getOrgId();
       if (hasPasswordChange) {
-        markCredentialPasswordChanges(orgId, [client]);
+        markCredentialPasswordChanges(orgId, [credentialBrandKey]);
       }
 
       let canWriteDirect = await hasStaffSupabaseSession();
@@ -128,7 +132,7 @@ export function useClientPortalCredentials() {
 
       if (canWriteDirect) {
         saveResult = await saveClientPortalCredentialsDirect({
-          brand: client,
+          brand: credentialBrandKey,
           users: activeUsers,
           existingData: existingUsers,
           brandVault,
@@ -138,7 +142,7 @@ export function useClientPortalCredentials() {
 
       if (!saveResult?.ok) {
         saveResult = await saveClientPortalPasswords({
-          brand: client,
+          brand: credentialBrandKey,
           users: draftUsers.map((draft) => ({
             id: draft.id,
             username: draft.username,
@@ -151,7 +155,7 @@ export function useClientPortalCredentials() {
 
       if (!saveResult?.ok) {
         if (hasPasswordChange) {
-          clearCredentialPasswordChanges(orgId, [client]);
+          clearCredentialPasswordChanges(orgId, [credentialBrandKey]);
         }
         return {
           ok: false,
@@ -161,15 +165,20 @@ export function useClientPortalCredentials() {
       }
 
       activeUsers = normalizeBrandUsers(saveResult.users);
-      markCredentialServerSaved(orgId, [client]);
+      markCredentialServerSaved(orgId, [credentialBrandKey]);
       if (hasPasswordChange) {
-        clearCredentialPasswordChanges(orgId, [client]);
+        clearCredentialPasswordChanges(orgId, [credentialBrandKey]);
       }
       vaultWarning = saveResult.vaultWarning || null;
     }
 
     setCredentials((prev) => {
-      const next = { ...prev, [client]: activeUsers };
+      const next = { ...prev, [credentialBrandKey]: activeUsers };
+      for (const brand of Object.keys(next)) {
+        if (brand !== credentialBrandKey && clientNamesConflict(brand, client)) {
+          delete next[brand];
+        }
+      }
       writeOrgScopedJson(CLIENT_PORTAL_AUTH_STORAGE_KEY, next);
       return next;
     });
