@@ -14,7 +14,6 @@ import { DEFAULT_CLIENT_BUSINESS_TYPES, normalizeBusinessType } from '../utils/e
 import { normalizeClientName, pickNextClientColor, mergeDefaultClients, clientNamesConflict, isInternalClientName } from '../utils/clients';
 import { reserveClientBrandName, releaseClientBrandName } from '../utils/clientBrandNames';
 import { ensureStaffSupabaseSession } from '../lib/staffSupabaseAuth';
-import { withTimeout } from '../utils/withTimeout';
 import {
   mergeClientSocialLogins,
   normalizeClientContacts,
@@ -201,19 +200,10 @@ export function useClients() {
     }
 
     if (SUPABASE_ENABLED) {
-      await ensureStaffSupabaseSession();
+      ensureStaffSupabaseSession().catch(() => {});
     }
 
-    let reserved;
-    try {
-      reserved = await withTimeout(
-        reserveClientBrandName(trimmed, orgId),
-        20000,
-        'Could not verify client name availability. Check your connection and try again.',
-      );
-    } catch (error) {
-      return { ok: false, error: error?.message || 'Could not verify client name availability.' };
-    }
+    const reserved = await reserveClientBrandName(trimmed, orgId);
     if (!reserved.ok) {
       return reserved;
     }
