@@ -6,6 +6,7 @@ import {
   mergeBrandStringMap,
   mergeClientsWorkspaceContactsMap,
   mergeClientsWorkspaceFileMap,
+  mergeClientsWorkspaceNames,
   mergePortalPasswordVault,
 } from '../utils/clientsWorkspaceMerge.js';
 export const FETCH_TIMEOUT_MS = 12000;
@@ -610,6 +611,9 @@ const CLIENTS_WORKSPACE_KEYS = [
 ];
 
 function mergeClientsWorkspaceField(key, remote, local, synced) {
+  if (key === 'names') {
+    return mergeClientsWorkspaceNames(remote?.names, local?.names, synced?.names);
+  }
   if (key === 'companyFiles') {
     return mergeClientsWorkspaceFileMap(
       remote?.companyFiles,

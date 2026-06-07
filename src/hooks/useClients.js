@@ -13,7 +13,7 @@ import { normalizeCustomColorPalette, normalizeHexColor } from '../utils/colorHe
 import { DEFAULT_CLIENT_BUSINESS_TYPES, normalizeBusinessType } from '../utils/eventFormSchemas';
 import { normalizeClientName, pickNextClientColor, mergeDefaultClients, clientNamesConflict, isInternalClientName } from '../utils/clients';
 import { reserveClientBrandName, releaseClientBrandName } from '../utils/clientBrandNames';
-import { ensureStaffSupabaseSession } from '../lib/staffSupabaseAuth';
+import { addClientThroughApi } from '../utils/addClientApi';
 import {
   mergeClientSocialLogins,
   normalizeClientContacts,
@@ -200,7 +200,35 @@ export function useClients() {
     }
 
     if (SUPABASE_ENABLED) {
-      ensureStaffSupabaseSession().catch(() => {});
+      const nextColor =
+        normalizeHexColor(color) || pickNextClientColor(state.colors, CLIENT_COLOR_PALETTE);
+      const apiResult = await addClientThroughApi({
+        displayName: trimmed,
+        color: nextColor,
+        logo,
+        businessType,
+        orgId,
+      });
+      if (!apiResult.ok) {
+        return apiResult;
+      }
+
+      const resolvedName = apiResult.name || trimmed;
+      const patch = apiResult.clientsPatch || {};
+      setState((prev) =>
+        normalizeClientsState(
+          {
+            ...prev,
+            names: Array.isArray(patch.names) ? patch.names : [...prev.names, resolvedName],
+            colors: { ...prev.colors, ...(patch.colors || {}) },
+            logos: { ...prev.logos, ...(patch.logos || {}) },
+            businessTypes: { ...prev.businessTypes, ...(patch.businessTypes || {}) },
+          },
+          { includeDefaults },
+        ),
+      );
+      registerPortalCredentialBrand(orgId, resolvedName);
+      return { ok: true, name: resolvedName };
     }
 
     const reserved = await reserveClientBrandName(trimmed, orgId);
@@ -240,11 +268,12 @@ export function useClients() {
 
     const syncResult = await syncClientsWorkspace(nextState);
     if (!syncResult.ok) {
+      await releaseClientBrandName(trimmed, orgId);
       return { ok: false, error: syncResult.error, name: trimmed };
     }
     registerPortalCredentialBrand(orgId, trimmed);
     return { ok: true, name: trimmed };
-  }, [orgId, planType, state.names]);
+  }, [orgId, planType, state.names, state.colors, includeDefaults]);
 
   const getClientColor = useCallback(
     (client) => state.colors[client] || '#9ca3af',

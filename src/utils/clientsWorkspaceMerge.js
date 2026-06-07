@@ -4,7 +4,45 @@
  * or profile fields (contacts, logos, social logins).
  */
 
+import { clientBrandNameKey } from './clients.js';
+
 const SOCIAL_PLATFORMS = ['instagram', 'tiktok', 'facebook'];
+
+function workspaceNameKeys(names) {
+  return new Set((Array.isArray(names) ? names : []).map((name) => clientBrandNameKey(name)));
+}
+
+/** Remote refresh must not drop clients still present in the local/synced baseline. */
+export function mergeClientsWorkspaceNames(remote = [], local = [], synced = []) {
+  const remoteList = Array.isArray(remote) ? remote : [];
+  const localList = Array.isArray(local) ? local : [];
+  const syncedList = Array.isArray(synced) ? synced : [];
+
+  if (JSON.stringify(localList) !== JSON.stringify(syncedList)) {
+    return localList;
+  }
+
+  if (JSON.stringify(remoteList) === JSON.stringify(syncedList)) {
+    return localList;
+  }
+
+  const remoteKeys = workspaceNameKeys(remoteList);
+  const missingFromRemote = syncedList.filter((name) => !remoteKeys.has(clientBrandNameKey(name)));
+  if (!missingFromRemote.length) {
+    return remoteList;
+  }
+
+  const mergedKeys = new Set(remoteKeys);
+  const merged = [...remoteList];
+  for (const name of missingFromRemote) {
+    const key = clientBrandNameKey(name);
+    if (!mergedKeys.has(key)) {
+      mergedKeys.add(key);
+      merged.push(name);
+    }
+  }
+  return merged;
+}
 
 function emptySocialLogins() {
   return {

@@ -25,6 +25,7 @@ import {
 import {
   mergeBrandCompanyFilesPortalRefresh,
   mergeClientsWorkspaceBrandFiles,
+  mergeClientsWorkspaceNames,
 } from '../src/utils/clientsWorkspaceMerge.js';
 import {
   isPortalContentCalendarCard,
@@ -410,6 +411,16 @@ if (typeof localStorage !== 'undefined') {
   const merged = mergeBrandCompanyFilesPortalRefresh(screen, server);
   assert(merged.length === 1, 'portal refresh should drop resurrected server file');
   assert(merged[0].id === 'f1', 'portal refresh should keep on-screen file');
+}
+
+// Stale remote refresh must not drop a client that is still in the synced baseline.
+{
+  const synced = ['Plume', 'Casalu'];
+  const local = [...synced];
+  const remote = ['Plume'];
+  const merged = mergeClientsWorkspaceNames(remote, local, synced);
+  assert(merged.length === 2, 'stale remote should not drop newly added client');
+  assert(merged.includes('Casalu'), 'newly added client should survive stale remote');
 }
 
 // Tombstoned ids never render again during this session.

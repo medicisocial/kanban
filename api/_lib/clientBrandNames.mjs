@@ -98,6 +98,18 @@ export async function reserveClientBrandNameOnServer(orgId, displayName) {
   throw new Error(detail || `Could not reserve client name (${response.status}).`);
 }
 
+export async function fetchClientBrandNameRow(displayName) {
+  const normalized = normalizeClientBrandName(displayName);
+  if (!normalized) return null;
+
+  const response = await restFetch(
+    `client_brand_names?name_normalized=eq.${encodeURIComponent(normalized)}&select=name_normalized,display_name,org_id&limit=1`,
+  );
+  if (!response.ok) return null;
+  const rows = await response.json().catch(() => []);
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
 export async function releaseClientBrandNameOnServer(orgId, displayName) {
   const normalized = normalizeClientBrandName(displayName);
   if (!normalized || !orgId) {
