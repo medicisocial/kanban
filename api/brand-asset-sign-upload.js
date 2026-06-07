@@ -2,6 +2,15 @@ import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
 import { getClientSessionFromRequest, isClientSessionValid } from './_lib/clientPortalAuth.mjs';
 import { isSupabaseConfigured } from './_lib/supabase.mjs';
+import {
+  badGateway,
+  badRequest,
+  methodNotAllowed,
+  ok,
+  serverError,
+  unavailable,
+  unauthorized,
+} from './_lib/apiResponse.mjs';
 
 const BUCKET = 'brand-assets';
 const ALLOWED_EXT = new Set(['pdf', 'png', 'jpg', 'jpeg', 'webp', 'svg', 'zip']);
@@ -80,28 +89,25 @@ async function authorize(req, requestedBrand, requestedOrgId) {
  * so client-portal users (who have no Supabase auth session) can upload too.
  */
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method !== 'POST') return methodNotAllowed(res, 'POST');
 
   if (!isSupabaseConfigured()) {
-    return res.status(503).json({ error: 'Cloud sync is not configured.' });
+    return unavailable(res, 'Cloud sync is not configured.');
   }
 
   const { brand, folder, fileName, contentType, orgId } = req.body || {};
   if (!brand) {
-    return res.status(400).json({ error: 'Missing brand.' });
+    return badRequest(res, 'Missing brand.');
   }
 
   const auth = await authorize(req, brand, orgId);
   if (!auth.ok) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return unauthorized(res, 'Unauthorized');
   }
 
   const { url, serviceKey } = storageConfig();
   if (!url || !serviceKey) {
-    return res.status(503).json({ error: 'Storage is not configured.' });
+    return unavailable(res, 'Storage is not configured.');
   }
 
   const ext = fileExtension(fileName, contentType);
@@ -121,7 +127,7 @@ export default async function handler(req, res) {
     if (!signRes.ok) {
       const detail = await signRes.text().catch(() => '');
       console.error('[brand-asset-sign-upload] sign failed:', signRes.status, detail);
-      return res.status(502).json({ error: 'Could not start upload.' });
+      return badGateway(res, 'Could not start upload.');
     }
 
     const signJson = await signRes.json().catch(() => ({}));
@@ -131,13 +137,13 @@ export default async function handler(req, res) {
     const token = tokenFromBody || (tokenFromUrl ? decodeURIComponent(tokenFromUrl[1]) : null);
     if (!token) {
       console.error('[brand-asset-sign-upload] no token in sign response:', signJson);
-      return res.status(502).json({ error: 'Could not start upload.' });
+      return badGateway(res, 'Could not start upload.');
     }
 
     const publicUrl = `${url}/storage/v1/object/public/${BUCKET}/${path}`;
-    return res.status(200).json({ ok: true, path, token, publicUrl });
+    return ok(res, { path, token, publicUrl });
   } catch (error) {
     console.error('[brand-asset-sign-upload] failed:', error?.message || error);
-    return res.status(500).json({ error: 'Could not start upload.' });
+    return serverError(res, 'Could not start upload.');
   }
 }

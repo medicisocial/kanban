@@ -67,8 +67,15 @@ export function normalizeBrandUsers(entry) {
   if (Array.isArray(entry)) {
     return entry.map((user) => normalizeClientUser(user)).filter(Boolean);
   }
-  if (entry && typeof entry === 'object' && (entry.username || entry.passwordHash)) {
-    return [normalizeClientUser(entry)].filter(Boolean);
+  if (entry && typeof entry === 'object') {
+    // Handle { users: [...] } format stored in client_portal_credentials table
+    if (Array.isArray(entry.users)) {
+      return entry.users.map((user) => normalizeClientUser(user)).filter(Boolean);
+    }
+    // Handle single user object
+    if (entry.username || entry.passwordHash) {
+      return [normalizeClientUser(entry)].filter(Boolean);
+    }
   }
   return [];
 }

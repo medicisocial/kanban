@@ -5,12 +5,20 @@ import {
   isSupabaseConfigured,
   upsertRecords,
 } from './_lib/supabase.mjs';
-import { patchRedisWorkspaceCards } from './_lib/redisWorkspace.mjs';
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
 import {
   filterAuthCriticalDeletes,
   sanitizeAuthCriticalUpserts,
 } from './_lib/authCriticalSync.mjs';
+import {
+  badRequest,
+  forbidden,
+  methodNotAllowed,
+  ok,
+  serverError,
+  unavailable,
+  unauthorized,
+} from './_lib/apiResponse.mjs';
 
 const ALLOWED_TABLES = new Set([
   'cards',
@@ -22,15 +30,10 @@ const ALLOWED_TABLES = new Set([
   'clients',
   'team_members',
   'client_portal_credentials',
+  'brands',
+  'portal_users',
+  'client_records',
 ]);
-
-function unauthorized(res) {
-  return res.status(401).json({ error: 'Unauthorized' });
-}
-
-function unavailable(res) {
-  return res.status(503).json({ error: 'Cloud sync is not configured.' });
-}
 
 function isLikelyJwt(token) {
   return typeof token === 'string' && token.split('.').length === 3;
@@ -85,36 +88,35 @@ async function isAuthorized(req) {
 
 export default async function handler(req, res) {
   if (!(await isAuthorized(req))) {
-    return unauthorized(res);
+    return unauthorized(res, 'Unauthorized');
   }
 
   if (!isSupabaseConfigured()) {
-    return unavailable(res);
+    return unavailable(res, 'Cloud sync is not configured.');
   }
 
   if (req.method === 'GET') {
     const table = String(req.query?.table || '').trim();
     if (!table || !ALLOWED_TABLES.has(table)) {
-      return res.status(400).json({ error: 'Invalid table.' });
+      return badRequest(res, 'Invalid table.');
     }
 
     const orgCheck = await assertAuthorizedOrgId(req, req.query?.orgId);
     if (!orgCheck.ok) {
-      return res.status(403).json({ error: orgCheck.error || 'Forbidden org scope.' });
+      return forbidden(res, orgCheck.error || 'Forbidden org scope.');
     }
 
     try {
       const rows = await fetchSyncRows(table, orgCheck.orgId);
-      return res.status(200).json({ rows: rows || [] });
+      return ok(res, { rows: rows || [] });
     } catch (error) {
       console.error('[staff-sync] fetch failed:', error?.message || error);
-      return res.status(500).json({ error: 'Could not load workspace data.' });
+      return serverError(res, 'Could not load workspace data.');
     }
   }
 
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'GET, POST');
-    return res.status(405).json({ error: 'Method not allowed' });
+    return methodNotAllowed(res, 'GET, POST');
   }
 
   const {
@@ -126,12 +128,12 @@ export default async function handler(req, res) {
     credentialPasswordChanges = [],
   } = req.body || {};
   if (!table || !ALLOWED_TABLES.has(table)) {
-    return res.status(400).json({ error: 'Invalid table.' });
+    return badRequest(res, 'Invalid table.');
   }
 
   const orgCheck = await assertAuthorizedOrgId(req, orgId);
   if (!orgCheck.ok) {
-    return res.status(403).json({ error: orgCheck.error || 'Forbidden org scope.' });
+    return forbidden(res, orgCheck.error || 'Forbidden org scope.');
   }
   const resolvedOrgId = orgCheck.orgId;
 
@@ -150,15 +152,10 @@ export default async function handler(req, res) {
         safeUpserts.map((row) => ({ id: row.id, data: row.data })),
         resolvedOrgId,
       );
-      if (table === 'cards') {
-        await patchRedisWorkspaceCards(safeUpserts, safeDeleteIds);
-      }
-    } else if (safeDeleteIds.length && table === 'cards') {
-      await patchRedisWorkspaceCards([], safeDeleteIds);
     }
-    return res.status(200).json({ ok: true });
+    return ok(res);
   } catch (error) {
     console.error('[staff-sync] failed:', error?.message || error);
-    return res.status(500).json({ error: 'Sync failed.' });
+    return serverError(res, 'Sync failed.');
   }
 }

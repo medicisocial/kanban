@@ -20,8 +20,15 @@ function normalizeBrandUsers(entry) {
   if (Array.isArray(entry)) {
     return entry.filter((user) => user && typeof user === 'object');
   }
-  if (entry && typeof entry === 'object' && (entry.username || entry.passwordHash)) {
-    return [entry];
+  if (entry && typeof entry === 'object') {
+    // Handle { users: [...] } format stored in client_portal_credentials table
+    if (Array.isArray(entry.users)) {
+      return entry.users.filter((user) => user && typeof user === 'object');
+    }
+    // Handle single user object
+    if (entry.username || entry.passwordHash) {
+      return [entry];
+    }
   }
   return [];
 }

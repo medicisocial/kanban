@@ -5,6 +5,7 @@ import {
   fetchClientBrandNameRow,
   isInternalClientBrandName,
   normalizeClientBrandName,
+  releaseClientBrandNameOnServer,
   reserveClientBrandNameOnServer,
 } from './_lib/clientBrandNames.mjs';
 
@@ -60,6 +61,21 @@ async function isAuthorized(req) {
   } catch {
     return false;
   }
+}
+
+function resolveServerKey() {
+  return (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    ''
+  ).trim();
+}
+
+function getSupabaseBaseUrl() {
+  return (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '')
+    .trim()
+    .replace(/\/$/, '');
 }
 
 /**
@@ -152,7 +168,56 @@ export default async function handler(req, res) {
       specialMenus: { ...(workspace.specialMenus || {}) },
     };
 
-    await upsertRecord('clients', 'workspace', nextWorkspace, resolvedOrgId);
+    // Write to the new normalized tables (migration 018+)
+    // Legacy `clients` blob write has been removed — triggers keep it in sync during transition.
+    const apiKey = resolveServerKey();
+    const baseUrl = getSupabaseBaseUrl();
+    const brandKey = normalizeClientBrandName(resolvedName);
+
+    // Upsert brands table — fail loudly so orphaned reservations don't accumulate
+    const commonHeaders = {
+      apikey: apiKey,
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+    };
+
+    const brandsRes = await fetch(`${baseUrl}/rest/v1/brands`, {
+      method: 'POST',
+      headers: commonHeaders,
+      body: JSON.stringify([{
+        org_id: resolvedOrgId,
+        brand_key: brandKey,
+        display_name: resolvedName,
+      }]),
+    });
+    if (!brandsRes.ok) {
+      const detail = await brandsRes.text().catch(() => '');
+      console.error('[add-client] brands upsert failed:', brandsRes.status, detail);
+      await releaseClientBrandNameOnServer(resolvedOrgId, resolvedName).catch(() => {});
+      return res.status(502).json({ ok: false, error: 'Could not save client brand. Try again in a moment.' });
+    }
+
+    // Upsert client_records with typed columns
+    const recordsRes = await fetch(`${baseUrl}/rest/v1/client_records`, {
+      method: 'POST',
+      headers: commonHeaders,
+      body: JSON.stringify([{
+        org_id: resolvedOrgId,
+        brand_key: brandKey,
+        display_name: resolvedName,
+        colors: nextWorkspace.colors || {},
+        logos: nextWorkspace.logos || {},
+        business_type: businessType || '',
+        data: { contentTypeColors: {} },
+      }]),
+    });
+    if (!recordsRes.ok) {
+      const detail = await recordsRes.text().catch(() => '');
+      console.error('[add-client] client_records upsert failed:', recordsRes.status, detail);
+      await releaseClientBrandNameOnServer(resolvedOrgId, resolvedName).catch(() => {});
+      return res.status(502).json({ ok: false, error: 'Could not save client record. Try again in a moment.' });
+    }
 
     return res.status(200).json({
       ok: true,

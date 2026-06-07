@@ -65,6 +65,10 @@ export default function ClientPortalUsersEditor({
     credentials: syncedCredentials,
   } = useClientsContext();
 
+  // Use synced credentials from context (already in correct format from sync system)
+  // instead of calling loadCredentials() directly, which may have stale or mismatched format.
+  const liveCredentials = syncedCredentials || loadCredentials();
+
   const [users, setUsers] = useState(() =>
     buildDraftUsers(client, getClientUsers, getClientContacts, getSyncedPortalPassword),
   );
@@ -133,7 +137,7 @@ export default function ClientPortalUsersEditor({
     setInviteDetails(null);
 
     try {
-      const credentials = { ...loadCredentials() };
+      const credentials = { ...liveCredentials };
       const takenUsernames = new Set();
 
       for (const [brand, brandUsers] of Object.entries(credentials)) {
