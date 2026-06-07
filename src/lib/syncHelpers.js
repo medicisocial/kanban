@@ -10,6 +10,9 @@ import {
   mergeBrandScalarMap,
   mergeClientsWorkspaceData,
   mergePortalPasswordVault,
+  mergeClientNameTombstones,
+  suppressedClientNameKeys,
+  stripSuppressedClientNames,
 } from '../utils/clientsWorkspaceMerge.js';
 export const FETCH_TIMEOUT_MS = 12000;
 
@@ -737,5 +740,10 @@ export function mergeClientsWorkspaceState({ remote, local, syncedStr }) {
     }
   }
 
-  return merged;
+  // Honor cross-device delete tombstones: a removal recorded on any device
+  // suppresses the name everywhere until a newer re-add overrides it.
+  const tombstones = mergeClientNameTombstones(remote, local);
+  merged.removedNames = tombstones.removedNames;
+  merged.restoredNames = tombstones.restoredNames;
+  return stripSuppressedClientNames(merged, suppressedClientNameKeys(tombstones));
 }

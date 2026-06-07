@@ -12,7 +12,11 @@ import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import { normalizeContentTypeColors } from '../utils/contentTypeColors';
 import { normalizeCustomColorPalette, normalizeHexColor } from '../utils/colorHex';
 import { DEFAULT_CLIENT_BUSINESS_TYPES, normalizeBusinessType } from '../utils/eventFormSchemas';
-import { normalizeClientName, pickNextClientColor, mergeDefaultClients, clientNamesConflict, isInternalClientName } from '../utils/clients';
+import { normalizeClientName, pickNextClientColor, mergeDefaultClients, clientNamesConflict, isInternalClientName, clientBrandNameKey, isTestClientName } from '../utils/clients';
+import {
+  mergeClientNameTombstones,
+  suppressedClientNameKeys,
+} from '../utils/clientsWorkspaceMerge';
 import { reserveClientBrandName, releaseClientBrandName } from '../utils/clientBrandNames';
 import { addClientThroughApi } from '../utils/addClientApi';
 import {
@@ -72,34 +76,51 @@ function normalizeClientColorsMap(colors = {}) {
 
 function normalizeClientsState(data, { includeDefaults = true } = {}) {
   const source = data && typeof data === 'object' ? data : {};
-  const names = Array.isArray(source.names) && source.names.length > 0
+  const now = Date.now();
+  const tombstones = mergeClientNameTombstones(source, source, now);
+  const suppressed = suppressedClientNameKeys(tombstones, now);
+  const namesBase = Array.isArray(source.names) && source.names.length > 0
     ? (includeDefaults ? mergeDefaultClients(source.names, DEFAULT_CLIENTS) : [...source.names])
     : (includeDefaults ? [...DEFAULT_CLIENTS] : []);
+  // Drop locally/cross-device removed brands and automated test clients up front.
+  const isDropped = (name) =>
+    isTestClientName(name) || suppressed.has(clientBrandNameKey(name));
+  const names = namesBase.filter((name) => !isDropped(name));
+  const stripSuppressed = (map) => {
+    if (!map || typeof map !== 'object') return {};
+    const next = {};
+    for (const [key, value] of Object.entries(map)) {
+      if (!isDropped(key)) next[key] = value;
+    }
+    return next;
+  };
 
   return {
     names,
-    colors: {
+    removedNames: tombstones.removedNames,
+    restoredNames: tombstones.restoredNames,
+    colors: stripSuppressed({
       ...normalizeClientColorsMap(DEFAULT_CLIENT_COLORS),
       ...normalizeClientColorsMap(source.colors || {}),
-    },
-    logos: { ...(source.logos || {}) },
-    accountManagers: {
+    }),
+    logos: stripSuppressed({ ...(source.logos || {}) }),
+    accountManagers: stripSuppressed({
       ...DEFAULT_CLIENT_ACCOUNT_MANAGERS,
       ...(source.accountManagers || {}),
-    },
-    businessTypes: normalizeBusinessTypesMap({
+    }),
+    businessTypes: stripSuppressed(normalizeBusinessTypesMap({
       ...DEFAULT_CLIENT_BUSINESS_TYPES,
       ...(source.businessTypes || {}),
-    }),
-    contacts: source.contacts || {},
-    socialLogins: source.socialLogins || {},
-    companyFiles: source.companyFiles || {},
-    specialMenus: source.specialMenus || {},
-    photoGalleryLinks: source.photoGalleryLinks || {},
-    portalPasswordVault: mergePortalPasswordVault(
+    })),
+    contacts: stripSuppressed(source.contacts || {}),
+    socialLogins: stripSuppressed(source.socialLogins || {}),
+    companyFiles: stripSuppressed(source.companyFiles || {}),
+    specialMenus: stripSuppressed(source.specialMenus || {}),
+    photoGalleryLinks: stripSuppressed(source.photoGalleryLinks || {}),
+    portalPasswordVault: stripSuppressed(mergePortalPasswordVault(
       source.portalPasswordVault,
       source.portalPasswordVault ? {} : loadLegacyPortalPasswordVault(),
-    ),
+    )),
     contentTypeColors: normalizeContentTypeColors(source.contentTypeColors || {}),
     customColorPalette: normalizeCustomColorPalette(source.customColorPalette),
   };
@@ -198,6 +219,13 @@ export function useClients() {
       };
     }
 
+    // Re-adding a previously removed client must beat its delete tombstone everywhere.
+    const restoredKey = clientBrandNameKey(trimmed);
+    const restoreTombstone = (prevState) => ({
+      ...prevState,
+      restoredNames: { ...(prevState.restoredNames || {}), [restoredKey]: Date.now() },
+    });
+
     if (SUPABASE_ENABLED) {
       const nextColor =
         normalizeHexColor(color) || pickNextClientColor(state.colors, CLIENT_COLOR_PALETTE);
@@ -214,7 +242,7 @@ export function useClients() {
 
       const resolvedName = apiResult.name || trimmed;
       const patch = apiResult.clientsPatch || {};
-      const prev = normalizeClientsState(stateRef.current, { includeDefaults });
+      const prev = restoreTombstone(normalizeClientsState(stateRef.current, { includeDefaults }));
       const nextState = normalizeClientsState(
         {
           ...prev,
@@ -252,6 +280,8 @@ export function useClients() {
       const nextBusinessTypes = { ...prev.businessTypes };
       if (businessType) nextBusinessTypes[trimmed] = businessType;
       nextState = {
+        removedNames: { ...(prev.removedNames || {}) },
+        restoredNames: { ...(prev.restoredNames || {}), [restoredKey]: Date.now() },
         names: [...prev.names, trimmed],
         colors: { ...prev.colors, [trimmed]: nextColor },
         logos: logo ? { ...prev.logos, [trimmed]: logo } : { ...prev.logos },
@@ -303,9 +333,17 @@ export function useClients() {
       return next;
     };
 
+    // Tombstone the delete so it propagates cross-device and survives baseline resets.
+    const removedKey = clientBrandNameKey(trimmed);
+    const nextRemovedNames = { ...(current.removedNames || {}), [removedKey]: Date.now() };
+    const nextRestoredNames = { ...(current.restoredNames || {}) };
+    delete nextRestoredNames[removedKey];
+
     const nextState = normalizeClientsState(
       {
         ...current,
+        removedNames: nextRemovedNames,
+        restoredNames: nextRestoredNames,
         names: current.names.filter((client) => !clientNamesConflict(client, trimmed)),
         colors: stripBrand(current.colors),
         logos: stripBrand(current.logos),

@@ -27,7 +27,11 @@ import {
   mergeClientsWorkspaceBrandFiles,
   mergeClientsWorkspaceNames,
   mergeClientsWorkspaceNamesOnWrite,
+  mergeClientNameTombstones,
+  suppressedClientNameKeys,
+  stripSuppressedClientNames,
 } from '../src/utils/clientsWorkspaceMerge.js';
+import { isTestClientName } from '../src/utils/clients.js';
 import {
   isPortalContentCalendarCard,
   buildCalendarNoteUpdates,
@@ -735,6 +739,84 @@ if (typeof localStorage !== 'undefined') {
   });
   assert(deleted.action === 'delete', 'delete action should pass through');
   assert(deleted.comment === '', 'delete payload should omit comment');
+}
+
+// Cross-device delete: a removal tombstone suppresses the name even when a stale
+// remote still lists it (the bug where a deleted client "comes back").
+{
+  const now = Date.now();
+  const remote = { names: ['Plume', 'Casalu'], colors: { Casalu: '#fff' } };
+  const local = {
+    names: ['Plume'],
+    removedNames: { casalu: now },
+  };
+  const merged = mergeClientsWorkspaceState({
+    remote,
+    local,
+    syncedStr: JSON.stringify({ names: ['Plume', 'Casalu'] }),
+  });
+  assert(!merged.names.includes('Casalu'), 'tombstoned client must not be resurrected by stale remote');
+  assert(!('Casalu' in (merged.colors || {})), 'tombstoned client brand map entry should be stripped');
+  assert(merged.removedNames?.casalu === now, 'removal tombstone should persist through merge');
+}
+
+// Cold load (no sync baseline) must honor a local delete tombstone, not union it back.
+{
+  const now = Date.now();
+  const remote = { names: ['Plume', 'Casalu'] };
+  const local = { names: ['Plume'], removedNames: { casalu: now } };
+  const merged = mergeClientsWorkspaceState({ remote, local, syncedStr: null });
+  assert(!merged.names.includes('Casalu'), 'cold-load union must not resurrect a tombstoned client');
+}
+
+// Re-add after delete wins: a newer restore tombstone beats the older removal.
+{
+  const now = Date.now();
+  const stored = { names: ['Plume'], removedNames: { casalu: now - 1000 } };
+  const incoming = { names: ['Plume', 'Casalu'], restoredNames: { casalu: now } };
+  const merged = mergeClientsWorkspaceData(stored, incoming);
+  assert(merged.names.includes('Casalu'), 're-added client (newer restore) should survive');
+}
+
+// A delete still wins when it is the newer event than a prior restore.
+{
+  const now = Date.now();
+  const keys = suppressedClientNameKeys({
+    removedNames: { casalu: now },
+    restoredNames: { casalu: now - 1000 },
+  });
+  assert(keys.has('casalu'), 'newest removal should suppress the name');
+}
+
+// Tombstone union keeps the newest timestamp per name across devices.
+{
+  const now = Date.now();
+  const merged = mergeClientNameTombstones(
+    { removedNames: { a: now - 100 } },
+    { removedNames: { a: now - 500, b: now - 50 } },
+  );
+  assert(merged.removedNames.a === now - 100, 'newest removal timestamp should win');
+  assert(merged.removedNames.b === now - 50, 'other device removal should be unioned in');
+}
+
+// Automated test clients are always stripped, regardless of tombstones.
+{
+  assert(isTestClientName('Cursor Audit Sync 123'), 'cursor audit sync should be a test client');
+  assert(isTestClientName('E2E Test Client'), 'e2e test should be a test client');
+  assert(!isTestClientName('Casalu'), 'real client should not match test patterns');
+  const stripped = stripSuppressedClientNames(
+    { names: ['Plume', 'Cursor Audit Sync 9'], colors: { 'Cursor Audit Sync 9': '#000' } },
+    new Set(),
+  );
+  assert(!stripped.names.includes('Cursor Audit Sync 9'), 'test client should be stripped on merge');
+  assert(!('Cursor Audit Sync 9' in stripped.colors), 'test client brand map entry should be stripped');
+}
+
+// Expired tombstones (older than TTL) stop suppressing so the maps stay bounded.
+{
+  const old = Date.now() - 200 * 24 * 60 * 60 * 1000;
+  const keys = suppressedClientNameKeys({ removedNames: { casalu: old } });
+  assert(!keys.has('casalu'), 'expired tombstone should no longer suppress');
 }
 
 console.log('Sync merge tests passed.');

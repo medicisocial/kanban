@@ -32,6 +32,21 @@ export function isInternalClientName(name) {
   return trimmed === '__internal__' || trimmed.startsWith('__');
 }
 
+const TEST_CLIENT_NAME_PATTERNS = [
+  /^cursor audit sync\b/i,
+  /^cursor api test\b/i,
+  /^pipeline audit client\b/i,
+  /^e2e[\s-]/i,
+  /\be2e test\b/i,
+];
+
+/** Names created by automated audits/E2E runs — never persisted or shown in the UI. */
+export function isTestClientName(name) {
+  const trimmed = normalizeClientName(String(name || ''));
+  if (!trimmed) return false;
+  return TEST_CLIENT_NAME_PATTERNS.some((pattern) => pattern.test(trimmed));
+}
+
 export function clientNamesConflict(a, b) {
   return clientBrandNameKey(a) === clientBrandNameKey(b);
 }

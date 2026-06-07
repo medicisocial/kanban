@@ -4,9 +4,99 @@
  * or profile fields (contacts, logos, social logins).
  */
 
-import { clientBrandNameKey } from './clients.js';
+import { clientBrandNameKey, isTestClientName } from './clients.js';
 
 const SOCIAL_PLATFORMS = ['instagram', 'tiktok', 'facebook'];
+
+/**
+ * Cross-device delete tombstones for client names.
+ *
+ * `removedNames`/`restoredNames` map a brand key → timestamp. A name is suppressed
+ * when its newest event is a removal, so a delete on one device propagates through
+ * the synced blob and is honored everywhere — and a later re-add (a newer
+ * `restoredNames` entry) wins over the old tombstone. Entries expire after the TTL
+ * so the maps stay bounded.
+ */
+export const CLIENT_NAME_TOMBSTONE_TTL_MS = 180 * 24 * 60 * 60 * 1000;
+
+function pruneTsMap(map, now) {
+  const out = {};
+  if (map && typeof map === 'object') {
+    for (const [key, value] of Object.entries(map)) {
+      const ts = Number(value) || 0;
+      if (ts && now - ts <= CLIENT_NAME_TOMBSTONE_TTL_MS) out[key] = ts;
+    }
+  }
+  return out;
+}
+
+function unionTsMap(a, b, now) {
+  const out = pruneTsMap(a, now);
+  const other = pruneTsMap(b, now);
+  for (const [key, ts] of Object.entries(other)) {
+    if (!out[key] || ts > out[key]) out[key] = ts;
+  }
+  return out;
+}
+
+/** Union two blobs' removal/restore tombstones, keeping the newest event per name. */
+export function mergeClientNameTombstones(stored = {}, incoming = {}, now = Date.now()) {
+  return {
+    removedNames: unionTsMap(stored?.removedNames, incoming?.removedNames, now),
+    restoredNames: unionTsMap(stored?.restoredNames, incoming?.restoredNames, now),
+  };
+}
+
+/** Brand keys whose latest tombstone event is a removal (still within TTL). */
+export function suppressedClientNameKeys(
+  { removedNames = {}, restoredNames = {} } = {},
+  now = Date.now(),
+) {
+  const removed = pruneTsMap(removedNames, now);
+  const restored = pruneTsMap(restoredNames, now);
+  const keys = new Set();
+  for (const [key, ts] of Object.entries(removed)) {
+    if ((restored[key] || 0) < ts) keys.add(key);
+  }
+  return keys;
+}
+
+/** Drop tombstoned + test-only client names (and their brand-map entries) from a blob. */
+export function stripSuppressedClientNames(workspace = {}, suppressedKeys = new Set()) {
+  const names = Array.isArray(workspace.names) ? workspace.names : [];
+  const isDropped = (name) =>
+    isTestClientName(name) || suppressedKeys.has(clientBrandNameKey(name));
+  const keepNames = names.filter((name) => !isDropped(name));
+
+  const stripMap = (map) => {
+    if (!map || typeof map !== 'object') return map;
+    const next = {};
+    let changed = false;
+    for (const [key, value] of Object.entries(map)) {
+      if (isDropped(key)) {
+        changed = true;
+        continue;
+      }
+      next[key] = value;
+    }
+    return changed ? next : map;
+  };
+
+  return {
+    ...workspace,
+    names: keepNames,
+    colors: stripMap(workspace.colors),
+    logos: stripMap(workspace.logos),
+    accountManagers: stripMap(workspace.accountManagers),
+    businessTypes: stripMap(workspace.businessTypes),
+    contacts: stripMap(workspace.contacts),
+    socialLogins: stripMap(workspace.socialLogins),
+    companyFiles: stripMap(workspace.companyFiles),
+    specialMenus: stripMap(workspace.specialMenus),
+    photoGalleryLinks: stripMap(workspace.photoGalleryLinks),
+    portalPasswordVault: stripMap(workspace.portalPasswordVault),
+  };
+}
 
 function workspaceNameKeys(names) {
   return new Set((Array.isArray(names) ? names : []).map((name) => clientBrandNameKey(name)));
@@ -574,9 +664,15 @@ export function mergeClientsWorkspaceData(stored = {}, incoming = {}) {
   if (!incoming || typeof incoming !== 'object') return stored || {};
   if (!stored || typeof stored !== 'object') return { ...incoming };
 
-  return {
+  const now = Date.now();
+  const tombstones = mergeClientNameTombstones(stored, incoming, now);
+  const suppressed = suppressedClientNameKeys(tombstones, now);
+
+  const merged = {
     ...stored,
     ...incoming,
+    removedNames: tombstones.removedNames,
+    restoredNames: tombstones.restoredNames,
     names: mergeClientsWorkspaceNamesOnWrite(stored.names, incoming.names),
     colors: mergeBrandScalarMap(stored.colors, incoming.colors),
     accountManagers: mergeBrandScalarMap(stored.accountManagers, incoming.accountManagers),
@@ -600,4 +696,6 @@ export function mergeClientsWorkspaceData(stored = {}, incoming = {}) {
       incoming.portalPasswordVault,
     ),
   };
+
+  return stripSuppressedClientNames(merged, suppressed);
 }

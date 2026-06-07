@@ -154,7 +154,21 @@ if (!testNames.length) {
   process.exit(0);
 }
 
-let next = { ...workspace, names: names.filter((name) => !isTestClientName(name)) };
+const nowTs = Date.now();
+const removedNames = { ...(workspace.removedNames && typeof workspace.removedNames === 'object' ? workspace.removedNames : {}) };
+const restoredNames = { ...(workspace.restoredNames && typeof workspace.restoredNames === 'object' ? workspace.restoredNames : {}) };
+for (const brand of testNames) {
+  const key = String(brand).trim().replace(/\s+/g, ' ').toLowerCase();
+  removedNames[key] = nowTs;
+  delete restoredNames[key];
+}
+
+let next = {
+  ...workspace,
+  removedNames,
+  restoredNames,
+  names: names.filter((name) => !isTestClientName(name)),
+};
 for (const brand of testNames) {
   next.colors = stripBrandFromMap(next.colors, brand);
   next.logos = stripBrandFromMap(next.logos, brand);
