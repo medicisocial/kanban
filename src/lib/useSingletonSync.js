@@ -28,6 +28,21 @@ import {
 } from '../utils/clientsWorkspaceMerge';
 
 /**
+ * Key-order-stable JSON so the redundant-write guard compares by *content*.
+ * The merged object (built from object spreads) and the row read back from
+ * Postgres jsonb can carry identical data in a different key order; a plain
+ * JSON.stringify compare would miss that and let pointless rewrites through.
+ */
+function stableStringify(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  const keys = Object.keys(value).sort();
+  return `{${keys
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
+    .join(',')}}`;
+}
+
+/**
  * Like useCollectionSync, but for a single composite object stored as one row
  * (e.g. the clients settings blob: names, colors, logos, contacts, ...).
  *
@@ -327,7 +342,7 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
         // that otherwise rewrite ~1MB+ every cycle and bloat the table, causing the
         // statement timeouts that surface as "Could not add client".
         if (table === 'clients' && existingData !== undefined) {
-          if (JSON.stringify(dataToWrite) === JSON.stringify(existingData)) {
+          if (stableStringify(dataToWrite) === stableStringify(existingData)) {
             if (!cancelled) {
               syncedRef.current = JSON.stringify(dataToWrite);
               pendingWriteRef.current = false;
