@@ -22,7 +22,10 @@ export async function saveClientPortalCredentialsDirect({
     return { ok: false, error: 'Cloud sync is not configured.' };
   }
 
-  const payload = mergePortalCredentialDataForPush(existingData, users, { allowPasswordChange });
+  const payload = mergePortalCredentialDataForPush(existingData, users, {
+    allowPasswordChange,
+    authoritativeUserList: true,
+  });
   if (!payload.length) {
     return { ok: false, error: 'Set a username and password for at least one portal user.' };
   }

@@ -1,19 +1,20 @@
-const STORAGE_KEY = 'medici-portal-deleted-company-files';
+import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage.js';
+
+const STORAGE_KEY = 'medici-deleted-company-files';
 
 function readStore() {
-  if (typeof sessionStorage === 'undefined') return {};
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    const parsed = readOrgScopedJson(STORAGE_KEY, null);
+    if (parsed && typeof parsed === 'object') return parsed;
   } catch {
-    return {};
+    /* ignore */
   }
+  return {};
 }
 
 function writeStore(store) {
-  if (typeof sessionStorage === 'undefined') return;
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    writeOrgScopedJson(STORAGE_KEY, store);
   } catch {
     /* ignore quota errors */
   }

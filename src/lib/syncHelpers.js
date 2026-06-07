@@ -76,7 +76,7 @@ function attachPortalPasswordChangeMarkers(users, previousUsers, allowPasswordCh
 export function mergePortalCredentialDataForPush(
   existingData,
   incomingData,
-  { allowPasswordChange = false } = {},
+  { allowPasswordChange = false, authoritativeUserList = false } = {},
 ) {
   const existing = normalizeBrandUsers(existingData);
   const incoming = normalizeBrandUsers(incomingData);
@@ -116,9 +116,13 @@ export function mergePortalCredentialDataForPush(
     });
   }
 
-  for (const user of existing) {
-    if (seen.has(user.id)) continue;
-    if (user.username && user.passwordHash) merged.push(user);
+  // Staff portal-access saves send the full intended roster — do not re-attach
+  // users the editor removed (stale-sync protection only applies to background pushes).
+  if (!authoritativeUserList) {
+    for (const user of existing) {
+      if (seen.has(user.id)) continue;
+      if (user.username && user.passwordHash) merged.push(user);
+    }
   }
 
   return attachPortalPasswordChangeMarkers(merged, existing, allowPasswordChange);

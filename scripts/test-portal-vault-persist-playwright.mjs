@@ -122,6 +122,26 @@ try {
   if (!passwordPersisted || !usernamePersisted) {
     process.exitCode = 1;
   }
+
+  // Cleanup: remove the test-only login so production brands are not polluted.
+  const removeButtons = page.getByRole('button', { name: /^remove$/i });
+  const removeCount = await removeButtons.count();
+  for (let i = removeCount - 1; i >= 0; i -= 1) {
+    const row = removeButtons.nth(i);
+    const rowRoot = row.locator('xpath=ancestor::div[contains(@class,"space-y-3")][1]');
+    const username = await rowRoot.getByPlaceholder('e.g. plumehtx').inputValue().catch(() => '');
+    if (username === testUsername) {
+      await row.click();
+      break;
+    }
+  }
+
+  await page.getByRole('button', { name: /save portal access/i }).first().click();
+  await page
+    .getByText(/portal access saved|could not save portal/i)
+    .first()
+    .waitFor({ timeout: 70000 });
+  console.log('[cleanup] removed test login', testUsername);
 } catch (error) {
   console.error('TEST ERROR:', error?.message || error);
   process.exitCode = 1;

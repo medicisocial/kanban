@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   allowsMultipleCompanyFileUpload,
   assertCompanyFileUploadable,
@@ -25,7 +26,7 @@ import {
   isEditorFilePickActive,
   markEditorUploadWork,
 } from '../../utils/editorPickGuard';
-import { filterDeletedCompanyFiles } from '../../utils/brandFileTombstones';
+import { filterDeletedCompanyFiles, recordDeletedCompanyFiles } from '../../utils/brandFileTombstones';
 import { incomingRecordsAreStale } from '../../utils/editorSyncGuard';
 import { btnPrimaryClass, btnSecondaryClass, inputClass, glassInsetClass } from './clientPortalUi';
 import FilePreviewActions from './FilePreviewActions';
@@ -323,12 +324,14 @@ export default function ClientCompanyFilesEditor({
   const cancelRemove = () => setDeleteTarget(null);
 
   const confirmRemove = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || saving) return;
     const target = deleteTarget;
     setDeleteTarget(null);
     setError('');
+    const nextFiles = localFiles.filter((file) => file.id !== target.id);
+    recordDeletedCompanyFiles(client, localFiles, nextFiles);
     try {
-      await persist(localFiles.filter((file) => file.id !== target.id));
+      await persist(nextFiles);
       if (target.storagePath) {
         void deleteBrandAssetFile(target.storagePath);
       }
@@ -375,8 +378,9 @@ export default function ClientCompanyFilesEditor({
           title={file.name}
           dataUrl={file.dataUrl}
           fileName={file.fileName}
+          removeLabel="Delete"
           onDownloadError={setError}
-          onRemove={readOnly ? undefined : () => requestRemove(file)}
+          onRemove={readOnly || saving ? undefined : () => requestRemove(file)}
         />
       </div>
     </li>
@@ -491,42 +495,48 @@ export default function ClientCompanyFilesEditor({
       {error && <p className="text-sm text-rose-300">{error}</p>}
       {message && !error && <p className="text-sm text-emerald-300">{message}</p>}
 
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      {deleteTarget &&
+        createPortal(
           <div
-            className={`${glassInsetClass} w-full max-w-sm space-y-4 p-4`}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-file-title"
+            className="fixed inset-0 z-[220] flex items-center justify-center bg-black/60 p-4"
+            onClick={cancelRemove}
           >
-            <div className="space-y-1.5">
-              <p id="delete-file-title" className="text-sm font-medium text-white">
-                Delete this file?
-              </p>
-              <p className="text-sm text-white/70">
-                Are you sure you want to delete{' '}
-                <span className="font-medium text-white">
-                  {deleteTarget.name || deleteTarget.fileName || 'this file'}
-                </span>
-                ? This cannot be undone.
-              </p>
+            <div
+              className={`${glassInsetClass} w-full max-w-sm space-y-4 p-4`}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-file-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="space-y-1.5">
+                <p id="delete-file-title" className="text-sm font-medium text-white">
+                  Delete this file?
+                </p>
+                <p className="text-sm text-white/70">
+                  Are you sure you want to delete{' '}
+                  <span className="font-medium text-white">
+                    {deleteTarget.name || deleteTarget.fileName || 'this file'}
+                  </span>
+                  ? This cannot be undone.
+                </p>
+              </div>
+              <div className="flex flex-wrap justify-end gap-2">
+                <button type="button" onClick={cancelRemove} className={btnSecondaryClass}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void confirmRemove()}
+                  disabled={saving}
+                  className={`${btnPrimaryClass} !bg-rose-600 !text-white hover:!opacity-90 disabled:opacity-40`}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
-            <div className="flex flex-wrap justify-end gap-2">
-              <button type="button" onClick={cancelRemove} className={btnSecondaryClass}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => void confirmRemove()}
-                disabled={saving}
-                className={`${btnPrimaryClass} !bg-rose-600 !text-white hover:!opacity-90 disabled:opacity-40`}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

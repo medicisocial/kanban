@@ -22,7 +22,6 @@ import {
   mergeBrandCompanyFiles,
   mergeClientsWorkspaceData,
 } from '../api/_lib/clientsWorkspaceMerge.mjs';
-import { filterIdsFromCompanyFiles } from '../src/utils/brandFileTombstones.js';
 import {
   mergeBrandCompanyFilesPortalRefresh,
   mergeClientsWorkspaceBrandFiles,
@@ -34,6 +33,13 @@ import {
 } from '../api/_lib/calendarNote.mjs';
 import { buildCalendarNoteResponse, buildCalendarNoteDeletePatch } from '../src/utils/calendarNote.js';
 import { getCalendarClientNote } from '../src/utils/calendarClientNote.js';
+
+function filterIdsFromCompanyFiles(files, deletedIds) {
+  const deleted =
+    deletedIds instanceof Set ? deletedIds : new Set((deletedIds || []).map((id) => String(id)));
+  if (!deleted.size) return Array.isArray(files) ? files : [];
+  return (Array.isArray(files) ? files : []).filter((file) => !deleted.has(String(file?.id || '')));
+}
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -253,6 +259,20 @@ if (typeof localStorage !== 'undefined') {
   );
 }
 
+// Authoritative portal-access save must drop users removed in the staff editor.
+{
+  const existing = [
+    { id: 'u1', username: 'plumehtx', passwordHash: 'a'.repeat(64) },
+    { id: 'u2', username: 'vaulttestmq1p9fil', passwordHash: 'b'.repeat(64) },
+  ];
+  const incoming = [{ id: 'u1', username: 'plumehtx', passwordHash: 'a'.repeat(64) }];
+  const merged = mergePortalCredentialDataForPush(existing, incoming, {
+    authoritativeUserList: true,
+  });
+  assert(merged.length === 1, 'authoritative save should remove omitted portal users');
+  assert(merged[0].username === 'plumehtx', 'authoritative save should keep remaining users');
+}
+
 // Auth-critical deletes are blocked unless explicitly confirmed.
 {
   const blocked = filterAuthCriticalDeletes('client_portal_credentials', ['Plume'], false);
@@ -416,6 +436,19 @@ if (typeof localStorage !== 'undefined') {
   const merged = mergeClientsWorkspaceBrandFiles(remote, local, synced);
   assert(merged.length === 1, 'stale staff local should not repush deleted file');
   assert(merged[0].id === 'f1', 'remaining server file should stay');
+}
+
+// Staff explicit delete must not resurrect removed files from a stale server snapshot.
+{
+  const synced = [
+    { id: 'f1', name: 'Keep', updatedAt: 10 },
+    { id: 'f2', name: 'Removed', updatedAt: 500 },
+  ];
+  const local = [{ id: 'f1', name: 'Keep', updatedAt: 10 }];
+  const remote = [...synced];
+  const merged = mergeClientsWorkspaceBrandFiles(remote, local, synced);
+  assert(merged.length === 1, 'staff delete should not resurrect removed file');
+  assert(merged[0].id === 'f1', 'staff delete should keep remaining file');
 }
 
 // Portal delete must not be resurrected when staff sync has not changed locally.

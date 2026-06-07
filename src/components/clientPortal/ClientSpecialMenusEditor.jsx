@@ -154,17 +154,13 @@ function MenuPdfListEditor({ label, brand, items = [], onChange, disabled, onUpl
                   disabled={disabled}
                   className={`${inputClass} min-w-0 flex-1 py-1.5 text-xs`}
                 />
-                <FilePreviewActions title={item.label || item.name} dataUrl={item.dataUrl} fileName={item.name} />
-                {!disabled && (
-                  <button
-                    type="button"
-                    onClick={() => removeItem(item.id)}
-                    disabled={busy}
-                    className="text-[10px] font-medium uppercase tracking-wider text-white/40 hover:text-rose-300 disabled:opacity-50"
-                  >
-                    Remove
-                  </button>
-                )}
+                <FilePreviewActions
+                  title={item.label || item.name}
+                  dataUrl={item.dataUrl}
+                  fileName={item.name}
+                  removeLabel="Delete"
+                  onRemove={disabled ? undefined : () => removeItem(item.id)}
+                />
               </div>
               <p className="mt-1 truncate text-[10px] text-white/35">{item.name}</p>
             </li>

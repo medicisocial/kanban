@@ -1,4 +1,4 @@
-import { getOrgId, LEGACY_ORG_ID } from './orgSession';
+import { getOrgId, LEGACY_ORG_ID } from './orgSession.js';
 
 /** Namespace localStorage by org so SaaS workspaces don't share Medici browser cache. */
 export function orgScopedKey(baseKey, orgId) {

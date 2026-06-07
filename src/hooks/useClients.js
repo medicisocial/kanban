@@ -13,12 +13,15 @@ import { normalizeCustomColorPalette, normalizeHexColor } from '../utils/colorHe
 import { DEFAULT_CLIENT_BUSINESS_TYPES, normalizeBusinessType } from '../utils/eventFormSchemas';
 import { normalizeClientName, pickNextClientColor, mergeDefaultClients, clientNamesConflict, isInternalClientName } from '../utils/clients';
 import { reserveClientBrandName, releaseClientBrandName } from '../utils/clientBrandNames';
+import { ensureStaffSupabaseSession } from '../lib/staffSupabaseAuth';
+import { withTimeout } from '../utils/withTimeout';
 import {
   mergeClientSocialLogins,
   normalizeClientContacts,
   normalizeClientSocialLogins,
 } from '../utils/clientProfile';
 import { normalizeClientCompanyFiles, slimCompanyFilesForApiSave } from '../utils/clientCompanyFiles';
+import { filterDeletedCompanyFiles, recordDeletedCompanyFiles } from '../utils/brandFileTombstones';
 import { normalizeClientSpecialMenus } from '../utils/clientSpecialMenus';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
@@ -197,7 +200,20 @@ export function useClients() {
       };
     }
 
-    const reserved = await reserveClientBrandName(trimmed, orgId);
+    if (SUPABASE_ENABLED) {
+      await ensureStaffSupabaseSession();
+    }
+
+    let reserved;
+    try {
+      reserved = await withTimeout(
+        reserveClientBrandName(trimmed, orgId),
+        20000,
+        'Could not verify client name availability. Check your connection and try again.',
+      );
+    } catch (error) {
+      return { ok: false, error: error?.message || 'Could not verify client name availability.' };
+    }
     if (!reserved.ok) {
       return reserved;
     }
@@ -483,9 +499,12 @@ export function useClients() {
 
   const getClientCompanyFiles = useCallback(
     (client) =>
-      normalizeClientCompanyFiles(
-        state.companyFiles?.[client],
-        normalizeBusinessType(state.businessTypes?.[client] || ''),
+      filterDeletedCompanyFiles(
+        client,
+        normalizeClientCompanyFiles(
+          state.companyFiles?.[client],
+          normalizeBusinessType(state.businessTypes?.[client] || ''),
+        ),
       ),
     [state.companyFiles, state.businessTypes],
   );
@@ -495,6 +514,10 @@ export function useClients() {
       if (!client) return { ok: false, error: 'Missing client.' };
 
       const businessType = normalizeBusinessType(stateRef.current.businessTypes?.[client] || '');
+      const prevFiles = normalizeClientCompanyFiles(
+        stateRef.current.companyFiles?.[client],
+        businessType,
+      );
       const normalized = normalizeClientCompanyFiles(files, businessType);
       const payload = slimCompanyFilesForApiSave(normalized, businessType);
 
@@ -502,6 +525,8 @@ export function useClients() {
         const apiResult = await saveStaffBrandAssets({ brand: client, companyFiles: payload });
         if (!apiResult.ok) return apiResult;
       }
+
+      recordDeletedCompanyFiles(client, prevFiles, normalized);
 
       return applyClientsWorkspaceUpdate((prev) => ({
         ...prev,

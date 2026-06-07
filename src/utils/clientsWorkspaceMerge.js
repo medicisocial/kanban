@@ -392,6 +392,27 @@ export function mergeClientsWorkspaceBrandFiles(
         : mergeList(syncedList, remoteList);
   }
 
+  const localIds = new Set(localList.filter((entry) => entry?.id).map((entry) => String(entry.id)));
+  const syncedIds = new Set(
+    syncedList.filter((entry) => entry?.id).map((entry) => String(entry.id)),
+  );
+  const removedLocally = [...syncedIds].filter((id) => !localIds.has(id));
+
+  // Staff/portal explicit delete — never resurrect removed ids from a stale server row.
+  if (removedLocally.length > 0) {
+    const byId = new Map(
+      localList.filter((entry) => entry?.id).map((entry) => [String(entry.id), entry]),
+    );
+    const removedSet = new Set(removedLocally);
+    for (const entry of remoteList) {
+      if (!entry?.id) continue;
+      const id = String(entry.id);
+      if (removedSet.has(id) || byId.has(id)) continue;
+      if (!syncedIds.has(id)) byId.set(id, entry);
+    }
+    return [...byId.values()].sort((a, b) => recordUpdatedAt(b) - recordUpdatedAt(a));
+  }
+
   const byId = new Map();
   for (const entry of localList) {
     if (entry?.id) byId.set(String(entry.id), entry);
