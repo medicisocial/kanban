@@ -265,6 +265,36 @@ export function mergeBrandContactsMap(storedMap = {}, incomingMap = {}) {
 }
 
 /** Keep stored logos when a stale push omits them or sends an empty value. */
+function logoIsStorageBacked(logo) {
+  const src = typeof logo === 'string' ? logo : logo?.src;
+  return /^https?:\/\//i.test(String(src || ''));
+}
+
+function logoUpdatedAt(logo) {
+  const ts = Number(logo?.updatedAt);
+  return Number.isFinite(ts) ? ts : 0;
+}
+
+/**
+ * Choose between a stored and incoming logo. Newest (by updatedAt) wins; on a tie
+ * or when neither is stamped, the storage-URL logo beats an inline base64 one so a
+ * stale tab can never re-inflate the workspace row with a giant data URL.
+ */
+function pickPreferredLogo(stored, incoming) {
+  if (!logoHasContent(incoming)) return stored;
+  if (!logoHasContent(stored)) return incoming;
+
+  const incomingTs = logoUpdatedAt(incoming);
+  const storedTs = logoUpdatedAt(stored);
+  if (incomingTs !== storedTs) return incomingTs > storedTs ? incoming : stored;
+
+  const incomingStorage = logoIsStorageBacked(incoming);
+  const storedStorage = logoIsStorageBacked(stored);
+  if (incomingStorage !== storedStorage) return incomingStorage ? incoming : stored;
+
+  return incoming;
+}
+
 export function mergeBrandLogoMap(stored = {}, incoming = {}) {
   const base = stored && typeof stored === 'object' ? { ...stored } : {};
   const inc = incoming && typeof incoming === 'object' ? incoming : {};
@@ -276,7 +306,7 @@ export function mergeBrandLogoMap(stored = {}, incoming = {}) {
       }
       continue;
     }
-    base[brand] = logo;
+    base[brand] = pickPreferredLogo(base[brand], logo);
   }
 
   return base;

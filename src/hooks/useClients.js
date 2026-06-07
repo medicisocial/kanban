@@ -27,6 +27,7 @@ import {
 import { normalizeClientCompanyFiles, slimCompanyFilesForApiSave } from '../utils/clientCompanyFiles';
 import { filterDeletedCompanyFiles, recordDeletedCompanyFiles } from '../utils/brandFileTombstones';
 import { normalizeClientSpecialMenus } from '../utils/clientSpecialMenus';
+import { persistClientLogoToStorage } from '../utils/clientLogo';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useSingletonSync } from '../lib/useSingletonSync';
@@ -226,13 +227,16 @@ export function useClients() {
       restoredNames: { ...(prevState.restoredNames || {}), [restoredKey]: Date.now() },
     });
 
+    // Push the logo image to storage up front so it never lands in the workspace blob as base64.
+    const storedLogo = logo ? await persistClientLogoToStorage(trimmed, logo) : null;
+
     if (SUPABASE_ENABLED) {
       const nextColor =
         normalizeHexColor(color) || pickNextClientColor(state.colors, CLIENT_COLOR_PALETTE);
       const apiResult = await addClientThroughApi({
         displayName: trimmed,
         color: nextColor,
-        logo,
+        logo: storedLogo,
         businessType,
         orgId,
       });
@@ -284,7 +288,7 @@ export function useClients() {
         restoredNames: { ...(prev.restoredNames || {}), [restoredKey]: Date.now() },
         names: [...prev.names, trimmed],
         colors: { ...prev.colors, [trimmed]: nextColor },
-        logos: logo ? { ...prev.logos, [trimmed]: logo } : { ...prev.logos },
+        logos: storedLogo ? { ...prev.logos, [trimmed]: storedLogo } : { ...prev.logos },
         accountManagers: { ...prev.accountManagers },
         businessTypes: nextBusinessTypes,
         contacts: { ...(prev.contacts || {}) },
@@ -414,10 +418,11 @@ export function useClients() {
 
   const setClientLogo = useCallback(async (client, logo) => {
     if (!client) return { ok: false, error: 'Missing client.' };
+    const storedLogo = logo ? await persistClientLogoToStorage(client, logo) : null;
     return applyClientsWorkspaceUpdate((prev) => {
       const nextLogos = { ...prev.logos };
-      if (logo) {
-        nextLogos[client] = logo;
+      if (storedLogo) {
+        nextLogos[client] = storedLogo;
       } else {
         delete nextLogos[client];
       }
@@ -440,6 +445,8 @@ export function useClients() {
     if (!client) return { ok: false, error: 'Missing client.' };
 
     const { color, businessType, logo, photoGalleryLink } = patch;
+    const storedLogo =
+      logo === undefined ? undefined : logo ? await persistClientLogoToStorage(client, logo) : null;
     return applyClientsWorkspaceUpdate((prev) => {
       const next = { ...prev };
       if (color) {
@@ -454,9 +461,9 @@ export function useClients() {
           [client]: normalizeBusinessType(businessType),
         };
       }
-      if (logo !== undefined) {
+      if (storedLogo !== undefined) {
         const nextLogos = { ...prev.logos };
-        if (logo) nextLogos[client] = logo;
+        if (storedLogo) nextLogos[client] = storedLogo;
         else delete nextLogos[client];
         next.logos = nextLogos;
       }

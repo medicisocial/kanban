@@ -30,6 +30,7 @@ import {
   mergeClientNameTombstones,
   suppressedClientNameKeys,
   stripSuppressedClientNames,
+  mergeBrandLogoMap,
 } from '../src/utils/clientsWorkspaceMerge.js';
 import { isTestClientName } from '../src/utils/clients.js';
 import {
@@ -817,6 +818,41 @@ if (typeof localStorage !== 'undefined') {
   const old = Date.now() - 200 * 24 * 60 * 60 * 1000;
   const keys = suppressedClientNameKeys({ removedNames: { casalu: old } });
   assert(!keys.has('casalu'), 'expired tombstone should no longer suppress');
+}
+
+// A stale base64 logo push must never overwrite a storage-backed (URL) logo.
+// This is what keeps the workspace row from re-inflating to >1MB after the
+// logo-to-storage migration.
+{
+  const stored = {
+    Plume: { src: 'https://cdn.example.com/medici/plume/logos/abc.png', storagePath: 'medici/plume/logos/abc.png', updatedAt: 2000 },
+  };
+  const incoming = { Plume: { src: 'data:image/png;base64,AAAA', updatedAt: 0 } };
+  const merged = mergeBrandLogoMap(stored, incoming);
+  assert(merged.Plume.src.startsWith('https://'), 'storage-backed logo should beat a stale base64 push');
+}
+
+// A genuinely newer logo (higher updatedAt) wins even over a storage URL.
+{
+  const stored = { Plume: { src: 'https://cdn.example.com/old.png', updatedAt: 1000 } };
+  const incoming = { Plume: { src: 'https://cdn.example.com/new.png', updatedAt: 5000 } };
+  const merged = mergeBrandLogoMap(stored, incoming);
+  assert(merged.Plume.src.endsWith('new.png'), 'newest logo (by updatedAt) should win');
+}
+
+// New storage logo (with timestamp) wins over an undated legacy base64.
+{
+  const stored = { Plume: { src: 'data:image/png;base64,LEGACY' } };
+  const incoming = { Plume: { src: 'https://cdn.example.com/fresh.png', updatedAt: Date.now() } };
+  const merged = mergeBrandLogoMap(stored, incoming);
+  assert(merged.Plume.src.startsWith('https://'), 'fresh storage logo should replace legacy base64');
+}
+
+// An empty incoming logo still never wipes a stored one (existing guard intact).
+{
+  const stored = { Plume: { src: 'https://cdn.example.com/keep.png', updatedAt: 10 } };
+  const merged = mergeBrandLogoMap(stored, { Plume: null });
+  assert(merged.Plume?.src?.endsWith('keep.png'), 'empty incoming logo must not wipe a stored logo');
 }
 
 console.log('Sync merge tests passed.');
