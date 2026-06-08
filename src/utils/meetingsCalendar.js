@@ -1,6 +1,12 @@
 import { addDays, addMonths, parseDateKey, toDateKey } from './calendar';
+import { clientNamesConflict } from './clients';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+function meetingMatchesClient(meeting, client) {
+  if (!meeting?.client || !client) return false;
+  return clientNamesConflict(meeting.client, client);
+}
 
 export function getMeetingRecurrence(meeting) {
   return meeting?.recurrence && meeting.recurrence !== 'none' ? meeting.recurrence : 'none';
@@ -23,14 +29,14 @@ export function filterMeetings(meetings, { client } = {}) {
   return meetings.filter((meeting) => {
     if (!meeting.client && !meeting.prospectName) return true;
     if (meeting.prospectName) return false;
-    return meeting.client === client;
+    return meetingMatchesClient(meeting, client);
   });
 }
 
 /** Client portal — only meetings tagged to this brand (excludes internal team meetings). */
 export function filterClientBrandMeetings(meetings, client) {
   if (!Array.isArray(meetings) || !client) return [];
-  return meetings.filter((meeting) => meeting.client === client);
+  return meetings.filter((meeting) => meetingMatchesClient(meeting, client));
 }
 
 function compareDateKeys(a, b) {

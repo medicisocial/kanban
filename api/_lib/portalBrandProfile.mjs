@@ -42,6 +42,27 @@ export function resolveBrandStorageKey(map, brand, names = []) {
   return trimmed;
 }
 
+export function brandKeysMatch(a, b) {
+  if (!a || !b) return false;
+  const normalize = (value) => String(value).trim().toLowerCase().replace(/\s+/g, ' ');
+  return normalize(a) === normalize(b);
+}
+
+/** Filter content rows (cards, events, meetings, ideas) to one brand — case-insensitive. */
+export function filterContentByBrand(items, brand) {
+  if (!Array.isArray(items) || !brand) return [];
+  return items.filter((item) => item?.client && brandKeysMatch(item.client, brand));
+}
+
+export function filterPlansByBrand(plans, brand) {
+  if (!plans || typeof plans !== 'object' || !brand) return {};
+  const filtered = {};
+  for (const [key, plan] of Object.entries(plans)) {
+    if (plan?.client && brandKeysMatch(plan.client, brand)) filtered[key] = plan;
+  }
+  return filtered;
+}
+
 export function resolveBrandProfileFromStore(clientStore, brand) {
   const names = Array.isArray(clientStore?.names) ? clientStore.names : [];
   const brandKey = resolveBrandStorageKey(

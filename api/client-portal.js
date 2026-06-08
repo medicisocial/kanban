@@ -23,6 +23,8 @@ import {
   fetchPortalBrandProfile,
   fetchBrandPortalUsers,
   fetchBrandContent,
+  filterContentByBrand,
+  filterPlansByBrand,
 } from './_lib/portalBrandProfile.mjs';
 import { isSupabaseConfigured } from './_lib/supabase.mjs';
 import { normalizeHexColor } from './_lib/colorHex.mjs';
@@ -80,34 +82,32 @@ async function loadBrandProfile(orgId, brand) {
  * the normalized brand_id FK. Falls back to filtering the workspace blob.
  */
 async function loadBrandContent(orgId, brand) {
-  // Try brand-scoped query first (migration 018+)
-  const scoped = await fetchBrandContent(orgId, brand);
-  if (scoped && scoped.cards) {
-    return scoped;
-  }
+  const loadFromBlob = async () => {
+    const workspace = await loadPortalWorkspace(orgId);
+    if (!workspace) return null;
 
-  // Fall back to loading + filtering the full workspace
-  const workspace = await loadPortalWorkspace(orgId);
-  if (!workspace) return null;
-
-  const data = workspace?.data || {};
-  const filterForBrand = (items, b) =>
-    Array.isArray(items) ? items.filter((item) => item?.client === b) : [];
-  const filterPlansForBrand = (plans, b) => {
-    if (!plans || typeof plans !== 'object') return {};
-    const filtered = {};
-    for (const [key, plan] of Object.entries(plans)) {
-      if (plan?.client === b) filtered[key] = plan;
-    }
-    return filtered;
+    const data = workspace?.data || {};
+    return {
+      cards: filterContentByBrand(data[STORAGE_KEY], brand).map(stripInternalCardFields),
+      ideas: filterContentByBrand(data[VIDEO_IDEAS_STORAGE_KEY] || data.video_ideas, brand),
+      plans: filterPlansByBrand(data[SHOOT_PLANS_STORAGE_KEY] || data.shoot_plans, brand),
+      events: filterContentByBrand(data[EVENTS_STORAGE_KEY] || data.events, brand),
+      meetings: filterContentByBrand(data[MEETINGS_STORAGE_KEY] || data.meetings, brand),
+    };
   };
 
+  const [scoped, blob] = await Promise.all([fetchBrandContent(orgId, brand), loadFromBlob()]);
+  if (!scoped && !blob) return null;
+  if (!scoped) return blob;
+  if (!blob) return scoped;
+
+  // Normalized tables may be partially migrated — keep blob data when a section is empty.
   return {
-    cards: filterForBrand(data[STORAGE_KEY], brand).map(stripInternalCardFields),
-    ideas: filterForBrand(data[VIDEO_IDEAS_STORAGE_KEY] || data.video_ideas, brand),
-    plans: filterPlansForBrand(data[SHOOT_PLANS_STORAGE_KEY] || data.shoot_plans, brand),
-    events: filterForBrand(data[EVENTS_STORAGE_KEY] || data.events, brand),
-    meetings: filterForBrand(data[MEETINGS_STORAGE_KEY] || data.meetings, brand),
+    cards: scoped.cards?.length ? scoped.cards : blob.cards,
+    ideas: scoped.ideas?.length ? scoped.ideas : blob.ideas,
+    plans: Object.keys(scoped.plans || {}).length ? scoped.plans : blob.plans,
+    events: scoped.events?.length ? scoped.events : blob.events,
+    meetings: scoped.meetings?.length ? scoped.meetings : blob.meetings,
   };
 }
 

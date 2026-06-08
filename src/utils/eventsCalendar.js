@@ -1,9 +1,11 @@
+import { clientNamesConflict } from './clients';
+
 export function filterEvents(events, { client } = {}) {
   if (!Array.isArray(events)) return [];
   let list = events;
 
   if (client && client !== 'all') {
-    list = list.filter((event) => event.client === client);
+    list = list.filter((event) => event?.client && clientNamesConflict(event.client, client));
   }
 
   return list;
