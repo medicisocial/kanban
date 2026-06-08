@@ -8,7 +8,6 @@ export default function CalendarWeekView({
   focusDate,
   cardsByDate,
   onCardClick,
-  onAddPost,
   onRemoveFromCalendar,
   onMoveCalendarPost,
   overviewLabel,
@@ -77,40 +76,20 @@ export default function CalendarWeekView({
                 {dayCards.length === 0 ? (
                   <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-white/10 py-6">
                     <p className="text-[10px] text-gray-600">No posts</p>
-                    {onAddPost && (
-                      <button
-                        type="button"
-                        onClick={() => onAddPost(key)}
-                        className="mt-2 rounded-md border border-white/10 px-2 py-1 text-[10px] text-gray-400 hover:bg-white/5 hover:text-white"
-                      >
-                        + Add
-                      </button>
-                    )}
                   </div>
                 ) : (
-                  <>
-                    {dayCards.map((card) => (
-                      <CalendarEvent
-                        key={`${card.id}-${key}`}
-                        card={card}
-                        onClick={onCardClick}
-                        onRemove={onRemoveFromCalendar}
-                        onMove={onMoveCalendarPost}
-                        hideClient={hideClient}
-                        clientPortal={clientPortal}
-                        relaxed
-                      />
-                    ))}
-                    {onAddPost && (
-                      <button
-                        type="button"
-                        onClick={() => onAddPost(key)}
-                        className="rounded-md border border-dashed border-white/10 py-2 text-[10px] text-gray-500 hover:bg-white/5 hover:text-gray-300"
-                      >
-                        + Add post
-                      </button>
-                    )}
-                  </>
+                  dayCards.map((card) => (
+                    <CalendarEvent
+                      key={`${card.id}-${key}`}
+                      card={card}
+                      onClick={onCardClick}
+                      onRemove={onRemoveFromCalendar}
+                      onMove={onMoveCalendarPost}
+                      hideClient={hideClient}
+                      clientPortal={clientPortal}
+                      relaxed
+                    />
+                  ))
                 )}
               </div>
             </div>

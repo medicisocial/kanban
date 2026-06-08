@@ -14,7 +14,6 @@ export default function CalendarMonthView({
   cardsByDate,
   onCardClick,
   onDayClick,
-  onAddPost,
   onSelectDate,
   selectedDateKey = '',
   onRemoveFromCalendar,
@@ -66,20 +65,21 @@ export default function CalendarMonthView({
               const selected = selectedDateKey === key;
               const visibleCards = expanded ? dayCards : dayCards.slice(0, maxVisibleCards);
               const hiddenCount = expanded ? 0 : Math.max(0, dayCards.length - maxVisibleCards);
+              const cellInteractive = Boolean(onSelectDate || onDayClick);
+              const CellTag = cellInteractive ? 'button' : 'div';
 
               return (
-                <button
+                <CellTag
                   key={key}
-                  type="button"
-                  onClick={() => {
-                    if (onSelectDate) {
-                      onSelectDate(day);
-                    } else if (onAddPost) {
-                      onAddPost(key);
-                    } else {
-                      onDayClick?.(day);
-                    }
-                  }}
+                  {...(cellInteractive ? { type: 'button' } : {})}
+                  onClick={
+                    cellInteractive
+                      ? () => {
+                          if (onSelectDate) onSelectDate(day);
+                          else onDayClick?.(day);
+                        }
+                      : undefined
+                  }
                   onDragOver={(event) => {
                     if (!onMoveCalendarPost) return;
                     event.preventDefault();
@@ -123,9 +123,6 @@ export default function CalendarMonthView({
                     {dayCards.length === 0 && markedLabel && inMonth && (
                       <p className="px-1 text-[10px] font-medium text-[#fca5a5]/80">{markedLabel}</p>
                     )}
-                    {dayCards.length === 0 && onAddPost && inMonth && !markedLabel && (
-                      <p className="px-1 text-[10px] text-gray-600">Click to add</p>
-                    )}
                     {visibleCards.map((card) => (
                       <CalendarEvent
                         key={`${card.id}-${key}`}
@@ -146,7 +143,7 @@ export default function CalendarMonthView({
                       <p className="px-1 text-[10px] text-gray-500">+{hiddenCount} more</p>
                     )}
                   </div>
-                </button>
+                </CellTag>
               );
             })}
           </div>
