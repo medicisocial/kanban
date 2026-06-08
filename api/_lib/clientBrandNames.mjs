@@ -110,6 +110,44 @@ export async function fetchClientBrandNameRow(displayName) {
   return Array.isArray(rows) ? rows[0] || null : null;
 }
 
+/** Upsert the normalized client_records row (migration 017 schema). Required before client_brand_names insert. */
+export async function upsertClientRecordOnServer(orgId, displayName, { color, logo, businessType } = {}) {
+  const display = normalizeDisplayName(displayName);
+  const brandKey = normalizeClientBrandName(display);
+  if (!orgId || !brandKey) {
+    throw new Error('Missing org or client name.');
+  }
+
+  const response = await restFetch('client_records', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify({
+      org_id: orgId,
+      brand_key: brandKey,
+      display_name: display,
+      data: {
+        colors: typeof color === 'string' && color.trim() ? color.trim() : '#9ca3af',
+        logos: logo && typeof logo === 'object' ? logo : {},
+        contacts: [],
+        socialLogins: {},
+        companyFiles: [],
+        specialMenus: [],
+        photoGalleryLink: '',
+        businessType: typeof businessType === 'string' ? businessType : '',
+        accountManager: '',
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(detail || `Could not save client record (${response.status}).`);
+  }
+}
+
 export async function releaseClientBrandNameOnServer(orgId, displayName) {
   const normalized = normalizeClientBrandName(displayName);
   if (!normalized || !orgId) {

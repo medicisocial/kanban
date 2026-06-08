@@ -7,6 +7,7 @@ import {
   normalizeClientBrandName,
   releaseClientBrandNameOnServer,
   reserveClientBrandNameOnServer,
+  upsertClientRecordOnServer,
 } from './_lib/clientBrandNames.mjs';
 
 function unauthorized(res) {
@@ -63,21 +64,6 @@ async function isAuthorized(req) {
   }
 }
 
-function resolveServerKey() {
-  return (
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY ||
-    ''
-  ).trim();
-}
-
-function getSupabaseBaseUrl() {
-  return (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '')
-    .trim()
-    .replace(/\/$/, '');
-}
-
 /**
  * Atomically reserve a brand name and persist the client on the server workspace.
  * Heals orphaned reservations when the global lock succeeded but sync dropped the name.
@@ -105,6 +91,8 @@ export default async function handler(req, res) {
     return res.status(403).json({ ok: false, error: orgCheck.error || 'Forbidden org scope.' });
   }
   const resolvedOrgId = orgCheck.orgId;
+
+  let reservedName = null;
 
   try {
     const workspace = (await fetchRecord('clients', 'workspace', resolvedOrgId)) || {};
@@ -138,13 +126,22 @@ export default async function handler(req, res) {
 
     let healed = false;
     let resolvedName = existingRow?.display_name || display;
+    const nextColor = typeof color === 'string' && color.trim() ? color.trim() : '#9ca3af';
+
+    // client_brand_names FK requires a client_records row before the name lock insert.
+    await upsertClientRecordOnServer(resolvedOrgId, resolvedName, {
+      color: nextColor,
+      logo,
+      businessType,
+    });
 
     if (!existingRow) {
       const reserved = await reserveClientBrandNameOnServer(resolvedOrgId, display);
       if (!reserved.ok) {
         return res.status(409).json(reserved);
       }
-      resolvedName = reserved.name || display;
+      reservedName = reserved.name || display;
+      resolvedName = reservedName;
     } else {
       healed = true;
     }
@@ -155,7 +152,7 @@ export default async function handler(req, res) {
       names: nextNames,
       colors: {
         ...(workspace.colors || {}),
-        [resolvedName]: typeof color === 'string' && color.trim() ? color.trim() : '#9ca3af',
+        [resolvedName]: nextColor,
       },
       logos: logo ? { ...(workspace.logos || {}), [resolvedName]: logo } : { ...(workspace.logos || {}) },
       accountManagers: { ...(workspace.accountManagers || {}) },
@@ -168,56 +165,12 @@ export default async function handler(req, res) {
       specialMenus: { ...(workspace.specialMenus || {}) },
     };
 
-    // Write to the new normalized tables (migration 018+)
-    // Legacy `clients` blob write has been removed — triggers keep it in sync during transition.
-    const apiKey = resolveServerKey();
-    const baseUrl = getSupabaseBaseUrl();
-    const brandKey = normalizeClientBrandName(resolvedName);
-
-    // Upsert brands table — fail loudly so orphaned reservations don't accumulate
-    const commonHeaders = {
-      apikey: apiKey,
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates,return=minimal',
-    };
-
-    const brandsRes = await fetch(`${baseUrl}/rest/v1/brands`, {
-      method: 'POST',
-      headers: commonHeaders,
-      body: JSON.stringify([{
-        org_id: resolvedOrgId,
-        brand_key: brandKey,
-        display_name: resolvedName,
-      }]),
+    await upsertClientRecordOnServer(resolvedOrgId, resolvedName, {
+      color: nextColor,
+      logo,
+      businessType,
     });
-    if (!brandsRes.ok) {
-      const detail = await brandsRes.text().catch(() => '');
-      console.error('[add-client] brands upsert failed:', brandsRes.status, detail);
-      await releaseClientBrandNameOnServer(resolvedOrgId, resolvedName).catch(() => {});
-      return res.status(502).json({ ok: false, error: 'Could not save client brand. Try again in a moment.' });
-    }
-
-    // Upsert client_records with typed columns
-    const recordsRes = await fetch(`${baseUrl}/rest/v1/client_records`, {
-      method: 'POST',
-      headers: commonHeaders,
-      body: JSON.stringify([{
-        org_id: resolvedOrgId,
-        brand_key: brandKey,
-        display_name: resolvedName,
-        colors: nextWorkspace.colors || {},
-        logos: nextWorkspace.logos || {},
-        business_type: businessType || '',
-        data: { contentTypeColors: {} },
-      }]),
-    });
-    if (!recordsRes.ok) {
-      const detail = await recordsRes.text().catch(() => '');
-      console.error('[add-client] client_records upsert failed:', recordsRes.status, detail);
-      await releaseClientBrandNameOnServer(resolvedOrgId, resolvedName).catch(() => {});
-      return res.status(502).json({ ok: false, error: 'Could not save client record. Try again in a moment.' });
-    }
+    await upsertRecord('clients', 'workspace', nextWorkspace, resolvedOrgId);
 
     return res.status(200).json({
       ok: true,
@@ -233,6 +186,9 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('[add-client] failed:', error?.message || error);
+    if (reservedName) {
+      await releaseClientBrandNameOnServer(resolvedOrgId, reservedName).catch(() => {});
+    }
     return res.status(500).json({
       ok: false,
       error: 'Could not add client. Try again in a moment.',
