@@ -29,6 +29,17 @@ export default function CalendarMonthView({
   const month = focusDate.getMonth();
   const weeks = getMonthWeeks(year, month);
   const [dragOverKey, setDragOverKey] = useState("");
+  const [expandedDayKeys, setExpandedDayKeys] = useState(() => new Set());
+
+  const toggleDayExpanded = (dateKey, event) => {
+    event?.stopPropagation();
+    setExpandedDayKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(dateKey)) next.delete(dateKey);
+      else next.add(dateKey);
+      return next;
+    });
+  };
 
   const handleDrop = (dateKey, event) => {
     event.preventDefault();
@@ -63,8 +74,9 @@ export default function CalendarMonthView({
               const today = isToday(day);
 
               const selected = selectedDateKey === key;
-              const visibleCards = expanded ? dayCards : dayCards.slice(0, maxVisibleCards);
-              const hiddenCount = expanded ? 0 : Math.max(0, dayCards.length - maxVisibleCards);
+              const isDayExpanded = expanded || expandedDayKeys.has(key);
+              const visibleCards = isDayExpanded ? dayCards : dayCards.slice(0, maxVisibleCards);
+              const hiddenCount = isDayExpanded ? 0 : Math.max(0, dayCards.length - maxVisibleCards);
               const cellInteractive = Boolean(onSelectDate || onDayClick);
               const CellTag = cellInteractive ? 'button' : 'div';
 
@@ -135,12 +147,41 @@ export default function CalendarMonthView({
                         compact
                         hideClient={hideClient}
                         clientPortal={clientPortal}
-                        fullTitle={expanded || clientPortal}
+                        fullTitle={isDayExpanded || clientPortal}
                         highlighted={false}
                       />
                     ))}
                     {hiddenCount > 0 && (
-                      <p className="px-1 text-[10px] text-gray-500">+{hiddenCount} more</p>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(event) => toggleDayExpanded(key, event)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            toggleDayExpanded(key, event);
+                          }
+                        }}
+                        className="block cursor-pointer px-1 text-left text-[10px] text-gray-400 transition hover:text-white"
+                      >
+                        +{hiddenCount} more
+                      </span>
+                    )}
+                    {isDayExpanded && !expanded && dayCards.length > maxVisibleCards && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(event) => toggleDayExpanded(key, event)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            toggleDayExpanded(key, event);
+                          }
+                        }}
+                        className="block cursor-pointer px-1 text-left text-[10px] text-gray-500 transition hover:text-white"
+                      >
+                        Show less
+                      </span>
                     )}
                   </div>
                 </CellTag>
