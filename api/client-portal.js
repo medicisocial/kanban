@@ -25,6 +25,8 @@ import {
   fetchBrandContent,
   filterContentByBrand,
   filterPlansByBrand,
+  resolvePortalBrandDisplayName,
+  brandKeysMatch,
 } from './_lib/portalBrandProfile.mjs';
 import { isSupabaseConfigured } from './_lib/supabase.mjs';
 import { normalizeHexColor } from './_lib/colorHex.mjs';
@@ -129,9 +131,10 @@ export default async function handler(req, res) {
   const brand = session.brand;
 
   // Load brand profile and content in parallel
-  const [profile, content] = await Promise.all([
+  const [profile, content, displayBrand] = await Promise.all([
     loadBrandProfile(session.orgId, brand),
     loadBrandContent(session.orgId, brand),
+    resolvePortalBrandDisplayName(session.orgId, brand),
   ]);
 
   if (!profile && !content) {
@@ -180,7 +183,7 @@ export default async function handler(req, res) {
 
   res.setHeader('Cache-Control', 'private, no-store, max-age=0');
   return res.status(200).json({
-    brand,
+    brand: profile?.brandKey && brandKeysMatch(profile.brandKey, brand) ? profile.brandKey : displayBrand,
     orgId: session.orgId || null,
     exportedAt: new Date().toISOString(),
     clientColor: normalizeHexColor(profile?.clientColor) || profile?.clientColor || null,

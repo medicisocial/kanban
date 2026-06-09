@@ -63,6 +63,71 @@ export function filterPlansByBrand(plans, brand) {
   return filtered;
 }
 
+/** Map portal credential key (e.g. "arco fit") to workspace display name ("Arco Fit"). */
+export function resolvePortalBrandDisplayNameFromStore(sessionBrand, clientStore = {}) {
+  if (!sessionBrand) return '';
+
+  const names = Array.isArray(clientStore?.names) ? clientStore.names : [];
+  const brandKey = resolveBrandStorageKey(
+    clientStore?.colors || clientStore?.logos || clientStore?.photoGalleryLinks || {},
+    sessionBrand,
+    names,
+  );
+
+  if (brandKey && brandKeysMatch(brandKey, sessionBrand)) {
+    const fromNames = names.find((name) => brandKeysMatch(name, brandKey));
+    if (fromNames) return String(fromNames).trim();
+    return brandKey;
+  }
+
+  for (const name of names) {
+    if (brandKeysMatch(name, sessionBrand)) return String(name).trim();
+  }
+
+  return String(sessionBrand).trim();
+}
+
+export async function resolvePortalBrandDisplayName(orgId, sessionBrand) {
+  if (!sessionBrand) return '';
+
+  const normalized = String(sessionBrand).trim().toLowerCase().replace(/\s+/g, ' ');
+  const url = getSupabaseUrl();
+  const key = resolveAuthReadKey();
+
+  if (url && key && orgId && normalized) {
+    try {
+      const response = await fetchWithTimeout(
+        `${url}/rest/v1/client_brand_names?name_normalized=eq.${encodeURIComponent(normalized)}&org_id=eq.${encodeURIComponent(orgId)}&select=display_name&limit=1`,
+        {
+          headers: {
+            apikey: key,
+            Authorization: `Bearer ${key}`,
+          },
+        },
+      );
+      if (response.ok) {
+        const rows = await response.json();
+        const displayName = rows?.[0]?.display_name;
+        if (displayName && brandKeysMatch(displayName, sessionBrand)) {
+          return String(displayName).trim();
+        }
+      }
+    } catch (error) {
+      console.warn('[portal-brand-profile] display name lookup failed:', error?.message || error);
+    }
+  }
+
+  try {
+    const { loadPortalWorkspace, CLIENTS_STORAGE_KEY } = await import('./portalWorkspace.mjs');
+    const workspace = await loadPortalWorkspace(orgId);
+    const clientStore = workspace?.data?.[CLIENTS_STORAGE_KEY] || {};
+    return resolvePortalBrandDisplayNameFromStore(sessionBrand, clientStore);
+  } catch (error) {
+    console.warn('[portal-brand-profile] workspace display name fallback failed:', error?.message || error);
+    return String(sessionBrand).trim();
+  }
+}
+
 export function resolveBrandProfileFromStore(clientStore, brand) {
   const names = Array.isArray(clientStore?.names) ? clientStore.names : [];
   const brandKey = resolveBrandStorageKey(

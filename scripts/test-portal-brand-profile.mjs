@@ -6,6 +6,7 @@ import {
   resolveBrandProfileFromStore,
   brandKeysMatch,
   filterContentByBrand,
+  resolvePortalBrandDisplayNameFromStore,
 } from '../api/_lib/portalBrandProfile.mjs';
 
 function assert(condition, message) {
@@ -44,6 +45,19 @@ assert(
   'filterContentByBrand is case-insensitive',
 );
 assert(filterContentByBrand(meetings, 'PLUME')[0].client === 'Plume', 'filterContentByBrand preserves stored client name');
+
+const arcoStore = {
+  names: ['Arco Fit', 'Plume'],
+  colors: { 'Arco Fit': '#3b82f6', Plume: '#22c55e' },
+};
+assert(
+  resolvePortalBrandDisplayNameFromStore('arco fit', arcoStore) === 'Arco Fit',
+  'credential key resolves to workspace display name',
+);
+assert(
+  resolvePortalBrandDisplayNameFromStore('plume', arcoStore) === 'Plume',
+  'lowercase credential key resolves to display name',
+);
 
 import { clientMatchesBrand } from '../src/utils/clients.js';
 

@@ -6,8 +6,10 @@ import {
 import {
   canUseSupabaseForAuth,
   fetchClientPortalCredentialsRows,
+  fetchRecord,
   isSupabaseAuthMisconfigured,
 } from './_lib/supabase.mjs';
+import { resolvePortalBrandDisplayNameFromStore } from './_lib/portalBrandProfile.mjs';
 import { repairPortalCredentialFromVault } from './_lib/authCriticalSync.mjs';
 import { checkRateLimit, rateLimitKeyFromRequest } from './_lib/rateLimit.mjs';
 import {
@@ -85,7 +87,14 @@ export default async function handler(req, res) {
 
     const orgId = result.orgId || 'medici';
     const session = createClientSession(result.brand, result.user.username || username, orgId);
-    return ok(res, { session, brand: result.brand });
+    let displayBrand = result.brand;
+    try {
+      const workspace = (await fetchRecord('clients', 'workspace', orgId)) || {};
+      displayBrand = resolvePortalBrandDisplayNameFromStore(result.brand, workspace);
+    } catch (error) {
+      console.warn('[client-auth] display brand resolve failed:', error?.message || error);
+    }
+    return ok(res, { session, brand: displayBrand });
   } catch (error) {
     console.error('[client-auth] failed:', error?.message || error);
     return serverError(res, 'Could not sign in. Try again in a moment.');
