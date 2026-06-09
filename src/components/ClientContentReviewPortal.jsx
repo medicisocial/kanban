@@ -30,6 +30,8 @@ export default function ClientContentReviewPortal({
   const [respondedIds, setRespondedIds] = useState([]);
   const [copied, setCopied] = useState(false);
 
+  const [actionError, setActionError] = useState('');
+
   useEffect(() => {
     if (useCloudSync) {
       const pending = stripInternalCardsForClientPortal(cards).filter(
@@ -61,13 +63,13 @@ export default function ClientContentReviewPortal({
     (c) => clientMatchesBrand(c.client, client) && c.columnId === 'in-review',
   );
 
-  const recordResponse = (response) => {
+  const recordResponse = async (response) => {
     setSessionResponses((prev) => [
       ...prev.filter((r) => r.cardId !== response.cardId),
       response,
     ]);
     if (useCloudSync && onCloudQueueResponse) {
-      onCloudQueueResponse(response);
+      await onCloudQueueResponse(response);
       return;
     }
     if (!canSyncLocally) {
@@ -79,7 +81,7 @@ export default function ClientContentReviewPortal({
     setRespondedIds((prev) => (prev.includes(cardId) ? prev : [...prev, cardId]));
   };
 
-  const handleApprove = (cardId, comment) => {
+  const handleApprove = async (cardId, comment) => {
     const card = localCards.find((c) => c.id === cardId);
     if (!card) return;
 
@@ -92,18 +94,24 @@ export default function ClientContentReviewPortal({
       timestamp: Date.now(),
     };
 
+    setActionError('');
     markResponded(cardId);
-    recordResponse(response);
-    if (canSyncLocally) onApprove(cardId, comment, card);
+    try {
+      await recordResponse(response);
+      if (canSyncLocally) onApprove(cardId, comment, card);
 
-    setLocalCards((prev) => {
-      const next = prev.filter((c) => c.id !== cardId);
-      if (next.length === 0) setDone(true);
-      return next;
-    });
+      setLocalCards((prev) => {
+        const next = prev.filter((c) => c.id !== cardId);
+        if (next.length === 0) setDone(true);
+        return next;
+      });
+    } catch (err) {
+      setRespondedIds((prev) => prev.filter((id) => id !== cardId));
+      setActionError(err.message || 'Could not save your approval. Please try again.');
+    }
   };
 
-  const handleDeny = (cardId, comment) => {
+  const handleDeny = async (cardId, comment) => {
     const card = localCards.find((c) => c.id === cardId);
     if (!card) return;
 
@@ -119,15 +127,21 @@ export default function ClientContentReviewPortal({
       timestamp: Date.now(),
     };
 
+    setActionError('');
     markResponded(cardId);
-    recordResponse(response);
-    if (canSyncLocally) onDeny(cardId, comment, card);
+    try {
+      await recordResponse(response);
+      if (canSyncLocally) onDeny(cardId, comment, card);
 
-    setLocalCards((prev) => {
-      const next = prev.filter((c) => c.id !== cardId);
-      if (next.length === 0) setDone(true);
-      return next;
-    });
+      setLocalCards((prev) => {
+        const next = prev.filter((c) => c.id !== cardId);
+        if (next.length === 0) setDone(true);
+        return next;
+      });
+    } catch (err) {
+      setRespondedIds((prev) => prev.filter((id) => id !== cardId));
+      setActionError(err.message || 'Could not save your response. Please try again.');
+    }
   };
 
   const copyImportLink = async () => {
@@ -150,6 +164,12 @@ export default function ClientContentReviewPortal({
           title="Content review"
           description="Content awaiting your approval before scheduling. Approve when ready, or submit revision notes for your production team."
         />
+
+        {actionError && (
+          <p className="mb-4 border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-200/90">
+            {actionError}
+          </p>
+        )}
 
         {done ? (
           <div className={`${surfacePanelClass} px-6 py-16 text-center`}>
@@ -174,6 +194,12 @@ export default function ClientContentReviewPortal({
 
   return (
     <SharePortalShell title="Content review" client={client} clientColor={clientColor}>
+      {actionError && (
+        <p className="mb-4 border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-200/90">
+          {actionError}
+        </p>
+      )}
+
       {!done ? (
         <>
           <p className="mb-6 text-sm text-white/45">

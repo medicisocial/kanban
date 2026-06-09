@@ -14,6 +14,7 @@ import {
   buildCalendarNoteDeleteUpdates,
   isPortalContentCalendarCard,
 } from './_lib/calendarNote.mjs';
+import { handleClientPortalResponse } from './_lib/clientPortalResponses.mjs';
 import {
   canUseSupabaseForAuth,
   fetchCollection,
@@ -125,13 +126,26 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    // ── POST: client set password (initial password creation) ─────────
     const session = getClientSessionFromRequest(req);
     if (!isClientSessionValid(session)) return unauthorized(res);
     if (!isSupabaseConfigured()) return unavailable(res);
 
+    const body = req.body || {};
+
+    if (body.type) {
+      try {
+        const payload = body.response ?? body.profile ?? body;
+        const result = await handleClientPortalResponse(session, body.type, payload);
+        return res.status(200).json({ ok: true, ...result });
+      } catch (error) {
+        console.error('[client-responses] POST portal response failed:', error?.message || error);
+        return res.status(400).json({ error: error?.message || 'Could not save your response.' });
+      }
+    }
+
+    // ── POST: client set password (initial password creation) ─────────
     const { brand, orgId, username } = session;
-    const newPassword = String(req.body?.password || '').trim();
+    const newPassword = String(body.password || '').trim();
     if (!newPassword || newPassword.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters.' });
     }
