@@ -45,4 +45,9 @@ assert(
 );
 assert(filterContentByBrand(meetings, 'PLUME')[0].client === 'Plume', 'filterContentByBrand preserves stored client name');
 
+import { clientMatchesBrand } from '../src/utils/clients.js';
+
+assert(clientMatchesBrand('Arco Fit', 'arco fit'), 'portal brand matches display client name');
+assert(!clientMatchesBrand('Plume', 'Arco Fit'), 'different clients do not match');
+
 console.log('Portal brand profile helper tests passed.');

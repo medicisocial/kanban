@@ -1,4 +1,5 @@
 import { hasStoryRecurrence, getContentCalendarCards } from './calendar';
+import { clientMatchesBrand } from './clients';
 import { encodeSharePayload, decodeSharePayload } from './sharePayload';
 
 export function getCalendarPortalClient() {
@@ -98,7 +99,7 @@ export function snapshotCalendarCard(card) {
 }
 
 export function buildCalendarShareUrl(client, cards) {
-  const clientCards = getContentCalendarCards(cards).filter((c) => c.client === client);
+  const clientCards = getContentCalendarCards(cards).filter((c) => clientMatchesBrand(c.client, client));
   const payload = encodeSharePayload({
     v: 2,
     i: clientCards.map(compactCalendarCard),
@@ -108,14 +109,14 @@ export function buildCalendarShareUrl(client, cards) {
 }
 
 export function mergePortalCalendarCards(storedCards, client, snapshot) {
-  const stored = getContentCalendarCards(storedCards).filter((c) => c.client === client);
+  const stored = getContentCalendarCards(storedCards).filter((c) => clientMatchesBrand(c.client, client));
 
   if (!snapshot?.cards?.length) return stored;
 
   const byId = new Map(stored.map((c) => [c.id, c]));
   for (const item of snapshot.cards) {
     if (
-      item.client === client &&
+      clientMatchesBrand(item.client, client) &&
       (item.dueDate || hasStoryRecurrence(item)) &&
       !byId.has(item.id)
     ) {

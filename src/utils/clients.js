@@ -51,6 +51,12 @@ export function clientNamesConflict(a, b) {
   return clientBrandNameKey(a) === clientBrandNameKey(b);
 }
 
+/** Case-insensitive brand match for portal session keys vs card/idea client names. */
+export function clientMatchesBrand(itemClient, brand) {
+  if (!itemClient || !brand) return false;
+  return clientNamesConflict(itemClient, brand);
+}
+
 export function mergeDefaultClients(names, defaults) {
   const merged = [...names];
   for (const client of defaults) {

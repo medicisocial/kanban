@@ -1,4 +1,5 @@
 import { getLogoSrc } from './clientLogo';
+import { clientMatchesBrand } from './clients';
 
 function hasSocialLogins(socialLogins) {
   if (!socialLogins || typeof socialLogins !== 'object') return false;
@@ -17,10 +18,10 @@ export function buildClientPortalTasks({
   clientLogo = '',
 }) {
   const pendingIdeas = ideas.filter(
-    (idea) => idea.client === brand && idea.status === 'pending',
+    (idea) => clientMatchesBrand(idea.client, brand) && idea.status === 'pending',
   );
   const reviewCards = cards.filter(
-    (card) => card.client === brand && card.columnId === 'in-review',
+    (card) => clientMatchesBrand(card.client, brand) && card.columnId === 'in-review',
   );
 
   const setupTasks = [];

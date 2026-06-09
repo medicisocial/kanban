@@ -7,6 +7,7 @@ import {
   queueContentReviewResponse,
 } from '../utils/contentReviewShare';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
+import { clientMatchesBrand } from '../utils/clients';
 import ContentReviewCard from './ContentReviewCard';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import ClientTasksTable from './clientPortal/ClientTasksTable';
@@ -33,7 +34,7 @@ export default function ClientContentReviewPortal({
     if (useCloudSync) {
       const pending = stripInternalCardsForClientPortal(cards).filter(
         (card) =>
-          card.client === client &&
+          clientMatchesBrand(card.client, client) &&
           card.columnId === 'in-review' &&
           !respondedIds.includes(card.id),
       );
@@ -57,7 +58,7 @@ export default function ClientContentReviewPortal({
   const clientColor = getClientColor(client);
   const clientLogo = getClientLogo(client);
   const canSyncLocally = !useCloudSync && cards.some(
-    (c) => c.client === client && c.columnId === 'in-review',
+    (c) => clientMatchesBrand(c.client, client) && c.columnId === 'in-review',
   );
 
   const recordResponse = (response) => {

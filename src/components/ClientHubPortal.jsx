@@ -13,6 +13,7 @@ import ClientUnifiedCalendarsPortal from './ClientUnifiedCalendarsPortal';
 import ClientPortalLayout from './clientPortal/ClientPortalLayout';
 import ClientPortalNotificationsPanel from './clientPortal/ClientPortalNotificationsPanel';
 import { filterEvents } from '../utils/eventsCalendar';
+import { clientMatchesBrand } from '../utils/clients';
 import { createEvent, createMeeting } from '../constants';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import { buildClientPortalTasks } from '../utils/clientPortalTasks';
@@ -67,9 +68,9 @@ export default function ClientHubPortal({ onSignOut }) {
   const meetings = useMemo(() => portalData?.meetings || [], [portalData?.meetings]);
 
   const notificationCount = useMemo(() => {
-    const pendingIdeas = ideas.filter((idea) => idea.client === brand && idea.status === 'pending').length;
+    const pendingIdeas = ideas.filter((idea) => clientMatchesBrand(idea.client, brand) && idea.status === 'pending').length;
     const pendingReview = cards.filter(
-      (card) => card.client === brand && card.columnId === 'in-review',
+      (card) => clientMatchesBrand(card.client, brand) && card.columnId === 'in-review',
     ).length;
     const setup = buildClientPortalTasks({
       brand,
@@ -91,9 +92,9 @@ export default function ClientHubPortal({ onSignOut }) {
       socialLogins: profileSocialLogins,
       clientLogo,
     });
-    const pendingIdeas = ideas.filter((idea) => idea.client === brand && idea.status === 'pending').length;
+    const pendingIdeas = ideas.filter((idea) => clientMatchesBrand(idea.client, brand) && idea.status === 'pending').length;
     const pendingReview = cards.filter(
-      (card) => card.client === brand && card.columnId === 'in-review',
+      (card) => clientMatchesBrand(card.client, brand) && card.columnId === 'in-review',
     ).length;
     const badges = {};
     const homeCount = tasks.actionItems.length + tasks.setupCount;

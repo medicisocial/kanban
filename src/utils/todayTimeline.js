@@ -1,4 +1,5 @@
 import { toDateKey } from './calendar';
+import { clientMatchesBrand } from './clients';
 import {
   filterMeetings,
   expandMeetingsForRange,
@@ -47,7 +48,7 @@ function buildTodayShootItems({
 }) {
   let shootCards = getShootCards(cards);
   if (clientFilter !== 'all') {
-    shootCards = shootCards.filter((card) => card.client === clientFilter);
+    shootCards = shootCards.filter((card) => clientMatchesBrand(card.client, clientFilter));
   }
 
   const todayCards = getCardsForShootDate(shootCards, today);
@@ -66,7 +67,7 @@ function buildTodayShootItems({
   const items = [];
 
   for (const group of groups) {
-    if (clientFilter !== 'all' && group.client !== clientFilter) continue;
+    if (clientFilter !== 'all' && !clientMatchesBrand(group.client, clientFilter)) continue;
 
     const scopedCards = group.cards.filter((card) =>
       cardMatchesScope(card, personalScope, staffName, clientAccountManagers),

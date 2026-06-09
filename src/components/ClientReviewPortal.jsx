@@ -11,6 +11,7 @@ import ClientIdeasTable from './clientPortal/ClientIdeasTable';
 import VideoIdeaQuickAdd from './VideoIdeaQuickAdd';
 import SharePortalShell from './clientPortal/SharePortalShell';
 import { btnPrimaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import { clientMatchesBrand } from '../utils/clients';
 
 export default function ClientReviewPortal({
   client,
@@ -33,10 +34,10 @@ export default function ClientReviewPortal({
 
   const clientColor = getClientColor(client);
   const clientLogo = getClientLogo(client);
-  const canSyncLocally = !useCloudSync && ideas.some((i) => i.client === client);
+  const canSyncLocally = !useCloudSync && ideas.some((i) => clientMatchesBrand(i.client, client));
 
   const brandIdeas = useMemo(
-    () => ideas.filter((idea) => idea.client === client),
+    () => ideas.filter((idea) => clientMatchesBrand(idea.client, client)),
     [ideas, client],
   );
 

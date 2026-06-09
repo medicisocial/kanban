@@ -13,6 +13,7 @@ import {
   formatRecurrenceDays,
   hasStoryRecurrence,
 } from '../utils/calendar';
+import { clientMatchesBrand } from '../utils/clients';
 import { parseCalendarShareHash, mergePortalCalendarCards } from '../utils/calendarShare';
 import CalendarWeekView from './CalendarWeekView';
 import CalendarMonthView from './CalendarMonthView';
@@ -202,7 +203,9 @@ export default function ClientCalendarPortal({
   const visibleCards = useMemo(() => {
     const snapshot = parseCalendarShareHash();
     const calendarCards = stripInternalCardsForClientPortal(getContentCalendarCards(cards));
-    return mergePortalCalendarCards(calendarCards, client, snapshot).filter((c) => c.client === client);
+    return mergePortalCalendarCards(calendarCards, client, snapshot).filter((c) =>
+      clientMatchesBrand(c.client, client),
+    );
   }, [cards, client]);
 
   const clientColor = getClientColor(client);

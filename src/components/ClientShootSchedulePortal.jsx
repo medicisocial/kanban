@@ -1,5 +1,6 @@
 import { getContentTypeStyle } from '../constants';
 import { getClientShootCards, stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
+import { clientMatchesBrand } from '../utils/clients';
 import { formatTime } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import ShootLocationLink from './ShootLocationLink';
@@ -41,7 +42,7 @@ export default function ClientShootSchedulePortal({
               year: 'numeric',
             });
             const plan = Object.values(plans || {}).find(
-              (entry) => entry?.client === client && entry?.dateKey === dateKey,
+              (entry) => clientMatchesBrand(entry?.client, client) && entry?.dateKey === dateKey,
             );
 
             return (

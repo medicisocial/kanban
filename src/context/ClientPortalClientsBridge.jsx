@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { ClientsContext } from './ClientsContext';
 import { useClientAuth } from './ClientAuthContext';
+import { clientMatchesBrand } from '../utils/clients';
 
 /**
  * Read-only client context for the client portal — no staff sync hooks, so portal
@@ -13,13 +14,13 @@ export function ClientPortalClientsBridge({ children }) {
     () => ({
       clients: brand ? [brand] : [],
       getClientColor: (client) => {
-        if (client === brand && portalData?.clientColor) return portalData.clientColor;
+        if (clientMatchesBrand(client, brand) && portalData?.clientColor) return portalData.clientColor;
         return '#9ca3af';
       },
-      getClientLogo: (client) => (client === brand ? (portalData?.clientLogo ?? null) : null),
-      getClientContacts: (client) => (client === brand ? (portalData?.contacts ?? []) : []),
+      getClientLogo: (client) => (clientMatchesBrand(client, brand) ? (portalData?.clientLogo ?? null) : null),
+      getClientContacts: (client) => (clientMatchesBrand(client, brand) ? (portalData?.contacts ?? []) : []),
       getClientUsers: () => [],
-      getClientSocialLogins: (client) => (client === brand ? (portalData?.socialLogins ?? {}) : {}),
+      getClientSocialLogins: (client) => (clientMatchesBrand(client, brand) ? (portalData?.socialLogins ?? {}) : {}),
       getClientBusinessType: () => portalData?.businessType ?? '',
       getClientCompanyFiles: () => portalData?.companyFiles ?? [],
       getClientSpecialMenus: () => portalData?.specialMenus ?? [],

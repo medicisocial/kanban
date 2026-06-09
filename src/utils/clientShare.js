@@ -1,3 +1,4 @@
+import { clientMatchesBrand } from './clients';
 import { encodeSharePayload, decodeSharePayload, decodeShareQueryParam } from './sharePayload';
 
 export function getClientPortalClient() {
@@ -68,14 +69,14 @@ export function buildClientShareUrl(client, pendingIdeas) {
 
 export function mergePortalIdeas(storedIdeas, client, snapshot) {
   const storedPending = storedIdeas.filter(
-    (i) => i.client === client && i.status === 'pending',
+    (i) => clientMatchesBrand(i.client, client) && i.status === 'pending',
   );
 
   if (!snapshot?.ideas?.length) return storedPending;
 
   const byId = new Map(storedPending.map((i) => [i.id, i]));
   for (const idea of snapshot.ideas) {
-    if (idea.client === client && idea.status === 'pending' && !byId.has(idea.id)) {
+    if (clientMatchesBrand(idea.client, client) && idea.status === 'pending' && !byId.has(idea.id)) {
       byId.set(idea.id, idea);
     }
   }

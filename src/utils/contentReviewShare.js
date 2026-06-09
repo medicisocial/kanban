@@ -1,4 +1,4 @@
-import { encodeSharePayload, decodeSharePayload, decodeShareQueryParam } from './sharePayload';
+import { clientMatchesBrand } from './clients';
 
 const RESPONSES_KEY = 'medici-social-content-review-responses';
 
@@ -65,14 +65,14 @@ export function buildContentReviewShareUrl(client, reviewCards) {
 
 export function mergePortalCards(storedCards, client, snapshot) {
   const stored = storedCards.filter(
-    (c) => c.client === client && c.columnId === 'in-review',
+    (c) => clientMatchesBrand(c.client, client) && c.columnId === 'in-review',
   );
 
   if (!snapshot?.cards?.length) return stored;
 
   const byId = new Map(stored.map((c) => [c.id, c]));
   for (const item of snapshot.cards) {
-    if (item.client === client && !byId.has(item.id)) {
+    if (clientMatchesBrand(item.client, client) && !byId.has(item.id)) {
       byId.set(item.id, {
         ...item,
         platform: 'Instagram',

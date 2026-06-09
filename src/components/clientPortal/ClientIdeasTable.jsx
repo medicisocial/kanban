@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState } from 'react';
+import { clientMatchesBrand } from '../../utils/clients';
 import { IDEA_STATUSES } from '../../constants';
 import ClientAvatar from '../ClientAvatar';
 import ReferenceVideoLink from './ReferenceVideoLink';
@@ -76,7 +77,7 @@ export default function ClientIdeasTable({
   };
 
   const filtered = useMemo(() => {
-    let rows = ideas.filter((idea) => idea.client === client);
+    let rows = ideas.filter((idea) => clientMatchesBrand(idea.client, client));
 
     if (statusFilter !== 'all') {
       rows = rows.filter((idea) => idea.status === statusFilter);
