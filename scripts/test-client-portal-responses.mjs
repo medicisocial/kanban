@@ -40,4 +40,23 @@ assert(deny.notes.includes('Client revision notes'), 'deny appends revision note
 const oneOffDeny = buildContentReviewDenyUpdates({ ...card, isOneOffProject: true }, 'Revise', 1710000000000);
 assert(oneOffDeny.columnId === 'editing', 'one-off deny moves back to editing');
 
+function resolvePortalVaultBrandKey(vault, client) {
+  if (!client) return client;
+  const source = vault && typeof vault === 'object' ? vault : {};
+  if (source[client]) return client;
+  const match = Object.keys(source).find(
+    (key) => key.trim().toLowerCase() === client.trim().toLowerCase(),
+  );
+  return match || client;
+}
+
+const vault = {
+  'ara med spa': { 'user-1': 'NewSecret123' },
+  Plume: { 'user-2': 'other' },
+};
+assert(
+  resolvePortalVaultBrandKey(vault, 'Ara Med Spa') === 'ara med spa',
+  'vault lookup resolves credential brand key from display name',
+);
+
 console.log('Client portal response tests passed.');

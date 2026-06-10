@@ -194,8 +194,14 @@ export function useClients() {
     recordId: 'workspace',
   });
 
+  // Debounce localStorage writes to avoid thrashing during rapid edits.
+  const persistTimerRef = useRef(null);
   useEffect(() => {
-    writeOrgScopedJson(CLIENTS_STORAGE_KEY, state);
+    clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(() => {
+      writeOrgScopedJson(CLIENTS_STORAGE_KEY, state);
+    }, 400);
+    return () => clearTimeout(persistTimerRef.current);
   }, [state]);
 
   const addClient = useCallback(async (name, color, logo = null, businessType = '') => {
@@ -485,11 +491,19 @@ export function useClients() {
   const getPortalPasswordForUser = useCallback(
     (client, userId) => {
       if (!client || !userId) return '';
-      const fromState = state.portalPasswordVault?.[client]?.[userId];
-      if (fromState) return fromState;
-      // Fall back to the local write-through cache so a just-saved password
-      // re-displays before cloud sync refreshes the in-memory vault.
-      return loadPortalPasswordVault()?.[client]?.[userId] || '';
+      const vaultKeys = new Set([client]);
+      for (const brand of Object.keys(state.portalPasswordVault || {})) {
+        if (clientNamesConflict(brand, client)) vaultKeys.add(brand);
+      }
+      for (const brand of vaultKeys) {
+        const fromState = state.portalPasswordVault?.[brand]?.[userId];
+        if (fromState) return fromState;
+      }
+      const localVault = loadPortalPasswordVault();
+      for (const brand of vaultKeys) {
+        if (localVault[brand]?.[userId]) return localVault[brand][userId];
+      }
+      return '';
     },
     [state.portalPasswordVault],
   );
@@ -552,12 +566,14 @@ export function useClients() {
     }));
   }, []);
 
-  const syncPortalPasswordVault = useCallback(async (client, draftUsers, savedUsers) => {
+  const syncPortalPasswordVault = useCallback(async (client, draftUsers, savedUsers, vaultBrandKey = client) => {
     if (!client) return { ok: true };
+
+    const brandKey = vaultBrandKey || client;
 
     return applyClientsWorkspaceUpdate((prev) => {
       const nextVault = { ...(prev.portalPasswordVault || {}) };
-      const clientVault = { ...(nextVault[client] || {}) };
+      const clientVault = { ...(nextVault[brandKey] || {}) };
 
       for (const draft of draftUsers) {
         const saved =
@@ -579,7 +595,12 @@ export function useClients() {
         }
       }
 
-      nextVault[client] = clientVault;
+      nextVault[brandKey] = clientVault;
+      for (const key of Object.keys(nextVault)) {
+        if (key !== brandKey && clientNamesConflict(key, client)) {
+          delete nextVault[key];
+        }
+      }
       savePortalPasswordVault(nextVault);
       return { ...prev, portalPasswordVault: nextVault };
     });

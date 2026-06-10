@@ -130,26 +130,49 @@ export function useClientPortalCredentials() {
         if (userId) brandVault[userId] = plain;
       }
 
-      if (canWriteDirect) {
+      const draftPayload = draftUsers.map((draft) => ({
+        id: draft.id,
+        username: draft.username,
+        password: draft.password,
+        displayName: draft.displayName,
+        avatar: draft.pendingAvatar !== undefined ? draft.pendingAvatar : draft.avatar,
+      }));
+
+      // Password changes must go through the service-role API first so the DB
+      // authorization marker is always present; direct browser upserts can be
+      // silently reverted by protect_client_portal_credentials.
+      if (hasPasswordChange) {
+        saveResult = await saveClientPortalPasswords({
+          brand: credentialBrandKey,
+          users: draftPayload,
+        });
+        if (!saveResult?.ok && canWriteDirect) {
+          saveResult = await saveClientPortalCredentialsDirect({
+            brand: credentialBrandKey,
+            users: activeUsers,
+            existingData: existingUsers,
+            brandVault,
+            allowPasswordChange: true,
+          });
+        }
+      } else if (canWriteDirect) {
         saveResult = await saveClientPortalCredentialsDirect({
           brand: credentialBrandKey,
           users: activeUsers,
           existingData: existingUsers,
           brandVault,
-          allowPasswordChange: hasPasswordChange,
+          allowPasswordChange: false,
         });
-      }
-
-      if (!saveResult?.ok) {
+        if (!saveResult?.ok) {
+          saveResult = await saveClientPortalPasswords({
+            brand: credentialBrandKey,
+            users: draftPayload,
+          });
+        }
+      } else {
         saveResult = await saveClientPortalPasswords({
           brand: credentialBrandKey,
-          users: draftUsers.map((draft) => ({
-            id: draft.id,
-            username: draft.username,
-            password: draft.password,
-            displayName: draft.displayName,
-            avatar: draft.pendingAvatar !== undefined ? draft.pendingAvatar : draft.avatar,
-          })),
+          users: draftPayload,
         });
       }
 

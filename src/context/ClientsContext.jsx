@@ -5,6 +5,7 @@ import { useTeamMembers } from '../hooks/useTeamMembers';
 import { setContentTypeColorOverrides } from '../utils/contentTypeColors';
 import { isClientHubPortal } from '../utils/clientPortalAuth';
 import { updatePortalPasswordVault } from '../utils/clientPortalPasswordVault';
+import { resolveCredentialBrandKey } from '../utils/clientPortalCredentials';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 
 export const ClientsContext = createContext(null);
@@ -19,9 +20,29 @@ export function ClientsProvider({ children }) {
       const result = await portalCredentials.setClientPortalUsers(client, draftUsers);
       if (!result?.ok) return result;
 
+      const vaultBrandKey = resolveCredentialBrandKey(portalCredentials.credentials || {}, client);
+
       // set-password API already writes credentials + vault to Supabase — only refresh local vault cache.
       if (SUPABASE_ENABLED) {
-        updatePortalPasswordVault(client, draftUsers, result.users || []);
+        updatePortalPasswordVault(client, draftUsers, result.users || [], {
+          vaultBrandKey,
+        });
+        // Sync the in-memory vault state so the password re-displays after refresh
+        // before cloud workspace blob refreshes. Otherwise getPortalPasswordForUser
+        // returns the stale in-memory value over the correct localStorage write-through.
+        const vaultResult = await clientsState.syncPortalPasswordVault(
+          client,
+          draftUsers,
+          result.users || [],
+          vaultBrandKey,
+        );
+        if (vaultResult?.ok === false) {
+          return {
+            ok: false,
+            error: vaultResult.error || 'Could not update client data.',
+            users: result.users,
+          };
+        }
         return { ...result, vaultSynced: true };
       }
 
@@ -29,6 +50,7 @@ export function ClientsProvider({ children }) {
         client,
         draftUsers,
         result.users || [],
+        vaultBrandKey,
       );
       if (vaultResult?.ok === false) {
         return {
@@ -40,7 +62,7 @@ export function ClientsProvider({ children }) {
 
       return { ...result, vaultSynced: true };
     },
-    [clientsState.syncPortalPasswordVault, portalCredentials.setClientPortalUsers],
+    [clientsState.syncPortalPasswordVault, portalCredentials.credentials, portalCredentials.setClientPortalUsers],
   );
 
   useEffect(() => {
