@@ -15,6 +15,7 @@ import { isEditorFilePickActive } from '../utils/editorPickGuard';
 import {
   companyFilesIncludeDeleted,
   filterDeletedCompanyFiles,
+  hydrateBrandFileTombstoneForBrand,
   recordDeletedCompanyFiles,
 } from '../utils/brandFileTombstones';
 import {
@@ -96,6 +97,9 @@ export function ClientAuthProvider({ children }) {
       }
 
       const activeBrand = data.brand || activeSession.brand;
+      if (Array.isArray(data.deletedCompanyFileIds)) {
+        hydrateBrandFileTombstoneForBrand(activeBrand, data.deletedCompanyFileIds);
+      }
       if (companyFilesIncludeDeleted(activeBrand, data.companyFiles)) {
         const canonical = filterDeletedCompanyFiles(activeBrand, data.companyFiles);
         void maybeHealDeletedCompanyFiles(activeSession, activeBrand, canonical);

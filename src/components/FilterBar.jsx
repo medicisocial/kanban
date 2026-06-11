@@ -4,6 +4,7 @@ import { useStaffAuth } from '../context/StaffAuthContext';
 import { syncClientPortalCredentialsToCloud } from '../utils/clientPortalAdmin';
 import { INTERNAL_TEAM_CLIENT } from '../constants';
 import { exportBackupFile, importBackupFile } from '../utils/dataBackup';
+import { isCloudSourceOfTruth } from '../lib/cloudSourceOfTruth';
 import { notifyWorkspaceReload } from '../utils/workspaceReload';
 import ClientPortalCredentialsModal from './ClientPortalCredentialsModal';
 import ClientFilterSelect from './clientPortal/ClientFilterSelect';
@@ -12,6 +13,7 @@ import { btnSecondaryClass } from './clientPortal/clientPortalUi';
 export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
   const { clients, getClientUsers, setClientPortalUsers } = useClientsContext();
   const { session } = useStaffAuth();
+  const cloudMode = isCloudSourceOfTruth();
   const [showTeamUsers, setShowTeamUsers] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [backupMessage, setBackupMessage] = useState('');
@@ -123,13 +125,15 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
             <button type="button" onClick={handleExport} className={menuItemClass}>
               Export backup
             </button>
-            <button
-              type="button"
-              onClick={() => importInputRef.current?.click()}
-              className={menuItemClass}
-            >
-              Import backup
-            </button>
+            {!cloudMode && (
+              <button
+                type="button"
+                onClick={() => importInputRef.current?.click()}
+                className={menuItemClass}
+              >
+                Import backup
+              </button>
+            )}
           </div>
         </>
       )}
@@ -148,6 +152,7 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
     handleExport,
     importInputRef,
     backupMessage,
+    cloudMode,
   };
 }
 
@@ -168,13 +173,15 @@ export default function FilterBar({ clientFilter, onClientChange }) {
         <button type="button" onClick={admin.handleExport} className={actionBtnClass}>
           Export backup
         </button>
-        <button
-          type="button"
-          onClick={() => admin.importInputRef.current?.click()}
-          className={actionBtnClass}
-        >
-          Import backup
-        </button>
+        {!isCloudSourceOfTruth() && (
+          <button
+            type="button"
+            onClick={() => admin.importInputRef.current?.click()}
+            className={actionBtnClass}
+          >
+            Import backup
+          </button>
+        )}
         {admin.backupMessage && <span className="text-xs text-emerald-300">{admin.backupMessage}</span>}
       </div>
       {admin.modals}

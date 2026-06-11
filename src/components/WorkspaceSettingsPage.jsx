@@ -39,19 +39,23 @@ export default function WorkspaceSettingsPage({ clientFilter, onClientChange }) 
         <div className={`${surfacePanelClass} p-5`}>
           <h3 className="text-sm font-semibold text-white">Data backup</h3>
           <p className="mt-1 text-sm text-white/45">
-            Export or restore your full workspace — board, clients, team, and portal data.
+            {admin.cloudMode
+              ? 'Export a snapshot of your workspace. Import is disabled — data is synced from Supabase.'
+              : 'Export or restore your full workspace — board, clients, team, and portal data.'}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" onClick={admin.handleExport} className={btnPrimaryClass}>
               Export backup
             </button>
-            <button
-              type="button"
-              onClick={() => admin.importInputRef.current?.click()}
-              className={btnSecondaryClass}
-            >
-              Import backup
-            </button>
+            {!admin.cloudMode && (
+              <button
+                type="button"
+                onClick={() => admin.importInputRef.current?.click()}
+                className={btnSecondaryClass}
+              >
+                Import backup
+              </button>
+            )}
           </div>
           {admin.backupMessage && (
             <p className="mt-3 text-sm text-emerald-300">{admin.backupMessage}</p>

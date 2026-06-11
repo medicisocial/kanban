@@ -7,6 +7,10 @@ import {
   mergeClientRecordRowsIntoWorkspace,
 } from '../utils/clientRecordsAssembly.js';
 import { pushBrandProfilePatches } from '../utils/clientRecordsCloud.js';
+import {
+  hydrateBrandFileTombstonesFromRows,
+  syncLocalTombstonesToCloudIfNeeded,
+} from '../utils/brandFileTombstones.js';
 
 /**
  * Hydrate brand profile maps from normalized client_records and push diffs to cloud.
@@ -32,6 +36,8 @@ export function useClientRecordsSync({ workspaceState, setWorkspaceState, orgRea
         hydratedRef.current = true;
         return;
       }
+      hydrateBrandFileTombstonesFromRows(rows);
+      syncLocalTombstonesToCloudIfNeeded();
       setWorkspaceState((prev) => mergeClientRecordRowsIntoWorkspace(prev, rows));
       hydratedRef.current = true;
     })();

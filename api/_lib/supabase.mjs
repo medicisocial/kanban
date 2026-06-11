@@ -312,37 +312,6 @@ export async function patchPortalPasswordVault(brand, brandVault, orgIdOverride)
   }
 }
 
-/** Patch one brand's portal password vault on the legacy clients workspace blob. */
-export async function patchClientsPortalPasswordVault(brand, brandVault, orgIdOverride) {
-  const { url, key, orgId } = getWriteConfig(orgIdOverride);
-  if (!url || !key) throw new Error('Supabase is not configured.');
-  if (!brand) throw new Error('Missing brand for portal password vault patch.');
-
-  const endpoint = `${url}/rest/v1/rpc/patch_clients_portal_password_vault`;
-  const response = await fetchWithTimeout(
-    endpoint,
-    {
-      method: 'POST',
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=minimal',
-      },
-      body: JSON.stringify({
-        p_org_id: orgId,
-        p_brand: brand,
-        p_brand_vault: brandVault && typeof brandVault === 'object' ? brandVault : {},
-      }),
-    },
-    SERVER_WRITE_TIMEOUT_MS,
-  );
-  if (!response.ok) {
-    const detail = await response.text().catch(() => '');
-    throw new Error(`Supabase portal vault patch failed: ${response.status} ${detail}`.trim());
-  }
-}
-
 /** Inserts or updates a single record (upsert on the (org_id, id) primary key). */
 export async function upsertRecord(table, id, data, orgIdOverride) {
   const { url, key, orgId } = getWriteConfig(orgIdOverride);

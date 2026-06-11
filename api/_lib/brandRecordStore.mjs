@@ -79,7 +79,7 @@ export async function fetchClientRecordRows(orgIdOverride) {
   if (!url || !key) return [];
 
   const endpoint =
-    `${url}/rest/v1/client_records?select=id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,updated_at&org_id=eq.${encodeURIComponent(orgId)}`;
+    `${url}/rest/v1/client_records?select=id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,deleted_company_file_ids,updated_at&org_id=eq.${encodeURIComponent(orgId)}`;
   const response = await fetchWithTimeout(endpoint, {
     headers: { apikey: key, Authorization: `Bearer ${key}` },
   });

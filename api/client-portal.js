@@ -126,6 +126,9 @@ export default async function handler(req, res) {
     contacts: normalizeClientContacts(profile?.contacts),
     socialLogins: normalizeClientSocialLogins(profile?.socialLogins),
     companyFiles: normalizeClientCompanyFiles(profile?.companyFiles, businessType),
+    deletedCompanyFileIds: Array.isArray(profile?.deletedCompanyFileIds)
+      ? profile.deletedCompanyFileIds.map(String)
+      : [],
     specialMenus: normalizeClientSpecialMenus(profile?.specialMenus),
     photoGalleryLink: profile?.photoGalleryLink || null,
     contentTypeColors,

@@ -15,6 +15,7 @@ import {
   VIDEO_IDEAS_STORAGE_KEY,
 } from '../constants';
 import { orgScopedKey } from '../lib/orgStorage';
+import { isCloudSourceOfTruth } from '../lib/cloudSourceOfTruth';
 
 export const BACKUP_VERSION = 1;
 
@@ -164,6 +165,11 @@ export function exportBackupFile() {
 }
 
 export function importBackupFile(file) {
+  if (isCloudSourceOfTruth()) {
+    return Promise.reject(
+      new Error('Backup import is disabled in cloud mode. Workspace data is synced from Supabase.'),
+    );
+  }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {

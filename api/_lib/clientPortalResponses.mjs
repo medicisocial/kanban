@@ -234,7 +234,21 @@ export async function handleProfilePortalResponse(orgId, sessionBrand, profile =
   }
 
   if (profile.companyFiles !== undefined) {
-    patch.companyFiles = normalizeClientCompanyFiles(profile.companyFiles, businessType);
+    const prevFiles = brandContext.profile?.companyFiles || [];
+    const nextFiles = normalizeClientCompanyFiles(profile.companyFiles, businessType);
+    patch.companyFiles = nextFiles;
+
+    const nextIds = new Set(
+      nextFiles.filter((file) => file?.id).map((file) => String(file.id)),
+    );
+    const removed = [];
+    for (const file of prevFiles) {
+      const id = String(file?.id || '');
+      if (id && !nextIds.has(id)) removed.push(id);
+    }
+    if (removed.length) {
+      patch.appendDeletedCompanyFileIds = removed;
+    }
   }
 
   if (profile.specialMenus !== undefined) {
