@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   CONTENT_TYPES,
@@ -15,7 +15,6 @@ import { hasStoryRecurrence, hasStoryDailyRange, getStoryScheduleMode, parseRecu
 import { formatScheduledDateTime, formatDate, formatTime } from '../utils';
 import { getDefaultShootEndTime, parseTimeToMinutes, getClientUpcomingShoots, sortCardsByShootTime } from '../utils/shootDay';
 import StoryRecurrencePicker from './StoryRecurrencePicker';
-import TimeInput from './TimeInput';
 import DateInput from './DateInput';
 import ClientNameInput from './ClientNameInput';
 import { btnPrimaryClass } from './clientPortal/clientPortalUi';
@@ -36,7 +35,7 @@ const CARD_TABS = [
 /** Text fields in the modal sync to cloud only when Done / close — not while typing. */
 const SAVE_ON_CLOSE = { deferCommit: true };
 
-export default function CardModal({
+function CardModal({
   card,
   cards = [],
   plans = {},
@@ -62,16 +61,19 @@ export default function CardModal({
 
   const pendingCardIdRef = useRef(null);
   const pendingUpdatesRef = useRef({});
+  const [draftDisplay, setDraftDisplay] = useState({});
 
   const queueUpdate = useCallback((patch) => {
     if (!patch || typeof patch !== 'object') return;
     pendingUpdatesRef.current = { ...pendingUpdatesRef.current, ...patch };
+    setDraftDisplay((prev) => ({ ...prev, ...patch }));
   }, []);
 
   const flushPendingUpdates = useCallback(() => {
     const updates = pendingUpdatesRef.current;
     const id = pendingCardIdRef.current;
     pendingUpdatesRef.current = {};
+    setDraftDisplay({});
     if (!id || !Object.keys(updates).length) return;
     onUpdate(id, updates, { recordUndo: false });
   }, [onUpdate]);
@@ -79,6 +81,7 @@ export default function CardModal({
   useEffect(() => {
     pendingCardIdRef.current = card?.id ?? null;
     pendingUpdatesRef.current = {};
+    setDraftDisplay({});
     beginBatch();
     return () => {
       flushPendingUpdates();
@@ -108,22 +111,24 @@ export default function CardModal({
   }, [card?.id]);
 
   const shootDayCards = useMemo(() => {
-    if (!card?.shootDate || !needsShootSchedule(card?.contentType)) return [];
+    const merged = { ...card, ...draftDisplay };
+    if (!merged?.shootDate || !needsShootSchedule(merged?.contentType)) return [];
     const filtered = cards.filter(
       (entry) =>
-        entry.client === card.client &&
-        entry.shootDate === card.shootDate &&
+        entry.client === merged.client &&
+        entry.shootDate === merged.shootDate &&
         needsShootSchedule(entry.contentType),
     );
     return sortCardsByShootTime(filtered);
-  }, [cards, card?.client, card?.shootDate, card?.contentType]);
+  }, [cards, card, draftDisplay]);
 
   const upcomingShoots = useMemo(() => {
-    if (!card?.client || !needsShootSchedule(card?.contentType)) return [];
-    return getClientUpcomingShoots(cards, plans, card.client).filter(
-      (session) => session.dateKey !== card.shootDate,
+    const merged = { ...card, ...draftDisplay };
+    if (!merged?.client || !needsShootSchedule(merged?.contentType)) return [];
+    return getClientUpcomingShoots(cards, plans, merged.client).filter(
+      (session) => session.dateKey !== merged.shootDate,
     );
-  }, [cards, plans, card?.client, card?.shootDate, card?.contentType]);
+  }, [cards, plans, card, draftDisplay]);
 
   const commitTextField = useCallback(
     (field, value) => {
@@ -135,51 +140,58 @@ export default function CardModal({
   const commitNotes = useCallback(
     (value) => {
       if (!card) return;
-      if (card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card))) {
+      const merged = { ...card, ...draftDisplay };
+      if (merged.occurrenceDate && (hasStoryRecurrence(merged) || hasStoryDailyRange(merged))) {
         queueUpdate({
           storyOccurrenceNotes: {
-            ...parseStoryOccurrenceNotes(card.storyOccurrenceNotes),
-            [card.occurrenceDate]: value,
+            ...parseStoryOccurrenceNotes(merged.storyOccurrenceNotes),
+            [merged.occurrenceDate]: value,
           },
         });
         return;
       }
       commitTextField('notes', value);
     },
-    [card, commitTextField, queueUpdate],
+    [card, draftDisplay, commitTextField, queueUpdate],
   );
 
-  const notesValue =
-    card?.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card))
-      ? parseStoryOccurrenceNotes(card.storyOccurrenceNotes)[card.occurrenceDate] ?? card.notes ?? ''
-      : card?.notes ?? '';
+  const notesValue = useMemo(() => {
+    if (!card) return '';
+    const merged = { ...card, ...draftDisplay };
+    if (merged.occurrenceDate && (hasStoryRecurrence(merged) || hasStoryDailyRange(merged))) {
+      return parseStoryOccurrenceNotes(merged.storyOccurrenceNotes)[merged.occurrenceDate] ?? merged.notes ?? '';
+    }
+    return merged.notes ?? '';
+  }, [card, draftDisplay]);
 
   const commitShootTime = useCallback(
     (value) => {
       if (!card) return;
+      const merged = { ...card, ...draftDisplay };
       const updates = { shootTime: value };
       const start = parseTimeToMinutes(value);
-      const end = parseTimeToMinutes(card.shootEndTime);
+      const end = parseTimeToMinutes(merged.shootEndTime);
       if (start != null && (end == null || end <= start)) {
-        updates.shootEndTime = getDefaultShootEndTime(value, card.contentType);
+        updates.shootEndTime = getDefaultShootEndTime(value, merged.contentType);
       }
       if (!value) updates.shootEndTime = '';
       queueUpdate(updates);
     },
-    [card, queueUpdate],
+    [card, draftDisplay, queueUpdate],
   );
 
   if (!card) return null;
 
-  const typeStyle = getContentTypeStyle(card.contentType);
-  const isOneOff = isOneOffProjectCard(card);
+  const displayCard = { ...card, ...draftDisplay };
+  const typeStyle = getContentTypeStyle(displayCard.contentType);
+  const isOneOff = isOneOffProjectCard(displayCard);
 
   const joinShootSession = (session) => {
-    onUpdate(card.id, {
+    queueUpdate({
       shootDate: session.dateKey,
       shootTime: session.shootTime || '',
       shootEndTime: session.shootEndTime || '',
-    }, { recordUndo: false });
+    });
   };
 
   const openShootCard = (entry) => {
@@ -226,7 +238,7 @@ export default function CardModal({
 
   const handleChange = (field, value) => {
     if (field === 'contentType' && value === 'One-off Project') {
-      onUpdate(card.id, {
+      queueUpdate({
         contentType: value,
         isOneOffProject: true,
         shootDate: '',
@@ -238,66 +250,66 @@ export default function CardModal({
         storyRecurrenceDays: [],
         storyEndDate: '',
         storyOccurrenceNotes: {},
-      }, { recordUndo: false });
+      });
       return;
     }
     if (field === 'contentType' && value === 'Story') {
-      onUpdate(card.id, {
+      queueUpdate({
         contentType: value,
         shootDate: '',
         shootTime: '',
         shootEndTime: '',
         shootModels: '',
         shootNeeds: '',
-      }, { recordUndo: false });
+      });
       return;
     }
     if (field === 'contentType' && value !== 'Story') {
-      onUpdate(card.id, {
+      queueUpdate({
         contentType: value,
         isOneOffProject: false,
         storyRecurrenceDays: [],
         storyEndDate: '',
         storyOccurrenceNotes: {},
-      }, { recordUndo: false });
+      });
       return;
     }
     if (field === 'client') {
-      onUpdate(card.id, {
+      queueUpdate({
         client: value,
-        accountManager: getClientAccountManager(value) || card.accountManager || '',
-      }, { recordUndo: false });
+        accountManager: getClientAccountManager(value) || displayCard.accountManager || '',
+      });
       return;
     }
-    if (field === 'notes' && card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card))) {
+    if (field === 'notes' && displayCard.occurrenceDate && (hasStoryRecurrence(displayCard) || hasStoryDailyRange(displayCard))) {
       commitNotes(value);
       return;
     }
     if (field === 'shootTime') {
       const updates = { shootTime: value };
       const start = parseTimeToMinutes(value);
-      const end = parseTimeToMinutes(card.shootEndTime);
+      const end = parseTimeToMinutes(displayCard.shootEndTime);
       if (start != null && (end == null || end <= start)) {
-        updates.shootEndTime = getDefaultShootEndTime(value, card.contentType);
+        updates.shootEndTime = getDefaultShootEndTime(value, displayCard.contentType);
       }
       if (!value) updates.shootEndTime = '';
-      onUpdate(card.id, updates, { recordUndo: false });
+      queueUpdate(updates);
       return;
     }
-    onUpdate(card.id, { [field]: value }, { recordUndo: false });
+    queueUpdate({ [field]: value });
   };
 
-  const recurrenceDays = parseRecurrenceDays(card.storyRecurrenceDays);
-  const storyRecurrenceMode = getStoryScheduleMode(card);
-  const occurrenceLabel = card.occurrenceDate
-    ? new Date(`${card.occurrenceDate}T12:00:00`).toLocaleDateString('en-US', {
+  const recurrenceDays = parseRecurrenceDays(displayCard.storyRecurrenceDays);
+  const storyRecurrenceMode = getStoryScheduleMode(displayCard);
+  const occurrenceLabel = displayCard.occurrenceDate
+    ? new Date(`${displayCard.occurrenceDate}T12:00:00`).toLocaleDateString('en-US', {
         weekday: 'long',
         month: 'short',
         day: 'numeric',
       })
     : '';
 
-  const showShootPlanning = needsShootSchedule(card.contentType) && card.shootDate;
+  const showShootPlanning = needsShootSchedule(displayCard.contentType) && displayCard.shootDate;
   const tabClass = (id) =>
     `px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider transition ${
       activeTab === id ? `${btnPrimaryClass} py-1.5` : 'text-white/45 hover:text-white'
@@ -353,7 +365,7 @@ export default function CardModal({
             <DebouncedField
               {...SAVE_ON_CLOSE}
               resetKey={card.id}
-              value={card.title}
+              value={displayCard.title}
               onCommit={(value) => commitTextField('title', value)}
               className={inputClass}
             />
@@ -365,7 +377,7 @@ export default function CardModal({
               {...SAVE_ON_CLOSE}
               resetKey={card.id}
               type="url"
-              value={card.dropboxLink}
+              value={displayCard.dropboxLink}
               onCommit={(value) => commitTextField('dropboxLink', value)}
               placeholder="Paste link to video file (Dropbox, Google Drive, Vimeo, WeTransfer…)"
               className={inputClass}
@@ -390,14 +402,14 @@ export default function CardModal({
             <Field label="Client">
               {isOneOff ? (
                 <ClientNameInput
-                  value={card.client}
+                  value={displayCard.client}
                   onChange={(e) => handleChange('client', e.target.value)}
                   clients={clients}
                   inputClass={inputClass}
                 />
               ) : (
                 <select
-                  value={card.client}
+                  value={displayCard.client}
                   onChange={(e) => handleChange('client', e.target.value)}
                   className={inputClass}
                 >
@@ -417,11 +429,11 @@ export default function CardModal({
                 </p>
               ) : (
                 <select
-                  value={card.contentType}
+                  value={displayCard.contentType}
                   onChange={(e) => handleChange('contentType', e.target.value)}
                   className={inputClass}
                 >
-                  {CONTENT_TYPES.filter((t) => t !== 'Story' || card.contentType === 'Story').map((t) => (
+                  {CONTENT_TYPES.filter((t) => t !== 'Story' || displayCard.contentType === 'Story').map((t) => (
                     <option key={t} value={t}>
                       {t}
                     </option>
@@ -435,7 +447,7 @@ export default function CardModal({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Content creator">
                 <select
-                  value={card.contentCreator || ''}
+                  value={displayCard.contentCreator || ''}
                   onChange={(e) => handleChange('contentCreator', e.target.value)}
                   className={inputClass}
                 >
@@ -449,7 +461,7 @@ export default function CardModal({
               </Field>
               <Field label="Editor">
                 <select
-                  value={card.assignedTo}
+                  value={displayCard.assignedTo}
                   onChange={(e) => handleChange('assignedTo', e.target.value)}
                   className={inputClass}
                 >
@@ -466,7 +478,7 @@ export default function CardModal({
           {(isOneOff || contentCreators.length === 0) && (
             <Field label="Editor">
               <select
-                value={card.assignedTo}
+                value={displayCard.assignedTo}
                 onChange={(e) => handleChange('assignedTo', e.target.value)}
                 className={inputClass}
               >
@@ -481,7 +493,7 @@ export default function CardModal({
 
           <Field label="Account manager">
             <select
-              value={card.accountManager || getClientAccountManager(card.client) || ''}
+              value={displayCard.accountManager || getClientAccountManager(displayCard.client) || ''}
               onChange={(e) => handleChange('accountManager', e.target.value)}
               className={inputClass}
             >
@@ -494,7 +506,7 @@ export default function CardModal({
             </select>
           </Field>
 
-          <Field label={card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card)) ? `Notes (${occurrenceLabel})` : 'Notes'}>
+          <Field label={displayCard.occurrenceDate && (hasStoryRecurrence(displayCard) || hasStoryDailyRange(displayCard)) ? `Notes (${occurrenceLabel})` : 'Notes'}>
             <DebouncedField
               {...SAVE_ON_CLOSE}
               resetKey={`${card.id}:${card.occurrenceDate || ''}`}
@@ -685,7 +697,7 @@ export default function CardModal({
                   <DebouncedTimeInput
                     {...SAVE_ON_CLOSE}
                     resetKey={card.id}
-                    value={card.shootTime || ''}
+                    value={displayCard.shootTime || ''}
                     onCommit={commitShootTime}
                     placeholder="Start time"
                     inputClassName={inputClass}
@@ -695,10 +707,10 @@ export default function CardModal({
                   <DebouncedTimeInput
                     {...SAVE_ON_CLOSE}
                     resetKey={card.id}
-                    value={card.shootEndTime || ''}
+                    value={displayCard.shootEndTime || ''}
                     onCommit={(value) => commitTextField('shootEndTime', value)}
                     placeholder="End time"
-                    min={card.shootTime || undefined}
+                    min={displayCard.shootTime || undefined}
                     inputClassName={inputClass}
                   />
                 </Field>
@@ -706,7 +718,7 @@ export default function CardModal({
                   <DebouncedModelTagInput
                     {...SAVE_ON_CLOSE}
                     resetKey={card.id}
-                    value={card.shootModels || ''}
+                    value={displayCard.shootModels || ''}
                     onCommit={(value) => commitTextField('shootModels', value)}
                     placeholder="Add model name, press Enter"
                   />
@@ -715,7 +727,7 @@ export default function CardModal({
                   <DebouncedField
                     {...SAVE_ON_CLOSE}
                     resetKey={card.id}
-                    value={card.shootNeeds}
+                    value={displayCard.shootNeeds}
                     onCommit={(value) => commitTextField('shootNeeds', value)}
                     placeholder="Ring light, samples, wardrobe..."
                     className={inputClass}
@@ -736,7 +748,7 @@ export default function CardModal({
               <Field label="Shoot date">
                 <div className="space-y-3">
                   <DateInput
-                    value={card.shootDate || card.dueDate || ''}
+                    value={displayCard.shootDate || displayCard.dueDate || ''}
                     onChange={(e) => handleChange('shootDate', e.target.value)}
                     placeholder="Select shoot date"
                     inputClassName={inputClass}
@@ -762,19 +774,23 @@ export default function CardModal({
                 </p>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Start time">
-                    <TimeInput
-                      value={card.shootTime || card.dueTime || ''}
-                      onChange={(e) => handleChange('shootTime', e.target.value)}
+                    <DebouncedTimeInput
+                      {...SAVE_ON_CLOSE}
+                      resetKey={card.id}
+                      value={displayCard.shootTime || displayCard.dueTime || ''}
+                      onCommit={commitShootTime}
                       placeholder="Start time"
                       inputClassName={inputClass}
                     />
                   </Field>
                   <Field label="End time">
-                    <TimeInput
-                      value={card.shootEndTime || ''}
-                      onChange={(e) => handleChange('shootEndTime', e.target.value)}
+                    <DebouncedTimeInput
+                      {...SAVE_ON_CLOSE}
+                      resetKey={card.id}
+                      value={displayCard.shootEndTime || ''}
+                      onCommit={(value) => commitTextField('shootEndTime', value)}
                       placeholder="End time"
-                      min={card.shootTime || card.dueTime || undefined}
+                      min={displayCard.shootTime || displayCard.dueTime || undefined}
                       inputClassName={inputClass}
                     />
                   </Field>
@@ -784,7 +800,7 @@ export default function CardModal({
               {contentCreators.length > 0 && (
                 <Field label="Content creator">
                   <select
-                    value={card.contentCreator || ''}
+                    value={displayCard.contentCreator || ''}
                     onChange={(e) => handleChange('contentCreator', e.target.value)}
                     className={inputClass}
                   >
@@ -806,16 +822,18 @@ export default function CardModal({
             <div className="space-y-4">
               <Field label="Due date">
                 <DateInput
-                  value={card.dueDate || card.shootDate || ''}
+                  value={displayCard.dueDate || displayCard.shootDate || ''}
                   onChange={(e) => handleChange('dueDate', e.target.value)}
                   placeholder="Select due date"
                   inputClassName={inputClass}
                 />
               </Field>
               <Field label="Due time">
-                <TimeInput
-                  value={card.dueTime || card.shootTime || ''}
-                  onChange={(e) => handleChange('dueTime', e.target.value)}
+                <DebouncedTimeInput
+                  {...SAVE_ON_CLOSE}
+                  resetKey={card.id}
+                  value={displayCard.dueTime || displayCard.shootTime || ''}
+                  onCommit={(value) => commitTextField('dueTime', value)}
                   placeholder="Select time"
                   inputClassName={inputClass}
                 />
@@ -849,10 +867,12 @@ export default function CardModal({
                   </p>
                 </div>
               </Field>
-              <Field label={card.columnId === 'scheduled' ? 'Scheduled time' : 'Plan time'}>
-                <TimeInput
-                  value={card.dueTime || ''}
-                  onChange={(e) => handleChange('dueTime', e.target.value)}
+              <Field label={displayCard.columnId === 'scheduled' ? 'Scheduled time' : 'Plan time'}>
+                <DebouncedTimeInput
+                  {...SAVE_ON_CLOSE}
+                  resetKey={card.id}
+                  value={displayCard.dueTime || ''}
+                  onCommit={(value) => commitTextField('dueTime', value)}
                   placeholder="Select time"
                   inputClassName={inputClass}
                 />
@@ -862,16 +882,18 @@ export default function CardModal({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Plan date">
               <DateInput
-                value={card.dueDate}
+                value={displayCard.dueDate}
                 onChange={(e) => handleChange('dueDate', e.target.value)}
                 placeholder="Select date"
                 inputClassName={inputClass}
               />
             </Field>
-            <Field label={card.columnId === 'scheduled' ? 'Scheduled Time' : 'Plan time'}>
-              <TimeInput
-                value={card.dueTime || ''}
-                onChange={(e) => handleChange('dueTime', e.target.value)}
+            <Field label={displayCard.columnId === 'scheduled' ? 'Scheduled Time' : 'Plan time'}>
+              <DebouncedTimeInput
+                {...SAVE_ON_CLOSE}
+                resetKey={card.id}
+                value={displayCard.dueTime || ''}
+                onCommit={(value) => commitTextField('dueTime', value)}
                 placeholder="Select time"
                 inputClassName={inputClass}
               />
@@ -879,26 +901,26 @@ export default function CardModal({
           </div>
           )}
 
-          {!isOneOff && card.contentType === 'Story' && ['scheduled', 'editing', 'in-review', 'approved'].includes(card.columnId) && (
+          {!isOneOff && displayCard.contentType === 'Story' && ['scheduled', 'editing', 'in-review', 'approved'].includes(displayCard.columnId) && (
             <StoryRecurrencePicker
               mode={storyRecurrenceMode}
               onModeChange={(mode) => {
                 if (mode === 'once') {
-                  onUpdate(card.id, { storyRecurrenceDays: [], storyEndDate: '' }, { recordUndo: false });
+                  queueUpdate({ storyRecurrenceDays: [], storyEndDate: '' });
                 } else if (mode === 'daily') {
-                  onUpdate(card.id, { storyRecurrenceDays: [] }, { recordUndo: false });
+                  queueUpdate({ storyRecurrenceDays: [] });
                 } else if (mode === 'weekly') {
-                  onUpdate(card.id, {
+                  queueUpdate({
                     storyEndDate: '',
                     storyRecurrenceDays: recurrenceDays.length ? recurrenceDays : [1],
-                  }, { recordUndo: false });
+                  });
                 }
               }}
               days={recurrenceDays}
-              onDaysChange={(days) => onUpdate(card.id, { storyRecurrenceDays: days, storyEndDate: '' }, { recordUndo: false })}
-              startDate={card.dueDate}
+              onDaysChange={(days) => queueUpdate({ storyRecurrenceDays: days, storyEndDate: '' })}
+              startDate={displayCard.dueDate}
               onStartDateChange={(dueDate) => handleChange('dueDate', dueDate)}
-              endDate={card.storyEndDate || ''}
+              endDate={displayCard.storyEndDate || ''}
               onEndDateChange={(storyEndDate) => handleChange('storyEndDate', storyEndDate)}
             />
           )}
@@ -912,14 +934,14 @@ export default function CardModal({
                 {...SAVE_ON_CLOSE}
                 resetKey={card.id}
                 type="url"
-                value={card.referenceMusic}
+                value={displayCard.referenceMusic}
                 onCommit={(value) => commitTextField('referenceMusic', value)}
                 placeholder="Paste Spotify, Apple Music, or other link..."
                 className={inputClass}
               />
-              {card.referenceMusic?.trim() && (
+              {displayCard.referenceMusic?.trim() && (
                 <div className="mt-2">
-                  <ReferenceMusicLink url={card.referenceMusic} />
+                  <ReferenceMusicLink url={displayCard.referenceMusic} />
                 </div>
               )}
             </Field>
@@ -927,14 +949,14 @@ export default function CardModal({
               <DebouncedField
                 {...SAVE_ON_CLOSE}
                 resetKey={card.id}
-                value={card.referenceVideo}
+                value={displayCard.referenceVideo}
                 onCommit={(value) => commitTextField('referenceVideo', value)}
                 placeholder="Paste Instagram, TikTok, or YouTube link..."
                 className={inputClass}
               />
-              {card.referenceVideo?.trim() && (
+              {displayCard.referenceVideo?.trim() && (
                 <div className="mt-2">
-                  <ReferenceVideoLink url={card.referenceVideo} />
+                  <ReferenceVideoLink url={displayCard.referenceVideo} />
                 </div>
               )}
             </Field>
@@ -977,3 +999,5 @@ function Field({ label, children }) {
 
 const inputClass =
   'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30';
+
+export default memo(CardModal);

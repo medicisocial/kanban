@@ -213,6 +213,12 @@ export default function AppShell({ onSignOut }) {
     if (!fresh) return;
     setSelectedCard((prev) => {
       if (!prev || prev.id !== fresh.id) return prev;
+      if (prev.updatedAt === fresh.updatedAt) {
+        if (prev.occurrenceDate && fresh.contentType === "Story") {
+          return withStoryOccurrence(fresh, prev.occurrenceDate);
+        }
+        return prev;
+      }
       if (prev.occurrenceDate && fresh.contentType === "Story") {
         return withStoryOccurrence(fresh, prev.occurrenceDate);
       }
