@@ -500,8 +500,8 @@ export default function AppShell({ onSignOut }) {
     [cards, updateCard, getPlan, updatePlan, deletePlan],
   );
 
-  const handleUpdate = (id, updates) => {
-    updateCard(id, updates);
+  const handleUpdate = (id, updates, options) => {
+    updateCard(id, updates, options);
     setSelectedCard((prev) => {
       if (prev?.id !== id) return prev;
       const next = { ...prev, ...updates };
@@ -886,7 +886,7 @@ export default function AppShell({ onSignOut }) {
         cards={cards}
         plan={plan}
         onUpdateCard={updateCard}
-        onUpdatePlan={(updates) => updatePlan(shootPortal.client, shootPortal.dateKey, updates)}
+        onUpdatePlan={(updates, options) => updatePlan(shootPortal.client, shootPortal.dateKey, updates, options)}
       />
     );
   }

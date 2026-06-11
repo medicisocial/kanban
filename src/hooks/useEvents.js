@@ -60,8 +60,8 @@ export function useEvents() {
     return event.id;
   }, []);
 
-  const updateEvent = useCallback((id, updates) => {
-    notifyMutation();
+  const updateEvent = useCallback((id, updates, options = {}) => {
+    notifyMutation(options);
     setEvents((prev) =>
       prev.map((event) => {
         if (event.id !== id) return event;

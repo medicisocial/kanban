@@ -27,7 +27,7 @@ import {
 
 const REALTIME_REFETCH_DEBOUNCE_MS = 80;
 // Coalesce rapid local edits (e.g. drag-drop, typing) into one cloud write.
-const SYNC_PUSH_DEBOUNCE_MS = 300;
+const SYNC_PUSH_DEBOUNCE_MS = 650;
 // Minimum gap before a focus/visibility event triggers a full re-fetch.
 const FOCUS_REFETCH_MIN_MS = 30_000;
 
@@ -351,8 +351,14 @@ export function useCollectionSync({
           local,
           syncedStr: previousSynced.get(id),
         });
+        const mergedStr = JSON.stringify(merged);
+        if (mergedStr === JSON.stringify(local)) {
+          syncedRef.current = new Map(previousSynced);
+          syncedRef.current.set(id, mergedStr);
+          return prev;
+        }
         syncedRef.current = new Map(previousSynced);
-        syncedRef.current.set(id, JSON.stringify(merged));
+        syncedRef.current.set(id, mergedStr);
         return prev.map((record) => (String(getId(record)) === id ? merged : record));
       });
     };

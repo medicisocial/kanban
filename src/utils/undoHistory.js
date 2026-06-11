@@ -1,4 +1,5 @@
 const MAX_STACK = 30;
+const DEFAULT_CAPTURE_DEBOUNCE_MS = 450;
 
 let getSnapshot = null;
 let applySnapshot = null;
@@ -7,6 +8,7 @@ let stack = [];
 let suppressUndo = false;
 let batchDepth = 0;
 let batchCaptured = false;
+let captureTimer = null;
 
 export function registerUndo({ getSnapshot: get, applySnapshot: apply, onStackChange: onChange }) {
   getSnapshot = get;
@@ -19,6 +21,8 @@ export function unregisterUndo() {
   applySnapshot = null;
   onStackChange = null;
   stack = [];
+  clearTimeout(captureTimer);
+  captureTimer = null;
   notifyStackChange();
 }
 
@@ -26,23 +30,53 @@ function notifyStackChange() {
   onStackChange?.();
 }
 
-function capture() {
+function captureNow() {
   if (suppressUndo || !getSnapshot) return;
   const snap = getSnapshot();
   stack = [...stack.slice(-(MAX_STACK - 1)), snap];
   notifyStackChange();
 }
 
-export function notifyMutation() {
-  if (suppressUndo) return;
-  if (batchDepth > 0) {
-    if (!batchCaptured) {
-      capture();
-      batchCaptured = true;
+function scheduleCapture(debounceMs) {
+  clearTimeout(captureTimer);
+  captureTimer = setTimeout(() => {
+    captureTimer = null;
+    if (batchDepth > 0) {
+      if (!batchCaptured) {
+        captureNow();
+        batchCaptured = true;
+      }
+      return;
     }
+    captureNow();
+  }, debounceMs);
+}
+
+/**
+ * @param {{ recordUndo?: boolean, debounceMs?: number }} [options]
+ */
+export function notifyMutation(options = {}) {
+  const recordUndo = options.recordUndo !== false;
+  if (!recordUndo) return;
+
+  const debounceMs =
+    typeof options.debounceMs === 'number' ? options.debounceMs : DEFAULT_CAPTURE_DEBOUNCE_MS;
+
+  if (suppressUndo || !getSnapshot) return;
+
+  if (debounceMs <= 0) {
+    if (batchDepth > 0) {
+      if (!batchCaptured) {
+        captureNow();
+        batchCaptured = true;
+      }
+      return;
+    }
+    captureNow();
     return;
   }
-  capture();
+
+  scheduleCapture(debounceMs);
 }
 
 export function beginBatch() {
@@ -83,5 +117,7 @@ export function canUndo() {
 
 export function clearUndoStack() {
   stack = [];
+  clearTimeout(captureTimer);
+  captureTimer = null;
   notifyStackChange();
 }

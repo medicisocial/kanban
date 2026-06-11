@@ -87,7 +87,7 @@ export default function ShootDayDetail({
               onAddShootItemForClient={onAddShootItemForClient}
               onAddCardsToShoot={onAddCardsToShoot}
               plan={getPlan(client, dateKey)}
-              onUpdatePlan={(updates) => onUpdatePlan(client, dateKey, updates)}
+              onUpdatePlan={(updates, options) => onUpdatePlan(client, dateKey, updates, options)}
               onRemoveFromSchedule={onRemoveFromSchedule}
               onRemoveClientShoot={() => onRemoveClientShoot(client, dateKey, clientCards)}
               onMoveShootDay={onMoveClientShootDay}

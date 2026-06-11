@@ -77,7 +77,7 @@ export function useClientRecordsSync({ workspaceState, setWorkspaceState, orgRea
         void pushBrandProfilePatches(getOrgId(), patches);
       }
       prevStateRef.current = next;
-    }, 500);
+    }, 650);
 
     return () => clearTimeout(pushTimerRef.current);
   }, [workspaceState, orgReady]);

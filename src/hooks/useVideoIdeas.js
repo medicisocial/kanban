@@ -87,8 +87,8 @@ export function useVideoIdeas() {
     setIdeas((prev) => [...prev, idea]);
   }, []);
 
-  const updateIdea = useCallback((id, updates) => {
-    notifyMutation();
+  const updateIdea = useCallback((id, updates, options = {}) => {
+    notifyMutation(options);
     setIdeas((prev) =>
       prev.map((i) => {
         if (i.id !== id) return i;

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 const REALTIME_REFETCH_DEBOUNCE_MS = 80;
 // Coalesce rapid local edits (e.g. typing, credential saves) into one cloud write.
-const SYNC_PUSH_DEBOUNCE_MS = 300;
+const SYNC_PUSH_DEBOUNCE_MS = 650;
 const FOCUS_REFETCH_MIN_MS = 30_000;
 import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
@@ -242,8 +242,15 @@ export function useMapSync({ table, map, setMap, loadLocal, enabled = true }) {
               syncedStr: previousSynced.get(key),
             });
 
+        const mergedStr = JSON.stringify(merged);
+        if (mergedStr === JSON.stringify(localValue)) {
+          syncedRef.current = new Map(previousSynced);
+          syncedRef.current.set(key, mergedStr);
+          return prev;
+        }
+
         syncedRef.current = new Map(previousSynced);
-        syncedRef.current.set(key, JSON.stringify(merged));
+        syncedRef.current.set(key, mergedStr);
         return { ...prev, [key]: merged };
       });
     };

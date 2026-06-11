@@ -76,8 +76,8 @@ export function useShootPlans() {
     setPlans(next);
   }, []);
 
-  const updatePlan = useCallback((client, dateKey, updates) => {
-    notifyMutation();
+  const updatePlan = useCallback((client, dateKey, updates, options = {}) => {
+    notifyMutation(options);
     const key = getShootPlanKey(client, dateKey);
     let persisted = null;
     setPlans((prev) => {

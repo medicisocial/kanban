@@ -24,6 +24,18 @@ import ReferenceVideoLink, { ReferenceMusicLink } from './clientPortal/Reference
 import { CalendarSheetNoteEditor } from './CalendarSheetNote';
 import { getCalendarClientNote, hasCalendarClientNote, isContentCalendarCard } from '../utils/calendarClientNote';
 import { buildCalendarNoteDeletePatch } from '../utils/calendarNote';
+import { beginBatch, endBatch } from '../utils/undoHistory';
+
+const TEXT_DRAFT_FIELDS = new Set([
+  'title',
+  'notes',
+  'dropboxLink',
+  'referenceMusic',
+  'referenceVideo',
+  'shootNeeds',
+  'shootScript',
+  'clientComment',
+]);
 
 const CARD_TABS = [
   { id: 'details', label: 'Details' },
@@ -48,6 +60,9 @@ export default function CardModal({
   const mouseDownOnOverlayRef = useRef(false);
   const pendingTabRef = useRef(null);
   const [activeTab, setActiveTab] = useState('details');
+  const [textDraft, setTextDraft] = useState({});
+  const debouncedUpdatesRef = useRef({});
+  const debounceTimerRef = useRef(null);
   const { clients, getClientAccountManager, getMemberNamesForRole } = useClientsContext();
   const editors = getMemberNamesForRole('Editor');
   const contentCreators = getMemberNamesForRole('Content Creator');
@@ -63,7 +78,21 @@ export default function CardModal({
     } else {
       setActiveTab('details');
     }
+    setTextDraft({});
   }, [card?.id]);
+
+  useEffect(() => {
+    beginBatch();
+    return () => {
+      clearTimeout(debounceTimerRef.current);
+      const updates = debouncedUpdatesRef.current;
+      debouncedUpdatesRef.current = {};
+      if (Object.keys(updates).length) {
+        onUpdate(card?.id, updates, { recordUndo: false });
+      }
+      endBatch();
+    };
+  }, [card?.id, onUpdate]);
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -105,7 +134,7 @@ export default function CardModal({
       shootDate: session.dateKey,
       shootTime: session.shootTime || '',
       shootEndTime: session.shootEndTime || '',
-    });
+    }, { recordUndo: false });
   };
 
   const openShootCard = (entry) => {
@@ -152,25 +181,26 @@ export default function CardModal({
 
   // Debounce text field updates (title, notes, etc.) to avoid triggering the
   // full sync pipeline on every keystroke. Non-text fields update immediately.
-  const debouncedUpdatesRef = useRef({});
-  const debounceTimerRef = useRef(null);
   const flushDebounced = useCallback(() => {
     const updates = debouncedUpdatesRef.current;
     debouncedUpdatesRef.current = {};
     debounceTimerRef.current = null;
     const keys = Object.keys(updates);
     if (keys.length === 0) return;
-    if (keys.length === 1 && keys[0] !== 'title' && keys[0] !== 'notes' && keys[0] !== 'dropboxLink' && keys[0] !== 'referenceMusic' && keys[0] !== 'referenceVideo' && keys[0] !== 'shootNeeds') {
-      // Non-text field — apply immediately
-      onUpdate(card.id, updates);
-      return;
-    }
-    onUpdate(card.id, updates);
+    onUpdate(card.id, updates, { recordUndo: false });
+    setTextDraft((prev) => {
+      const next = { ...prev };
+      for (const key of keys) delete next[key];
+      return next;
+    });
   }, [card?.id, onUpdate]);
   const scheduleFlush = useCallback(() => {
     clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(flushDebounced, 180);
+    debounceTimerRef.current = setTimeout(flushDebounced, 400);
   }, [flushDebounced]);
+
+  const fieldValue = (field) =>
+    textDraft[field] !== undefined ? textDraft[field] : (card?.[field] ?? '');
 
   const handleChange = (field, value) => {
     if (field === 'contentType' && value === 'One-off Project') {
@@ -188,7 +218,7 @@ export default function CardModal({
         storyRecurrenceDays: [],
         storyEndDate: '',
         storyOccurrenceNotes: {},
-      });
+      }, { recordUndo: false });
       return;
     }
     if (field === 'contentType' && value === 'Story') {
@@ -201,7 +231,7 @@ export default function CardModal({
         shootEndTime: '',
         shootModels: '',
         shootNeeds: '',
-      });
+      }, { recordUndo: false });
       return;
     }
     if (field === 'contentType' && value !== 'Story') {
@@ -213,7 +243,7 @@ export default function CardModal({
         storyRecurrenceDays: [],
         storyEndDate: '',
         storyOccurrenceNotes: {},
-      });
+      }, { recordUndo: false });
       return;
     }
     if (field === 'client') {
@@ -222,7 +252,7 @@ export default function CardModal({
       onUpdate(card.id, {
         client: value,
         accountManager: getClientAccountManager(value) || card.accountManager || '',
-      });
+      }, { recordUndo: false });
       return;
     }
     if (field === 'notes' && card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card))) {
@@ -233,7 +263,7 @@ export default function CardModal({
           ...parseStoryOccurrenceNotes(card.storyOccurrenceNotes),
           [card.occurrenceDate]: value,
         },
-      });
+      }, { recordUndo: false });
       return;
     }
     if (field === 'shootTime') {
@@ -246,12 +276,17 @@ export default function CardModal({
         updates.shootEndTime = getDefaultShootEndTime(value, card.contentType);
       }
       if (!value) updates.shootEndTime = '';
-      onUpdate(card.id, updates);
+      onUpdate(card.id, updates, { recordUndo: false });
       return;
     }
-    // Text fields — debounce
-    debouncedUpdatesRef.current[field] = value;
-    scheduleFlush();
+    // Text fields — local draft for instant feedback; debounced cloud save.
+    if (TEXT_DRAFT_FIELDS.has(field)) {
+      setTextDraft((prev) => ({ ...prev, [field]: value }));
+      debouncedUpdatesRef.current[field] = value;
+      scheduleFlush();
+      return;
+    }
+    onUpdate(card.id, { [field]: value }, { recordUndo: false });
   };
 
   const recurrenceDays = parseRecurrenceDays(card.storyRecurrenceDays);
@@ -319,7 +354,7 @@ export default function CardModal({
           <Field label="Task Title">
             <input
               type="text"
-              value={card.title}
+              value={fieldValue('title')}
               onChange={(e) => handleChange('title', e.target.value)}
               className={inputClass}
             />
@@ -329,7 +364,7 @@ export default function CardModal({
           <Field label="Video File Link">
             <input
               type="url"
-              value={card.dropboxLink || ''}
+              value={fieldValue('dropboxLink')}
               onChange={(e) => handleChange('dropboxLink', e.target.value)}
               placeholder="Paste link to video file (Dropbox, Google Drive, Vimeo, WeTransfer…)"
               className={inputClass}
@@ -460,7 +495,7 @@ export default function CardModal({
 
           <Field label={card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card)) ? `Notes (${occurrenceLabel})` : 'Notes'}>
             <textarea
-              value={card.notes}
+              value={fieldValue('notes')}
               onChange={(e) => handleChange('notes', e.target.value)}
               rows={4}
               placeholder="Add notes..."
@@ -669,7 +704,7 @@ export default function CardModal({
                 <Field label="Props & Needs">
                   <input
                     type="text"
-                    value={card.shootNeeds || ''}
+                    value={fieldValue('shootNeeds')}
                     onChange={(e) => handleChange('shootNeeds', e.target.value)}
                     placeholder="Ring light, samples, wardrobe..."
                     className={inputClass}
@@ -838,18 +873,18 @@ export default function CardModal({
               mode={storyRecurrenceMode}
               onModeChange={(mode) => {
                 if (mode === 'once') {
-                  onUpdate(card.id, { storyRecurrenceDays: [], storyEndDate: '' });
+                  onUpdate(card.id, { storyRecurrenceDays: [], storyEndDate: '' }, { recordUndo: false });
                 } else if (mode === 'daily') {
-                  onUpdate(card.id, { storyRecurrenceDays: [] });
+                  onUpdate(card.id, { storyRecurrenceDays: [] }, { recordUndo: false });
                 } else if (mode === 'weekly') {
                   onUpdate(card.id, {
                     storyEndDate: '',
                     storyRecurrenceDays: recurrenceDays.length ? recurrenceDays : [1],
-                  });
+                  }, { recordUndo: false });
                 }
               }}
               days={recurrenceDays}
-              onDaysChange={(days) => onUpdate(card.id, { storyRecurrenceDays: days, storyEndDate: '' })}
+              onDaysChange={(days) => onUpdate(card.id, { storyRecurrenceDays: days, storyEndDate: '' }, { recordUndo: false })}
               startDate={card.dueDate}
               onStartDateChange={(dueDate) => handleChange('dueDate', dueDate)}
               endDate={card.storyEndDate || ''}
@@ -864,7 +899,7 @@ export default function CardModal({
             <Field label="Reference Music">
               <input
                 type="url"
-                value={card.referenceMusic || ''}
+                value={fieldValue('referenceMusic')}
                 onChange={(e) => handleChange('referenceMusic', e.target.value)}
                 placeholder="Paste Spotify, Apple Music, or other link..."
                 className={inputClass}
@@ -878,7 +913,7 @@ export default function CardModal({
             <Field label="Reference Video">
               <input
                 type="text"
-                value={card.referenceVideo || ''}
+                value={fieldValue('referenceVideo')}
                 onChange={(e) => handleChange('referenceVideo', e.target.value)}
                 placeholder="Paste Instagram, TikTok, or YouTube link..."
                 className={inputClass}

@@ -60,8 +60,8 @@ export function useMeetings() {
     return meeting.id;
   }, []);
 
-  const updateMeeting = useCallback((id, updates) => {
-    notifyMutation();
+  const updateMeeting = useCallback((id, updates, options = {}) => {
+    notifyMutation(options);
     setMeetings((prev) =>
       prev.map((meeting) => {
         if (meeting.id !== id) return meeting;

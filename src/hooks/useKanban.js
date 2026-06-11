@@ -271,8 +271,8 @@ export function useKanban() {
     return resolvedId;
   }, []);
 
-  const updateCard = useCallback((id, updates) => {
-    notifyMutation();
+  const updateCard = useCallback((id, updates, { recordUndo = true } = {}) => {
+    notifyMutation({ recordUndo });
     let persisted = null;
     setCards((prev) =>
       prev.map((card) => {
