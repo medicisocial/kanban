@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   IconBoard,
   IconCalendar,
@@ -79,7 +79,10 @@ export default function AdminConsoleLayout({
   children,
 }) {
   const admin = useWorkspaceAdmin({ clientFilter, onClientChange });
-  const navSections = buildNavSections(homeNavLabel, clientFilter);
+  const navSections = useMemo(
+    () => buildNavSections(homeNavLabel, clientFilter),
+    [homeNavLabel, clientFilter],
+  );
   const { getClientColor, getClientLogo, setClientLogo } = useClientsContext();
   const teamColor = getClientColor(INTERNAL_TEAM_CLIENT);
   const teamLogo = getClientLogo(INTERNAL_TEAM_CLIENT);

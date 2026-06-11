@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useClientsContext } from '../../context/ClientsContext';
 import { sortClientNamesAlphabetically } from '../../utils/clients';
@@ -32,7 +32,26 @@ function ClientDot({ color, active = false }) {
   );
 }
 
-export default function ClientFilterSelect({ value, onChange }) {
+const ClientFilterOption = memo(function ClientFilterOption({ option, isActive, onSelect }) {
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={isActive}
+      className={`client-filter-item portal-dropdown-item${
+        isActive ? ' client-filter-item-active' : ''
+      }`}
+      style={{ '--client-filter-color': option.color }}
+      onClick={() => onSelect(option.id)}
+    >
+      <ClientDot color={option.color} active={isActive} />
+      <span className="min-w-0 flex-1 truncate">{option.label}</span>
+      {isActive && <span className="client-filter-check" aria-hidden />}
+    </button>
+  );
+});
+
+function ClientFilterSelect({ value, onChange }) {
   const { clients, getClientColor } = useClientsContext();
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState(null);
@@ -42,6 +61,18 @@ export default function ClientFilterSelect({ value, onChange }) {
   const selectedColor =
     value === 'all' ? 'rgba(255, 255, 255, 0.42)' : getClientColor(value);
 
+  const options = useMemo(
+    () =>
+      [{ id: 'all', label: 'All clients', color: 'rgba(255, 255, 255, 0.42)' }].concat(
+        sortClientNamesAlphabetically(clients).map((client) => ({
+          id: client,
+          label: client,
+          color: getClientColor(client),
+        })),
+      ),
+    [clients, getClientColor],
+  );
+
   useEffect(() => {
     if (!open) return undefined;
 
@@ -49,16 +80,26 @@ export default function ClientFilterSelect({ value, onChange }) {
       const trigger = triggerRef.current;
       if (!trigger) return;
       const rect = trigger.getBoundingClientRect();
-      setMenuStyle({
-        top: rect.bottom + 8,
-        left: rect.left,
-        width: Math.max(rect.width, 220),
+      setMenuStyle((prev) => {
+        const next = {
+          top: rect.bottom + 8,
+          left: rect.left,
+          width: Math.max(rect.width, 220),
+        };
+        if (
+          prev &&
+          prev.top === next.top &&
+          prev.left === next.left &&
+          prev.width === next.width
+        ) {
+          return prev;
+        }
+        return next;
       });
     };
 
     updateMenuPosition();
     window.addEventListener('resize', updateMenuPosition);
-    window.addEventListener('scroll', updateMenuPosition, true);
 
     const handleKey = (event) => {
       if (event.key === 'Escape') setOpen(false);
@@ -67,23 +108,14 @@ export default function ClientFilterSelect({ value, onChange }) {
     document.addEventListener('keydown', handleKey);
     return () => {
       window.removeEventListener('resize', updateMenuPosition);
-      window.removeEventListener('scroll', updateMenuPosition, true);
       document.removeEventListener('keydown', handleKey);
     };
   }, [open]);
 
   const handleSelect = (next) => {
-    onChange(next);
     setOpen(false);
+    onChange(next);
   };
-
-  const options = [{ id: 'all', label: 'All clients', color: 'rgba(255, 255, 255, 0.42)' }].concat(
-    sortClientNamesAlphabetically(clients).map((client) => ({
-      id: client,
-      label: client,
-      color: getClientColor(client),
-    })),
-  );
 
   const menu =
     open &&
@@ -111,27 +143,15 @@ export default function ClientFilterSelect({ value, onChange }) {
               Filter workspace
             </p>
           </div>
-          <div className="portal-dropdown-body portal-dropdown-items max-h-[min(320px,50vh)] overflow-y-auto">
-            {options.map((option) => {
-              const isActive = value === option.id;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  role="option"
-                  aria-selected={isActive}
-                  className={`client-filter-item portal-dropdown-item${
-                    isActive ? ' client-filter-item-active' : ''
-                  }`}
-                  style={{ '--client-filter-color': option.color }}
-                  onClick={() => handleSelect(option.id)}
-                >
-                  <ClientDot color={option.color} active={isActive} />
-                  <span className="min-w-0 flex-1 truncate">{option.label}</span>
-                  {isActive && <span className="client-filter-check" aria-hidden />}
-                </button>
-              );
-            })}
+          <div className="portal-dropdown-body portal-dropdown-items max-h-[min(320px,50vh)] overflow-y-auto overscroll-contain">
+            {options.map((option) => (
+              <ClientFilterOption
+                key={option.id}
+                option={option}
+                isActive={value === option.id}
+                onSelect={handleSelect}
+              />
+            ))}
           </div>
         </div>
       </>,
@@ -161,3 +181,5 @@ export default function ClientFilterSelect({ value, onChange }) {
     </>
   );
 }
+
+export default memo(ClientFilterSelect);

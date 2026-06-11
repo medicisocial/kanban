@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { syncClientPortalCredentialsToCloud } from '../utils/clientPortalAdmin';
@@ -86,8 +86,9 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
     </>
   );
 
-  const clientFilterSelect = (
-    <ClientFilterSelect value={clientFilter} onChange={onClientChange} />
+  const clientFilterSelect = useMemo(
+    () => <ClientFilterSelect value={clientFilter} onChange={onClientChange} />,
+    [clientFilter, onClientChange],
   );
 
   const settingsMenu = (

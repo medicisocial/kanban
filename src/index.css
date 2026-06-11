@@ -1131,6 +1131,9 @@ textarea:focus::placeholder {
   opacity: 1;
   transform: none;
   animation: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  contain: layout paint;
 }
 
 .client-filter-panel .portal-dropdown-header,
@@ -1144,6 +1147,16 @@ textarea:focus::placeholder {
   display: flex;
   align-items: center;
   gap: 0.625rem;
+}
+
+.client-filter-panel .portal-dropdown-item {
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.client-filter-panel .portal-dropdown-item:active {
+  transform: none;
 }
 
 .client-filter-item-active {

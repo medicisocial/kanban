@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, startTransition } from "react";
 import { SUPABASE_ENABLED } from "../lib/supabaseClient";
 import { useKanban } from "../hooks/useKanban";
 import { useVideoIdeas, applyClientResponses } from "../hooks/useVideoIdeas";
@@ -124,7 +124,10 @@ export default function AppShell({ onSignOut }) {
   });
 
   const [selectedCard, setSelectedCard] = useState(null);
-  const [clientFilter, setClientFilter] = useState("all");
+  const [clientFilter, setClientFilterState] = useState("all");
+  const setClientFilter = useCallback((next) => {
+    startTransition(() => setClientFilterState(next));
+  }, []);
   const [activeView, setActiveView] = useState(() => readWorkspaceViewFromUrl() || "home");
   const [viewInitialized, setViewInitialized] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
