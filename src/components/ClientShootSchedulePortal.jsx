@@ -3,6 +3,7 @@ import { getClientShootCards, stripInternalCardsForClientPortal } from '../utils
 import { clientMatchesBrand } from '../utils/clients';
 import { formatTime } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
+import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
 import ShootLocationLink from './ShootLocationLink';
 import { surfacePanelClass } from './clientPortal/clientPortalUi';
 
@@ -82,6 +83,14 @@ export default function ClientShootSchedulePortal({
                           <h4 className="mt-1 text-sm font-medium text-white">{card.title}</h4>
                           {card.shootModels && (
                             <p className="mt-1 text-xs text-white/45">Talent: {card.shootModels}</p>
+                          )}
+                          {card.referenceVideo?.trim() && (
+                            <p className="mt-1.5">
+                              <span className="mr-1.5 text-[10px] uppercase tracking-wider text-white/35">
+                                Reference
+                              </span>
+                              <ReferenceVideoLink url={card.referenceVideo} compact />
+                            </p>
                           )}
                         </div>
                       </article>
