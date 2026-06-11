@@ -1,10 +1,10 @@
 import { supabase } from './supabaseClient';
 import { fetchStaffSyncRows } from './staffSyncApi';
 import { fetchLegacyWorkspaceBlobRows } from './workspaceBlobFallback';
-import { hasStaffSupabaseSession } from './staffSupabaseAuth';
+import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
 import { getOrgId, LEGACY_ORG_ID } from './orgSession';
 
-const REST_FETCH_TIMEOUT_MS = 12000;
+const REST_FETCH_TIMEOUT_MS = 5000;
 
 async function fetchAllViaRest(table, orgId) {
   // Anon REST only works for the legacy org where RLS allows unauthenticated reads.
@@ -60,6 +60,19 @@ function buildTableStore(table, orgId, brandId) {
 
   return {
     async fetchAll() {
+      // Warm DB session in the background; reads must not wait on it.
+      void ensureStaffSupabaseSession();
+
+      const staffPromise = fetchStaffSyncRows(table, orgId);
+      const restPromise =
+        orgId === LEGACY_ORG_ID ? fetchAllViaRest(table, orgId) : Promise.resolve(null);
+      const [staffRows, restRows] = await Promise.all([staffPromise, restPromise]);
+
+      if (Array.isArray(staffRows) && staffRows.length) return staffRows;
+      if (Array.isArray(restRows) && restRows.length) return restRows;
+      if (staffRows !== null) return staffRows;
+      if (restRows !== null) return restRows;
+
       if (supabase && (await hasStaffSupabaseSession())) {
         let query = supabase
           .from(table)
@@ -72,10 +85,6 @@ function buildTableStore(table, orgId, brandId) {
         if (!error) return data || [];
         console.warn(`[supabase:${table}] client fetch failed:`, error.message);
       }
-
-      // Fallback: authenticated server read (mobile / no browser DB session).
-      const staffRows = await fetchStaffSyncRows(table, orgId);
-      if (staffRows !== null) return staffRows;
 
       if (supabase) {
         let query = supabase
@@ -90,10 +99,6 @@ function buildTableStore(table, orgId, brandId) {
         console.warn(`[supabase:${table}] anon client fetch failed:`, error.message);
       }
 
-      const restRows = await fetchAllViaRest(table, orgId);
-      if (restRows !== null) return restRows;
-
-      // Legacy Upstash blob fallback — now always returns null (removed).
       const blobRows = await fetchLegacyWorkspaceBlobRows(table);
       if (blobRows?.length) return blobRows;
 

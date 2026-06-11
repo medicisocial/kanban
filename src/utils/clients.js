@@ -38,6 +38,7 @@ const TEST_CLIENT_NAME_PATTERNS = [
   /^pipeline audit client\b/i,
   /^e2e[\s-]/i,
   /\be2e test\b/i,
+  /-test-upsert$/i,
 ];
 
 /** Names created by automated audits/E2E runs — never persisted or shown in the UI. */

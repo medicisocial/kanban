@@ -29,6 +29,14 @@ if (merged.colors.Plume !== '#222222') {
 if (!Array.isArray(merged.contacts.Plume) || merged.contacts.Plume[0]?.name !== 'Cloud Owner') {
   throw new Error('mergeClientRecordRowsIntoWorkspace should apply contacts');
 }
+if (!merged.names.includes('Plume') || merged.names.length !== 2) {
+  throw new Error('mergeClientRecordRowsIntoWorkspace should preserve and union client names');
+}
+
+const namesOnly = mergeClientRecordRowsIntoWorkspace({ names: [] }, rows);
+if (!namesOnly.names.includes('Plume') || namesOnly.names.length !== 1) {
+  throw new Error('mergeClientRecordRowsIntoWorkspace should derive names from client_records rows');
+}
 
 const patches = diffBrandProfilePatches(
   workspace,

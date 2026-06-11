@@ -160,7 +160,7 @@ async function syncClientsWorkspace() {
 
 export function useClients() {
   const { isLegacyOrg, planType, orgId } = useStaffAuth();
-  const includeDefaults = isLegacyOrg;
+  const includeDefaults = isLegacyOrg && !isCloudSourceOfTruth();
   const [state, setState] = useState(() =>
     normalizeClientsState(isCloudSourceOfTruth() ? null : loadClientsRaw(), { includeDefaults }),
   );
@@ -214,8 +214,6 @@ export function useClients() {
     },
     orgReady: Boolean(orgId),
   });
-
-  // Debounce localStorage writes to avoid thrashing during rapid edits.
   const persistTimerRef = useRef(null);
   useEffect(() => {
     if (isCloudSourceOfTruth()) return;

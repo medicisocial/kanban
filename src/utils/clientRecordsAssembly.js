@@ -1,5 +1,25 @@
 import { clientBrandNameKey } from './clients.js';
 
+function unionClientNamesFromRecords(existingNames = [], rows = []) {
+  const seen = new Set();
+  const merged = [];
+  for (const name of Array.isArray(existingNames) ? existingNames : []) {
+    const key = clientBrandNameKey(name);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    merged.push(name);
+  }
+  for (const row of rows) {
+    const name = row.display_name || row.brand_key;
+    if (!name) continue;
+    const key = clientBrandNameKey(name);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(String(name).trim());
+  }
+  return merged;
+}
+
 export function brandProfilePatchFromWorkspaceBrand(client, workspace = {}) {
   if (!client) return null;
   return {
@@ -18,6 +38,7 @@ export function brandProfilePatchFromWorkspaceBrand(client, workspace = {}) {
 
 export function mergeClientRecordRowsIntoWorkspace(workspace = {}, rows = []) {
   const next = { ...workspace };
+  next.names = unionClientNamesFromRecords(workspace.names, rows);
   for (const row of rows) {
     const client = row.display_name || row.brand_key;
     if (!client) continue;

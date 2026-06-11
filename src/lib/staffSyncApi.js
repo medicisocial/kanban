@@ -91,7 +91,7 @@ export async function pushStaffSyncSingleton(table, recordId, data) {
   return pushStaffSyncRows(table, [{ id: recordId, data }]);
 }
 
-const STAFF_FETCH_TIMEOUT_MS = 8000;
+const STAFF_FETCH_TIMEOUT_MS = 5000;
 
 /**
  * Load a workspace table through /api/staff-sync (service-role on the server).
