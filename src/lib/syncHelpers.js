@@ -524,8 +524,9 @@ export function mergeRemoteListWithLocalPending({
 
       const local = localById.get(id);
       if (!local) {
-        // Was synced locally before but removed — don't resurrect from stale cloud pulls.
-        if (synced.has(id)) return null;
+        // Offline/localStorage: synced row missing from cache means the user deleted it locally.
+        // Cloud-only mode: React state can lag behind a refetch — never drop cloud rows then.
+        if (synced.has(id) && localItems.length > 0 && !isCloudSourceOfTruth()) return null;
         return remote;
       }
 
@@ -577,7 +578,7 @@ export function mergeRemoteMapWithLocalPending({
         merged[key] = remoteValue;
         continue;
       }
-      if (synced.has(key)) continue;
+      if (synced.has(key) && Object.keys(local).length > 0 && !isCloudSourceOfTruth()) continue;
       merged[key] = remoteValue;
       continue;
     }

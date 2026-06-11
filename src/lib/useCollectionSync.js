@@ -140,7 +140,12 @@ export function useCollectionSync({
         };
 
         // Empty cloud table — authoritative empty state (no localStorage seeding).
+        // Keep in-memory rows when a refetch fails transiently after a successful load.
         if (rows.length === 0) {
+          if (isCloudSourceOfTruth() && localCollectionHasRecords(localItemsRef.current)) {
+            markSyncLoaded();
+            return;
+          }
           applyingRemoteRef.current = true;
           syncedRef.current = new Map();
           markSyncLoaded();
@@ -424,6 +429,23 @@ export function useCollectionSync({
         console.warn(
           `[supabase:${table}] blocked ${rawRemoved.length - removed.length} accidental delete(s) — re-sync from cloud`,
         );
+      }
+
+      if (
+        isCloudSourceOfTruth() &&
+        removed.length > 0 &&
+        items.length === 0 &&
+        removed.some((id) => !pendingRemovedRef.current.has(String(id)))
+      ) {
+        console.warn(
+          `[supabase:${table}] blocked ${removed.length} untombstoned delete(s) with empty local state`,
+        );
+        reportSyncIssue({
+          level: 'error',
+          table,
+          message: `Could not save ${table}: blocked an accidental bulk delete. Refresh the page.`,
+        });
+        return;
       }
 
       if (removed.length) {

@@ -106,6 +106,28 @@ const getId = (record) => record.id;
   assert(merged.length === 0, 'pending delete should hide remote row');
 }
 
+// Cloud-only refetch must not drop rows when React state has not caught up yet.
+{
+  process.env.VITE_USE_SUPABASE = 'true';
+  const remote = [
+    { id: 'a', title: 'Card A', updatedAt: 10 },
+    { id: 'b', title: 'Card B', updatedAt: 11 },
+  ];
+  const merged = mergeRemoteListWithLocalPending({
+    remoteItems: remote,
+    getId,
+    syncedSnapshot: new Map([
+      ['a', JSON.stringify(remote[0])],
+      ['b', JSON.stringify(remote[1])],
+    ]),
+    localItems: [],
+    pendingRemoved: new Set(),
+    pendingLocalCreates: new Set(),
+  });
+  assert(merged.length === 2, 'cloud refetch with empty local must keep remote rows');
+  delete process.env.VITE_USE_SUPABASE;
+}
+
 // Map merge should ignore stale local-only keys.
 {
   const merged = mergeRemoteMapWithLocalPending({

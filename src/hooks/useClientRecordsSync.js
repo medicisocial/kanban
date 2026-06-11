@@ -12,6 +12,22 @@ import {
   syncLocalTombstonesToCloudIfNeeded,
 } from '../utils/brandFileTombstones.js';
 
+const HYDRATE_RETRY_MS = 600;
+const HYDRATE_MAX_ATTEMPTS = 8;
+
+async function fetchClientRecordRowsWithRetry(orgId) {
+  for (let attempt = 0; attempt < HYDRATE_MAX_ATTEMPTS; attempt += 1) {
+    const rows = await fetchStaffSyncRows('client_records', orgId);
+    if (Array.isArray(rows) && rows.length) return rows;
+    if (attempt < HYDRATE_MAX_ATTEMPTS - 1) {
+      await new Promise((resolve) => {
+        setTimeout(resolve, HYDRATE_RETRY_MS);
+      });
+    }
+  }
+  return null;
+}
+
 /**
  * Hydrate brand profile maps from normalized client_records and push diffs to cloud.
  */
@@ -31,9 +47,10 @@ export function useClientRecordsSync({ workspaceState, setWorkspaceState, orgRea
     hydratedRef.current = false;
 
     void (async () => {
-      const rows = await fetchStaffSyncRows('client_records', getOrgId());
-      if (cancelled || !Array.isArray(rows) || !rows.length) {
-        hydratedRef.current = true;
+      const rows = await fetchClientRecordRowsWithRetry(getOrgId());
+      if (cancelled) return;
+      if (!Array.isArray(rows) || !rows.length) {
+        console.warn('[client_records] hydrate skipped — no rows from staff-sync');
         return;
       }
       hydrateBrandFileTombstonesFromRows(rows);
