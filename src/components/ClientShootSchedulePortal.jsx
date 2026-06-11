@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { getContentTypeStyle } from '../constants';
-import { contentTypePillProps } from '../utils/contentTypeColors';
 import {
   getClientShootCards,
   resolveShootCardReferenceVideo,
@@ -11,51 +10,55 @@ import { formatTime } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
 import ShootLocationLink from './ShootLocationLink';
-import { glassInsetClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import {
+  glassInsetClass,
+  statusBadgeClass,
+  statusDotClass,
+  surfacePanelClass,
+} from './clientPortal/clientPortalUi';
 
-function ShootScheduleCard({ card, ideas, clientColor }) {
+function ShootScheduleCard({ card, ideas }) {
   const referenceVideo = resolveShootCardReferenceVideo(card, ideas);
   const typeStyle = getContentTypeStyle(card.contentType);
 
   return (
     <article
-      className={`${glassInsetClass} flex flex-col overflow-hidden`}
-      style={{ borderTopColor: clientColor, borderTopWidth: '3px' }}
+      className={`${glassInsetClass} mb-2 p-3 transition-colors last:mb-0 hover:border-white/12`}
     >
-      <div className="p-4">
-        <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            {card.shootTime && (
-              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/40">
-                {formatTime(card.shootTime)}
-              </p>
-            )}
-            <h3 className="mt-1 text-base font-semibold text-white">{card.title}</h3>
-          </div>
-          <span
-            {...contentTypePillProps(
-              typeStyle,
-              'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase',
-            )}
-          >
-            {card.contentType}
-          </span>
-        </div>
-
-        {card.shootModels && (
-          <p className="mb-3 text-sm text-white/45">Talent: {card.shootModels}</p>
-        )}
-
-        {referenceVideo ? (
-          <div className="rounded-lg bg-white/5 px-3 py-2.5 transition hover:bg-white/[0.07]">
-            <ReferenceVideoLink url={referenceVideo} />
-          </div>
-        ) : (
-          <p className="text-xs text-white/35">No reference video</p>
-        )}
+      <div className="flex items-start justify-between gap-2">
+        <p
+          className="text-[10px] font-medium uppercase tracking-wider"
+          style={{ color: typeStyle.border }}
+        >
+          {card.contentType}
+        </p>
+        <span className={statusBadgeClass('scheduled')}>
+          <span className={statusDotClass('scheduled')} />
+          Shoot
+        </span>
       </div>
+      <h4 className="mt-1.5 text-sm font-medium text-white">{card.title}</h4>
+      {card.shootTime && (
+        <p className="mt-1 text-[11px] tabular-nums text-white/45">{formatTime(card.shootTime)}</p>
+      )}
+      {card.shootModels && (
+        <p className="mt-1 text-[11px] text-white/45">Talent: {card.shootModels}</p>
+      )}
+      {referenceVideo ? (
+        <p className="mt-1.5">
+          <ReferenceVideoLink url={referenceVideo} compact />
+        </p>
+      ) : null}
     </article>
   );
+}
+
+function formatShootDayTitle(dateKey) {
+  return new Date(`${dateKey}T12:00:00`).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 export default function ClientShootSchedulePortal({
@@ -63,7 +66,6 @@ export default function ClientShootSchedulePortal({
   cards,
   ideas = [],
   plans,
-  clientColor,
   embedded = false,
   upcomingOnly = true,
 }) {
@@ -83,58 +85,53 @@ export default function ClientShootSchedulePortal({
 
   const dates = Object.keys(grouped).sort();
 
-  const content = (
-    <>
-      {dates.length === 0 ? (
-        <div className={`${surfacePanelClass} px-6 py-16 text-center`}>
-          <p className="text-sm text-white/45">No upcoming shoots scheduled.</p>
-        </div>
-      ) : (
-        <div className="space-y-8">
+  const content =
+    dates.length === 0 ? (
+      <div className={`${surfacePanelClass} px-6 py-16 text-center`}>
+        <p className="text-sm text-white/45">No upcoming shoots scheduled.</p>
+      </div>
+    ) : (
+      <div className="kanban-board-scroll flex w-full overflow-x-auto overscroll-x-contain pb-2 md:-mx-8 md:scroll-px-8 md:px-8 lg:-mx-10 lg:scroll-px-10 lg:px-10">
+        <div className="flex w-max gap-3 px-1">
           {dates.map((dateKey) => {
-            const label = new Date(`${dateKey}T12:00:00`).toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric',
-            });
+            const dayCards = grouped[dateKey];
             const plan = Object.values(plans || {}).find(
               (entry) => clientMatchesBrand(entry?.client, client) && entry?.dateKey === dateKey,
             );
 
             return (
-              <section key={dateKey} className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-white/55">
-                    {label}
-                  </h3>
-                  {plan?.location && (
-                    <p className="mt-1.5 text-xs text-white/45">
-                      Location:{' '}
-                      <ShootLocationLink
-                        location={plan.location}
-                        linkClassName="text-[#c88] underline-offset-2 hover:underline"
-                      />
-                    </p>
-                  )}
+              <section key={dateKey} className="kanban-stage glass-surface flex flex-col">
+                <div className="kanban-stage-header">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className={statusDotClass('scheduled')} />
+                    <h3 className="kanban-stage-title">{formatShootDayTitle(dateKey)}</h3>
+                  </div>
+                  <span className="text-xs font-semibold tabular-nums text-white/40">
+                    {dayCards.length}
+                  </span>
                 </div>
-                <div className="space-y-3">
-                  {grouped[dateKey].map((card) => (
-                    <ShootScheduleCard
-                      key={card.id}
-                      card={card}
-                      ideas={ideas}
-                      clientColor={clientColor}
+                {plan?.location && (
+                  <p className="mb-2 text-[11px] leading-snug text-white/45">
+                    Location:{' '}
+                    <ShootLocationLink
+                      location={plan.location}
+                      linkClassName="text-[#c88] underline-offset-2 hover:underline"
                     />
-                  ))}
+                  </p>
+                )}
+                <div className="kanban-stage-columns kanban-stage-columns-solo">
+                  <div className="kanban-column-cards">
+                    {dayCards.map((card) => (
+                      <ShootScheduleCard key={card.id} card={card} ideas={ideas} />
+                    ))}
+                  </div>
                 </div>
               </section>
             );
           })}
         </div>
-      )}
-    </>
-  );
+      </div>
+    );
 
   if (embedded) {
     return (
