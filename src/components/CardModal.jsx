@@ -33,7 +33,7 @@ const CARD_TABS = [
 ];
 
 /** Text fields in the modal sync to cloud only when Done / close — not while typing. */
-const SAVE_ON_CLOSE = { deferCommit: true };
+const SAVE_ON_CLOSE = { deferCommit: true, commitOnBlur: true };
 
 function CardModal({
   card,
@@ -63,6 +63,9 @@ function CardModal({
   const pendingUpdatesRef = useRef({});
   const [draftDisplay, setDraftDisplay] = useState({});
 
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
+
   const queueUpdate = useCallback((patch) => {
     if (!patch || typeof patch !== 'object') return;
     pendingUpdatesRef.current = { ...pendingUpdatesRef.current, ...patch };
@@ -75,13 +78,23 @@ function CardModal({
     pendingUpdatesRef.current = {};
     setDraftDisplay({});
     if (!id || !Object.keys(updates).length) return;
-    onUpdate(id, updates, { recordUndo: false });
-  }, [onUpdate]);
+    onUpdateRef.current(id, updates, { recordUndo: false });
+  }, []);
 
   useEffect(() => {
     pendingCardIdRef.current = card?.id ?? null;
     pendingUpdatesRef.current = {};
     setDraftDisplay({});
+  }, [card?.id]);
+
+  const handleDone = useCallback(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    onClose();
+  }, [onClose]);
+
+  useEffect(() => {
     beginBatch();
     return () => {
       flushPendingUpdates();
@@ -91,7 +104,7 @@ function CardModal({
 
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') handleDone();
     };
     document.addEventListener('keydown', handleKey);
     document.body.style.overflow = 'hidden';
@@ -99,7 +112,7 @@ function CardModal({
       document.removeEventListener('keydown', handleKey);
       document.body.style.overflow = '';
     };
-  }, [onClose]);
+  }, [handleDone]);
 
   useEffect(() => {
     if (pendingTabRef.current) {
@@ -323,7 +336,7 @@ function CardModal({
         mouseDownOnOverlayRef.current = e.target === overlayRef.current;
       }}
       onClick={(e) => {
-        if (e.target === overlayRef.current && mouseDownOnOverlayRef.current) onClose();
+        if (e.target === overlayRef.current && mouseDownOnOverlayRef.current) handleDone();
       }}
     >
       <div
@@ -341,7 +354,7 @@ function CardModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleDone}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition hover:bg-white/10 hover:text-white"
           >
             ✕
@@ -376,15 +389,15 @@ function CardModal({
             <DebouncedField
               {...SAVE_ON_CLOSE}
               resetKey={card.id}
-              type="url"
+              type="text"
               value={displayCard.dropboxLink}
               onCommit={(value) => commitTextField('dropboxLink', value)}
               placeholder="Paste link to video file (Dropbox, Google Drive, Vimeo, WeTransfer…)"
               className={inputClass}
             />
-            {card.dropboxLink ? (
+            {displayCard.dropboxLink?.trim() ? (
               <a
-                href={card.dropboxLink}
+                href={displayCard.dropboxLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-1.5 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
@@ -976,7 +989,7 @@ function CardModal({
           )}
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleDone}
             className="flex-1 rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white transition hover:bg-[#a00000]"
           >
             Done

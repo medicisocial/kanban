@@ -17,10 +17,12 @@ function useDebouncedLocalValue(
   localRef.current = local;
   const onCommitRef = useRef(onCommit);
   onCommitRef.current = onCommit;
+  const focusedRef = useRef(false);
   const externalRef = useRef(value ?? '');
   externalRef.current = value ?? '';
 
   useEffect(() => {
+    if (focusedRef.current) return;
     setLocal(value ?? '');
     clearTimeout(timerRef.current);
     timerRef.current = null;
@@ -48,6 +50,14 @@ function useDebouncedLocalValue(
     if (commitOnBlur) flush();
   }, [commitOnBlur, flush]);
 
+  const markFocused = useCallback(() => {
+    focusedRef.current = true;
+  }, []);
+
+  const markBlurred = useCallback(() => {
+    focusedRef.current = false;
+  }, []);
+
   useEffect(() => {
     if (!flushOnUnmount) return undefined;
     return () => {
@@ -58,7 +68,7 @@ function useDebouncedLocalValue(
     };
   }, [resetKey, flushOnUnmount]);
 
-  return { local, schedule, flush, handleBlur };
+  return { local, schedule, flush, handleBlur, markFocused, markBlurred };
 }
 
 function DebouncedField({
@@ -73,7 +83,7 @@ function DebouncedField({
   onBlur,
   ...props
 }) {
-  const { local, schedule, handleBlur } = useDebouncedLocalValue(value, resetKey, delay, onCommit, {
+  const { local, schedule, handleBlur, markFocused, markBlurred } = useDebouncedLocalValue(value, resetKey, delay, onCommit, {
     flushOnUnmount,
     deferCommit,
     commitOnBlur,
@@ -84,15 +94,36 @@ function DebouncedField({
   };
 
   const handleFieldBlur = (event) => {
+    markBlurred();
     handleBlur();
     onBlur?.(event);
   };
 
+  const handleFieldFocus = () => {
+    markFocused();
+  };
+
   if (as === 'textarea') {
-    return <textarea {...props} value={local} onChange={handleChange} onBlur={handleFieldBlur} />;
+    return (
+      <textarea
+        {...props}
+        value={local}
+        onChange={handleChange}
+        onFocus={handleFieldFocus}
+        onBlur={handleFieldBlur}
+      />
+    );
   }
 
-  return <input {...props} value={local} onChange={handleChange} onBlur={handleFieldBlur} />;
+  return (
+    <input
+      {...props}
+      value={local}
+      onChange={handleChange}
+      onFocus={handleFieldFocus}
+      onBlur={handleFieldBlur}
+    />
+  );
 }
 
 export function DebouncedTimeInput({
