@@ -7,8 +7,14 @@ import {
   brandKeysMatch,
   filterContentByBrand,
   resolvePortalBrandDisplayNameFromStore,
+  resolvePortalBrandLabel,
   matchesBrandContentRow,
 } from '../api/_lib/portalBrandProfile.mjs';
+import {
+  attachBrandIdToContentRow,
+  buildBrandIdLookupMap,
+  resolveBrandIdForClient,
+} from '../api/_lib/contentBrandLink.mjs';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -58,6 +64,45 @@ assert(
 assert(
   resolvePortalBrandDisplayNameFromStore('plume', arcoStore) === 'Plume',
   'lowercase credential key resolves to display name',
+);
+assert(
+  resolvePortalBrandDisplayNameFromStore('ara med spa', {
+    names: ['Ara Med Spa', 'Plume'],
+    colors: { 'Ara Med Spa': '#ec4899' },
+  }) === 'Ara Med Spa',
+  'credential key resolves via names before storage key',
+);
+assert(
+  resolvePortalBrandLabel({
+    profile: { brandKey: 'plume', displayName: 'Plume' },
+    displayBrand: 'Plume',
+    sessionBrand: 'plume',
+  }) === 'Plume',
+  'portal brand label prefers profile display name',
+);
+assert(
+  resolvePortalBrandLabel({
+    profile: { brandKey: 'ara med spa' },
+    displayBrand: 'Ara Med Spa',
+    sessionBrand: 'ara med spa',
+  }) === 'Ara Med Spa',
+  'portal brand label uses resolved display name for all clients',
+);
+
+const brandMap = buildBrandIdLookupMap([
+  { id: 'brand-1', brand_key: 'ara med spa', display_name: 'Ara Med Spa' },
+]);
+assert(
+  resolveBrandIdForClient('Ara Med Spa', brandMap) === 'brand-1',
+  'content upsert links brand_id from display client name',
+);
+assert(
+  attachBrandIdToContentRow(
+    'cards',
+    { id: 'c1', org_id: 'medici', data: { client: 'Plume' } },
+    buildBrandIdLookupMap([{ id: 'brand-2', brand_key: 'plume', display_name: 'Plume' }]),
+  ).brand_id === 'brand-2',
+  'content upsert attaches brand_id for any client portal brand',
 );
 
 import { clientMatchesBrand } from '../src/utils/clients.js';

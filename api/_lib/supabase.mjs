@@ -6,6 +6,8 @@
 //   SUPABASE_SERVICE_ROLE_KEY  (required in production when Supabase URL is set)
 //   SUPABASE_URL / SUPABASE_ANON_KEY / ORG_ID  (optional overrides)
 
+import { enrichContentRowsForUpsert } from './contentBrandLink.mjs';
+
 export function getSupabaseUrl() {
   return (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '')
     .trim()
@@ -328,6 +330,12 @@ export async function upsertRecord(table, id, data, orgIdOverride) {
   const { url, key, orgId } = getWriteConfig(orgIdOverride);
   if (!url || !key) throw new Error('Supabase is not configured.');
 
+  const [row] = await enrichContentRowsForUpsert(
+    table,
+    [{ id, org_id: orgId, data, updated_at: new Date().toISOString() }],
+    orgId,
+  );
+
   const endpoint = `${url}/rest/v1/${table}`;
   const response = await fetchWithTimeout(
     endpoint,
@@ -339,7 +347,7 @@ export async function upsertRecord(table, id, data, orgIdOverride) {
         'Content-Type': 'application/json',
         Prefer: 'resolution=merge-duplicates,return=minimal',
       },
-      body: JSON.stringify([{ id, org_id: orgId, data, updated_at: new Date().toISOString() }]),
+      body: JSON.stringify([row]),
     },
     SERVER_WRITE_TIMEOUT_MS,
   );
@@ -382,12 +390,16 @@ export async function upsertRecords(table, records, orgIdOverride) {
   const { url, key, orgId } = getWriteConfig(orgIdOverride);
   if (!url || !key) throw new Error('Supabase is not configured.');
 
-  const payload = rows.map(({ id, data }) => ({
-    id: String(id),
-    org_id: orgId,
-    data,
-    updated_at: new Date().toISOString(),
-  }));
+  const payload = await enrichContentRowsForUpsert(
+    table,
+    rows.map(({ id, data }) => ({
+      id: String(id),
+      org_id: orgId,
+      data,
+      updated_at: new Date().toISOString(),
+    })),
+    orgId,
+  );
 
   const endpoint = `${url}/rest/v1/${table}`;
   const response = await fetch(endpoint, {

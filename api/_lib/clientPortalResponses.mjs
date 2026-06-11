@@ -9,6 +9,7 @@ import { patchBrandProfileRecord, fetchBrandProfileRecord } from './brandRecordS
 import {
   brandKeysMatch,
   resolvePortalBrandDisplayName,
+  resolvePortalBrandLabel,
 } from './portalBrandProfile.mjs';
 import { fetchRecord, upsertRecord } from './supabase.mjs';
 
@@ -34,9 +35,13 @@ async function resolveSessionBrandContext(orgId, sessionBrand) {
     fetchBrandProfileRecord(orgId, sessionBrand),
     resolvePortalBrandDisplayName(orgId, sessionBrand),
   ]);
-  const resolvedDisplay = displayName || profile?.displayName || sessionBrand;
+  const resolvedDisplay = resolvePortalBrandLabel({
+    profile,
+    displayBrand: displayName,
+    sessionBrand,
+  });
   return {
-    brandKey: profile?.displayName || resolvedDisplay,
+    brandKey: profile?.brandKey || String(sessionBrand || '').trim().toLowerCase(),
     displayName: resolvedDisplay,
     profile,
   };

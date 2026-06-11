@@ -13,6 +13,7 @@ import {
   fetchBrandPortalUsers,
   fetchBrandContent,
   resolvePortalBrandDisplayName,
+  resolvePortalBrandLabel,
 } from './_lib/portalBrandProfile.mjs';
 import { isSupabaseConfigured } from './_lib/supabase.mjs';
 import { normalizeHexColor } from './_lib/colorHex.mjs';
@@ -115,8 +116,7 @@ export default async function handler(req, res) {
   }
 
   res.setHeader('Cache-Control', 'private, no-store, max-age=0');
-  const portalBrand =
-    profile?.displayName || displayBrand || profile?.brandKey || brand;
+  const portalBrand = resolvePortalBrandLabel({ profile, displayBrand, sessionBrand: brand });
   return res.status(200).json({
     brand: portalBrand,
     orgId: session.orgId || null,

@@ -68,6 +68,10 @@ export function resolvePortalBrandDisplayNameFromStore(sessionBrand, clientStore
   if (!sessionBrand) return '';
 
   const names = Array.isArray(clientStore?.names) ? clientStore.names : [];
+  for (const name of names) {
+    if (brandKeysMatch(name, sessionBrand)) return String(name).trim();
+  }
+
   const brandKey = resolveBrandStorageKey(
     clientStore?.colors || clientStore?.logos || clientStore?.photoGalleryLinks || {},
     sessionBrand,
@@ -77,14 +81,14 @@ export function resolvePortalBrandDisplayNameFromStore(sessionBrand, clientStore
   if (brandKey && brandKeysMatch(brandKey, sessionBrand)) {
     const fromNames = names.find((name) => brandKeysMatch(name, brandKey));
     if (fromNames) return String(fromNames).trim();
-    return brandKey;
-  }
-
-  for (const name of names) {
-    if (brandKeysMatch(name, sessionBrand)) return String(name).trim();
   }
 
   return String(sessionBrand).trim();
+}
+
+/** Human-readable brand label for all client portal surfaces. */
+export function resolvePortalBrandLabel({ profile, displayBrand, sessionBrand }) {
+  return profile?.displayName || displayBrand || profile?.brandKey || sessionBrand || '';
 }
 
 export async function resolvePortalBrandDisplayName(orgId, sessionBrand) {
