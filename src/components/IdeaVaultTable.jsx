@@ -6,7 +6,6 @@ import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
 import {
   btnGhostClass,
   btnPrimaryClass,
-  formatPortalDate,
   mobileActionRowClass,
   mobileCardClass,
   mobileMetaClass,
@@ -92,7 +91,6 @@ export default function IdeaVaultTable({
                   </span>
                 )}
                 {!hideClientColumn && <span className="text-white/70">{idea.client}</span>}
-                <span>{formatPortalDate(idea.reviewedAt || idea.createdAt)}</span>
               </div>
               {!readOnly && (
               <div className={mobileActionRowClass}>
@@ -133,16 +131,15 @@ export default function IdeaVaultTable({
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[860px] border-collapse">
+        <table className="w-full min-w-[720px] border-collapse">
           <thead>
             <tr>
-              <th className="w-[28%]"><span className={tableHeaderClass}>Title</span></th>
-              <th className="w-[12%]"><span className={tableHeaderClass}>Reference</span></th>
-              <th className="w-[10%]"><span className={tableHeaderClass}>Type</span></th>
+              <th className="w-[32%]"><span className={tableHeaderClass}>Title</span></th>
+              <th className="w-[14%]"><span className={tableHeaderClass}>Reference</span></th>
+              <th className="w-[12%]"><span className={tableHeaderClass}>Type</span></th>
               {!hideClientColumn && (
-                <th className="w-[14%]"><span className={tableHeaderClass}>Client</span></th>
+                <th className="w-[16%]"><span className={tableHeaderClass}>Client</span></th>
               )}
-              <th className="w-[10%]"><span className={tableHeaderClass}>Approved</span></th>
               {!readOnly && (
                 <th className="w-[26%]"><span className={tableHeaderClass}>Actions</span></th>
               )}
@@ -174,9 +171,6 @@ export default function IdeaVaultTable({
                     </div>
                   </td>
                   )}
-                  <td className={`${tableCellClass} text-xs tabular-nums text-white/55`}>
-                    {formatPortalDate(idea.reviewedAt || idea.createdAt)}
-                  </td>
                   {!readOnly && (
                   <td className={tableCellClass}>
                     <div className="flex flex-wrap items-center gap-1">
