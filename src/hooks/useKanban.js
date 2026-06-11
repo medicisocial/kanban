@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { STORAGE_KEY, COLUMNS, PLATFORM, createCard, EDITOR_TODO_STORAGE_KEY, isScheduledPostType, isOneOffProjectCard, syncOneOffScheduleFields } from '../constants';
 import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
@@ -166,9 +166,15 @@ export function useKanban() {
     loadLocal: loadCards,
   });
 
+  // Debounce localStorage writes to avoid thrashing during rapid edits (e.g. typing).
+  const persistTimerRef = useRef(null);
   useEffect(() => {
     if (!shouldPersistSyncedState(syncLoaded)) return;
-    writeOrgScopedJson(STORAGE_KEY, cards);
+    clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(() => {
+      writeOrgScopedJson(STORAGE_KEY, cards);
+    }, 400);
+    return () => clearTimeout(persistTimerRef.current);
   }, [cards, syncLoaded]);
 
   const replaceCards = useCallback((next) => {

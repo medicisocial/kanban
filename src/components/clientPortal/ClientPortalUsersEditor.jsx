@@ -11,8 +11,9 @@ import {
   normalizePortalLogin,
   suggestPortalUsername,
 } from '../../utils/portalLogin';
-import { getPortalPasswordForUser as getVaultPasswordForUser } from '../../utils/clientPortalPasswordVault';
+import { getPortalPasswordForUser as getVaultPasswordForUser, hydratePortalPasswordVaultForBrand } from '../../utils/clientPortalPasswordVault';
 import { loadCredentials } from '../../hooks/useClientPortalCredentials';
+import { fetchPortalPasswordVaultFromApi } from '../../utils/portalPasswordVaultApi';
 import { useClientsContext } from '../../context/ClientsContext';
 import PasswordField from './PasswordField';
 import ProfilePhotoEditor from './ProfilePhotoEditor';
@@ -88,6 +89,25 @@ export default function ClientPortalUsersEditor({
     setError('');
     setInviteDetails(null);
   }, [client]);
+
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !client) return;
+
+    let cancelled = false;
+    const credentials = syncedCredentials || loadCredentials();
+    const brandKey = resolveCredentialBrandKey(credentials, client);
+
+    void fetchPortalPasswordVaultFromApi(brandKey).then((result) => {
+      if (cancelled || !result?.ok || !result.vault || !Object.keys(result.vault).length) return;
+      hydratePortalPasswordVaultForBrand(client, result.vault, { vaultBrandKey: brandKey });
+      if (dirtyRef.current) return;
+      setUsers(buildDraftUsers(client, getClientUsers, getClientContacts, getSyncedPortalPassword));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client, syncedCredentials, getClientUsers, getClientContacts, getSyncedPortalPassword]);
 
   useEffect(() => {
     if (dirtyRef.current) return;

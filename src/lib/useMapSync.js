@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 const REALTIME_REFETCH_DEBOUNCE_MS = 80;
-const SYNC_PUSH_DEBOUNCE_MS = 40;
+// Coalesce rapid local edits (e.g. typing, credential saves) into one cloud write.
+const SYNC_PUSH_DEBOUNCE_MS = 300;
 const FOCUS_REFETCH_MIN_MS = 30_000;
 import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';

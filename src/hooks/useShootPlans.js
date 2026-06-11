@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { SHOOT_PLANS_STORAGE_KEY } from "../constants";
 import { getShootPlanKey } from "../utils/shootDay";
 import { notifyMutation } from "../utils/undoHistory";
@@ -53,9 +53,15 @@ export function useShootPlans() {
     loadLocal: loadPlans,
   });
 
+  // Debounce localStorage writes to avoid thrashing during rapid edits.
+  const persistTimerRef = useRef(null);
   useEffect(() => {
     if (!shouldPersistSyncedState(syncLoaded)) return;
-    writeOrgScopedJson(SHOOT_PLANS_STORAGE_KEY, plans);
+    clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(() => {
+      writeOrgScopedJson(SHOOT_PLANS_STORAGE_KEY, plans);
+    }, 400);
+    return () => clearTimeout(persistTimerRef.current);
   }, [plans, syncLoaded]);
 
   const getPlan = useCallback(

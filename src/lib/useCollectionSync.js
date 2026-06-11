@@ -26,8 +26,8 @@ import {
 } from './syncHelpers';
 
 const REALTIME_REFETCH_DEBOUNCE_MS = 80;
-// Coalesce rapid local edits (e.g. drag-drop) into one cloud write.
-const SYNC_PUSH_DEBOUNCE_MS = 40;
+// Coalesce rapid local edits (e.g. drag-drop, typing) into one cloud write.
+const SYNC_PUSH_DEBOUNCE_MS = 300;
 // Minimum gap before a focus/visibility event triggers a full re-fetch.
 const FOCUS_REFETCH_MIN_MS = 30_000;
 

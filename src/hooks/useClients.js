@@ -562,8 +562,8 @@ export function useClients() {
 
     const brandKey = vaultBrandKey || client;
 
-    return applyClientsWorkspaceUpdate((prev) => {
-      const nextVault = { ...(prev.portalPasswordVault || {}) };
+    const applyVaultUpdate = (prevVault) => {
+      const nextVault = { ...(prevVault || {}) };
       const clientVault = { ...(nextVault[brandKey] || {}) };
 
       for (const draft of draftUsers) {
@@ -592,10 +592,22 @@ export function useClients() {
           delete nextVault[key];
         }
       }
-      savePortalPasswordVault(collapsePortalPasswordVaultBrandKeys(nextVault));
+      return collapsePortalPasswordVaultBrandKeys(nextVault);
+    };
+
+    // Normalized portal_password_vault is the cloud source of truth — keep local
+    // cache only so passwords re-display after refresh without rewriting the blob.
+    if (SUPABASE_ENABLED) {
+      savePortalPasswordVault(applyVaultUpdate(loadPortalPasswordVault()));
+      return { ok: true };
+    }
+
+    return applyClientsWorkspaceUpdate((prev) => {
+      const nextVault = applyVaultUpdate(prev.portalPasswordVault || {});
+      savePortalPasswordVault(nextVault);
       return {
         ...prev,
-        portalPasswordVault: collapsePortalPasswordVaultBrandKeys(nextVault),
+        portalPasswordVault: nextVault,
       };
     });
   }, [applyClientsWorkspaceUpdate]);

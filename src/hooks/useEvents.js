@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { EVENTS_STORAGE_KEY, createEvent } from '../constants';
 import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
@@ -38,9 +38,15 @@ export function useEvents() {
     loadLocal: loadEvents,
   });
 
+  // Debounce localStorage writes to avoid thrashing during rapid edits.
+  const persistTimerRef = useRef(null);
   useEffect(() => {
     if (!shouldPersistSyncedState(syncLoaded)) return;
-    writeOrgScopedJson(EVENTS_STORAGE_KEY, events);
+    clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(() => {
+      writeOrgScopedJson(EVENTS_STORAGE_KEY, events);
+    }, 400);
+    return () => clearTimeout(persistTimerRef.current);
   }, [events, syncLoaded]);
 
   const replaceEvents = useCallback((next) => {

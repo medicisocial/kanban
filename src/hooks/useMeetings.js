@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { MEETINGS_STORAGE_KEY, createMeeting } from '../constants';
 import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
@@ -38,9 +38,15 @@ export function useMeetings() {
     loadLocal: loadMeetings,
   });
 
+  // Debounce localStorage writes to avoid thrashing during rapid edits.
+  const persistTimerRef = useRef(null);
   useEffect(() => {
     if (!shouldPersistSyncedState(syncLoaded)) return;
-    writeOrgScopedJson(MEETINGS_STORAGE_KEY, meetings);
+    clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(() => {
+      writeOrgScopedJson(MEETINGS_STORAGE_KEY, meetings);
+    }, 400);
+    return () => clearTimeout(persistTimerRef.current);
   }, [meetings, syncLoaded]);
 
   const replaceMeetings = useCallback((next) => {

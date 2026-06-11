@@ -1,6 +1,6 @@
 import { normalizeBrandUsers, hashValue } from './clientPortalAuth.mjs';
 import { mergeClientsWorkspaceData } from './clientsWorkspaceMerge.mjs';
-import { fetchCollectionMap, fetchRecord, upsertRecord } from './supabase.mjs';
+import { fetchCollectionMap, fetchRecord, getPortalPasswordVault, upsertRecord } from './supabase.mjs';
 
 export const AUTH_CRITICAL_SYNC_TABLES = new Set([
   'client_portal_credentials',
@@ -234,7 +234,15 @@ export async function repairPortalCredentialFromVault({ brand, orgId, user, pass
   if (user.passwordHash && user.passwordHash.trim()) return null;
 
   const clients = await fetchRecord('clients', 'workspace', orgId);
-  const vaultPassword = clients?.portalPasswordVault?.[brand]?.[user.id];
+  let vaultPassword = clients?.portalPasswordVault?.[brand]?.[user.id];
+  if (!vaultPassword) {
+    try {
+      const normalizedVault = await getPortalPasswordVault(brand, orgId);
+      vaultPassword = normalizedVault?.[user.id];
+    } catch {
+      /* fall back to blob-only */
+    }
+  }
   if (!vaultPassword || vaultPassword !== String(password).trim()) return null;
 
   const rows = await fetchCollectionMap('client_portal_credentials', orgId);

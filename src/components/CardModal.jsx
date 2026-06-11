@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   CONTENT_TYPES,
@@ -150,8 +150,32 @@ export default function CardModal({
     );
   };
 
+  // Debounce text field updates (title, notes, etc.) to avoid triggering the
+  // full sync pipeline on every keystroke. Non-text fields update immediately.
+  const debouncedUpdatesRef = useRef({});
+  const debounceTimerRef = useRef(null);
+  const flushDebounced = useCallback(() => {
+    const updates = debouncedUpdatesRef.current;
+    debouncedUpdatesRef.current = {};
+    debounceTimerRef.current = null;
+    const keys = Object.keys(updates);
+    if (keys.length === 0) return;
+    if (keys.length === 1 && keys[0] !== 'title' && keys[0] !== 'notes' && keys[0] !== 'dropboxLink' && keys[0] !== 'referenceMusic' && keys[0] !== 'referenceVideo' && keys[0] !== 'shootNeeds') {
+      // Non-text field — apply immediately
+      onUpdate(card.id, updates);
+      return;
+    }
+    onUpdate(card.id, updates);
+  }, [card?.id, onUpdate]);
+  const scheduleFlush = useCallback(() => {
+    clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(flushDebounced, 180);
+  }, [flushDebounced]);
+
   const handleChange = (field, value) => {
     if (field === 'contentType' && value === 'One-off Project') {
+      clearTimeout(debounceTimerRef.current);
+      debouncedUpdatesRef.current = {};
       onUpdate(card.id, {
         contentType: value,
         isOneOffProject: true,
@@ -168,6 +192,8 @@ export default function CardModal({
       return;
     }
     if (field === 'contentType' && value === 'Story') {
+      clearTimeout(debounceTimerRef.current);
+      debouncedUpdatesRef.current = {};
       onUpdate(card.id, {
         contentType: value,
         shootDate: '',
@@ -179,6 +205,8 @@ export default function CardModal({
       return;
     }
     if (field === 'contentType' && value !== 'Story') {
+      clearTimeout(debounceTimerRef.current);
+      debouncedUpdatesRef.current = {};
       onUpdate(card.id, {
         contentType: value,
         isOneOffProject: false,
@@ -189,6 +217,8 @@ export default function CardModal({
       return;
     }
     if (field === 'client') {
+      clearTimeout(debounceTimerRef.current);
+      debouncedUpdatesRef.current = {};
       onUpdate(card.id, {
         client: value,
         accountManager: getClientAccountManager(value) || card.accountManager || '',
@@ -196,6 +226,8 @@ export default function CardModal({
       return;
     }
     if (field === 'notes' && card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card))) {
+      clearTimeout(debounceTimerRef.current);
+      debouncedUpdatesRef.current = {};
       onUpdate(card.id, {
         storyOccurrenceNotes: {
           ...parseStoryOccurrenceNotes(card.storyOccurrenceNotes),
@@ -205,6 +237,8 @@ export default function CardModal({
       return;
     }
     if (field === 'shootTime') {
+      clearTimeout(debounceTimerRef.current);
+      debouncedUpdatesRef.current = {};
       const updates = { shootTime: value };
       const start = parseTimeToMinutes(value);
       const end = parseTimeToMinutes(card.shootEndTime);
@@ -215,7 +249,9 @@ export default function CardModal({
       onUpdate(card.id, updates);
       return;
     }
-    onUpdate(card.id, { [field]: value });
+    // Text fields — debounce
+    debouncedUpdatesRef.current[field] = value;
+    scheduleFlush();
   };
 
   const recurrenceDays = parseRecurrenceDays(card.storyRecurrenceDays);

@@ -64,6 +64,23 @@ export function savePortalPasswordVault(vault) {
   localStorage.setItem(CLIENT_PORTAL_PASSWORD_VAULT_KEY, JSON.stringify(vault));
 }
 
+/** Merge API-fetched vault entries into the local write-through cache for one brand. */
+export function hydratePortalPasswordVaultForBrand(client, brandVault, { vaultBrandKey = client } = {}) {
+  if (!client || !brandVault || typeof brandVault !== 'object') return;
+
+  const vault = loadPortalPasswordVault();
+  const brandKey = vaultBrandKey || client;
+  vault[brandKey] = { ...(vault[brandKey] || {}), ...brandVault };
+
+  for (const key of Object.keys(vault)) {
+    if (key !== brandKey && clientNamesConflict(key, client)) {
+      delete vault[key];
+    }
+  }
+
+  savePortalPasswordVault(collapsePortalPasswordVaultBrandKeys(vault));
+}
+
 /** Resolve vault map key when display name differs from credential brand id (e.g. "Ara Med Spa" vs "ara med spa"). */
 export function resolvePortalVaultBrandKey(vault, client) {
   if (!client) return client;

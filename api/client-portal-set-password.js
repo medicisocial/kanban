@@ -3,7 +3,7 @@ import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
 import {
   fetchRecord,
   isSupabaseConfigured,
-  patchClientsPortalPasswordVault,
+  patchPortalPasswordVault,
   upsertRecord,
 } from './_lib/supabase.mjs';
 import { hashValue, normalizeBrandUsers } from './_lib/clientPortalAuth.mjs';
@@ -169,7 +169,7 @@ export default async function handler(req, res) {
     let vaultWarning = null;
     if (Object.keys(brandVault).length) {
       try {
-        await patchClientsPortalPasswordVault(brandKey, brandVault, resolvedOrgId);
+        await patchPortalPasswordVault(brandKey, brandVault, resolvedOrgId);
       } catch (vaultError) {
         vaultWarning =
           'Portal login saved, but the password may not show on other devices until sync completes.';

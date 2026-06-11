@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { DEFAULT_TEAM_MEMBERS, TEAM_ROLES, TEAM_STORAGE_KEY } from '../constants';
 import {
   getAllMemberNames,
@@ -51,9 +51,15 @@ export function useTeamMembers() {
   // team-member logins keep working: verifyTeamMemberStaffCredentials() reads
   // localStorage directly, and the /api/team-auth endpoint reads the KV blob fed
   // from it. Supabase realtime updates flow into state -> here -> localStorage.
+  // Debounce writes to avoid thrashing during rapid edits.
+  const persistTimerRef = useRef(null);
   useEffect(() => {
     if (!shouldPersistSyncedState(syncLoaded)) return;
-    writeOrgScopedJson(TEAM_STORAGE_KEY, teamMembers);
+    clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(() => {
+      writeOrgScopedJson(TEAM_STORAGE_KEY, teamMembers);
+    }, 400);
+    return () => clearTimeout(persistTimerRef.current);
   }, [teamMembers, syncLoaded]);
 
   const getMembersByRole = useCallback(

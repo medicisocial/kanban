@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ADMIN_TASKS_STORAGE_KEY } from '../constants';
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
 import { notifyMutation } from '../utils/undoHistory';
@@ -54,9 +54,15 @@ export function useAdminTasks() {
     loadLocal: loadAdminTasks,
   });
 
+  // Debounce localStorage writes to avoid thrashing during rapid edits.
+  const persistTimerRef = useRef(null);
   useEffect(() => {
     if (!shouldPersistSyncedState(syncLoaded)) return;
-    writeOrgScopedJson(ADMIN_TASKS_STORAGE_KEY, adminTasks);
+    clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(() => {
+      writeOrgScopedJson(ADMIN_TASKS_STORAGE_KEY, adminTasks);
+    }, 400);
+    return () => clearTimeout(persistTimerRef.current);
   }, [adminTasks, syncLoaded]);
 
   const replaceAdminTasks = useCallback((next) => {

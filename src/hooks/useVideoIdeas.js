@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   DEFAULT_CLIENTS,
   VIDEO_IDEAS_STORAGE_KEY,
@@ -66,9 +66,15 @@ export function useVideoIdeas() {
     getRemotePurgeIds: getRejectedVideoIdeaIds,
   });
 
+  // Debounce localStorage writes to avoid thrashing during rapid edits.
+  const persistTimerRef = useRef(null);
   useEffect(() => {
     if (!shouldPersistSyncedState(syncLoaded)) return;
-    writeOrgScopedJson(VIDEO_IDEAS_STORAGE_KEY, ideas);
+    clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = setTimeout(() => {
+      writeOrgScopedJson(VIDEO_IDEAS_STORAGE_KEY, ideas);
+    }, 400);
+    return () => clearTimeout(persistTimerRef.current);
   }, [ideas, syncLoaded]);
 
   const replaceIdeas = useCallback((next) => {
