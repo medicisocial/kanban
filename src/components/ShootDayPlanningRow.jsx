@@ -11,6 +11,9 @@ import DebouncedField, { DebouncedModelTagInput, DebouncedTimeInput } from "./De
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-2.5 py-1.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50";
 
+/** Inline shoot fields sync on blur (or unmount), not while typing. */
+const SAVE_ON_BLUR = { deferCommit: true, commitOnBlur: true };
+
 export default function ShootDayPlanningRow({
   card,
   onUpdate,
@@ -106,6 +109,7 @@ export default function ShootDayPlanningRow({
             Start time
           </span>
           <DebouncedTimeInput
+            {...SAVE_ON_BLUR}
             resetKey={card.id}
             value={card.shootTime || ""}
             onCommit={commitShootTime}
@@ -127,6 +131,7 @@ export default function ShootDayPlanningRow({
             End time
           </span>
           <DebouncedTimeInput
+            {...SAVE_ON_BLUR}
             resetKey={card.id}
             value={card.shootEndTime || ""}
             onCommit={(value) => commitPatch({ shootEndTime: value })}
@@ -143,6 +148,7 @@ export default function ShootDayPlanningRow({
             Models / talent
           </span>
           <DebouncedModelTagInput
+            {...SAVE_ON_BLUR}
             resetKey={card.id}
             value={card.shootModels || ""}
             onCommit={(value) => commitPatch({ shootModels: value })}
@@ -178,6 +184,7 @@ export default function ShootDayPlanningRow({
             Props & needs
           </span>
           <DebouncedField
+            {...SAVE_ON_BLUR}
             resetKey={card.id}
             value={card.shootNeeds || ""}
             onCommit={(value) => commitPatch({ shootNeeds: value })}
@@ -202,6 +209,7 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
       <label className="block sm:col-span-2">
         <span className="mb-1 block text-xs font-medium text-gray-400">Shoot name</span>
         <DebouncedField
+          {...SAVE_ON_BLUR}
           resetKey={planKey}
           value={plan?.title || ""}
           onCommit={(value) => commitPatch({ title: value, manual: true })}
@@ -217,6 +225,7 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
       <label className="block sm:col-span-2">
         <span className="mb-1 block text-xs font-medium text-gray-400">Location</span>
         <DebouncedField
+          {...SAVE_ON_BLUR}
           resetKey={planKey}
           value={plan?.location || ""}
           onCommit={(value) => commitPatch({ location: value })}
@@ -240,6 +249,7 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-gray-400">Start time</span>
             <DebouncedTimeInput
+              {...SAVE_ON_BLUR}
               resetKey={planKey}
               value={plan?.shootStartTime || ""}
               onCommit={(value) => commitPatch({ shootStartTime: value })}
@@ -251,6 +261,7 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-gray-400">End time</span>
             <DebouncedTimeInput
+              {...SAVE_ON_BLUR}
               resetKey={planKey}
               value={plan?.shootEndTime || ""}
               onCommit={(value) => commitPatch({ shootEndTime: value })}
@@ -269,6 +280,7 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
           Models needed for the entire shoot window (not tied to a specific piece of content).
         </p>
         <DebouncedModelTagInput
+          {...SAVE_ON_BLUR}
           resetKey={planKey}
           value={plan?.sessionModels || ""}
           onCommit={(value) => commitPatch({ sessionModels: value })}
@@ -291,6 +303,7 @@ export function ShootDaySessionExtras({ plan, onUpdatePlan, readOnly = false }) 
       <label className="block sm:col-span-2">
         <span className="mb-1 block text-xs font-medium text-gray-400">General equipment & needs</span>
         <DebouncedField
+          {...SAVE_ON_BLUR}
           resetKey={planKey}
           value={plan?.sessionNeeds || ""}
           onCommit={(value) => commitPatch({ sessionNeeds: value })}
@@ -302,6 +315,7 @@ export function ShootDaySessionExtras({ plan, onUpdatePlan, readOnly = false }) 
       <label className="block sm:col-span-2">
         <span className="mb-1 block text-xs font-medium text-gray-400">Session notes</span>
         <DebouncedField
+          {...SAVE_ON_BLUR}
           resetKey={planKey}
           as="textarea"
           value={plan?.notes || ""}

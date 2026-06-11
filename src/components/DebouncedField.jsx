@@ -4,7 +4,13 @@ import ModelTagInput from './ModelTagInput';
 
 export const DEBOUNCED_FIELD_DELAY_MS = 450;
 
-function useDebouncedLocalValue(value, resetKey, delay, onCommit, flushOnUnmount = true, deferCommit = false) {
+function useDebouncedLocalValue(
+  value,
+  resetKey,
+  delay,
+  onCommit,
+  { flushOnUnmount = true, deferCommit = false, commitOnBlur = false } = {},
+) {
   const [local, setLocal] = useState(value ?? '');
   const timerRef = useRef(null);
   const localRef = useRef(local);
@@ -38,6 +44,10 @@ function useDebouncedLocalValue(value, resetKey, delay, onCommit, flushOnUnmount
     [delay, deferCommit, flush],
   );
 
+  const handleBlur = useCallback(() => {
+    if (commitOnBlur) flush();
+  }, [commitOnBlur, flush]);
+
   useEffect(() => {
     if (!flushOnUnmount) return undefined;
     return () => {
@@ -48,7 +58,7 @@ function useDebouncedLocalValue(value, resetKey, delay, onCommit, flushOnUnmount
     };
   }, [resetKey, flushOnUnmount]);
 
-  return { local, schedule, flush };
+  return { local, schedule, flush, handleBlur };
 }
 
 function DebouncedField({
@@ -59,26 +69,30 @@ function DebouncedField({
   as = 'input',
   flushOnUnmount = true,
   deferCommit = false,
+  commitOnBlur = false,
+  onBlur,
   ...props
 }) {
-  const { local, schedule } = useDebouncedLocalValue(
-    value,
-    resetKey,
-    delay,
-    onCommit,
+  const { local, schedule, handleBlur } = useDebouncedLocalValue(value, resetKey, delay, onCommit, {
     flushOnUnmount,
     deferCommit,
-  );
+    commitOnBlur,
+  });
 
   const handleChange = (event) => {
     schedule(event.target.value);
   };
 
+  const handleFieldBlur = (event) => {
+    handleBlur();
+    onBlur?.(event);
+  };
+
   if (as === 'textarea') {
-    return <textarea {...props} value={local} onChange={handleChange} />;
+    return <textarea {...props} value={local} onChange={handleChange} onBlur={handleFieldBlur} />;
   }
 
-  return <input {...props} value={local} onChange={handleChange} />;
+  return <input {...props} value={local} onChange={handleChange} onBlur={handleFieldBlur} />;
 }
 
 export function DebouncedTimeInput({
@@ -88,22 +102,25 @@ export function DebouncedTimeInput({
   delay = DEBOUNCED_FIELD_DELAY_MS,
   flushOnUnmount = true,
   deferCommit = false,
+  commitOnBlur = false,
+  onBlur,
   ...props
 }) {
-  const { local, schedule } = useDebouncedLocalValue(
-    value,
-    resetKey,
-    delay,
-    onCommit,
+  const { local, schedule, handleBlur } = useDebouncedLocalValue(value, resetKey, delay, onCommit, {
     flushOnUnmount,
     deferCommit,
-  );
+    commitOnBlur,
+  });
 
   return (
     <TimeInput
       {...props}
       value={local}
       onChange={(event) => schedule(event.target.value)}
+      onBlur={(event) => {
+        handleBlur();
+        onBlur?.(event);
+      }}
     />
   );
 }
@@ -117,16 +134,23 @@ export function DebouncedModelTagInput({
   deferCommit = false,
   ...props
 }) {
-  const { local, schedule } = useDebouncedLocalValue(
-    value,
-    resetKey,
-    delay,
-    onCommit,
+  const { local, schedule, flush } = useDebouncedLocalValue(value, resetKey, delay, onCommit, {
     flushOnUnmount,
     deferCommit,
-  );
+    commitOnBlur: false,
+  });
 
-  return <ModelTagInput {...props} value={local} onChange={schedule} />;
+  return (
+    <ModelTagInput
+      {...props}
+      value={local}
+      onChange={(next) => {
+        schedule(next);
+        // Tag add/remove (and draft commit on blur) are explicit — sync immediately.
+        if (deferCommit) flush();
+      }}
+    />
+  );
 }
 
 export default memo(DebouncedField);
