@@ -1,3 +1,5 @@
+import { isOneOffProjectCard } from '../constants';
+
 /** Approved ideas waiting to be scheduled on a shoot day. */
 export function findIdeaBoardCard(idea, cards = []) {
   if (!idea) return null;
@@ -31,22 +33,21 @@ export function isIdeaScheduled(idea, cards = []) {
   return !isIdeaInVault(idea, cards);
 }
 
-/** Approved idea linked to a To Create card (by sourceIdeaId or boardCardId). */
-export function findIdeaForCard(card, ideas = []) {
-  if (!card || card.columnId !== 'shoot') return null;
-  if (card.sourceIdeaId) {
-    const bySource = ideas.find(
-      (idea) => idea.id === card.sourceIdeaId && idea.status === 'approved',
-    );
-    if (bySource) return bySource;
-  }
-  return (
-    ideas.find(
-      (idea) => idea.status === 'approved' && idea.boardCardId === card.id,
-    ) || null
-  );
+/** Pipeline card in the To Create column (not a one-off project). */
+export function isToCreatePipelineCard(card) {
+  return Boolean(card && card.columnId === 'shoot' && !isOneOffProjectCard(card));
 }
 
-export function canReturnCardToVault(card, ideas = []) {
-  return Boolean(findIdeaForCard(card, ideas));
+/** Idea linked to a To Create card (by sourceIdeaId or boardCardId). */
+export function findIdeaForCard(card, ideas = []) {
+  if (!isToCreatePipelineCard(card)) return null;
+  if (card.sourceIdeaId) {
+    const bySource = ideas.find((idea) => idea.id === card.sourceIdeaId);
+    if (bySource) return bySource;
+  }
+  return ideas.find((idea) => idea.boardCardId === card.id) || null;
+}
+
+export function canReturnCardToVault(card) {
+  return isToCreatePipelineCard(card);
 }

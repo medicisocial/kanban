@@ -21,7 +21,7 @@ export default function KanbanCard({ card, ideas = [], onClick, onDelete, onRetu
   const scheduleDate = card.dueDate || (isOneOff ? card.shootDate : '');
   const scheduleTime = card.dueTime || (isOneOff ? card.shootTime : '');
   const overdue = isOverdue(scheduleDate) && card.columnId !== 'scheduled' && !isOneOff;
-  const showReturnToBank = Boolean(onReturnToVault && canReturnCardToVault(card, ideas));
+  const showReturnToBank = Boolean(onReturnToVault && canReturnCardToVault(card));
 
   return (
     <div

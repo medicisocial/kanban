@@ -30,20 +30,18 @@ function isIdeaScheduled(idea, cards = []) {
 function findIdeaForCard(card, ideas = []) {
   if (!card || card.columnId !== 'shoot') return null;
   if (card.sourceIdeaId) {
-    const bySource = ideas.find(
-      (idea) => idea.id === card.sourceIdeaId && idea.status === 'approved',
-    );
+    const bySource = ideas.find((idea) => idea.id === card.sourceIdeaId);
     if (bySource) return bySource;
   }
-  return (
-    ideas.find(
-      (idea) => idea.status === 'approved' && idea.boardCardId === card.id,
-    ) || null
-  );
+  return ideas.find((idea) => idea.boardCardId === card.id) || null;
 }
 
-function canReturnCardToVault(card, ideas = []) {
-  return Boolean(findIdeaForCard(card, ideas));
+function isToCreatePipelineCard(card) {
+  return Boolean(card && card.columnId === 'shoot' && card.contentType !== 'One-off Project');
+}
+
+function canReturnCardToVault(card) {
+  return isToCreatePipelineCard(card);
 }
 
 const idea = {
@@ -87,18 +85,24 @@ const ideas = [
 ];
 
 assert(
-  canReturnCardToVault({ sourceIdeaId: 'idea-2', columnId: 'shoot' }, ideas),
-  'shoot cards from ideas can return to vault',
+  canReturnCardToVault({ sourceIdeaId: 'idea-2', columnId: 'shoot', contentType: 'Reel' }),
+  'shoot cards can return to vault',
 );
 assert(
-  canReturnCardToVault({ id: 'card-legacy', columnId: 'shoot' }, [
-    { id: 'idea-3', status: 'approved', boardCardId: 'card-legacy' },
-  ]),
-  'legacy boardCardId link can return to vault',
+  canReturnCardToVault({ id: 'card-legacy', columnId: 'shoot', contentType: 'Reel' }),
+  'To Create cards without idea links can return to vault',
 );
 assert(
-  !canReturnCardToVault({ sourceIdeaId: 'idea-2', columnId: 'editing' }, ideas),
+  findIdeaForCard({ sourceIdeaId: 'idea-2', columnId: 'shoot' }, ideas)?.id === 'idea-2',
+  'findIdeaForCard resolves sourceIdeaId',
+);
+assert(
+  !canReturnCardToVault({ sourceIdeaId: 'idea-2', columnId: 'editing', contentType: 'Reel' }),
   'cards that moved past To Create cannot return to vault',
+);
+assert(
+  !canReturnCardToVault({ columnId: 'shoot', contentType: 'One-off Project', isOneOffProject: true }),
+  'one-off projects in To Create cannot return to vault',
 );
 
 console.log('Video idea vault tests passed.');

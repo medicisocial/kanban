@@ -79,8 +79,8 @@ export default function ContentCreatorTodo({
                 </p>
                 <CardLinks card={task.card} compact />
               </button>
-              <div className="flex shrink-0 flex-col gap-1.5">
-                {onReturnToVault && canReturnCardToVault(task.card, ideas) && (
+              <div className="flex shrink-0 flex-col items-stretch gap-1.5 sm:min-w-[7.5rem]">
+                {onReturnToVault && canReturnCardToVault(task.card) && (
                   <button
                     type="button"
                     onClick={() => onReturnToVault(task.card)}
@@ -89,13 +89,15 @@ export default function ContentCreatorTodo({
                     Return to bank
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => onHandoff?.(task.card)}
-                  className="tesla-task-card-action"
-                >
-                  Hand off
-                </button>
+                {onHandoff && (
+                  <button
+                    type="button"
+                    onClick={() => onHandoff(task.card)}
+                    className="tesla-task-card-action"
+                  >
+                    Hand off
+                  </button>
+                )}
               </div>
             </div>
           </TeamTaskCard>

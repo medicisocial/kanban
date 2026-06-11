@@ -443,11 +443,10 @@ export default function AppShell({ onSignOut }) {
   const handleReturnCardToVault = useCallback(
     (card) => {
       const idea = findIdeaForCard(card, ideas);
-      if (!idea) return;
       const label = idea?.title || card.title || "this reel";
       if (
         !window.confirm(
-          `Return "${label}" to the idea bank? It will be removed from the shoot and can be scheduled again later.`,
+          `Return "${label}" to the idea bank? The pipeline card will be removed and the concept saved back to the bank.`,
         )
       ) {
         return;
@@ -455,13 +454,27 @@ export default function AppShell({ onSignOut }) {
       beginBatch();
       try {
         deleteCard(card.id);
-        updateIdea(idea.id, { boardCardId: null });
+        if (idea) {
+          updateIdea(idea.id, { boardCardId: null, status: "approved" });
+        } else {
+          addIdea({
+            client: card.client,
+            title: card.title,
+            contentType: card.contentType,
+            referenceVideo: card.referenceVideo || "",
+            description: card.notes || "",
+            clientComment: card.clientComment || "",
+            status: "approved",
+            boardCardId: null,
+            reviewedAt: Date.now(),
+          });
+        }
         if (selectedCard?.id === card.id) setSelectedCard(null);
       } finally {
         endBatch();
       }
     },
-    [ideas, deleteCard, updateIdea, selectedCard?.id],
+    [ideas, addIdea, deleteCard, updateIdea, selectedCard?.id],
   );
 
   const handleAssignToShoot = useCallback(

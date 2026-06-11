@@ -581,6 +581,24 @@ function CardModal({
 
           {activeTab === 'production' && !isOneOff && (
             <>
+          {card.columnId === 'shoot' && onReturnToVault && canReturnCardToVault(card) && (
+            <div className="rounded-lg border border-violet-500/20 bg-violet-500/10 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-violet-200/90">
+                Idea bank
+              </p>
+              <p className="mt-1 text-sm text-violet-100/80">
+                Not filming this yet? Send it back to the bank and schedule again later.
+              </p>
+              <button
+                type="button"
+                onClick={() => onReturnToVault(card)}
+                className="mt-3 rounded-lg border border-violet-500/30 bg-violet-500/15 px-3 py-2 text-sm font-medium text-violet-100 transition hover:bg-violet-500/25"
+              >
+                Return to idea bank
+              </button>
+            </div>
+          )}
+
           {!isOneOff && needsShootSchedule(card.contentType) && (
             <Field label="Shoot date">
               <div className="space-y-3">
@@ -674,7 +692,7 @@ function CardModal({
                   On this shoot · {formatDate(card.shootDate)}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {onReturnToVault && canReturnCardToVault(card, ideas) && (
+                  {onReturnToVault && canReturnCardToVault(card) && (
                     <button
                       type="button"
                       onClick={() => onReturnToVault(card)}

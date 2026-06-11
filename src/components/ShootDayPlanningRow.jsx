@@ -91,7 +91,7 @@ export default function ShootDayPlanningRow({
               {card.shootScript ? "Edit script" : "Write script"}
             </button>
           )}
-          {onReturnToVault && canReturnCardToVault(card, ideas) && !readOnly && (
+          {onReturnToVault && canReturnCardToVault(card) && !readOnly && (
             <button
               type="button"
               onClick={() => onReturnToVault(card)}
