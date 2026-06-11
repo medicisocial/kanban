@@ -8,8 +8,9 @@ import { contentTypePipelinePillProps, contentTypeCardStyle } from '../utils/con
 import { formatDate, formatScheduledDateTime, isOverdue } from '../utils';
 import CardTitleLink from './CardTitleLink';
 import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
+import { canReturnCardToVault } from '../utils/videoIdeas';
 
-export default function KanbanCard({ card, onClick, onDelete }) {
+export default function KanbanCard({ card, onClick, onDelete, onReturnToVault }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: card.id,
     data: { type: 'card', card, columnId: card.columnId },
@@ -20,6 +21,7 @@ export default function KanbanCard({ card, onClick, onDelete }) {
   const scheduleDate = card.dueDate || (isOneOff ? card.shootDate : '');
   const scheduleTime = card.dueTime || (isOneOff ? card.shootTime : '');
   const overdue = isOverdue(scheduleDate) && card.columnId !== 'scheduled' && !isOneOff;
+  const showReturnToBank = Boolean(onReturnToVault && canReturnCardToVault(card));
 
   return (
     <div
@@ -94,6 +96,20 @@ export default function KanbanCard({ card, onClick, onDelete }) {
         <p className="mt-2 line-clamp-1 text-xs text-red-300/90" title={card.clientComment}>
           ↩ Revision requested
         </p>
+      )}
+
+      {showReturnToBank && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onReturnToVault(card);
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          className="mt-2 text-[10px] font-medium text-violet-300/90 transition hover:text-violet-200"
+        >
+          Return to idea bank
+        </button>
       )}
     </div>
   );

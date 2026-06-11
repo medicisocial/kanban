@@ -65,6 +65,7 @@ const KanbanBoardView = memo(function KanbanBoardView({
   onAddCard,
   onCardClick,
   onDeleteCard,
+  onReturnToVault,
   onMoveCard,
   boardClient,
   embedded = false,
@@ -285,6 +286,7 @@ const KanbanBoardView = memo(function KanbanBoardView({
                           onAddCard={handleAddCard}
                           onCardClick={onCardClick}
                           onDeleteCard={onDeleteCard}
+                          onReturnToVault={onReturnToVault}
                           embedded={embedded}
                           solo={solo}
                         />
@@ -313,6 +315,7 @@ function KanbanBoard({
   onAddCard,
   onCardClick,
   onDeleteCard,
+  onReturnToVault,
   onMoveCard,
   clientFilter,
   getClientColor,
@@ -344,6 +347,7 @@ function KanbanBoard({
         onAddCard={onAddCard}
         onCardClick={onCardClick}
         onDeleteCard={onDeleteCard}
+        onReturnToVault={onReturnToVault}
         onMoveCard={onMoveCard}
         boardClient={boardClient}
         embedded={embedded}
@@ -362,6 +366,7 @@ function KanbanBoard({
             onAddCard={onAddCard}
             onCardClick={onCardClick}
             onDeleteCard={onDeleteCard}
+            onReturnToVault={onReturnToVault}
             onMoveCard={onMoveCard}
             boardClient={client}
             embedded={embedded}

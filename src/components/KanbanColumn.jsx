@@ -7,6 +7,7 @@ export default function KanbanColumn({
   onAddCard,
   onCardClick,
   onDeleteCard,
+  onReturnToVault,
   embedded = false,
   solo = false,
 }) {
@@ -43,7 +44,13 @@ export default function KanbanColumn({
 
       <div className="kanban-column-cards">
         {cards.map((card) => (
-          <KanbanCard key={card.id} card={card} onClick={onCardClick} onDelete={onDeleteCard} />
+          <KanbanCard
+            key={card.id}
+            card={card}
+            onClick={onCardClick}
+            onDelete={onDeleteCard}
+            onReturnToVault={column.id === 'shoot' ? onReturnToVault : undefined}
+          />
         ))}
 
         {cards.length === 0 && (

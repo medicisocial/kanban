@@ -63,6 +63,7 @@ import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
 import { buildWorkspaceHomeSummary, buildNavBadgeCounts } from "../utils/workspaceHome";
 import { useStaffWorkspaceScope } from "../hooks/useStaffWorkspaceScope";
 import { scopeAdminTasksForStaff, scopeCardsForStaff } from "../utils/staffWorkspaceScope";
+import { canReturnCardToVault, findIdeaBoardCard, getVaultIdeas } from "../utils/videoIdeas";
 
 export default function AppShell({ onSignOut }) {
   const importData = parseImportParam();
@@ -385,22 +386,109 @@ export default function AppShell({ onSignOut }) {
     return id;
   };
 
-  const handleAssignExistingToShoot = (cardIds, { client, shootDate, shootTime = '', shootEndTime = '' }) => {
-    beginBatch();
-    try {
-      ensurePlan(client, shootDate);
-      for (const id of cardIds) {
-        const existing = cards.find((entry) => entry.id === id);
-        updateCard(id, {
-          shootDate,
-          shootTime: existing?.shootTime || shootTime || '',
-          shootEndTime: existing?.shootEndTime || shootEndTime || '',
+  const scheduleVaultIdeaOnShoot = useCallback(
+    (idea, { client, shootDate, shootTime = "", shootEndTime = "" }) => {
+      if (!idea || !client || !shootDate) return;
+      beginBatch();
+      try {
+        ensurePlan(client, shootDate);
+        const boardCardId = createCardFromIdea({
+          ...idea,
+          clientComment: idea.clientComment || "",
         });
+        updateCard(boardCardId, {
+          shootDate,
+          shootTime,
+          shootEndTime,
+          columnId: "shoot",
+          status: "To Create",
+        });
+        updateIdea(idea.id, { boardCardId });
+      } finally {
+        endBatch();
       }
-    } finally {
-      endBatch();
-    }
-  };
+    },
+    [createCardFromIdea, ensurePlan, updateCard, updateIdea],
+  );
+
+  const handleScheduleVaultIdea = useCallback(
+    (ideaId, schedule) => {
+      const idea = ideas.find((entry) => entry.id === ideaId);
+      if (!idea) return;
+      scheduleVaultIdeaOnShoot(idea, schedule);
+    },
+    [ideas, scheduleVaultIdeaOnShoot],
+  );
+
+  const handleDeleteVaultIdea = useCallback(
+    (ideaId) => {
+      const idea = ideas.find((entry) => entry.id === ideaId);
+      if (!idea) return;
+      beginBatch();
+      try {
+        const linkedCard = findIdeaBoardCard(idea, cards);
+        if (linkedCard) deleteCard(linkedCard.id);
+        deleteIdea(ideaId);
+      } finally {
+        endBatch();
+      }
+    },
+    [ideas, cards, deleteCard, deleteIdea],
+  );
+
+  const handleReturnCardToVault = useCallback(
+    (card) => {
+      if (!canReturnCardToVault(card)) return;
+      const idea = ideas.find((entry) => entry.id === card.sourceIdeaId);
+      const label = idea?.title || card.title || "this reel";
+      if (
+        !window.confirm(
+          `Return "${label}" to the idea bank? It will be removed from the shoot and can be scheduled again later.`,
+        )
+      ) {
+        return;
+      }
+      beginBatch();
+      try {
+        deleteCard(card.id);
+        if (idea) updateIdea(idea.id, { boardCardId: null });
+        if (selectedCard?.id === card.id) setSelectedCard(null);
+      } finally {
+        endBatch();
+      }
+    },
+    [ideas, deleteCard, updateIdea, selectedCard?.id],
+  );
+
+  const handleAssignToShoot = useCallback(
+    ({ cardIds = [], ideaIds = [], client, shootDate, shootTime = "", shootEndTime = "" }) => {
+      beginBatch();
+      try {
+        ensurePlan(client, shootDate);
+        for (const id of cardIds) {
+          const existing = cards.find((entry) => entry.id === id);
+          updateCard(id, {
+            shootDate,
+            shootTime: existing?.shootTime || shootTime || "",
+            shootEndTime: existing?.shootEndTime || shootEndTime || "",
+          });
+        }
+        for (const ideaId of ideaIds) {
+          const idea = ideas.find((entry) => entry.id === ideaId);
+          if (!idea) continue;
+          scheduleVaultIdeaOnShoot(idea, { client, shootDate, shootTime, shootEndTime });
+        }
+      } finally {
+        endBatch();
+      }
+    },
+    [cards, ideas, ensurePlan, scheduleVaultIdeaOnShoot, updateCard],
+  );
+
+  const vaultIdeas = useMemo(
+    () => getVaultIdeas(ideas, cards, { client: clientFilter }),
+    [ideas, cards, clientFilter],
+  );
 
   const openAddCardsToShoot = useCallback((client, shootDate, { excludeCardIds = [], shootTime = '', shootEndTime = '' } = {}) => {
     if (!client || !shootDate) return;
@@ -545,13 +633,7 @@ export default function AppShell({ onSignOut }) {
   const handleApproveIdea = (ideaId, clientComment) => {
     const idea = ideas.find((i) => i.id === ideaId);
     if (!idea || idea.status !== "pending") return;
-    beginBatch();
-    try {
-      const boardCardId = createCardFromIdea({ ...idea, clientComment });
-      markApproved(ideaId, clientComment, boardCardId);
-    } finally {
-      endBatch();
-    }
+    markApproved(ideaId, clientComment, null);
   };
 
   const handleDeclineIdea = (ideaId, clientComment) => {
@@ -561,15 +643,14 @@ export default function AppShell({ onSignOut }) {
   const handlePortalApprove = (ideaId, clientComment, ideaSnapshot) => {
     const idea = ideas.find((i) => i.id === ideaId) || ideaSnapshot;
     if (!idea) return;
-    if (ideas.some((i) => i.id === ideaId && i.status === "approved" && i.boardCardId)) return;
+    if (ideas.some((i) => i.id === ideaId && i.status === "approved")) return;
     if (ideas.some((i) => i.id === ideaId && i.status !== "pending")) return;
     beginBatch();
     try {
       if (!ideas.some((i) => i.id === ideaId)) {
         addIdea(idea);
       }
-      const boardCardId = createCardFromIdea({ ...idea, clientComment });
-      markApproved(ideaId, clientComment, boardCardId);
+      markApproved(ideaId, clientComment, null);
     } finally {
       endBatch();
     }
@@ -604,7 +685,7 @@ export default function AppShell({ onSignOut }) {
       endBatch();
     }
     setResponseCount(0);
-    alert(`Applied ${applied} client response${applied === 1 ? "" : "s"} to the board.`);
+    alert(`Applied ${applied} client response${applied === 1 ? "" : "s"} to the idea bank.`);
   };
 
   const handleContentReviewApprove = (cardId, comment) => {
@@ -713,33 +794,7 @@ export default function AppShell({ onSignOut }) {
     addIdea,
   ]);
 
-  // Supabase mode: client portal approvals land directly on the idea record
-  // (status='approved', no boardCardId). Mirror the legacy behaviour by creating
-  // the board card here. Idempotent: a board card exists once boardCardId is set,
-  // and the session ref guards against re-processing while state settles.
-  const processedClientIdeaIdsRef = useRef(new Set());
-  useEffect(() => {
-    if (!SUPABASE_ENABLED) return;
-    const processed = processedClientIdeaIdsRef.current;
-    const pending = ideas.filter((idea) => {
-      if (idea.status !== "approved" || processed.has(idea.id)) return false;
-      const existingCard = cards.find((card) => card.sourceIdeaId === idea.id);
-      if (existingCard) return idea.boardCardId !== existingCard.id;
-      return !idea.boardCardId;
-    });
-    if (!pending.length) return;
-
-    runWithoutUndoCapture(() => {
-      for (const idea of pending) {
-        processed.add(idea.id);
-        const existingCard = cards.find((card) => card.sourceIdeaId === idea.id);
-        const boardCardId =
-          existingCard?.id ||
-          createCardFromIdea({ ...idea, clientComment: idea.clientComment || "" });
-        markApproved(idea.id, idea.clientComment || "", boardCardId);
-      }
-    });
-  }, [ideas, cards, createCardFromIdea, markApproved]);
+  // Supabase client portal approvals land on the idea record only — staff schedules from the idea bank.
 
   useEffect(() => {
     if (!importData?.responses?.length) return;
@@ -752,8 +807,8 @@ export default function AppShell({ onSignOut }) {
     });
     if (applied > 0) {
       window.history.replaceState({}, "", window.location.pathname);
-      alert(`Imported ${applied} client approval${applied === 1 ? "" : "s"} to the board.`);
-      setActiveView("board");
+      alert(`Imported ${applied} client approval${applied === 1 ? "" : "s"} to the idea bank.`);
+      setActiveView("ideas");
     }
     setResponseCount(loadClientResponses().length);
   }, []);
@@ -1007,14 +1062,17 @@ export default function AppShell({ onSignOut }) {
       {activeView === "ideas" && (
         <VideoIdeas
           ideas={ideas}
+          cards={cards}
           clientFilter={clientFilter}
           onAddIdea={addIdea}
           onApprove={handleApproveIdea}
           onDecline={handleDeclineIdea}
           onDeleteIdea={deleteIdea}
           onDeleteIdeas={deleteIdeas}
+          onDeleteVaultIdea={handleDeleteVaultIdea}
           onUpdateIdea={updateIdea}
           onGoToBoard={handleGoToBoard}
+          onScheduleVaultIdea={handleScheduleVaultIdea}
         />
       )}
 
@@ -1029,6 +1087,7 @@ export default function AppShell({ onSignOut }) {
             }}
             onCardClick={handleCardClick}
             onDeleteCard={handleDelete}
+            onReturnToVault={handleReturnCardToVault}
             onMoveCard={handleMoveCard}
             clientFilter={clientFilter}
             getClientColor={getClientColor}
@@ -1112,6 +1171,7 @@ export default function AppShell({ onSignOut }) {
           onUpdatePlan={updatePlan}
           onEnsurePlan={ensurePlan}
           onRemoveFromSchedule={handleRemoveFromShootSchedule}
+          onReturnToVault={handleReturnCardToVault}
           onRemoveClientShoot={handleRemoveClientShoot}
           embedded
         />
@@ -1153,6 +1213,7 @@ export default function AppShell({ onSignOut }) {
           onPlanShootDate={setShootDateCard}
           onAddCardsToShoot={openAddCardsToShoot}
           onOpenCard={handleCardClick}
+          onReturnToVault={handleReturnCardToVault}
         />
       )}
 
@@ -1201,14 +1262,15 @@ export default function AppShell({ onSignOut }) {
       {assignToShoot && (
         <AddExistingToShootModal
           cards={cards}
+          vaultIdeas={vaultIdeas}
           client={assignToShoot.client}
           dateKey={assignToShoot.shootDate}
           shootTime={assignToShoot.shootTime}
           shootEndTime={assignToShoot.shootEndTime}
           excludeCardIds={assignToShoot.excludeCardIds}
           onClose={() => setAssignToShoot(null)}
-          onAssign={(cardIds, data) => {
-            handleAssignExistingToShoot(cardIds, data);
+          onAssign={(payload) => {
+            handleAssignToShoot(payload);
             setAssignToShoot(null);
           }}
         />

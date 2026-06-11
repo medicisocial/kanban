@@ -1,10 +1,8 @@
 import { getContentTypeStyle } from "../constants";
 import { contentTypeLabelProps, contentTypeCardStyle } from "../utils/contentTypeColors";
 import { useClientsContext } from "../context/ClientsContext";
-import {
-  getDefaultShootEndTime,
-  parseTimeToMinutes,
-} from "../utils/shootDay";
+import { getDefaultShootEndTime, parseTimeToMinutes } from "../utils/shootDay";
+import { canReturnCardToVault } from "../utils/videoIdeas";
 import ShootLocationLink from "./ShootLocationLink";
 import DebouncedField, { DebouncedModelTagInput, DebouncedTimeInput } from "./DebouncedField";
 
@@ -18,6 +16,7 @@ export default function ShootDayPlanningRow({
   card,
   onUpdate,
   onRemove,
+  onReturnToVault,
   onCardClick,
   readOnly = false,
   shootWindow = null,
@@ -89,6 +88,15 @@ export default function ShootDayPlanningRow({
               }`}
             >
               {card.shootScript ? "Edit script" : "Write script"}
+            </button>
+          )}
+          {onReturnToVault && canReturnCardToVault(card) && !readOnly && (
+            <button
+              type="button"
+              onClick={() => onReturnToVault(card)}
+              className="rounded-lg border border-violet-500/25 px-2.5 py-1 text-xs font-medium text-violet-200 transition hover:bg-violet-500/10"
+            >
+              Return to idea bank
             </button>
           )}
           {onRemove && !readOnly && (

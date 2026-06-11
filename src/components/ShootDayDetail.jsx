@@ -34,6 +34,7 @@ export default function ShootDayDetail({
   getPlan,
   onUpdatePlan,
   onRemoveFromSchedule,
+  onReturnToVault,
   onRemoveClientShoot,
   onMoveClientShootDay,
 }) {
@@ -89,6 +90,7 @@ export default function ShootDayDetail({
               plan={getPlan(client, dateKey)}
               onUpdatePlan={(updates, options) => onUpdatePlan(client, dateKey, updates, options)}
               onRemoveFromSchedule={onRemoveFromSchedule}
+              onReturnToVault={onReturnToVault}
               onRemoveClientShoot={() => onRemoveClientShoot(client, dateKey, clientCards)}
               onMoveShootDay={onMoveClientShootDay}
             />
@@ -111,6 +113,7 @@ function ClientShootSection({
   plan,
   onUpdatePlan,
   onRemoveFromSchedule,
+  onReturnToVault,
   onRemoveClientShoot,
   onMoveShootDay,
 }) {
@@ -250,7 +253,7 @@ function ClientShootSection({
                   }
                   className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-white/5"
                 >
-                  Add from board
+                  Add from board / idea bank
                 </button>
                 <button
                   type="button"
@@ -269,6 +272,7 @@ function ClientShootSection({
                   card={card}
                   onUpdate={onUpdateCard}
                   onRemove={onRemoveFromSchedule}
+                  onReturnToVault={onReturnToVault}
                   onCardClick={onCardClick}
                   shootWindow={plan}
                   onOpenScript={setScriptCard}
@@ -291,6 +295,7 @@ function ClientShootSection({
             dateKey={dateKey}
             onUpdateCard={onUpdateCard}
             onCardClick={onCardClick}
+            onReturnToVault={onReturnToVault}
           />
         </div>
         )}

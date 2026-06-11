@@ -22,6 +22,7 @@ import ReferenceVideoLink, { ReferenceMusicLink } from './clientPortal/Reference
 import { CalendarSheetNoteEditor } from './CalendarSheetNote';
 import { getCalendarClientNote, hasCalendarClientNote, isContentCalendarCard } from '../utils/calendarClientNote';
 import { buildCalendarNoteDeletePatch } from '../utils/calendarNote';
+import { canReturnCardToVault } from '../utils/videoIdeas';
 import { beginBatch, endBatch } from '../utils/undoHistory';
 import DebouncedField, { DebouncedModelTagInput, DebouncedTimeInput } from './DebouncedField';
 
@@ -46,6 +47,7 @@ function CardModal({
   onPlanShootDate,
   onAddCardsToShoot,
   onOpenCard,
+  onReturnToVault,
 }) {
   const overlayRef = useRef(null);
   const mouseDownOnOverlayRef = useRef(false);
@@ -670,24 +672,35 @@ function CardModal({
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                   On this shoot · {formatDate(card.shootDate)}
                 </p>
-                {onAddCardsToShoot && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const sessionTime = shootDayCards.find((entry) => entry.shootTime)?.shootTime || card.shootTime || '';
-                      const sessionEnd =
-                        shootDayCards.find((entry) => entry.shootEndTime)?.shootEndTime || card.shootEndTime || '';
-                      onAddCardsToShoot(card.client, card.shootDate, {
-                        excludeCardIds: [card.id],
-                        shootTime: sessionTime,
-                        shootEndTime: sessionEnd,
-                      });
-                    }}
-                    className="rounded-lg border border-[#810100]/30 bg-[#810100]/10 px-2.5 py-1 text-xs font-medium text-[#fca5a5] hover:bg-[#810100]/20"
-                  >
-                    + Add cards
-                  </button>
-                )}
+                <div className="flex flex-wrap gap-2">
+                  {onReturnToVault && canReturnCardToVault(card) && (
+                    <button
+                      type="button"
+                      onClick={() => onReturnToVault(card)}
+                      className="rounded-lg border border-violet-500/25 bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-200 hover:bg-violet-500/15"
+                    >
+                      Return to idea bank
+                    </button>
+                  )}
+                  {onAddCardsToShoot && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const sessionTime = shootDayCards.find((entry) => entry.shootTime)?.shootTime || card.shootTime || '';
+                        const sessionEnd =
+                          shootDayCards.find((entry) => entry.shootEndTime)?.shootEndTime || card.shootEndTime || '';
+                        onAddCardsToShoot(card.client, card.shootDate, {
+                          excludeCardIds: [card.id],
+                          shootTime: sessionTime,
+                          shootEndTime: sessionEnd,
+                        });
+                      }}
+                      className="rounded-lg border border-[#810100]/30 bg-[#810100]/10 px-2.5 py-1 text-xs font-medium text-[#fca5a5] hover:bg-[#810100]/20"
+                    >
+                      + Add cards
+                    </button>
+                  )}
+                </div>
               </div>
               <ul className="space-y-2">
                 {shootDayCards.map((entry) => renderShootRosterItem(entry))}

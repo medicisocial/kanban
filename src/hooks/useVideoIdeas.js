@@ -184,11 +184,7 @@ export function applyClientResponses(ideas, responses, { markApproved, markDecli
     }
 
     if (response.action === "approved") {
-      const boardCardId = createCardFromIdea({
-        ...ideaData,
-        clientComment: response.comment || "",
-      });
-      markApproved(response.ideaId, response.comment || "", boardCardId);
+      markApproved(response.ideaId, response.comment || "", null);
       applied += 1;
     } else if (response.action === "declined") {
       markDeclined(response.ideaId, response.comment || "");

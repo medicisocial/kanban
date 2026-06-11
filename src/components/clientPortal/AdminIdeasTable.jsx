@@ -80,6 +80,8 @@ export default function AdminIdeasTable({
     [ideas],
   );
 
+  const approvedSubtitle = 'Scheduled on pipeline';
+
   const filtered = useMemo(() => {
     let rows = [...ideas];
 
@@ -111,7 +113,7 @@ export default function AdminIdeasTable({
             className={`${selectClass} min-w-[140px]`}
           >
             <option value="pending">Pending review ({statusCounts.pending})</option>
-            <option value="approved">Approved ({statusCounts.approved})</option>
+            <option value="approved">{approvedSubtitle} ({statusCounts.approved})</option>
             <option value="declined">Passed ({statusCounts.declined})</option>
             <option value="all">All statuses ({statusCounts.all})</option>
           </select>

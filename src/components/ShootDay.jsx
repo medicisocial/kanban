@@ -35,6 +35,7 @@ export default function ShootDay({
   onUpdatePlan,
   onEnsurePlan,
   onRemoveFromSchedule,
+  onReturnToVault,
   onRemoveClientShoot,
   embedded = false,
   focusRequest,
@@ -244,6 +245,7 @@ export default function ShootDay({
               getPlan={getPlan}
               onUpdatePlan={onUpdatePlan}
               onRemoveFromSchedule={onRemoveFromSchedule}
+              onReturnToVault={onReturnToVault}
               onRemoveClientShoot={onRemoveClientShoot}
               onMoveClientShootDay={onMoveClientShootDay}
             />

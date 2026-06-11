@@ -11,6 +11,7 @@ import {
 } from "../utils/shootDay";
 import ShootDayTimelinePrintButton from "./ShootDayTimelinePrintButton";
 import ShootScriptModal from "./ShootScriptModal";
+import { canReturnCardToVault } from "../utils/videoIdeas";
 
 const LANE_HEIGHT = 104;
 /** Minimum timeline width (% of track) so short slots stay visible without overlapping neighbors. */
@@ -24,6 +25,7 @@ export default function ShootDayTimeline({
   dateKey,
   onUpdateCard,
   onCardClick,
+  onReturnToVault,
 }) {
   const [scriptCard, setScriptCard] = useState(null);
   const canEditScript = Boolean(onUpdateCard);
@@ -232,6 +234,19 @@ export default function ShootDayTimeline({
                         <span>{entry.card.shootScript ? 'View script' : 'Write script'}</span>
                       </button>
                     )}
+                    {onReturnToVault && canReturnCardToVault(entry.card) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReturnToVault(entry.card);
+                        }}
+                        className="inline-flex items-center gap-1.5 text-sm text-violet-200 transition hover:text-violet-100"
+                      >
+                        <span>↩</span>
+                        <span>Return to idea bank</span>
+                      </button>
+                    )}
                   </div>
                   {entry.card.shootModels && (
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -263,7 +278,7 @@ export default function ShootDayTimeline({
           <p className="mb-2 text-sm font-medium text-gray-500">Not yet scheduled</p>
           <ul className="space-y-1">
             {unscheduled.map((card) => (
-              <li key={card.id}>
+              <li key={card.id} className="flex flex-wrap items-center justify-between gap-2">
                 {onCardClick ? (
                   <button
                     type="button"
@@ -278,6 +293,15 @@ export default function ShootDayTimeline({
                     {card.title}
                     <span className="ml-2 text-xs text-gray-600">({card.contentType})</span>
                   </span>
+                )}
+                {onReturnToVault && canReturnCardToVault(card) && (
+                  <button
+                    type="button"
+                    onClick={() => onReturnToVault(card)}
+                    className="text-[11px] font-medium text-violet-200 hover:text-violet-100"
+                  >
+                    Return to idea bank
+                  </button>
                 )}
               </li>
             ))}
