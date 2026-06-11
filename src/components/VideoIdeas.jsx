@@ -7,7 +7,7 @@ import AdminIdeasTable from './clientPortal/AdminIdeasTable';
 import IdeaVaultTable from './IdeaVaultTable';
 import ScheduleVaultIdeaModal from './ScheduleVaultIdeaModal';
 import { getVaultIdeas, isIdeaInVault, isIdeaScheduled } from '../utils/videoIdeas';
-import { btnSecondaryClass, glassSegmentClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass, glassSegmentClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 const IDEA_TABS = [
   { id: 'review', label: 'Review' },
@@ -119,11 +119,9 @@ export default function VideoIdeas({
   };
 
   const tabClass = (tabId) =>
-    `px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition ${
-      activeTab === tabId
-        ? 'rounded-sm bg-[#810100] text-white'
-        : 'text-white/45 hover:text-white'
-    }`;
+    activeTab === tabId
+      ? `${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`
+      : `${btnSecondaryClass} !px-4 !py-1.5 !text-xs !tracking-wider !border-transparent !text-white/45 hover:!text-white`;
 
   return (
     <section>
@@ -137,7 +135,7 @@ export default function VideoIdeas({
           </span>
         )}
         {vaultIdeas.length > 0 && (
-          <span className="border border-violet-500/25 bg-violet-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-violet-200/90">
+          <span className="border border-white/25 bg-white/[0.08] px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-white">
             {vaultIdeas.length} in bank
           </span>
         )}

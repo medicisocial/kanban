@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CONTENT_TYPES } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import { normalizeLink } from '../utils/links';
-import { btnPrimaryClass, btnSecondaryClass, inputClass, selectClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, inputClass, selectClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 function clientFromFilter(clientFilter, fallbackClient) {
   if (clientFilter && clientFilter !== 'all') return clientFilter;
@@ -194,7 +194,7 @@ export default function VideoIdeaQuickAdd({
             <button
               type="button"
               onClick={submitToBank}
-              className={`${btnSecondaryClass} w-full md:w-auto border-violet-500/25 bg-violet-500/10 text-violet-100 hover:bg-violet-500/15`}
+              className={`${btnPrimaryClass} w-full md:w-auto`}
             >
               Add to bank
             </button>
