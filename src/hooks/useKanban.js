@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, startTransition } from 'react';
 import { STORAGE_KEY, COLUMNS, PLATFORM, createCard, EDITOR_TODO_STORAGE_KEY, isScheduledPostType, isOneOffProjectCard, syncOneOffScheduleFields } from '../constants';
 import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
@@ -273,29 +273,31 @@ export function useKanban() {
 
   const updateCard = useCallback((id, updates, { recordUndo = true } = {}) => {
     notifyMutation({ recordUndo });
-    let persisted = null;
-    setCards((prev) =>
-      prev.map((card) => {
-        if (card.id !== id) return card;
-        const synced = syncOneOffScheduleFields(updates, card);
-        const nextColumnId = synced.columnId ?? card.columnId;
-        const isOneOff = synced.isOneOffProject ?? isOneOffProjectCard({ ...card, ...synced });
-        const nextDueDate = withColumnDate(
-          nextColumnId,
-          synced.dueDate !== undefined ? synced.dueDate : card.dueDate,
-          { isOneOffProject: isOneOff, contentType: synced.contentType ?? card.contentType },
-        );
-        persisted = normalizeCard({
-          ...card,
-          ...synced,
-          dueDate: nextDueDate,
-          isOneOffProject: isOneOff,
-          platform: PLATFORM,
-          updatedAt: Date.now(),
-        });
-        return persisted;
-      }),
-    );
+    const applyUpdate = () => {
+      setCards((prev) =>
+        prev.map((card) => {
+          if (card.id !== id) return card;
+          const synced = syncOneOffScheduleFields(updates, card);
+          const nextColumnId = synced.columnId ?? card.columnId;
+          const isOneOff = synced.isOneOffProject ?? isOneOffProjectCard({ ...card, ...synced });
+          const nextDueDate = withColumnDate(
+            nextColumnId,
+            synced.dueDate !== undefined ? synced.dueDate : card.dueDate,
+            { isOneOffProject: isOneOff, contentType: synced.contentType ?? card.contentType },
+          );
+          return normalizeCard({
+            ...card,
+            ...synced,
+            dueDate: nextDueDate,
+            isOneOffProject: isOneOff,
+            platform: PLATFORM,
+            updatedAt: Date.now(),
+          });
+        }),
+      );
+    };
+    if (recordUndo) applyUpdate();
+    else startTransition(applyUpdate);
   }, []);
 
   const deleteCard = useCallback((id) => {

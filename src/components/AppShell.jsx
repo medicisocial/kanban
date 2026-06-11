@@ -500,18 +500,21 @@ export default function AppShell({ onSignOut }) {
     [cards, updateCard, getPlan, updatePlan, deletePlan],
   );
 
-  const handleUpdate = (id, updates, options) => {
+  const handleUpdate = (id, updates, options = {}) => {
     updateCard(id, updates, options);
-    setSelectedCard((prev) => {
-      if (prev?.id !== id) return prev;
-      const next = { ...prev, ...updates };
-      if (updates.storyOccurrenceNotes && prev.occurrenceDate) {
-        const overrides = parseStoryOccurrenceNotes(updates.storyOccurrenceNotes);
-        next.notes = overrides[prev.occurrenceDate] ?? prev.notes;
-        next.storyOccurrenceNotes = overrides;
-      }
-      return next;
-    });
+    // Typing commits use local draft state in CardModal — skip shell re-render until undo-worthy edits.
+    if (options.recordUndo !== false) {
+      setSelectedCard((prev) => {
+        if (prev?.id !== id) return prev;
+        const next = { ...prev, ...updates };
+        if (updates.storyOccurrenceNotes && prev.occurrenceDate) {
+          const overrides = parseStoryOccurrenceNotes(updates.storyOccurrenceNotes);
+          next.notes = overrides[prev.occurrenceDate] ?? prev.notes;
+          next.storyOccurrenceNotes = overrides;
+        }
+        return next;
+      });
+    }
 
     if (updates.shootDate !== undefined && activeView === "shoot") {
       const card = cards.find((entry) => entry.id === id);

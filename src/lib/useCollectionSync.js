@@ -7,6 +7,7 @@ import { isCloudSourceOfTruth } from './cloudSourceOfTruth';
 import { reportSyncIssue } from './workspaceSyncHealth';
 import { subscribeWorkspaceRefetch } from '../utils/workspaceReload';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { markRecentlyPushed, wasRecentlyPushed } from './syncEchoGuard';
 import {
   augmentLocalWithPendingCreates,
   fetchRowsWithTimeout,
@@ -333,6 +334,14 @@ export function useCollectionSync({
       const id = String(getId(remote));
       if (pendingRemovedRef.current.has(id)) return;
 
+      if (payload.eventType === 'UPDATE' && wasRecentlyPushed(table, id)) {
+        applyingRemoteRef.current = true;
+        const previousSynced = syncedRef.current || new Map();
+        syncedRef.current = new Map(previousSynced);
+        syncedRef.current.set(id, JSON.stringify(remote));
+        return;
+      }
+
       applyingRemoteRef.current = true;
       setItems((prev) => {
         const local = prev.find((record) => String(getId(record)) === id);
@@ -419,13 +428,16 @@ export function useCollectionSync({
 
     const pushChanges = async () => {
       const prev = syncedRef.current || new Map();
-      const next = new Map(items.map((r) => [String(getId(r)), JSON.stringify(r)]));
-
+      const next = new Map();
       const changed = [];
+
       for (const record of items) {
         const id = String(getId(record));
-        if (prev.get(id) !== next.get(id)) changed.push(record);
+        const serialized = JSON.stringify(record);
+        next.set(id, serialized);
+        if (prev.get(id) !== serialized) changed.push(record);
       }
+
       const rawRemoved = [];
       for (const id of prev.keys()) {
         if (!next.has(id)) rawRemoved.push(id);
@@ -515,6 +527,10 @@ export function useCollectionSync({
           savePendingCreates(orgId, table, pendingLocalCreatesRef.current);
           syncedRef.current = next;
           pendingWriteRef.current = false;
+          markRecentlyPushed(table, [
+            ...changed.map((record) => getId(record)),
+            ...removed,
+          ]);
         }
       } catch (err) {
         console.error(`[supabase:${table}] sync failed:`, err?.message || err, err);

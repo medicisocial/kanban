@@ -206,7 +206,10 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
       applyingRemoteRef.current = true;
       syncedRef.current = JSON.stringify(row.data);
       markSyncLoaded();
-      setValue(merged);
+      const local = localValueRef.current;
+      if (JSON.stringify(local) !== JSON.stringify(merged)) {
+        setValue(merged);
+      }
     };
 
     let lastFetchAt = 0;

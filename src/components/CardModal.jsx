@@ -15,7 +15,6 @@ import { hasStoryRecurrence, hasStoryDailyRange, getStoryScheduleMode, parseRecu
 import { formatScheduledDateTime, formatDate, formatTime } from '../utils';
 import { getDefaultShootEndTime, parseTimeToMinutes, getClientUpcomingShoots, sortCardsByShootTime } from '../utils/shootDay';
 import StoryRecurrencePicker from './StoryRecurrencePicker';
-import ModelTagInput from './ModelTagInput';
 import TimeInput from './TimeInput';
 import DateInput from './DateInput';
 import ClientNameInput from './ClientNameInput';
@@ -25,17 +24,7 @@ import { CalendarSheetNoteEditor } from './CalendarSheetNote';
 import { getCalendarClientNote, hasCalendarClientNote, isContentCalendarCard } from '../utils/calendarClientNote';
 import { buildCalendarNoteDeletePatch } from '../utils/calendarNote';
 import { beginBatch, endBatch } from '../utils/undoHistory';
-
-const TEXT_DRAFT_FIELDS = new Set([
-  'title',
-  'notes',
-  'dropboxLink',
-  'referenceMusic',
-  'referenceVideo',
-  'shootNeeds',
-  'shootScript',
-  'clientComment',
-]);
+import DebouncedField, { DebouncedModelTagInput, DebouncedTimeInput } from './DebouncedField';
 
 const CARD_TABS = [
   { id: 'details', label: 'Details' },
@@ -60,9 +49,6 @@ export default function CardModal({
   const mouseDownOnOverlayRef = useRef(false);
   const pendingTabRef = useRef(null);
   const [activeTab, setActiveTab] = useState('details');
-  const [textDraft, setTextDraft] = useState({});
-  const debouncedUpdatesRef = useRef({});
-  const debounceTimerRef = useRef(null);
   const { clients, getClientAccountManager, getMemberNamesForRole } = useClientsContext();
   const editors = getMemberNamesForRole('Editor');
   const contentCreators = getMemberNamesForRole('Content Creator');
@@ -78,21 +64,12 @@ export default function CardModal({
     } else {
       setActiveTab('details');
     }
-    setTextDraft({});
   }, [card?.id]);
 
   useEffect(() => {
     beginBatch();
-    return () => {
-      clearTimeout(debounceTimerRef.current);
-      const updates = debouncedUpdatesRef.current;
-      debouncedUpdatesRef.current = {};
-      if (Object.keys(updates).length) {
-        onUpdate(card?.id, updates, { recordUndo: false });
-      }
-      endBatch();
-    };
-  }, [card?.id, onUpdate]);
+    return () => endBatch();
+  }, [card?.id]);
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -123,6 +100,55 @@ export default function CardModal({
       (session) => session.dateKey !== card.shootDate,
     );
   }, [cards, plans, card?.client, card?.shootDate, card?.contentType]);
+
+  const commitTextField = useCallback(
+    (field, value) => {
+      if (!card?.id) return;
+      onUpdate(card.id, { [field]: value }, { recordUndo: false });
+    },
+    [card?.id, onUpdate],
+  );
+
+  const commitNotes = useCallback(
+    (value) => {
+      if (!card?.id) return;
+      if (card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card))) {
+        onUpdate(
+          card.id,
+          {
+            storyOccurrenceNotes: {
+              ...parseStoryOccurrenceNotes(card.storyOccurrenceNotes),
+              [card.occurrenceDate]: value,
+            },
+          },
+          { recordUndo: false },
+        );
+        return;
+      }
+      commitTextField('notes', value);
+    },
+    [card, commitTextField, onUpdate],
+  );
+
+  const notesValue =
+    card?.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card))
+      ? parseStoryOccurrenceNotes(card.storyOccurrenceNotes)[card.occurrenceDate] ?? card.notes ?? ''
+      : card?.notes ?? '';
+
+  const commitShootTime = useCallback(
+    (value) => {
+      if (!card?.id) return;
+      const updates = { shootTime: value };
+      const start = parseTimeToMinutes(value);
+      const end = parseTimeToMinutes(card.shootEndTime);
+      if (start != null && (end == null || end <= start)) {
+        updates.shootEndTime = getDefaultShootEndTime(value, card.contentType);
+      }
+      if (!value) updates.shootEndTime = '';
+      onUpdate(card.id, updates, { recordUndo: false });
+    },
+    [card, onUpdate],
+  );
 
   if (!card) return null;
 
@@ -179,33 +205,8 @@ export default function CardModal({
     );
   };
 
-  // Debounce text field updates (title, notes, etc.) to avoid triggering the
-  // full sync pipeline on every keystroke. Non-text fields update immediately.
-  const flushDebounced = useCallback(() => {
-    const updates = debouncedUpdatesRef.current;
-    debouncedUpdatesRef.current = {};
-    debounceTimerRef.current = null;
-    const keys = Object.keys(updates);
-    if (keys.length === 0) return;
-    onUpdate(card.id, updates, { recordUndo: false });
-    setTextDraft((prev) => {
-      const next = { ...prev };
-      for (const key of keys) delete next[key];
-      return next;
-    });
-  }, [card?.id, onUpdate]);
-  const scheduleFlush = useCallback(() => {
-    clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(flushDebounced, 400);
-  }, [flushDebounced]);
-
-  const fieldValue = (field) =>
-    textDraft[field] !== undefined ? textDraft[field] : (card?.[field] ?? '');
-
   const handleChange = (field, value) => {
     if (field === 'contentType' && value === 'One-off Project') {
-      clearTimeout(debounceTimerRef.current);
-      debouncedUpdatesRef.current = {};
       onUpdate(card.id, {
         contentType: value,
         isOneOffProject: true,
@@ -222,8 +223,6 @@ export default function CardModal({
       return;
     }
     if (field === 'contentType' && value === 'Story') {
-      clearTimeout(debounceTimerRef.current);
-      debouncedUpdatesRef.current = {};
       onUpdate(card.id, {
         contentType: value,
         shootDate: '',
@@ -235,8 +234,6 @@ export default function CardModal({
       return;
     }
     if (field === 'contentType' && value !== 'Story') {
-      clearTimeout(debounceTimerRef.current);
-      debouncedUpdatesRef.current = {};
       onUpdate(card.id, {
         contentType: value,
         isOneOffProject: false,
@@ -247,8 +244,6 @@ export default function CardModal({
       return;
     }
     if (field === 'client') {
-      clearTimeout(debounceTimerRef.current);
-      debouncedUpdatesRef.current = {};
       onUpdate(card.id, {
         client: value,
         accountManager: getClientAccountManager(value) || card.accountManager || '',
@@ -256,19 +251,10 @@ export default function CardModal({
       return;
     }
     if (field === 'notes' && card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card))) {
-      clearTimeout(debounceTimerRef.current);
-      debouncedUpdatesRef.current = {};
-      onUpdate(card.id, {
-        storyOccurrenceNotes: {
-          ...parseStoryOccurrenceNotes(card.storyOccurrenceNotes),
-          [card.occurrenceDate]: value,
-        },
-      }, { recordUndo: false });
+      commitNotes(value);
       return;
     }
     if (field === 'shootTime') {
-      clearTimeout(debounceTimerRef.current);
-      debouncedUpdatesRef.current = {};
       const updates = { shootTime: value };
       const start = parseTimeToMinutes(value);
       const end = parseTimeToMinutes(card.shootEndTime);
@@ -277,13 +263,6 @@ export default function CardModal({
       }
       if (!value) updates.shootEndTime = '';
       onUpdate(card.id, updates, { recordUndo: false });
-      return;
-    }
-    // Text fields — local draft for instant feedback; debounced cloud save.
-    if (TEXT_DRAFT_FIELDS.has(field)) {
-      setTextDraft((prev) => ({ ...prev, [field]: value }));
-      debouncedUpdatesRef.current[field] = value;
-      scheduleFlush();
       return;
     }
     onUpdate(card.id, { [field]: value }, { recordUndo: false });
@@ -352,20 +331,21 @@ export default function CardModal({
           {activeTab === 'details' && (
             <>
           <Field label="Task Title">
-            <input
-              type="text"
-              value={fieldValue('title')}
-              onChange={(e) => handleChange('title', e.target.value)}
+            <DebouncedField
+              resetKey={card.id}
+              value={card.title}
+              onCommit={(value) => commitTextField('title', value)}
               className={inputClass}
             />
           </Field>
 
 
           <Field label="Video File Link">
-            <input
+            <DebouncedField
+              resetKey={card.id}
               type="url"
-              value={fieldValue('dropboxLink')}
-              onChange={(e) => handleChange('dropboxLink', e.target.value)}
+              value={card.dropboxLink}
+              onCommit={(value) => commitTextField('dropboxLink', value)}
               placeholder="Paste link to video file (Dropbox, Google Drive, Vimeo, WeTransfer…)"
               className={inputClass}
             />
@@ -494,9 +474,11 @@ export default function CardModal({
           </Field>
 
           <Field label={card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card)) ? `Notes (${occurrenceLabel})` : 'Notes'}>
-            <textarea
-              value={fieldValue('notes')}
-              onChange={(e) => handleChange('notes', e.target.value)}
+            <DebouncedField
+              resetKey={`${card.id}:${card.occurrenceDate || ''}`}
+              as="textarea"
+              value={notesValue}
+              onCommit={commitNotes}
               rows={4}
               placeholder="Add notes..."
               className={`${inputClass} resize-y`}
@@ -678,34 +660,37 @@ export default function CardModal({
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Start time">
-                  <TimeInput
+                  <DebouncedTimeInput
+                    resetKey={card.id}
                     value={card.shootTime || ''}
-                    onChange={(e) => handleChange('shootTime', e.target.value)}
+                    onCommit={commitShootTime}
                     placeholder="Start time"
                     inputClassName={inputClass}
                   />
                 </Field>
                 <Field label="End time">
-                  <TimeInput
+                  <DebouncedTimeInput
+                    resetKey={card.id}
                     value={card.shootEndTime || ''}
-                    onChange={(e) => handleChange('shootEndTime', e.target.value)}
+                    onCommit={(value) => commitTextField('shootEndTime', value)}
                     placeholder="End time"
                     min={card.shootTime || undefined}
                     inputClassName={inputClass}
                   />
                 </Field>
                 <Field label="Models / Talent">
-                  <ModelTagInput
+                  <DebouncedModelTagInput
+                    resetKey={card.id}
                     value={card.shootModels || ''}
-                    onChange={(value) => handleChange('shootModels', value)}
+                    onCommit={(value) => commitTextField('shootModels', value)}
                     placeholder="Add model name, press Enter"
                   />
                 </Field>
                 <Field label="Props & Needs">
-                  <input
-                    type="text"
-                    value={fieldValue('shootNeeds')}
-                    onChange={(e) => handleChange('shootNeeds', e.target.value)}
+                  <DebouncedField
+                    resetKey={card.id}
+                    value={card.shootNeeds}
+                    onCommit={(value) => commitTextField('shootNeeds', value)}
                     placeholder="Ring light, samples, wardrobe..."
                     className={inputClass}
                   />
@@ -897,10 +882,11 @@ export default function CardModal({
           {activeTab === 'references' && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Reference Music">
-              <input
+              <DebouncedField
+                resetKey={card.id}
                 type="url"
-                value={fieldValue('referenceMusic')}
-                onChange={(e) => handleChange('referenceMusic', e.target.value)}
+                value={card.referenceMusic}
+                onCommit={(value) => commitTextField('referenceMusic', value)}
                 placeholder="Paste Spotify, Apple Music, or other link..."
                 className={inputClass}
               />
@@ -911,10 +897,10 @@ export default function CardModal({
               )}
             </Field>
             <Field label="Reference Video">
-              <input
-                type="text"
-                value={fieldValue('referenceVideo')}
-                onChange={(e) => handleChange('referenceVideo', e.target.value)}
+              <DebouncedField
+                resetKey={card.id}
+                value={card.referenceVideo}
+                onCommit={(value) => commitTextField('referenceVideo', value)}
                 placeholder="Paste Instagram, TikTok, or YouTube link..."
                 className={inputClass}
               />

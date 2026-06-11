@@ -1,20 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 const DEFAULT_DELAY_MS = 450;
 
 /**
- * Local overlay + debounced commit for text-heavy forms.
- * Keeps typing instant while batching parent/sync updates.
+ * Ref-backed overlay + debounced commit for text-heavy forms.
+ * Avoids parent re-renders on every keystroke — only the commit callback runs after delay.
  */
 export function useDebouncedPatch(onCommit, { delay = DEFAULT_DELAY_MS, recordUndo = false, resetKey = null } = {}) {
-  const [overlay, setOverlay] = useState({});
+  const overlayRef = useRef({});
   const pendingRef = useRef({});
   const timerRef = useRef(null);
   const onCommitRef = useRef(onCommit);
   onCommitRef.current = onCommit;
 
   useEffect(() => {
-    setOverlay({});
+    overlayRef.current = {};
     pendingRef.current = {};
     clearTimeout(timerRef.current);
     timerRef.current = null;
@@ -27,17 +27,15 @@ export function useDebouncedPatch(onCommit, { delay = DEFAULT_DELAY_MS, recordUn
     pendingRef.current = {};
     if (!patch || !Object.keys(patch).length) return;
     onCommitRef.current(patch, { recordUndo });
-    setOverlay((prev) => {
-      const next = { ...prev };
-      for (const key of Object.keys(patch)) delete next[key];
-      return next;
-    });
+    for (const key of Object.keys(patch)) {
+      delete overlayRef.current[key];
+    }
   }, [recordUndo]);
 
   const applyPatch = useCallback(
     (patch) => {
       if (!patch || typeof patch !== 'object') return;
-      setOverlay((prev) => ({ ...prev, ...patch }));
+      overlayRef.current = { ...overlayRef.current, ...patch };
       pendingRef.current = { ...pendingRef.current, ...patch };
       clearTimeout(timerRef.current);
       timerRef.current = setTimeout(flush, delay);
@@ -57,10 +55,13 @@ export function useDebouncedPatch(onCommit, { delay = DEFAULT_DELAY_MS, recordUn
     [recordUndo],
   );
 
-  const merge = useCallback(
-    (base) => (base && typeof base === 'object' ? { ...base, ...overlay } : { ...overlay }),
-    [overlay],
-  );
+  const merge = useCallback((base) => {
+    const overlay = overlayRef.current;
+    if (!overlay || !Object.keys(overlay).length) {
+      return base && typeof base === 'object' ? base : {};
+    }
+    return base && typeof base === 'object' ? { ...base, ...overlay } : { ...overlay };
+  }, []);
 
-  return { applyPatch, flush, merge, overlay };
+  return { applyPatch, flush, merge };
 }

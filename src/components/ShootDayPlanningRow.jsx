@@ -1,14 +1,12 @@
 import { getContentTypeStyle } from "../constants";
 import { contentTypeLabelProps, contentTypeCardStyle } from "../utils/contentTypeColors";
 import { useClientsContext } from "../context/ClientsContext";
-import { useDebouncedPatch } from "../hooks/useDebouncedPatch";
 import {
   getDefaultShootEndTime,
   parseTimeToMinutes,
 } from "../utils/shootDay";
-import ModelTagInput from "./ModelTagInput";
 import ShootLocationLink from "./ShootLocationLink";
-import TimeInput from "./TimeInput";
+import DebouncedField, { DebouncedModelTagInput, DebouncedTimeInput } from "./DebouncedField";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-2.5 py-1.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50";
@@ -25,25 +23,18 @@ export default function ShootDayPlanningRow({
   const { getMemberNamesForRole } = useClientsContext();
   const contentCreators = getMemberNamesForRole("Content Creator");
   const typeStyle = getContentTypeStyle(card.contentType);
-  const { merge, applyPatch } = useDebouncedPatch(
-    (patch, options) => onUpdate?.(card.id, patch, options),
-    { resetKey: card.id, recordUndo: false },
-  );
-  const view = merge(card);
 
-  const handleChange = (field, value) => {
-    applyPatch({ [field]: value });
-  };
+  const commitPatch = (patch) => onUpdate?.(card.id, patch, { recordUndo: false });
 
-  const handleShootTimeChange = (value) => {
+  const commitShootTime = (value) => {
     const updates = { shootTime: value };
     const start = parseTimeToMinutes(value);
-    const end = parseTimeToMinutes(view.shootEndTime);
+    const end = parseTimeToMinutes(card.shootEndTime);
     if (start != null && (end == null || end <= start)) {
       updates.shootEndTime = getDefaultShootEndTime(value, card.contentType);
     }
     if (!value) updates.shootEndTime = "";
-    applyPatch(updates);
+    commitPatch(updates);
   };
 
   const timeMin = shootWindow?.shootStartTime || undefined;
@@ -114,9 +105,10 @@ export default function ShootDayPlanningRow({
           <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
             Start time
           </span>
-          <TimeInput
-            value={view.shootTime || ""}
-            onChange={(e) => handleShootTimeChange(e.target.value)}
+          <DebouncedTimeInput
+            resetKey={card.id}
+            value={card.shootTime || ""}
+            onCommit={commitShootTime}
             disabled={readOnly}
             min={timeMin}
             max={timeMax}
@@ -134,11 +126,12 @@ export default function ShootDayPlanningRow({
           <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
             End time
           </span>
-          <TimeInput
-            value={view.shootEndTime || ""}
-            onChange={(e) => handleChange("shootEndTime", e.target.value)}
+          <DebouncedTimeInput
+            resetKey={card.id}
+            value={card.shootEndTime || ""}
+            onCommit={(value) => commitPatch({ shootEndTime: value })}
             disabled={readOnly}
-            min={view.shootTime || timeMin}
+            min={card.shootTime || timeMin}
             max={timeMax}
             placeholder="End time"
             inputClassName={inputClass}
@@ -149,9 +142,10 @@ export default function ShootDayPlanningRow({
           <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
             Models / talent
           </span>
-          <ModelTagInput
-            value={view.shootModels || ""}
-            onChange={(value) => handleChange("shootModels", value)}
+          <DebouncedModelTagInput
+            resetKey={card.id}
+            value={card.shootModels || ""}
+            onCommit={(value) => commitPatch({ shootModels: value })}
             disabled={readOnly}
             placeholder="Add model name, press Enter"
           />
@@ -165,8 +159,8 @@ export default function ShootDayPlanningRow({
             Content creator
           </span>
           <select
-            value={view.contentCreator || ""}
-            onChange={(e) => handleChange("contentCreator", e.target.value)}
+            value={card.contentCreator || ""}
+            onChange={(e) => commitPatch({ contentCreator: e.target.value })}
             disabled={readOnly || contentCreators.length === 0}
             className={inputClass}
           >
@@ -183,10 +177,10 @@ export default function ShootDayPlanningRow({
           <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
             Props & needs
           </span>
-          <input
-            type="text"
-            value={view.shootNeeds || ""}
-            onChange={(e) => handleChange("shootNeeds", e.target.value)}
+          <DebouncedField
+            resetKey={card.id}
+            value={card.shootNeeds || ""}
+            onCommit={(value) => commitPatch({ shootNeeds: value })}
             disabled={readOnly}
             placeholder="e.g. Ring light, product samples, gym bag"
             className={inputClass}
@@ -201,22 +195,18 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
   const inputClassWide =
     "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50";
   const planKey = `${plan?.client || ""}|${plan?.dateKey || ""}`;
-  const { merge, applyPatch } = useDebouncedPatch(
-    (patch, options) => onUpdatePlan?.(patch, options),
-    { resetKey: planKey, recordUndo: false },
-  );
-  const view = merge(plan);
+  const commitPatch = (patch) => onUpdatePlan?.(patch, { recordUndo: false });
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="block sm:col-span-2">
         <span className="mb-1 block text-xs font-medium text-gray-400">Shoot name</span>
-        <input
-          type="text"
-          value={view.title || ""}
-          onChange={(e) => applyPatch({ title: e.target.value, manual: true })}
+        <DebouncedField
+          resetKey={planKey}
+          value={plan?.title || ""}
+          onCommit={(value) => commitPatch({ title: value, manual: true })}
           disabled={readOnly}
-          placeholder={`e.g. ${plan.client || "Client"} spring campaign`}
+          placeholder={`e.g. ${plan?.client || "Client"} spring campaign`}
           className={inputClassWide}
         />
         <p className="mt-1 text-[10px] text-gray-500">
@@ -226,17 +216,17 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
 
       <label className="block sm:col-span-2">
         <span className="mb-1 block text-xs font-medium text-gray-400">Location</span>
-        <input
-          type="text"
-          value={view.location || ""}
-          onChange={(e) => applyPatch({ location: e.target.value })}
+        <DebouncedField
+          resetKey={planKey}
+          value={plan?.location || ""}
+          onCommit={(value) => commitPatch({ location: value })}
           disabled={readOnly}
           placeholder="123 Main St, Austin TX — opens in Apple Maps"
           className={inputClassWide}
         />
-        {view.location?.trim() && (
+        {plan?.location?.trim() && (
           <p className="mt-1.5 text-xs">
-            <ShootLocationLink location={view.location} showIcon />
+            <ShootLocationLink location={plan.location} showIcon />
           </p>
         )}
       </label>
@@ -249,9 +239,10 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-gray-400">Start time</span>
-            <TimeInput
-              value={view.shootStartTime || ""}
-              onChange={(e) => applyPatch({ shootStartTime: e.target.value })}
+            <DebouncedTimeInput
+              resetKey={planKey}
+              value={plan?.shootStartTime || ""}
+              onCommit={(value) => commitPatch({ shootStartTime: value })}
               disabled={readOnly}
               placeholder="Start time"
               inputClassName={inputClassWide}
@@ -259,11 +250,12 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-gray-400">End time</span>
-            <TimeInput
-              value={view.shootEndTime || ""}
-              onChange={(e) => applyPatch({ shootEndTime: e.target.value })}
+            <DebouncedTimeInput
+              resetKey={planKey}
+              value={plan?.shootEndTime || ""}
+              onCommit={(value) => commitPatch({ shootEndTime: value })}
               disabled={readOnly}
-              min={view.shootStartTime || undefined}
+              min={plan?.shootStartTime || undefined}
               placeholder="End time"
               inputClassName={inputClassWide}
             />
@@ -276,9 +268,10 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
         <p className="mb-3 text-[10px] text-gray-500">
           Models needed for the entire shoot window (not tied to a specific piece of content).
         </p>
-        <ModelTagInput
-          value={view.sessionModels || ""}
-          onChange={(value) => applyPatch({ sessionModels: value })}
+        <DebouncedModelTagInput
+          resetKey={planKey}
+          value={plan?.sessionModels || ""}
+          onCommit={(value) => commitPatch({ sessionModels: value })}
           disabled={readOnly}
           placeholder="Add model name, press Enter"
         />
@@ -291,20 +284,16 @@ export function ShootDaySessionExtras({ plan, onUpdatePlan, readOnly = false }) 
   const inputClassWide =
     "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50";
   const planKey = `${plan?.client || ""}|${plan?.dateKey || ""}`;
-  const { merge, applyPatch } = useDebouncedPatch(
-    (patch, options) => onUpdatePlan?.(patch, options),
-    { resetKey: planKey, recordUndo: false },
-  );
-  const view = merge(plan);
+  const commitPatch = (patch) => onUpdatePlan?.(patch, { recordUndo: false });
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="block sm:col-span-2">
         <span className="mb-1 block text-xs font-medium text-gray-400">General equipment & needs</span>
-        <input
-          type="text"
-          value={view.sessionNeeds || ""}
-          onChange={(e) => applyPatch({ sessionNeeds: e.target.value })}
+        <DebouncedField
+          resetKey={planKey}
+          value={plan?.sessionNeeds || ""}
+          onCommit={(value) => commitPatch({ sessionNeeds: value })}
           disabled={readOnly}
           placeholder="Cameras, lighting kit, wardrobe rack..."
           className={inputClassWide}
@@ -312,9 +301,11 @@ export function ShootDaySessionExtras({ plan, onUpdatePlan, readOnly = false }) 
       </label>
       <label className="block sm:col-span-2">
         <span className="mb-1 block text-xs font-medium text-gray-400">Session notes</span>
-        <textarea
-          value={view.notes || ""}
-          onChange={(e) => applyPatch({ notes: e.target.value })}
+        <DebouncedField
+          resetKey={planKey}
+          as="textarea"
+          value={plan?.notes || ""}
+          onCommit={(value) => commitPatch({ notes: value })}
           disabled={readOnly}
           rows={2}
           placeholder="Parking, access codes, special instructions..."

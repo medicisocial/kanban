@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -51,7 +51,7 @@ function collisionDetection(args) {
   return closestCenter(args);
 }
 
-export default function KanbanBoard({
+function KanbanBoard({
   cards,
   onAddCard,
   onCardClick,
@@ -265,3 +265,5 @@ export default function KanbanBoard({
     </DndContext>
   );
 }
+
+export default memo(KanbanBoard);
