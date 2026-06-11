@@ -1,7 +1,5 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useClientsContext } from '../../context/ClientsContext';
-import { sortClientNamesAlphabetically } from '../../utils/clients';
 
 function FilterChevron({ open }) {
   return (
@@ -41,37 +39,76 @@ const ClientFilterOption = memo(function ClientFilterOption({ option, isActive, 
       className={`client-filter-item portal-dropdown-item${
         isActive ? ' client-filter-item-active' : ''
       }`}
-      style={{ '--client-filter-color': option.color }}
+      style={isActive ? { '--client-filter-color': option.color } : undefined}
       onClick={() => onSelect(option.id)}
     >
-      <ClientDot color={option.color} active={isActive} />
+      <span className="client-filter-option-dot" style={{ backgroundColor: option.color }} aria-hidden />
       <span className="min-w-0 flex-1 truncate">{option.label}</span>
       {isActive && <span className="client-filter-check" aria-hidden />}
     </button>
   );
 });
 
-function ClientFilterSelect({ value, onChange }) {
-  const { clients, getClientColor } = useClientsContext();
+const ClientFilterMenu = memo(function ClientFilterMenu({
+  options,
+  value,
+  menuStyle,
+  onSelect,
+  onClose,
+}) {
+  return createPortal(
+    <>
+      <button
+        type="button"
+        className="client-filter-backdrop fixed inset-0 z-[200] cursor-default"
+        aria-label="Close client filter"
+        onClick={onClose}
+      />
+      <div
+        className="client-filter-panel portal-dropdown-panel fixed z-[210]"
+        style={{
+          top: menuStyle.top,
+          left: menuStyle.left,
+          width: menuStyle.width,
+        }}
+        role="listbox"
+        aria-label="Clients"
+      >
+        <div className="portal-dropdown-header">
+          <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/35">
+            Filter workspace
+          </p>
+        </div>
+        <div className="client-filter-list portal-dropdown-body portal-dropdown-items max-h-[min(320px,50vh)] overflow-y-auto overscroll-contain">
+          {options.map((option) => (
+            <ClientFilterOption
+              key={option.id}
+              option={option}
+              isActive={value === option.id}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      </div>
+    </>,
+    document.body,
+  );
+});
+
+function ClientFilterSelect({ value, onChange, options }) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState(null);
   const triggerRef = useRef(null);
+  const frozenOptionsRef = useRef(options);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
-  const selectedLabel = value === 'all' ? 'All clients' : value;
-  const selectedColor =
-    value === 'all' ? 'rgba(255, 255, 255, 0.42)' : getClientColor(value);
-
-  const options = useMemo(
-    () =>
-      [{ id: 'all', label: 'All clients', color: 'rgba(255, 255, 255, 0.42)' }].concat(
-        sortClientNamesAlphabetically(clients).map((client) => ({
-          id: client,
-          label: client,
-          color: getClientColor(client),
-        })),
-      ),
-    [clients, getClientColor],
-  );
+  const selectedOption =
+    options.find((option) => option.id === value) ||
+    options[0] ||
+    { id: 'all', label: 'All clients', color: 'rgba(255, 255, 255, 0.42)' };
+  const selectedLabel = selectedOption.label;
+  const selectedColor = selectedOption.color;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -112,51 +149,22 @@ function ClientFilterSelect({ value, onChange }) {
     };
   }, [open]);
 
-  const handleSelect = (next) => {
-    setOpen(false);
-    onChange(next);
-  };
+  const handleToggle = useCallback(() => {
+    setOpen((current) => {
+      if (current) return false;
+      frozenOptionsRef.current = options;
+      return true;
+    });
+  }, [options]);
 
-  const menu =
-    open &&
-    menuStyle &&
-    createPortal(
-      <>
-        <button
-          type="button"
-          className="portal-dropdown-backdrop fixed inset-0 z-[200] cursor-default"
-          aria-label="Close client filter"
-          onClick={() => setOpen(false)}
-        />
-        <div
-          className="client-filter-panel portal-dropdown-panel fixed z-[210]"
-          style={{
-            top: menuStyle.top,
-            left: menuStyle.left,
-            width: menuStyle.width,
-          }}
-          role="listbox"
-          aria-label="Clients"
-        >
-          <div className="portal-dropdown-header">
-            <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/35">
-              Filter workspace
-            </p>
-          </div>
-          <div className="portal-dropdown-body portal-dropdown-items max-h-[min(320px,50vh)] overflow-y-auto overscroll-contain">
-            {options.map((option) => (
-              <ClientFilterOption
-                key={option.id}
-                option={option}
-                isActive={value === option.id}
-                onSelect={handleSelect}
-              />
-            ))}
-          </div>
-        </div>
-      </>,
-      document.body,
-    );
+  const handleClose = useCallback(() => {
+    setOpen(false);
+  }, []);
+
+  const handleSelect = useCallback((next) => {
+    setOpen(false);
+    onChangeRef.current(next);
+  }, []);
 
   return (
     <>
@@ -167,7 +175,7 @@ function ClientFilterSelect({ value, onChange }) {
           className="client-filter-trigger"
           data-open={open ? '' : undefined}
           style={{ '--client-filter-color': selectedColor }}
-          onClick={() => setOpen((current) => !current)}
+          onClick={handleToggle}
           aria-expanded={open}
           aria-haspopup="listbox"
           aria-label={`Filter by client, currently ${selectedLabel}`}
@@ -177,7 +185,15 @@ function ClientFilterSelect({ value, onChange }) {
           <FilterChevron open={open} />
         </button>
       </div>
-      {menu}
+      {open && menuStyle && (
+        <ClientFilterMenu
+          options={frozenOptionsRef.current}
+          value={value}
+          menuStyle={menuStyle}
+          onSelect={handleSelect}
+          onClose={handleClose}
+        />
+      )}
     </>
   );
 }

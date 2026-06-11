@@ -1126,6 +1126,13 @@ textarea:focus::placeholder {
   transform-origin: top left;
 }
 
+.client-filter-backdrop {
+  background: rgba(0, 0, 0, 0.42);
+  animation: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 .client-filter-panel.portal-dropdown-panel {
   background: rgba(12, 12, 12, 0.98);
   opacity: 1;
@@ -1134,6 +1141,7 @@ textarea:focus::placeholder {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   contain: layout paint;
+  isolation: isolate;
 }
 
 .client-filter-panel .portal-dropdown-header,
@@ -1149,10 +1157,25 @@ textarea:focus::placeholder {
   gap: 0.625rem;
 }
 
+.client-filter-option-dot {
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+}
+
+.client-filter-list .portal-dropdown-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 2.25rem;
+}
+
 .client-filter-panel .portal-dropdown-item {
-  transition:
-    background-color 0.12s ease,
-    color 0.12s ease;
+  transition: none;
+}
+
+.client-filter-panel .portal-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.96);
 }
 
 .client-filter-panel .portal-dropdown-item:active {

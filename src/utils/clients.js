@@ -79,3 +79,20 @@ export function getClientPortalBrands(clients, internalClient) {
     clients.filter((client) => client !== internalClient),
   );
 }
+
+const ALL_CLIENTS_FILTER_OPTION = {
+  id: 'all',
+  label: 'All clients',
+  color: 'rgba(255, 255, 255, 0.42)',
+};
+
+export function buildClientFilterOptions(clients, getClientColor) {
+  return [
+    ALL_CLIENTS_FILTER_OPTION,
+    ...sortClientNamesAlphabetically(clients).map((client) => ({
+      id: client,
+      label: client,
+      color: getClientColor(client),
+    })),
+  ];
+}

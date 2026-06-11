@@ -9,9 +9,10 @@ import { notifyWorkspaceReload } from '../utils/workspaceReload';
 import ClientPortalCredentialsModal from './ClientPortalCredentialsModal';
 import ClientFilterSelect from './clientPortal/ClientFilterSelect';
 import { btnSecondaryClass } from './clientPortal/clientPortalUi';
+import { buildClientFilterOptions } from '../utils/clients';
 
 export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
-  const { clients, getClientUsers, setClientPortalUsers } = useClientsContext();
+  const { clients, getClientColor, getClientUsers, setClientPortalUsers } = useClientsContext();
   const { session } = useStaffAuth();
   const cloudMode = isCloudSourceOfTruth();
   const [showTeamUsers, setShowTeamUsers] = useState(false);
@@ -86,9 +87,20 @@ export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
     </>
   );
 
+  const clientFilterOptions = useMemo(
+    () => buildClientFilterOptions(clients, getClientColor),
+    [clients, getClientColor],
+  );
+
   const clientFilterSelect = useMemo(
-    () => <ClientFilterSelect value={clientFilter} onChange={onClientChange} />,
-    [clientFilter, onClientChange],
+    () => (
+      <ClientFilterSelect
+        value={clientFilter}
+        onChange={onClientChange}
+        options={clientFilterOptions}
+      />
+    ),
+    [clientFilter, onClientChange, clientFilterOptions],
   );
 
   const settingsMenu = (
