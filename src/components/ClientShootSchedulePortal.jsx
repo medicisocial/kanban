@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import { getContentTypeStyle } from '../constants';
+import { contentTypePillProps } from '../utils/contentTypeColors';
 import {
   getClientShootCards,
   resolveShootCardReferenceVideo,
@@ -9,7 +11,52 @@ import { formatTime } from '../utils';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
 import ShootLocationLink from './ShootLocationLink';
-import { surfacePanelClass } from './clientPortal/clientPortalUi';
+import { glassInsetClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+
+function ShootScheduleCard({ card, ideas, clientColor }) {
+  const referenceVideo = resolveShootCardReferenceVideo(card, ideas);
+  const typeStyle = getContentTypeStyle(card.contentType);
+
+  return (
+    <article
+      className={`${glassInsetClass} flex flex-col overflow-hidden`}
+      style={{ borderTopColor: clientColor, borderTopWidth: '3px' }}
+    >
+      <div className="p-4">
+        <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            {card.shootTime && (
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/40">
+                {formatTime(card.shootTime)}
+              </p>
+            )}
+            <h3 className="mt-1 text-base font-semibold text-white">{card.title}</h3>
+          </div>
+          <span
+            {...contentTypePillProps(
+              typeStyle,
+              'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase',
+            )}
+          >
+            {card.contentType}
+          </span>
+        </div>
+
+        {card.shootModels && (
+          <p className="mb-3 text-sm text-white/45">Talent: {card.shootModels}</p>
+        )}
+
+        {referenceVideo ? (
+          <div className="rounded-lg bg-white/5 px-3 py-2.5 transition hover:bg-white/[0.07]">
+            <ReferenceVideoLink url={referenceVideo} />
+          </div>
+        ) : (
+          <p className="text-xs text-white/35">No reference video</p>
+        )}
+      </div>
+    </article>
+  );
+}
 
 export default function ClientShootSchedulePortal({
   client,
@@ -43,7 +90,7 @@ export default function ClientShootSchedulePortal({
           <p className="text-sm text-white/45">No upcoming shoots scheduled.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-8">
           {dates.map((dateKey) => {
             const label = new Date(`${dateKey}T12:00:00`).toLocaleDateString('en-US', {
               weekday: 'long',
@@ -56,58 +103,30 @@ export default function ClientShootSchedulePortal({
             );
 
             return (
-              <section key={dateKey} className={`${surfacePanelClass} overflow-hidden`}>
-                <div className="border-b border-white/10 px-4 py-3">
-                  <h3 className="text-sm font-semibold text-white">{label}</h3>
-                  <div className="mt-1 flex flex-wrap gap-x-4 text-xs text-white/45">
-                    {plan?.location && (
-                      <span>
-                        Location:{' '}
-                        <ShootLocationLink
-                          location={plan.location}
-                          linkClassName="text-[#c88] underline-offset-2 hover:underline"
-                        />
-                      </span>
-                    )}
-                  </div>
+              <section key={dateKey} className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-white/55">
+                    {label}
+                  </h3>
+                  {plan?.location && (
+                    <p className="mt-1.5 text-xs text-white/45">
+                      Location:{' '}
+                      <ShootLocationLink
+                        location={plan.location}
+                        linkClassName="text-[#c88] underline-offset-2 hover:underline"
+                      />
+                    </p>
+                  )}
                 </div>
-                <div className="divide-y divide-white/[0.06]">
-                  {grouped[dateKey].map((card) => {
-                    const referenceVideo = resolveShootCardReferenceVideo(card, ideas);
-                    return (
-                      <article
-                        key={card.id}
-                        className="flex items-start justify-between gap-4 px-4 py-3 transition-colors hover:bg-white/[0.03]"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span
-                              className="text-[10px] font-medium uppercase tracking-wider"
-                              style={{ color: clientColor }}
-                            >
-                              {card.contentType}
-                            </span>
-                            {card.shootTime && (
-                              <span className="text-[11px] tabular-nums text-white/40">
-                                {formatTime(card.shootTime)}
-                              </span>
-                            )}
-                          </div>
-                          <h4 className="mt-1 text-sm font-medium text-white">{card.title}</h4>
-                          {card.shootModels && (
-                            <p className="mt-1 text-xs text-white/45">Talent: {card.shootModels}</p>
-                          )}
-                        </div>
-                        <div className="shrink-0 pt-0.5 text-right">
-                          {referenceVideo ? (
-                            <ReferenceVideoLink url={referenceVideo} />
-                          ) : (
-                            <span className="text-[11px] text-white/25">No reference</span>
-                          )}
-                        </div>
-                      </article>
-                    );
-                  })}
+                <div className="space-y-3">
+                  {grouped[dateKey].map((card) => (
+                    <ShootScheduleCard
+                      key={card.id}
+                      card={card}
+                      ideas={ideas}
+                      clientColor={clientColor}
+                    />
+                  ))}
                 </div>
               </section>
             );
