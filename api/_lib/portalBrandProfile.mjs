@@ -96,6 +96,23 @@ export async function resolvePortalBrandDisplayName(orgId, sessionBrand) {
 
   if (url && key && orgId && normalized) {
     try {
+      const brandResponse = await fetchWithTimeout(
+        `${url}/rest/v1/brands?org_id=eq.${encodeURIComponent(orgId)}&brand_key=eq.${encodeURIComponent(normalized)}&select=display_name&limit=1`,
+        {
+          headers: {
+            apikey: key,
+            Authorization: `Bearer ${key}`,
+          },
+        },
+      );
+      if (brandResponse.ok) {
+        const brandRows = await brandResponse.json();
+        const fromBrands = brandRows?.[0]?.display_name;
+        if (fromBrands && brandKeysMatch(fromBrands, sessionBrand)) {
+          return String(fromBrands).trim();
+        }
+      }
+
       const response = await fetchWithTimeout(
         `${url}/rest/v1/client_brand_names?name_normalized=eq.${encodeURIComponent(normalized)}&org_id=eq.${encodeURIComponent(orgId)}&select=display_name&limit=1`,
         {
@@ -118,6 +135,119 @@ export async function resolvePortalBrandDisplayName(orgId, sessionBrand) {
   }
 
   return String(sessionBrand).trim();
+}
+
+export async function resolveBrandRecord(orgId, brand) {
+  if (!brand) return null;
+
+  const url = getSupabaseUrl();
+  const key = resolveAuthReadKey();
+  if (!url || !key || !orgId) return null;
+
+  const normalized = String(brand).trim().toLowerCase().replace(/\s+/g, ' ');
+
+  try {
+    const exactResponse = await fetchWithTimeout(
+      `${url}/rest/v1/brands?org_id=eq.${encodeURIComponent(orgId)}&brand_key=eq.${encodeURIComponent(normalized)}&select=id,brand_key,display_name&limit=1`,
+      {
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+        },
+      },
+    );
+    if (exactResponse.ok) {
+      const rows = await exactResponse.json();
+      if (rows?.[0]?.id) return rows[0];
+    }
+
+    const allResponse = await fetchWithTimeout(
+      `${url}/rest/v1/brands?org_id=eq.${encodeURIComponent(orgId)}&select=id,brand_key,display_name`,
+      {
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+        },
+      },
+    );
+    if (allResponse.ok) {
+      const rows = await allResponse.json();
+      for (const row of rows || []) {
+        if (
+          brandKeysMatch(row.brand_key, brand) ||
+          brandKeysMatch(row.display_name, brand)
+        ) {
+          return row;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('[portal-brand-profile] brand record lookup failed:', error?.message || error);
+  }
+
+  return null;
+}
+
+function rowMatchesBrand(row, brand, table) {
+  const data = row?.data;
+  if (!data || typeof data !== 'object') return false;
+  if (table === 'shoot_plans') {
+    return data.client ? brandKeysMatch(data.client, brand) : brandKeysMatch(row.id, brand);
+  }
+  return data.client ? brandKeysMatch(data.client, brand) : false;
+}
+
+/** @internal test helper */
+export function matchesBrandContentRow(row, brand, table) {
+  return rowMatchesBrand(row, brand, table);
+}
+
+async function queryOrgTableRows(orgId, table) {
+  const url = getSupabaseUrl();
+  const key = resolveAuthReadKey();
+  if (!url || !key || !orgId) return [];
+
+  const response = await fetchWithTimeout(
+    `${url}/rest/v1/${table}?select=id,data&org_id=eq.${encodeURIComponent(orgId)}`,
+    {
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+      },
+    },
+  );
+  if (!response.ok) return [];
+  return response.json();
+}
+
+async function queryRowsByBrandId(orgId, table, brandId) {
+  const url = getSupabaseUrl();
+  const key = resolveAuthReadKey();
+  if (!url || !key || !orgId || !brandId) return [];
+
+  const response = await fetchWithTimeout(
+    `${url}/rest/v1/${table}?select=id,data&org_id=eq.${encodeURIComponent(orgId)}&brand_id=eq.${encodeURIComponent(brandId)}`,
+    {
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+      },
+    },
+  );
+  if (!response.ok) return [];
+  return response.json();
+}
+
+async function loadBrandTableContent(orgId, brand, table, brandId) {
+  if (brandId) {
+    const linkedRows = await queryRowsByBrandId(orgId, table, brandId);
+    if (linkedRows.length > 0) {
+      return linkedRows;
+    }
+  }
+
+  const orgRows = await queryOrgTableRows(orgId, table);
+  return orgRows.filter((row) => rowMatchesBrand(row, brand, table));
 }
 
 export function resolveBrandProfileFromStore(clientStore, brand) {
@@ -262,58 +392,34 @@ export async function fetchBrandContent(orgId, brand) {
   const key = resolveAuthReadKey();
   if (!url || !key || !orgId || !brand) return null;
 
-  // First resolve the brand_id
-  let brandId = null;
-  try {
-    const brandResponse = await fetchWithTimeout(
-      `${url}/rest/v1/brands?org_id=eq.${encodeURIComponent(orgId)}&brand_key=eq.${encodeURIComponent(brand.toLowerCase().trim())}&select=id`,
-      {
-        headers: {
-          apikey: key,
-          Authorization: `Bearer ${key}`,
-        },
-      },
-    );
-    if (brandResponse.ok) {
-      const brandRows = await brandResponse.json();
-      if (brandRows?.length > 0) {
-        brandId = brandRows[0].id;
-      }
-    }
-  } catch (error) {
-    console.warn('[portal-brand-profile] brand lookup failed:', error?.message || error);
-  }
-
-  if (!brandId) return null;
-
-  // Now query each content table by brand_id
-  const queryByBrand = async (table) => {
-    const response = await fetchWithTimeout(
-      `${url}/rest/v1/${table}?select=id,data&brand_id=eq.${encodeURIComponent(brandId)}`,
-      {
-        headers: {
-          apikey: key,
-          Authorization: `Bearer ${key}`,
-        },
-      },
-    );
-    if (!response.ok) return [];
-    return response.json();
-  };
+  const brandRecord = await resolveBrandRecord(orgId, brand);
+  const brandId = brandRecord?.id || null;
 
   const [cards, ideas, events, meetings, plans] = await Promise.all([
-    queryByBrand('cards'),
-    queryByBrand('video_ideas'),
-    queryByBrand('events'),
-    queryByBrand('meetings'),
-    queryByBrand('shoot_plans'),
+    loadBrandTableContent(orgId, brand, 'cards', brandId),
+    loadBrandTableContent(orgId, brand, 'video_ideas', brandId),
+    loadBrandTableContent(orgId, brand, 'events', brandId),
+    loadBrandTableContent(orgId, brand, 'meetings', brandId),
+    loadBrandTableContent(orgId, brand, 'shoot_plans', brandId),
   ]);
 
+  const hasContent =
+    cards.length > 0 ||
+    ideas.length > 0 ||
+    events.length > 0 ||
+    meetings.length > 0 ||
+    plans.length > 0;
+
+  if (!hasContent && !brandRecord) return null;
+
   return {
-    cards: (cards || []).map(r => r.data).filter(Boolean),
-    ideas: (ideas || []).map(r => r.data).filter(Boolean),
-    events: (events || []).map(r => r.data).filter(Boolean),
-    meetings: (meetings || []).map(r => r.data).filter(Boolean),
-    plans: (plans || []).reduce((acc, r) => { acc[r.id] = r.data; return acc; }, {}),
+    cards: (cards || []).map((r) => r.data).filter(Boolean),
+    ideas: (ideas || []).map((r) => r.data).filter(Boolean),
+    events: (events || []).map((r) => r.data).filter(Boolean),
+    meetings: (meetings || []).map((r) => r.data).filter(Boolean),
+    plans: (plans || []).reduce((acc, r) => {
+      acc[r.id] = r.data;
+      return acc;
+    }, {}),
   };
 }

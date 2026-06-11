@@ -7,6 +7,7 @@ import {
   brandKeysMatch,
   filterContentByBrand,
   resolvePortalBrandDisplayNameFromStore,
+  matchesBrandContentRow,
 } from '../api/_lib/portalBrandProfile.mjs';
 
 function assert(condition, message) {
@@ -63,5 +64,22 @@ import { clientMatchesBrand } from '../src/utils/clients.js';
 
 assert(clientMatchesBrand('Arco Fit', 'arco fit'), 'portal brand matches display client name');
 assert(!clientMatchesBrand('Plume', 'Arco Fit'), 'different clients do not match');
+
+assert(
+  matchesBrandContentRow(
+    { id: 'card-1', data: { client: 'Ara Med Spa', shootDate: '2026-06-11' } },
+    'ara med spa',
+    'cards',
+  ),
+  'portal content fallback matches cards by client text when brand_id is missing',
+);
+assert(
+  matchesBrandContentRow(
+    { id: 'Ara Med Spa|2026-06-11', data: { client: 'Ara Med Spa' } },
+    'ara med spa',
+    'shoot_plans',
+  ),
+  'portal content fallback matches shoot plans by client text',
+);
 
 console.log('Portal brand profile helper tests passed.');
