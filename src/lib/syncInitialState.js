@@ -1,4 +1,4 @@
-import { SUPABASE_ENABLED } from './supabaseClient';
+import { isCloudSourceOfTruth } from './cloudSourceOfTruth.js';
 import { markPendingRemoved, readSyncedLocalCollection, readSyncedLocalMap } from './syncHelpers';
 import { getOrgId } from './orgSession';
 
@@ -8,20 +8,24 @@ export function tombstoneSyncedDeletes(table, ids) {
   markPendingRemoved(getOrgId(), table, ids.map(String));
 }
 
-/** Hydrate from local cache on boot; cloud sync merges afterward when enabled. */
+/** Boot state: empty when cloud is source of truth; localStorage only for offline mode. */
 export function initialSyncCollectionState(loadLocal, { table, getId } = {}) {
+  if (isCloudSourceOfTruth()) return [];
   if (!loadLocal) return [];
   if (!table || !getId) return loadLocal();
   return readSyncedLocalCollection(loadLocal, getId, getOrgId(), table);
 }
 
-/** Hydrate from local cache on boot; cloud sync merges afterward when enabled. */
+/** Boot state: empty when cloud is source of truth; localStorage only for offline mode. */
 export function initialSyncMapState(loadLocal, { table } = {}) {
+  if (isCloudSourceOfTruth()) return {};
   if (!loadLocal) return {};
   if (!table) return loadLocal();
   return readSyncedLocalMap(loadLocal, getOrgId(), table);
 }
 
+/** Cloud mode: never mirror synced tables into localStorage. */
 export function shouldPersistSyncedState(syncLoaded) {
-  return !SUPABASE_ENABLED || syncLoaded;
+  if (isCloudSourceOfTruth()) return false;
+  return syncLoaded;
 }

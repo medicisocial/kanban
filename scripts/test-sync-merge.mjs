@@ -11,6 +11,7 @@ import {
   pendingRemovedKey,
   pendingCreatesKey,
   mergeClientsWorkspaceState,
+  mergeClientsWorkspaceStateSupabase,
   mergePortalCredentialDataForPush,
 } from '../src/lib/syncHelpers.js';
 import {
@@ -21,6 +22,7 @@ import {
   applyAuthoritativeBrandAssets,
   mergeBrandCompanyFiles,
   mergeClientsWorkspaceData,
+  mergeSlimClientsWorkspace,
 } from '../api/_lib/clientsWorkspaceMerge.mjs';
 import {
   mergeBrandCompanyFilesPortalRefresh,
@@ -875,6 +877,49 @@ if (typeof localStorage !== 'undefined') {
   assert(taken.has('arcofitgym'), 'other brand usernames should still be reserved');
   const plumeKey = Object.keys(credentials).find((key) => clientNamesConflict(key, 'Plume'));
   assert(plumeKey === 'plume', 'case-insensitive brand key should resolve to stored row id');
+}
+
+// Supabase clients merge ignores deprecated brand maps from remote blob.
+{
+  const remote = {
+    names: ['Plume', 'Casalu'],
+    colors: { Casalu: '#fff' },
+    portalPasswordVault: { Casalu: { u1: 'secret' } },
+    contentTypeColors: { reel: '#111' },
+  };
+  const local = {
+    names: ['Plume'],
+    colors: { Plume: '#000' },
+    contacts: { Plume: [{ name: 'Ann' }] },
+    contentTypeColors: { reel: '#222' },
+  };
+  const merged = mergeClientsWorkspaceStateSupabase({
+    remote,
+    local,
+    syncedStr: JSON.stringify({ names: ['Plume'], contentTypeColors: { reel: '#222' } }),
+  });
+  assert(JSON.stringify(merged.names) === JSON.stringify(['Plume', 'Casalu']), 'org names merge from remote');
+  assert(merged.colors?.Plume === '#000', 'local brand colors kept, not overwritten by remote blob');
+  assert(!merged.colors?.Casalu, 'remote brand colors ignored in supabase merge');
+  assert(!merged.portalPasswordVault?.Casalu, 'remote vault ignored in supabase merge');
+  assert(merged.contacts?.Plume?.[0]?.name === 'Ann', 'local contacts preserved');
+}
+
+{
+  const existing = {
+    names: ['Plume'],
+    colors: { Plume: '#000' },
+    contentTypeColors: { reel: '#111' },
+  };
+  const incoming = {
+    names: ['Plume', 'Casalu'],
+    colors: { Casalu: '#fff' },
+    contentTypeColors: { reel: '#222' },
+  };
+  const merged = mergeSlimClientsWorkspace(existing, incoming);
+  assert(JSON.stringify(merged.names) === JSON.stringify(['Plume', 'Casalu']), 'slim merge updates names');
+  assert(merged.colors?.Plume === '#000', 'slim merge does not touch deprecated brand maps');
+  assert(merged.contentTypeColors?.reel === '#222', 'slim merge updates org palette');
 }
 
 console.log('Sync merge tests passed.');

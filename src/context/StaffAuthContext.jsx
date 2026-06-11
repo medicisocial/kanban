@@ -13,7 +13,7 @@ import {
 import { SUPABASE_ENABLED, supabase } from '../lib/supabaseClient';
 import { normalizePlanType } from '../constants/plans';
 import { LEGACY_ORG_ID, resetOrgSession, setOrgSession } from '../lib/orgSession';
-import { clearOrgScopedCache } from '../lib/orgStorage';
+import { clearSyncedWorkspaceCache } from '../lib/orgStorage';
 import { authenticateTeamMemberCredentials } from '../utils/teamAuth';
 import {
   ensureStaffSupabaseSession,
@@ -76,6 +76,9 @@ async function establishLegacyStaffSession(loginId, password, applyLegacyOrg, se
   saveStaffSession(nextSession);
   setSession(nextSession);
   applyLegacyOrg();
+  if (SUPABASE_ENABLED) {
+    clearSyncedWorkspaceCache(LEGACY_ORG_ID);
+  }
   await Promise.race([
     ensureStaffSupabaseSession(password),
     new Promise((resolve) => {
@@ -123,7 +126,7 @@ export function StaffAuthProvider({ children }) {
     const saasOrg = buildSaasOrg(membership, user.email);
     // Clear stale localStorage cache for this org so the initial merge
     // always loads fresh data from Supabase on a new login session.
-    clearOrgScopedCache(saasOrg.id);
+    clearSyncedWorkspaceCache(saasOrg.id);
     setOrg(saasOrg);
     setOrgSession(saasOrg.id, true);
     return true;
@@ -147,6 +150,9 @@ export function StaffAuthProvider({ children }) {
         if (!cancelled) {
           setSession(stored);
           applyLegacyOrg();
+          if (SUPABASE_ENABLED) {
+            clearSyncedWorkspaceCache(LEGACY_ORG_ID);
+          }
         }
         ensureStaffSupabaseSession().catch(() => {});
         if (!cancelled) setReady(true);
@@ -349,7 +355,7 @@ export function StaffAuthProvider({ children }) {
   const logout = useCallback(() => {
     // Clear org-scoped cache before resetting so getOrgId() still returns the
     // current org when clearOrgScopedCache reads it.
-    if (org?.id) clearOrgScopedCache(org.id);
+    if (org?.id) clearSyncedWorkspaceCache(org.id);
     clearStaffSession();
     signOutStaffSupabaseSession();
     signOutSupabaseAuth();

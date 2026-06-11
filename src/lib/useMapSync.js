@@ -8,7 +8,7 @@ import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
 import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
 import { pushStaffSyncRows } from './staffSyncApi';
-import { seedRecordsToCloud } from './syncSeed';
+import { isCloudSourceOfTruth } from './cloudSourceOfTruth';
 import { reportSyncIssue } from './workspaceSyncHealth';
 import { subscribeWorkspaceRefetch } from '../utils/workspaceReload';
 import { useStaffAuth } from '../context/StaffAuthContext';
@@ -86,13 +86,8 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
     storeRef.current = createCollectionStore(table);
     syncedRef.current = null;
     applyingRemoteRef.current = false;
-    const hasCachedItems = localCollectionHasRecords(localMapRef.current);
-    loadedRef.current = hasCachedItems;
-    if (!hasCachedItems) {
-      setSyncLoaded(false);
-    } else {
-      markSyncLoaded();
-    }
+    loadedRef.current = false;
+    setSyncLoaded(false);
     pendingRemovedRef.current = loadPendingRemoved(orgId, table);
     pendingLocalCreatesRef.current = loadPendingCreates(orgId, table);
 
@@ -112,26 +107,8 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
         const rows = await fetchRowsWithTimeout(store);
         if (!active) return;
 
-        const local = readLocal();
-        const localKeys = Object.keys(local);
-
-        // Empty cloud table: keep local cache when it still has records (any org).
+        // Empty cloud table — authoritative empty state (no localStorage seeding).
         if (rows.length === 0) {
-          if (localKeys.length) {
-            let seedRows = localKeys.map((key) => ({ id: key, data: local[key] }));
-            seedRows = filterProtectedSyncUpserts(table, seedRows);
-            if (seedRows.length) {
-              void seedRecordsToCloud({ table, orgId, store, rows: seedRows });
-            }
-            applyingRemoteRef.current = true;
-            syncedRef.current = new Map(localKeys.map((key) => [key, JSON.stringify(local[key])]));
-            markSyncLoaded();
-            setMap(local);
-            pendingWriteRef.current = true;
-            queueMicrotask(() => setWriteNonce((current) => current + 1));
-            return;
-          }
-
           applyingRemoteRef.current = true;
           syncedRef.current = new Map();
           markSyncLoaded();
@@ -171,15 +148,12 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
           queueMicrotask(() => setWriteNonce((current) => current + 1));
         }
       } catch (err) {
-        console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
-        if (loadLocal) {
-          const local = readLocal();
-          const keys = Object.keys(local);
-          if (localCollectionHasRecords(local)) {
-            applyingRemoteRef.current = true;
-            syncedRef.current = new Map(keys.map((key) => [key, JSON.stringify(local[key])]));
-            setMap(local);
-          }
+        console.error(`[supabase:${table}] load failed:`, err?.message || err, err);
+        if (isCloudSourceOfTruth()) {
+          reportSyncIssue({
+            level: 'error',
+            message: 'Could not load workspace from the cloud. Check your connection and refresh.',
+          });
         }
         markSyncLoaded();
       }

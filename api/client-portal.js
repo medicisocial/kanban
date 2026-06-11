@@ -1,8 +1,6 @@
 import {
   getClientSessionFromRequest,
-  getClientPortalAuthMap,
   isClientSessionValid,
-  normalizeBrandUsers,
 } from './_lib/clientPortalAuth.mjs';
 import {
   normalizeClientContacts,
@@ -11,20 +9,9 @@ import {
 import { normalizeClientCompanyFiles } from './_lib/clientCompanyFiles.mjs';
 import { normalizeClientSpecialMenus } from './_lib/clientSpecialMenus.mjs';
 import {
-  CLIENTS_STORAGE_KEY,
-  EVENTS_STORAGE_KEY,
-  MEETINGS_STORAGE_KEY,
-  SHOOT_PLANS_STORAGE_KEY,
-  STORAGE_KEY,
-  VIDEO_IDEAS_STORAGE_KEY,
-  loadPortalWorkspace,
-} from './_lib/portalWorkspace.mjs';
-import {
   fetchPortalBrandProfile,
   fetchBrandPortalUsers,
   fetchBrandContent,
-  filterContentByBrand,
-  filterPlansByBrand,
   resolvePortalBrandDisplayName,
   brandKeysMatch,
 } from './_lib/portalBrandProfile.mjs';
@@ -54,8 +41,7 @@ function stripInternalCardFields(card) {
 }
 
 /**
- * Load the brand profile using the new normalized architecture.
- * Prefers get_brand_profile RPC → legacy get_portal_brand_profile → blob fallback.
+ * Load the brand profile from normalized client_records via get_brand_profile RPC.
  */
 async function loadBrandProfile(orgId, brand) {
   try {
@@ -64,52 +50,18 @@ async function loadBrandProfile(orgId, brand) {
   } catch (error) {
     console.error('[client-portal] profile RPC failed:', error?.message || error);
   }
-
-  // Legacy fallback: resolve from the clients workspace blob
-  try {
-    const workspace = await loadPortalWorkspace(orgId);
-    if (!workspace) return null;
-    const data = workspace?.data || {};
-    const clientStore = data[CLIENTS_STORAGE_KEY] || {};
-    const { resolveBrandProfileFromStore } = await import('./_lib/portalBrandProfile.mjs');
-    return resolveBrandProfileFromStore(clientStore, brand);
-  } catch (error) {
-    console.error('[client-portal] blob profile fallback failed:', error?.message || error);
-    return null;
-  }
+  return null;
 }
 
 /**
- * Load brand-scoped content (cards, ideas, plans, events, meetings) using
- * the normalized brand_id FK. Falls back to filtering the workspace blob.
+ * Load brand-scoped content (cards, ideas, plans, events, meetings) by brand_id FK.
  */
 async function loadBrandContent(orgId, brand) {
-  const loadFromBlob = async () => {
-    const workspace = await loadPortalWorkspace(orgId);
-    if (!workspace) return null;
-
-    const data = workspace?.data || {};
-    return {
-      cards: filterContentByBrand(data[STORAGE_KEY], brand).map(stripInternalCardFields),
-      ideas: filterContentByBrand(data[VIDEO_IDEAS_STORAGE_KEY] || data.video_ideas, brand),
-      plans: filterPlansByBrand(data[SHOOT_PLANS_STORAGE_KEY] || data.shoot_plans, brand),
-      events: filterContentByBrand(data[EVENTS_STORAGE_KEY] || data.events, brand),
-      meetings: filterContentByBrand(data[MEETINGS_STORAGE_KEY] || data.meetings, brand),
-    };
-  };
-
-  const [scoped, blob] = await Promise.all([fetchBrandContent(orgId, brand), loadFromBlob()]);
-  if (!scoped && !blob) return null;
-  if (!scoped) return blob;
-  if (!blob) return scoped;
-
-  // Normalized tables may be partially migrated — keep blob data when a section is empty.
+  const content = await fetchBrandContent(orgId, brand);
+  if (!content) return null;
   return {
-    cards: scoped.cards?.length ? scoped.cards : blob.cards,
-    ideas: scoped.ideas?.length ? scoped.ideas : blob.ideas,
-    plans: Object.keys(scoped.plans || {}).length ? scoped.plans : blob.plans,
-    events: scoped.events?.length ? scoped.events : blob.events,
-    meetings: scoped.meetings?.length ? scoped.meetings : blob.meetings,
+    ...content,
+    cards: (content.cards || []).map(stripInternalCardFields),
   };
 }
 
@@ -161,24 +113,6 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.warn('[client-portal] portal user lookup failed:', error?.message || error);
-    // Fall back to legacy auth map lookup
-    try {
-      const workspace = await loadPortalWorkspace(session.orgId);
-      if (workspace) {
-        const authMap = getClientPortalAuthMap(workspace);
-        const brandUsers = normalizeBrandUsers(authMap[brand]);
-        const sessionUsername = session.username.trim().toLowerCase();
-        const currentUser = brandUsers.find(
-          (user) => user.username.toLowerCase() === sessionUsername,
-        ) || null;
-        if (currentUser) {
-          userAvatar = currentUser.avatar || null;
-          userDisplayName = currentUser.displayName || session.username;
-        }
-      }
-    } catch {
-      // ignore
-    }
   }
 
   res.setHeader('Cache-Control', 'private, no-store, max-age=0');

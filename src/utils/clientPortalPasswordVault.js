@@ -1,8 +1,10 @@
 import { CLIENT_PORTAL_PASSWORD_VAULT_KEY, CLIENTS_STORAGE_KEY } from '../constants';
 import { readOrgScopedJson } from '../lib/orgStorage';
+import { isCloudSourceOfTruth } from '../lib/cloudSourceOfTruth';
 import { clientNamesConflict } from './clients';
 
 function readCloudVault() {
+  if (isCloudSourceOfTruth()) return {};
   try {
     const clients = readOrgScopedJson(CLIENTS_STORAGE_KEY, null);
     if (clients?.portalPasswordVault && typeof clients.portalPasswordVault === 'object') {

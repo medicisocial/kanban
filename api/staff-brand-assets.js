@@ -1,7 +1,7 @@
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
-import { fetchRecord, isSupabaseConfigured, upsertRecord } from './_lib/supabase.mjs';
-import { patchBrandProfileRecord } from './_lib/brandRecordStore.mjs';
+import { isSupabaseConfigured } from './_lib/supabase.mjs';
+import { patchBrandProfileRecord, fetchBrandProfileRecord } from './_lib/brandRecordStore.mjs';
 import { normalizeClientCompanyFiles } from './_lib/clientCompanyFiles.mjs';
 import { normalizeClientSpecialMenus } from './_lib/clientSpecialMenus.mjs';
 
@@ -75,9 +75,9 @@ export default async function handler(req, res) {
 
   try {
     const brandKey = String(brand).trim().toLowerCase();
-    const workspace = (await fetchRecord('clients', 'workspace', resolvedOrgId)) || {};
-    const businessType = workspace.businessTypes?.[brand] || '';
-    const patch = { displayName: brand };
+    const profile = await fetchBrandProfileRecord(resolvedOrgId, brandKey);
+    const businessType = profile?.businessType || '';
+    const patch = { displayName: profile?.displayName || brand };
 
     if (companyFiles !== undefined) {
       if (!Array.isArray(companyFiles)) {

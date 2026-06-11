@@ -117,15 +117,7 @@ export async function resolvePortalBrandDisplayName(orgId, sessionBrand) {
     }
   }
 
-  try {
-    const { loadPortalWorkspace, CLIENTS_STORAGE_KEY } = await import('./portalWorkspace.mjs');
-    const workspace = await loadPortalWorkspace(orgId);
-    const clientStore = workspace?.data?.[CLIENTS_STORAGE_KEY] || {};
-    return resolvePortalBrandDisplayNameFromStore(sessionBrand, clientStore);
-  } catch (error) {
-    console.warn('[portal-brand-profile] workspace display name fallback failed:', error?.message || error);
-    return String(sessionBrand).trim();
-  }
+  return String(sessionBrand).trim();
 }
 
 export function resolveBrandProfileFromStore(clientStore, brand) {

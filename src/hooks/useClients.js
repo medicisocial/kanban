@@ -30,6 +30,7 @@ import { normalizeClientSpecialMenus } from '../utils/clientSpecialMenus';
 import { persistClientLogoToStorage } from '../utils/clientLogo';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
+import { isCloudSourceOfTruth } from '../lib/cloudSourceOfTruth';
 import { useSingletonSync } from '../lib/useSingletonSync';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { registerPortalCredentialBrand } from '../lib/syncHelpers';
@@ -124,11 +125,13 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
     companyFiles: stripSuppressed(source.companyFiles || {}),
     specialMenus: stripSuppressed(source.specialMenus || {}),
     photoGalleryLinks: stripSuppressed(source.photoGalleryLinks || {}),
-    portalPasswordVault: stripSuppressed(
-      collapsePortalPasswordVaultBrandKeys(
-        mergePortalPasswordVault(source.portalPasswordVault || {}, loadLegacyPortalPasswordVault()),
-      ),
-    ),
+    portalPasswordVault: isCloudSourceOfTruth()
+      ? {}
+      : stripSuppressed(
+          collapsePortalPasswordVaultBrandKeys(
+            mergePortalPasswordVault(source.portalPasswordVault || {}, loadLegacyPortalPasswordVault()),
+          ),
+        ),
     contentTypeColors: normalizeContentTypeColors(source.contentTypeColors || {}),
     customColorPalette: normalizeCustomColorPalette(source.customColorPalette),
   };
@@ -159,7 +162,7 @@ export function useClients() {
   const { isLegacyOrg, planType, orgId } = useStaffAuth();
   const includeDefaults = isLegacyOrg;
   const [state, setState] = useState(() =>
-    normalizeClientsState(loadClientsRaw(), { includeDefaults }),
+    normalizeClientsState(isCloudSourceOfTruth() ? null : loadClientsRaw(), { includeDefaults }),
   );
   const stateRef = useRef(state);
 
@@ -215,6 +218,7 @@ export function useClients() {
   // Debounce localStorage writes to avoid thrashing during rapid edits.
   const persistTimerRef = useRef(null);
   useEffect(() => {
+    if (isCloudSourceOfTruth()) return;
     clearTimeout(persistTimerRef.current);
     persistTimerRef.current = setTimeout(() => {
       writeOrgScopedJson(CLIENTS_STORAGE_KEY, state);
@@ -286,7 +290,9 @@ export function useClients() {
         stateRef.current = nextState;
         setState(nextState);
       });
-      writeOrgScopedJson(CLIENTS_STORAGE_KEY, nextState);
+      if (!isCloudSourceOfTruth()) {
+        writeOrgScopedJson(CLIENTS_STORAGE_KEY, nextState);
+      }
       registerPortalCredentialBrand(orgId, resolvedName);
       return { ok: true, name: resolvedName };
     }
@@ -392,7 +398,9 @@ export function useClients() {
       stateRef.current = nextState;
       setState(nextState);
     });
-    writeOrgScopedJson(CLIENTS_STORAGE_KEY, nextState);
+    if (!isCloudSourceOfTruth()) {
+      writeOrgScopedJson(CLIENTS_STORAGE_KEY, nextState);
+    }
 
     if (SUPABASE_ENABLED && orgId) {
       await releaseClientBrandName(trimmed, orgId).catch(() => {});

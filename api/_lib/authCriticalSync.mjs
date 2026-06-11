@@ -1,5 +1,5 @@
 import { normalizeBrandUsers, hashValue } from './clientPortalAuth.mjs';
-import { mergeClientsWorkspaceData } from './clientsWorkspaceMerge.mjs';
+import { mergeClientsWorkspaceData, mergeSlimClientsWorkspace } from './clientsWorkspaceMerge.mjs';
 import { fetchCollectionMap, fetchRecord, getPortalPasswordVault, upsertRecord } from './supabase.mjs';
 
 export const AUTH_CRITICAL_SYNC_TABLES = new Set([
@@ -211,7 +211,7 @@ export async function sanitizeAuthCriticalUpserts(
         existingMap?.[row.id] && typeof existingMap[row.id] === 'object' ? existingMap[row.id] : {};
       sanitized.push({
         id: row.id,
-        data: mergeClientsWorkspaceData(existing, row.data),
+        data: mergeSlimClientsWorkspace(existing, row.data),
       });
     }
     return sanitized;
@@ -233,15 +233,12 @@ export async function repairPortalCredentialFromVault({ brand, orgId, user, pass
   // Never touch a credential that already has a usable hash.
   if (user.passwordHash && user.passwordHash.trim()) return null;
 
-  const clients = await fetchRecord('clients', 'workspace', orgId);
-  let vaultPassword = clients?.portalPasswordVault?.[brand]?.[user.id];
-  if (!vaultPassword) {
-    try {
-      const normalizedVault = await getPortalPasswordVault(brand, orgId);
-      vaultPassword = normalizedVault?.[user.id];
-    } catch {
-      /* fall back to blob-only */
-    }
+  let vaultPassword;
+  try {
+    const normalizedVault = await getPortalPasswordVault(brand, orgId);
+    vaultPassword = normalizedVault?.[user.id];
+  } catch {
+    return null;
   }
   if (!vaultPassword || vaultPassword !== String(password).trim()) return null;
 

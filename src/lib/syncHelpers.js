@@ -14,6 +14,12 @@ import {
   suppressedClientNameKeys,
   stripSuppressedClientNames,
 } from '../utils/clientsWorkspaceMerge.js';
+import {
+  CLIENTS_BLOB_ONLY_KEYS,
+  slimClientsWorkspaceForCloudPush,
+} from '../utils/clientsWorkspacePush.js';
+
+import { isCloudSourceOfTruth } from './cloudSourceOfTruth.js';
 export const FETCH_TIMEOUT_MS = 12000;
 
 function normalizeBrandUsers(entry) {
@@ -244,6 +250,7 @@ export function excludePendingRemovedFromMap(map, orgId, table) {
 }
 
 export function readSyncedLocalCollection(loadLocal, getId, orgId, table) {
+  if (isCloudSourceOfTruth()) return [];
   if (!loadLocal) return [];
   const raw = loadLocal();
   if (!orgId || !table || !getId || !Array.isArray(raw)) return Array.isArray(raw) ? raw : [];
@@ -251,6 +258,7 @@ export function readSyncedLocalCollection(loadLocal, getId, orgId, table) {
 }
 
 export function readSyncedLocalMap(loadLocal, orgId, table) {
+  if (isCloudSourceOfTruth()) return {};
   if (!loadLocal) return {};
   const raw = loadLocal() || {};
   if (!orgId || !table) return raw;
@@ -387,7 +395,9 @@ export function markPendingRemoved(orgId, table, ids) {
 
 /** Pull unsynced local creates from cache when initial React state starts empty. */
 export function augmentLocalWithPendingCreates(localItems, loadLocal, getId, pendingLocalCreates) {
-  if (!loadLocal || !pendingLocalCreates?.size) return localItems;
+  if (!pendingLocalCreates?.size) return localItems;
+  // Session-only in cloud mode — pending rows must already be in React state.
+  if (isCloudSourceOfTruth() || !loadLocal) return localItems;
   const localById = new Map(localItems.map((record) => [String(getId(record)), record]));
   const cache = loadLocal();
   if (!Array.isArray(cache)) return localItems;
@@ -403,7 +413,8 @@ export function augmentLocalWithPendingCreates(localItems, loadLocal, getId, pen
 
 /** Pull unsynced local map entries from cache when initial React state starts empty. */
 export function augmentLocalMapWithPendingCreates(localMap, loadLocal, pendingLocalCreates) {
-  if (!loadLocal || !pendingLocalCreates?.size) return localMap || {};
+  if (!pendingLocalCreates?.size) return localMap || {};
+  if (isCloudSourceOfTruth() || !loadLocal) return localMap || {};
   const cache = loadLocal() || {};
   const merged = { ...(localMap || {}) };
   for (const key of pendingLocalCreates) {
@@ -683,8 +694,76 @@ function mergeClientsWorkspaceField(key, remote, local, synced) {
   return undefined;
 }
 
+/** Field-level three-way merge for org-level clients workspace keys (Supabase mode). */
+export function mergeClientsWorkspaceStateSupabase({ remote, local, syncedStr }) {
+  const slimRemote = slimClientsWorkspaceForCloudPush(remote || {});
+
+  if (local == null) {
+    const tombstones = mergeClientNameTombstones(slimRemote, slimRemote);
+    return stripSuppressedClientNames(slimRemote, suppressedClientNameKeys(tombstones));
+  }
+  if (remote == null) return local;
+
+  let synced = null;
+  if (syncedStr != null) {
+    try {
+      synced = JSON.parse(syncedStr);
+    } catch {
+      synced = null;
+    }
+  }
+  const slimSynced = synced ? slimClientsWorkspaceForCloudPush(synced) : null;
+
+  if (syncedStr == null) {
+    const merged = { ...local, ...slimRemote };
+    merged.names = mergeClientsWorkspaceNames(slimRemote.names, local.names, null);
+    const tombstones = mergeClientNameTombstones(slimRemote, local);
+    merged.removedNames = tombstones.removedNames;
+    merged.restoredNames = tombstones.restoredNames;
+    return stripSuppressedClientNames(merged, suppressedClientNameKeys(tombstones));
+  }
+
+  const merged = { ...local };
+  merged.names = mergeClientsWorkspaceNames(slimRemote.names, local.names, slimSynced?.names);
+
+  for (const key of CLIENTS_BLOB_ONLY_KEYS) {
+    if (key === 'names') continue;
+    if (local[key] === undefined) continue;
+
+    const localStr = JSON.stringify(local[key]);
+    const syncedKeyStr =
+      slimSynced && slimSynced[key] !== undefined ? JSON.stringify(slimSynced[key]) : undefined;
+
+    if (syncedKeyStr === undefined) {
+      merged[key] = slimRemote[key] !== undefined ? slimRemote[key] : local[key];
+      continue;
+    }
+
+    if (localStr !== syncedKeyStr) {
+      merged[key] = local[key];
+      continue;
+    }
+
+    const remoteStr = JSON.stringify(slimRemote[key]);
+    merged[key] =
+      remoteStr !== syncedKeyStr
+        ? slimRemote[key] !== undefined
+          ? slimRemote[key]
+          : local[key]
+        : local[key];
+  }
+
+  const tombstones = mergeClientNameTombstones(slimRemote, local);
+  merged.removedNames = tombstones.removedNames;
+  merged.restoredNames = tombstones.restoredNames;
+  return stripSuppressedClientNames(merged, suppressedClientNameKeys(tombstones));
+}
+
 /** Field-level three-way merge for the clients workspace blob (contacts, logos, etc.). */
 export function mergeClientsWorkspaceState({ remote, local, syncedStr }) {
+  if (isCloudSourceOfTruth()) {
+    return mergeClientsWorkspaceStateSupabase({ remote, local, syncedStr });
+  }
   if (local == null) return remote;
   if (remote == null) return local;
 

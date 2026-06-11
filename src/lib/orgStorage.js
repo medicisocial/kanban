@@ -44,11 +44,23 @@ export const WORKSPACE_CACHE_KEYS = [
  * Remove the org-scoped localStorage cache for the given org.
  * Call on logout (so the next user starts clean) and on SaaS login
  * (so stale data from a previous session doesn't contaminate the merge).
- * Never clears the legacy org's base keys — those are the primary store.
  */
 export function clearOrgScopedCache(orgId) {
   if (!orgId || orgId === LEGACY_ORG_ID) return;
   for (const key of WORKSPACE_CACHE_KEYS) {
     localStorage.removeItem(orgScopedKey(key, orgId));
+  }
+}
+
+/**
+ * Clear workspace cache on login/logout. Also clears legacy base keys for the
+ * primary org when cloud sync is enabled so stale localStorage cannot merge in.
+ */
+export function clearSyncedWorkspaceCache(orgId) {
+  clearOrgScopedCache(orgId);
+  if (!orgId || orgId === LEGACY_ORG_ID) {
+    for (const key of WORKSPACE_CACHE_KEYS) {
+      localStorage.removeItem(key);
+    }
   }
 }

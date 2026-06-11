@@ -1,5 +1,6 @@
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
+import { fetchClientRecordRows } from './_lib/brandRecordStore.mjs';
 import {
   fetchCollectionMap,
   fetchRecord,
@@ -44,14 +45,19 @@ export default async function handler(req, res) {
   const orgId = orgCheck.orgId;
 
   try {
-    const [credentialMap, clientsWorkspace] = await Promise.all([
+    const [credentialMap, clientsWorkspace, clientRecords] = await Promise.all([
       fetchCollectionMap('client_portal_credentials', orgId),
       fetchRecord('clients', 'workspace', orgId),
+      fetchClientRecordRows(orgId),
     ]);
 
     const vault = {};
+    const recordNames = (clientRecords || [])
+      .map((row) => row.display_name || row.brand_key)
+      .filter((name) => name && !String(name).startsWith('__'));
     const clientNames = Array.isArray(clientsWorkspace?.names) ? clientsWorkspace.names : [];
-    for (const brand of clientNames) {
+    const brandNames = new Set([...recordNames, ...clientNames]);
+    for (const brand of brandNames) {
       if (!brand || String(brand).startsWith('__')) continue;
       try {
         const brandVault = await getPortalPasswordVault(brand, orgId);
@@ -59,16 +65,12 @@ export default async function handler(req, res) {
           vault[brand] = brandVault;
         }
       } catch {
-        /* fall back to legacy blob below */
+        /* skip brand */
       }
-    }
-    const legacyVault = clientsWorkspace?.portalPasswordVault || {};
-    for (const [brand, brandVault] of Object.entries(legacyVault)) {
-      vault[brand] = { ...(vault[brand] || {}), ...(brandVault || {}) };
     }
     const nextMap = { ...(credentialMap || {}) };
     const brands = new Set([
-      ...clientNames.filter((name) => name && !String(name).startsWith('__')),
+      ...[...brandNames].filter((name) => name && !String(name).startsWith('__')),
       ...Object.keys(vault),
       ...Object.keys(nextMap),
     ]);

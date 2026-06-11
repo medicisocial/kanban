@@ -5,11 +5,10 @@ import {
 import { normalizeClientContacts, mergeClientSocialLogins } from './clientProfile.mjs';
 import { normalizeClientCompanyFiles } from './clientCompanyFiles.mjs';
 import { normalizeClientSpecialMenus } from './clientSpecialMenus.mjs';
-import { patchBrandProfileRecord } from './brandRecordStore.mjs';
+import { patchBrandProfileRecord, fetchBrandProfileRecord } from './brandRecordStore.mjs';
 import {
   brandKeysMatch,
-  resolveBrandStorageKey,
-  resolvePortalBrandDisplayNameFromStore,
+  resolvePortalBrandDisplayName,
 } from './portalBrandProfile.mjs';
 import { fetchRecord, upsertRecord } from './supabase.mjs';
 
@@ -30,22 +29,23 @@ function buildContentReviewDenyUpdates(card, comment, timestamp = Date.now()) {
   };
 }
 
-function resolveWorkspaceBrandKey(sessionBrand, workspace = {}) {
-  const names = Array.isArray(workspace.names) ? workspace.names : [];
-  return (
-    resolveBrandStorageKey(
-      workspace.colors || workspace.contacts || workspace.logos || {},
-      sessionBrand,
-      names,
-    ) || resolvePortalBrandDisplayNameFromStore(sessionBrand, workspace) || sessionBrand
-  );
+async function resolveSessionBrandContext(orgId, sessionBrand) {
+  const [profile, displayName] = await Promise.all([
+    fetchBrandProfileRecord(orgId, sessionBrand),
+    resolvePortalBrandDisplayName(orgId, sessionBrand),
+  ]);
+  const resolvedDisplay = displayName || profile?.displayName || sessionBrand;
+  return {
+    brandKey: profile?.displayName || resolvedDisplay,
+    displayName: resolvedDisplay,
+    profile,
+  };
 }
 
-function itemMatchesSessionBrand(itemClient, sessionBrand, workspace) {
+function itemMatchesSessionBrand(itemClient, sessionBrand, brandContext) {
   if (!itemClient || !sessionBrand) return false;
   if (brandKeysMatch(itemClient, sessionBrand)) return true;
-  const displayBrand = resolveWorkspaceBrandKey(sessionBrand, workspace);
-  return brandKeysMatch(itemClient, displayBrand);
+  return brandKeysMatch(itemClient, brandContext.displayName);
 }
 
 async function loadCard(orgId, cardId) {
@@ -83,8 +83,8 @@ export async function handleContentPortalResponse(orgId, sessionBrand, response 
     return { ok: true, skipped: true, reason: 'not-in-review' };
   }
 
-  const workspace = (await fetchRecord('clients', 'workspace', orgId)) || {};
-  if (!itemMatchesSessionBrand(card.client, sessionBrand, workspace)) {
+  const brandContext = await resolveSessionBrandContext(orgId, sessionBrand);
+  if (!itemMatchesSessionBrand(card.client, sessionBrand, brandContext)) {
     throw new Error('You do not have access to this content item.');
   }
 
@@ -113,14 +113,14 @@ export async function handleContentPortalResponse(orgId, sessionBrand, response 
 
 export async function handleIdeaPortalResponse(orgId, sessionBrand, response = {}) {
   const action = String(response.action || '').trim();
-  const workspace = (await fetchRecord('clients', 'workspace', orgId)) || {};
+  const brandContext = await resolveSessionBrandContext(orgId, sessionBrand);
 
   if (action === 'create') {
     const idea = response.idea;
     if (!idea || typeof idea !== 'object' || !idea.id) {
       throw new Error('Missing idea payload.');
     }
-    if (!itemMatchesSessionBrand(idea.client, sessionBrand, workspace)) {
+    if (!itemMatchesSessionBrand(idea.client, sessionBrand, brandContext)) {
       throw new Error('You do not have access to this brand.');
     }
     await saveIdea(orgId, idea.id, {
@@ -147,7 +147,7 @@ export async function handleIdeaPortalResponse(orgId, sessionBrand, response = {
   if (idea.status && idea.status !== 'pending') {
     return { ok: true, skipped: true, reason: 'not-pending' };
   }
-  if (!itemMatchesSessionBrand(idea.client, sessionBrand, workspace)) {
+  if (!itemMatchesSessionBrand(idea.client, sessionBrand, brandContext)) {
     throw new Error('You do not have access to this idea.');
   }
 
@@ -190,8 +190,8 @@ export async function handleCalendarNotePortalResponse(orgId, sessionBrand, resp
     throw new Error('Calendar item not found.');
   }
 
-  const workspace = (await fetchRecord('clients', 'workspace', orgId)) || {};
-  if (!itemMatchesSessionBrand(card.client, sessionBrand, workspace)) {
+  const brandContext = await resolveSessionBrandContext(orgId, sessionBrand);
+  if (!itemMatchesSessionBrand(card.client, sessionBrand, brandContext)) {
     throw new Error('You do not have access to this calendar item.');
   }
 
@@ -217,11 +217,10 @@ export async function handleProfilePortalResponse(orgId, sessionBrand, profile =
     throw new Error('Missing profile payload.');
   }
 
-  const workspace = (await fetchRecord('clients', 'workspace', orgId)) || {};
-  const brandKey = resolveWorkspaceBrandKey(sessionBrand, workspace);
-  const displayName = resolvePortalBrandDisplayNameFromStore(sessionBrand, workspace) || brandKey;
-  const businessType = workspace.businessTypes?.[brandKey] || '';
-  const patch = { displayName };
+  const brandContext = await resolveSessionBrandContext(orgId, sessionBrand);
+  const brandKey = brandContext.brandKey;
+  const businessType = brandContext.profile?.businessType || '';
+  const patch = { displayName: brandContext.displayName || brandKey };
 
   if (profile.contacts) {
     patch.contacts = normalizeClientContacts(profile.contacts);
@@ -229,7 +228,7 @@ export async function handleProfilePortalResponse(orgId, sessionBrand, profile =
 
   if (profile.socialLogins) {
     patch.socialLogins = mergeClientSocialLogins(
-      workspace.socialLogins?.[brandKey],
+      brandContext.profile?.socialLogins,
       profile.socialLogins,
     );
   }

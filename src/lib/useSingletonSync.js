@@ -8,8 +8,8 @@ import { supabase, SUPABASE_ENABLED } from './supabaseClient';
 import { createCollectionStore } from './supabaseSync';
 import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
 import { pushStaffSyncSingleton } from './staffSyncApi';
+import { isCloudSourceOfTruth } from './cloudSourceOfTruth';
 import { reportSyncIssue } from './workspaceSyncHealth';
-import { seedRecordsToCloud } from './syncSeed';
 import { isEditorFilePickActive } from '../utils/editorPickGuard';
 import { subscribeWorkspaceRefetch } from '../utils/workspaceReload';
 import { useStaffAuth } from '../context/StaffAuthContext';
@@ -93,13 +93,8 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
     storeRef.current = createCollectionStore(table);
     syncedRef.current = null;
     applyingRemoteRef.current = false;
-    const hasCachedItems = localCollectionHasRecords(localValueRef.current);
-    loadedRef.current = hasCachedItems;
-    if (!hasCachedItems) {
-      setSyncLoaded(false);
-    } else {
-      markSyncLoaded();
-    }
+    loadedRef.current = false;
+    setSyncLoaded(false);
 
     const store = storeRef.current;
     let active = true;
@@ -142,36 +137,18 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
           return;
         }
 
-        // Empty cloud table: keep local cache when it still has records (any org).
-        if (localCollectionHasRecords(local)) {
-          void seedRecordsToCloud({
-            table,
-            orgId,
-            store,
-            rows: [{ id: recordId, data: local }],
-          });
-          applyingRemoteRef.current = true;
-          syncedRef.current = JSON.stringify(local);
-          markSyncLoaded();
-          setValue(local);
-          pendingWriteRef.current = true;
-          queueMicrotask(() => setWriteNonce((current) => current + 1));
-          return;
-        }
-
         applyingRemoteRef.current = true;
-        syncedRef.current = JSON.stringify(local ?? null);
+        syncedRef.current = JSON.stringify(null);
         markSyncLoaded();
-        if (loadLocal) setValue(local ?? loadLocal());
+        setValue(null);
+        return;
       } catch (err) {
-        console.error(`[supabase:${table}] load/seed failed:`, err?.message || err, err);
-        if (loadLocal) {
-          const local = loadLocal();
-          if (localCollectionHasRecords(local)) {
-            applyingRemoteRef.current = true;
-            syncedRef.current = JSON.stringify(local);
-            setValue(local);
-          }
+        console.error(`[supabase:${table}] load failed:`, err?.message || err, err);
+        if (isCloudSourceOfTruth()) {
+          reportSyncIssue({
+            level: 'error',
+            message: 'Could not load workspace from the cloud. Check your connection and refresh.',
+          });
         }
         markSyncLoaded();
       }

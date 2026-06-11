@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { CLIENT_PORTAL_AUTH_STORAGE_KEY } from '../constants';
 import {
   createClientPortalUserId,
@@ -11,6 +11,7 @@ import { clientNamesConflict } from '../utils/clients';
 import { hashPassword } from '../utils/staffAuth';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
+import { isCloudSourceOfTruth } from '../lib/cloudSourceOfTruth';
 import { useMapSync } from '../lib/useMapSync';
 import { initialSyncMapState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
@@ -42,6 +43,11 @@ export function useClientPortalCredentials() {
   const [credentials, setCredentials] = useState(() =>
     initialSyncMapState(loadCredentials, { table: 'client_portal_credentials' }),
   );
+  const credentialsRef = useRef(credentials);
+
+  useEffect(() => {
+    credentialsRef.current = credentials;
+  }, [credentials]);
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;
@@ -56,8 +62,7 @@ export function useClientPortalCredentials() {
     loadLocal: loadCredentials,
   });
 
-  // Keep localStorage as a write-through cache even when Supabase is enabled,
-  // because the mutation helpers below read existing users via loadCredentials().
+  // Keep localStorage as a write-through cache only in offline mode.
   useEffect(() => {
     if (!shouldPersistSyncedState(syncLoaded)) return;
     writeOrgScopedJson(CLIENT_PORTAL_AUTH_STORAGE_KEY, credentials);
@@ -78,7 +83,9 @@ export function useClientPortalCredentials() {
   );
 
   const setClientPortalUsers = useCallback(async (client, draftUsers) => {
-    const storedCredentials = loadCredentials();
+    const storedCredentials = isCloudSourceOfTruth()
+      ? credentialsRef.current
+      : loadCredentials();
     const credentialBrandKey = resolveCredentialBrandKey(storedCredentials, client);
     const existingUsers = normalizeBrandUsers(storedCredentials[credentialBrandKey]);
     const hasPasswordChange = draftUsers.some((draft) => String(draft.password || '').trim());
@@ -202,7 +209,9 @@ export function useClientPortalCredentials() {
           delete next[brand];
         }
       }
-      writeOrgScopedJson(CLIENT_PORTAL_AUTH_STORAGE_KEY, next);
+      if (!isCloudSourceOfTruth()) {
+        writeOrgScopedJson(CLIENT_PORTAL_AUTH_STORAGE_KEY, next);
+      }
       return next;
     });
 
@@ -210,7 +219,10 @@ export function useClientPortalCredentials() {
   }, []);
 
   const setClientPortalCredential = useCallback(async (client, username, password) => {
-    const users = getClientUsersFromStore(loadCredentials(), client);
+    const users = getClientUsersFromStore(
+      isCloudSourceOfTruth() ? credentialsRef.current : loadCredentials(),
+      client,
+    );
     const primary = users[0] || {
       id: createClientPortalUserId(),
       username: '',
@@ -233,7 +245,9 @@ export function useClientPortalCredentials() {
     setCredentials((prev) => {
       const next = { ...prev };
       delete next[client];
-      writeOrgScopedJson(CLIENT_PORTAL_AUTH_STORAGE_KEY, next);
+      if (!isCloudSourceOfTruth()) {
+        writeOrgScopedJson(CLIENT_PORTAL_AUTH_STORAGE_KEY, next);
+      }
       return next;
     });
   }, []);
