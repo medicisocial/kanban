@@ -99,7 +99,7 @@ export default function IdeaVaultTable({
                   onClick={() => onSchedule?.(idea)}
                   className={`${btnPrimaryClass} min-h-10 flex-1 px-3 py-2 text-[11px]`}
                 >
-                  Schedule
+                  Add to shoot
                 </button>
                 <button
                   type="button"
@@ -179,7 +179,7 @@ export default function IdeaVaultTable({
                         onClick={() => onSchedule?.(idea)}
                         className={`${btnPrimaryClass} px-2.5 py-1.5 text-[10px]`}
                       >
-                        Schedule
+                        Add to shoot
                       </button>
                       <button
                         type="button"

@@ -17,6 +17,7 @@ const IDEA_TABS = [
 export default function VideoIdeas({
   ideas,
   cards,
+  plans = {},
   clientFilter,
   onAddIdea,
   onAddIdeaToBank,
@@ -226,6 +227,8 @@ export default function VideoIdeas({
       {scheduleIdea && (
         <ScheduleVaultIdeaModal
           idea={scheduleIdea}
+          cards={cards}
+          plans={plans}
           onClose={() => setScheduleIdea(null)}
           onSave={(schedule) => {
             onScheduleVaultIdea?.(scheduleIdea.id, {

@@ -393,27 +393,25 @@ export default function AppShell({ onSignOut }) {
 
   const scheduleVaultIdeaOnShoot = useCallback(
     (idea, { client, shootDate, shootTime = "", shootEndTime = "" }) => {
-      if (!idea || !client || !shootDate) return;
+      if (!idea || !client || !shootDate) return null;
       beginBatch();
+      let boardCardId = null;
       try {
         ensurePlan(client, shootDate);
-        const boardCardId = createCardFromIdea({
-          ...idea,
-          clientComment: idea.clientComment || "",
-        });
-        updateCard(boardCardId, {
-          shootDate,
-          shootTime,
-          shootEndTime,
-          columnId: "shoot",
-          status: "To Create",
-        });
+        boardCardId = createCardFromIdea(
+          {
+            ...idea,
+            clientComment: idea.clientComment || "",
+          },
+          { shootDate, shootTime, shootEndTime },
+        );
         updateIdea(idea.id, { boardCardId });
       } finally {
         endBatch();
       }
+      return boardCardId;
     },
-    [createCardFromIdea, ensurePlan, updateCard, updateIdea],
+    [createCardFromIdea, ensurePlan, updateIdea],
   );
 
   const handleScheduleVaultIdea = useCallback(
@@ -1082,6 +1080,7 @@ export default function AppShell({ onSignOut }) {
         <VideoIdeas
           ideas={ideas}
           cards={cards}
+          plans={plans}
           clientFilter={clientFilter}
           onAddIdea={addIdea}
           onAddIdeaToBank={addIdeaToBank}

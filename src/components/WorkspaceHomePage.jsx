@@ -63,7 +63,6 @@ export default function WorkspaceHomePage({
   const summaryWithToday = {
     ...summary,
     meetingsTodayCount: todayTimeline.meetingCount,
-    shootsTodayCount: todayTimeline.shootDayCount ?? todayTimeline.shootCount,
   };
 
   const firstName =

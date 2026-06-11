@@ -216,10 +216,20 @@ export function useKanban() {
     return card;
   }, []);
 
-  const createCardFromIdea = useCallback((idea) => {
+  const createCardFromIdea = useCallback((idea, schedule = null) => {
     notifyMutation();
     let resolvedId = idea.boardCardId || `from-idea-${idea.id}`;
-    let persisted = null;
+
+    const withSchedule = (card) => {
+      if (!schedule?.shootDate) return card;
+      return {
+        ...card,
+        shootDate: schedule.shootDate,
+        shootTime: schedule.shootTime ?? card.shootTime ?? '',
+        shootEndTime: schedule.shootEndTime ?? card.shootEndTime ?? '',
+        columnId: 'shoot',
+      };
+    };
 
     setCards((prev) => {
       const existing =
@@ -227,7 +237,15 @@ export function useKanban() {
         prev.find((card) => card.id === resolvedId);
       if (existing) {
         resolvedId = existing.id;
-        return prev;
+        return prev.map((card) => {
+          if (card.id !== resolvedId) return card;
+          return normalizeCard(
+            withSchedule({
+              ...card,
+              sourceIdeaId: idea.id,
+            }),
+          );
+        });
       }
 
       const notes = [
@@ -237,33 +255,34 @@ export function useKanban() {
         .filter(Boolean)
         .join('\n\n');
 
-      persisted = normalizeCard({
-        id: resolvedId,
-        client: idea.client,
-        contentType: idea.contentType || 'Reel',
-        platform: PLATFORM,
-        title: idea.title,
-        dueDate: '',
-        dueTime: '',
-        shootDate: '',
-        shootTime: '',
-        shootEndTime: '',
-        shootDuration: 45,
-        shootModels: '',
-        shootNeeds: '',
-        shootScript: '',
-        contentCreator: getDefaultAssigneeForRole('Content Creator'),
-        assignedTo: getDefaultAssigneeForRole('Editor'),
-        notes,
-        referenceMusic: '',
-        referenceVideo: idea.referenceVideo || '',
-        dropboxLink: '',
-        clientComment: '',
-        sourceIdeaId: idea.id,
-        status: getStatusForColumn('shoot'),
-        columnId: 'shoot',
-        createdAt: Date.now(),
-      });
+      const persisted = normalizeCard(
+        withSchedule({
+          id: resolvedId,
+          client: idea.client,
+          contentType: idea.contentType || 'Reel',
+          platform: PLATFORM,
+          title: idea.title,
+          dueDate: '',
+          dueTime: '',
+          shootDate: '',
+          shootTime: '',
+          shootEndTime: '',
+          shootDuration: 45,
+          shootModels: '',
+          shootNeeds: '',
+          shootScript: '',
+          contentCreator: getDefaultAssigneeForRole('Content Creator'),
+          assignedTo: getDefaultAssigneeForRole('Editor'),
+          notes,
+          referenceMusic: '',
+          referenceVideo: idea.referenceVideo || '',
+          dropboxLink: '',
+          clientComment: '',
+          sourceIdeaId: idea.id,
+          columnId: 'shoot',
+          createdAt: Date.now(),
+        }),
+      );
 
       return [...prev, persisted];
     });

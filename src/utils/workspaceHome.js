@@ -60,6 +60,37 @@ function matchesClientFilter(item, clientFilter) {
   return clientFilter === 'all' || item.client === clientFilter;
 }
 
+function buildEditorQueueCounts(
+  cards,
+  { clientFilter = 'all', assignee = 'all', includeCompleted = false } = {},
+) {
+  const editorTasks = filterEditorTasks(buildBoardEditorTasks(cards), {
+    client: clientFilter,
+    assignee,
+    includeCompleted,
+  });
+  const { editing, inReview } = splitEditorTasksByQueue(editorTasks);
+  return {
+    editingCount: editing.length,
+    editorInReviewCount: inReview.length,
+  };
+}
+
+function buildShootsTodayCount(
+  cards,
+  { clientFilter = 'all', staffName = '', personalScope = false } = {},
+) {
+  return cards.filter(
+    (card) =>
+      card.columnId === 'shoot' &&
+      card.shootDate &&
+      isToday(card.shootDate) &&
+      card.contentType !== 'Story' &&
+      matchesClientFilter(card, clientFilter) &&
+      (!personalScope || !staffName || cardIsAssignedToContentCreator(card, staffName)),
+  ).length;
+}
+
 /** Overview counts that use the same rules as Team tasks tabs (per-role assignee fields). */
 function buildPersonalWorkspaceHomeSummary({
   cards,
@@ -73,26 +104,23 @@ function buildPersonalWorkspaceHomeSummary({
 }) {
   const assignee = staffName;
   const amFilter = { client: clientFilter, assignee };
-  const editorFilter = { client: clientFilter, assignee, includeCompleted: false };
 
   const toCreateCount = buildContentCreatorTasks(cards, {
     client: clientFilter,
     staffName,
   }).length;
 
-  const shootsTodayCount = cards.filter(
-    (card) =>
-      card.shootDate &&
-      isToday(card.shootDate) &&
-      card.contentType !== 'Story' &&
-      matchesClientFilter(card, clientFilter) &&
-      cardIsAssignedToContentCreator(card, staffName),
-  ).length;
+  const shootsTodayCount = buildShootsTodayCount(cards, {
+    clientFilter,
+    staffName,
+    personalScope: true,
+  });
 
-  const editorTasks = filterEditorTasks(buildBoardEditorTasks(cards), editorFilter);
-  const { editing, inReview: editorInReview } = splitEditorTasksByQueue(editorTasks);
-  const editingCount = editing.length;
-  const editorInReviewCount = editorInReview.length;
+  const { editingCount, editorInReviewCount } = buildEditorQueueCounts(cards, {
+    clientFilter,
+    assignee,
+    includeCompleted: false,
+  });
 
   const inReviewTasks = filterAccountManagerTasks(
     buildInReviewTasks(cards, clientAccountManagers),
@@ -198,25 +226,27 @@ export function buildWorkspaceHomeSummary({
   const toCreate = companyMetrics
     ? getToCreateQueueCards(scopedCards)
     : getToCreateQueueCards(scopedCards, { staffName, personalScope: true });
-  const editing = companyMetrics
-    ? scopedCards.filter((c) => c.columnId === 'editing')
-    : scopedCards.filter((c) => c.columnId === 'editing' && cardScope(c));
+  const editorAssignee =
+    companyMetrics || !personalScope || !staffName ? 'all' : staffName;
+  const { editingCount, editorInReviewCount } = buildEditorQueueCounts(scopedCards, {
+    clientFilter,
+    assignee: editorAssignee,
+    includeCompleted: false,
+  });
   const pendingIdeas = scopedIdeas.filter((i) => i.status === 'pending');
-  const shootsTodayAll = scopedCards.filter(
+  const shootsTodayCount = buildShootsTodayCount(scopedCards, {
+    clientFilter,
+    staffName,
+    personalScope: personalScope && !companyMetrics,
+  });
+  const shootsToday = scopedCards.filter(
     (c) =>
+      c.columnId === 'shoot' &&
       c.shootDate &&
       isToday(c.shootDate) &&
-      c.contentType !== 'Story',
+      c.contentType !== 'Story' &&
+      (!personalScope || !staffName || cardScope(c)),
   );
-  const shootsToday = companyMetrics
-    ? shootsTodayAll
-    : scopedCards.filter(
-        (c) =>
-          c.shootDate &&
-          isToday(c.shootDate) &&
-          c.contentType !== 'Story' &&
-          cardScope(c),
-      );
   const scheduledThisWeekAll = scopedCards.filter(
     (c) => c.columnId === 'scheduled' && c.dueDate && isThisWeek(c.dueDate),
   );
@@ -270,9 +300,10 @@ export function buildWorkspaceHomeSummary({
     showAccountManagerQueue: !myWorkOnly || includeAccountManagerQueue,
     inReviewCount: visibleInReview.length,
     toCreateCount: toCreate.length,
-    editingCount: editing.length,
+    editingCount,
+    editorInReviewCount,
     pendingIdeasCount: pendingIdeas.length,
-    shootsTodayCount: shootsToday.length,
+    shootsTodayCount,
     scheduledThisWeekCount: scheduledThisWeek.length,
     needsSchedulingCount: visibleNeedsScheduling.length,
     needPostDateCount: visibleNeedPostDate.length,
