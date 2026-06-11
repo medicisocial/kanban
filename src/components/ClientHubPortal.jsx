@@ -260,6 +260,7 @@ export default function ClientHubPortal({ onSignOut }) {
         <ClientShootSchedulePortal
           client={brand}
           cards={cards}
+          ideas={ideas}
           plans={plans}
           clientColor={clientColor}
           embedded

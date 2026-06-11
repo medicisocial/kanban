@@ -231,3 +231,12 @@ export function getClientShootCards(cards, { upcomingOnly = true, todayKey = toD
       return (a.shootTime || '').localeCompare(b.shootTime || '');
     });
 }
+
+export function resolveShootCardReferenceVideo(card, ideas = []) {
+  const direct = card?.referenceVideo?.trim();
+  if (direct) return direct;
+  const sourceIdeaId = card?.sourceIdeaId;
+  if (!sourceIdeaId || !Array.isArray(ideas)) return '';
+  const idea = ideas.find((entry) => entry.id === sourceIdeaId);
+  return idea?.referenceVideo?.trim() || '';
+}
