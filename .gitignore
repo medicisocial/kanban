@@ -34,3 +34,10 @@ Thumbs.db
 # Playwright auth profile used for one-off Supabase dashboard automation
 .playwright-supabase-profile
 .env*
+
+# One-off scratch / temp ops scripts (never commit)
+scripts/_temp-*.mjs
+scripts/_apply-*.json
+
+# Local Supabase data dumps (read-only backups — keep out of git)
+supabase/backup-*.json
