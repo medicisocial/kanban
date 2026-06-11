@@ -130,9 +130,14 @@ export async function handleIdeaPortalResponse(orgId, sessionBrand, response = {
     }
     await saveIdea(orgId, idea.id, {
       ...idea,
-      status: idea.status || 'pending',
+      status: idea.status === 'approved' ? 'approved' : (idea.status || 'pending'),
+      boardCardId: idea.boardCardId ?? null,
       createdAt: idea.createdAt || Date.now(),
-      reviewedAt: null,
+      reviewedAt:
+        idea.status === 'approved'
+          ? Number(idea.reviewedAt) || Date.now()
+          : null,
+      updatedAt: Date.now(),
     });
     return { ok: true, ideaId: idea.id };
   }

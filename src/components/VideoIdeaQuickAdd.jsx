@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CONTENT_TYPES } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import { normalizeLink } from '../utils/links';
-import { btnPrimaryClass, inputClass, selectClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass, inputClass, selectClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 function clientFromFilter(clientFilter, fallbackClient) {
   if (clientFilter && clientFilter !== 'all') return clientFilter;
@@ -13,15 +13,17 @@ export default function VideoIdeaQuickAdd({
   clientFilter = 'all',
   clientOnly,
   onAdd,
+  onAddToBank,
   onAdded,
-  submitLabel = 'Add idea',
-  hint = 'Press Enter to add — the idea appears in the list below. No popup.',
+  variant = 'review',
+  submitLabel = 'Add for review',
+  hint,
 }) {
   const { clients, defaultClient: firstClient } = useClientsContext();
   const titleRef = useRef(null);
-  const referenceRef = useRef(null);
   const lockedClient = Boolean(clientOnly || (clientFilter && clientFilter !== 'all'));
   const hideClientField = Boolean(clientOnly);
+  const isBankVariant = variant === 'bank';
 
   const [form, setForm] = useState(() => ({
     client: clientOnly || clientFromFilter(clientFilter, firstClient),
@@ -48,34 +50,43 @@ export default function VideoIdeaQuickAdd({
     setError('');
   };
 
-  const submit = () => {
-    setError('');
+  const buildPayload = () => {
     const title = form.title.trim();
     const referenceVideo = normalizeLink(form.referenceVideo.trim());
 
     if (!title) {
       setError('Enter an idea title.');
       titleRef.current?.focus();
-      return;
+      return null;
     }
 
-    onAdd({
+    return {
       client: form.client,
       title,
       referenceVideo: referenceVideo || '',
       description: '',
       contentType: form.contentType,
       clientComment: '',
-    });
+    };
+  };
 
+  const commit = (handler) => {
+    setError('');
+    const payload = buildPayload();
+    if (!payload || !handler) return;
+    handler(payload);
     resetForm();
     onAdded?.();
     titleRef.current?.focus();
   };
 
+  const submitForReview = () => commit(onAdd);
+  const submitToBank = () => commit(onAddToBank);
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    submit();
+    if (isBankVariant) submitToBank();
+    else submitForReview();
   };
 
   const handleReferencePaste = (e) => {
@@ -88,13 +99,23 @@ export default function VideoIdeaQuickAdd({
     }
   };
 
+  const resolvedHint =
+    hint ??
+    (isBankVariant
+      ? 'Adds straight to the bank — no approval step.'
+      : onAddToBank
+        ? 'Add for review, or skip approval and put it in the bank.'
+        : 'Press Enter to add — the idea appears in the list below.');
+
+  const primaryLabel = isBankVariant ? 'Add to bank' : submitLabel;
+
   return (
     <form
       onSubmit={handleSubmit}
       className={`${surfacePanelClass} mb-4 border-white/10 px-4 py-4`}
     >
       <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">
-        New idea
+        {isBankVariant ? 'Add to bank' : 'New idea'}
       </p>
 
       <div
@@ -120,7 +141,6 @@ export default function VideoIdeaQuickAdd({
         <label className="block min-w-0">
           <span className="mb-1.5 block text-xs text-white/45">Reference video</span>
           <input
-            ref={referenceRef}
             type="text"
             value={form.referenceVideo}
             onChange={(e) => setForm({ ...form, referenceVideo: e.target.value })}
@@ -166,13 +186,24 @@ export default function VideoIdeaQuickAdd({
           </select>
         </label>
 
-        <button type="submit" className={`${btnPrimaryClass} w-full md:w-auto md:self-end`}>
-          {submitLabel}
-        </button>
+        <div className="flex flex-col gap-2 md:self-end">
+          <button type="submit" className={`${btnPrimaryClass} w-full md:w-auto`}>
+            {primaryLabel}
+          </button>
+          {!isBankVariant && onAddToBank && (
+            <button
+              type="button"
+              onClick={submitToBank}
+              className={`${btnSecondaryClass} w-full md:w-auto border-violet-500/25 bg-violet-500/10 text-violet-100 hover:bg-violet-500/15`}
+            >
+              Add to bank
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
-      {hint && <p className="mt-2 text-[10px] text-white/30">{hint}</p>}
+      {resolvedHint && <p className="mt-2 text-[10px] text-white/30">{resolvedHint}</p>}
     </form>
   );
 }

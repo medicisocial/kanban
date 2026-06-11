@@ -94,6 +94,7 @@ export default function AppShell({ onSignOut }) {
     ideasSyncLoaded,
     replaceIdeas,
     addIdea,
+    addIdeaToBank,
     updateIdea,
     deleteIdea,
     deleteIdeas,
@@ -446,7 +447,7 @@ export default function AppShell({ onSignOut }) {
       const label = idea?.title || card.title || "this reel";
       if (
         !window.confirm(
-          `Return "${label}" to the idea bank? The pipeline card will be removed and the concept saved back to the bank.`,
+          `Return "${label}" to the bank? The pipeline card will be removed and you can schedule it again later.`,
         )
       ) {
         return;
@@ -702,7 +703,7 @@ export default function AppShell({ onSignOut }) {
       endBatch();
     }
     setResponseCount(0);
-    alert(`Applied ${applied} client response${applied === 1 ? "" : "s"} to the idea bank.`);
+    alert(`Applied ${applied} client response${applied === 1 ? "" : "s"} to the bank.`);
   };
 
   const handleContentReviewApprove = (cardId, comment) => {
@@ -824,7 +825,7 @@ export default function AppShell({ onSignOut }) {
     });
     if (applied > 0) {
       window.history.replaceState({}, "", window.location.pathname);
-      alert(`Imported ${applied} client approval${applied === 1 ? "" : "s"} to the idea bank.`);
+      alert(`Imported ${applied} client approval${applied === 1 ? "" : "s"} to the bank.`);
       setActiveView("ideas");
     }
     setResponseCount(loadClientResponses().length);
@@ -1001,6 +1002,7 @@ export default function AppShell({ onSignOut }) {
         client={portalClient}
         ideas={ideas}
         onAddIdea={addIdea}
+        onAddIdeaToBank={addIdeaToBank}
         onApprove={(id, comment, idea) => handlePortalApprove(id, comment, idea)}
         onDecline={(id, comment, idea) => {
           const snap = idea || ideas.find((i) => i.id === id);
@@ -1082,6 +1084,7 @@ export default function AppShell({ onSignOut }) {
           cards={cards}
           clientFilter={clientFilter}
           onAddIdea={addIdea}
+          onAddIdeaToBank={addIdeaToBank}
           onApprove={handleApproveIdea}
           onDecline={handleDeclineIdea}
           onDeleteIdea={deleteIdea}

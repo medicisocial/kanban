@@ -51,3 +51,14 @@ export function findIdeaForCard(card, ideas = []) {
 export function canReturnCardToVault(card) {
   return isToCreatePipelineCard(card);
 }
+
+/** Fields for an idea added straight to the bank (skips review). */
+export function buildBankIdeaData(ideaData = {}) {
+  const now = Date.now();
+  return {
+    ...ideaData,
+    status: 'approved',
+    boardCardId: null,
+    reviewedAt: now,
+  };
+}

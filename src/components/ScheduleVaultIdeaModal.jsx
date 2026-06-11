@@ -54,7 +54,7 @@ export default function ScheduleVaultIdeaModal({ idea, onClose, onSave }) {
         onClick={(event) => event.stopPropagation()}
         className={`${surfacePanelClass} w-full max-w-md p-5`}
       >
-        <p className="text-xs font-medium uppercase tracking-wider text-white/45">Idea bank</p>
+        <p className="text-xs font-medium uppercase tracking-wider text-white/45">Bank</p>
         <h2 className="mt-1 text-lg font-semibold text-white">Schedule for shoot</h2>
         <p className="mt-2 text-sm text-white/55">
           {idea.title || 'Untitled idea'} · {idea.client}

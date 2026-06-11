@@ -19,7 +19,7 @@ const NAV_SECTIONS = [
   {
     label: 'Production',
     items: [
-      { id: 'ideas', label: 'Ideas', Icon: IconIdeas },
+      { id: 'ideas', label: 'Vault', Icon: IconIdeas },
       { id: 'pipeline', label: 'Board', Icon: IconBoard },
       { id: 'review', label: 'Content review', Icon: IconTasks },
       { id: 'shoots', label: 'Shoot Schedule', Icon: IconShoots },

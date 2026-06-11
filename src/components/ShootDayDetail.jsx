@@ -255,7 +255,7 @@ function ClientShootSection({
                   }
                   className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-white/5"
                 >
-                  Add from board / idea bank
+                  Add from board / bank
                 </button>
                 <button
                   type="button"

@@ -53,7 +53,7 @@ export default function ClientPortalHome({
       label: 'Open tasks',
       count: summary.totalOpen,
       details: [
-        { label: 'Ideas', value: summary.pendingIdeasCount },
+        { label: 'Vault', value: summary.pendingIdeasCount },
         { label: 'Content', value: summary.reviewCount },
         { label: 'Profile', value: summary.setupCount },
       ].filter((item) => item.value > 0),
@@ -64,7 +64,7 @@ export default function ClientPortalHome({
       centerCount: true,
     },
     {
-      label: 'Ideas to review',
+      label: 'Vault review',
       count: summary.pendingIdeasCount,
       details:
         summary.pendingIdeasCount > 0
@@ -222,7 +222,7 @@ export default function ClientPortalHome({
         <div className="mt-8 flex flex-wrap gap-2">
           {summary.pendingIdeasCount > 0 && (
             <button type="button" onClick={() => onNavigate('ideas')} className={btnPrimaryClass}>
-              Review ideas
+              Open vault
             </button>
           )}
           {summary.reviewCount > 0 && (

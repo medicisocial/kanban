@@ -9,14 +9,23 @@ import {
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import ClientIdeasTable from './clientPortal/ClientIdeasTable';
 import VideoIdeaQuickAdd from './VideoIdeaQuickAdd';
+import IdeaVaultTable from './IdeaVaultTable';
 import SharePortalShell from './clientPortal/SharePortalShell';
-import { btnPrimaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, glassSegmentClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 import { clientMatchesBrand } from '../utils/clients';
+import { getVaultIdeas, isIdeaInVault } from '../utils/videoIdeas';
+
+const VAULT_TABS = [
+  { id: 'review', label: 'Review' },
+  { id: 'bank', label: 'Bank' },
+];
 
 export default function ClientReviewPortal({
   client,
   ideas,
+  cards = [],
   onAddIdea,
+  onAddIdeaToBank,
   onApprove,
   onDecline,
   useCloudSync = false,
@@ -31,6 +40,7 @@ export default function ClientReviewPortal({
   const [busyIds, setBusyIds] = useState(() => new Set());
   const [actionError, setActionError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState('review');
 
   const clientColor = getClientColor(client);
   const clientLogo = getClientLogo(client);
@@ -39,6 +49,16 @@ export default function ClientReviewPortal({
   const brandIdeas = useMemo(
     () => ideas.filter((idea) => clientMatchesBrand(idea.client, client)),
     [ideas, client],
+  );
+
+  const vaultIdeas = useMemo(
+    () => getVaultIdeas(ideas, cards, { client }),
+    [ideas, cards, client],
+  );
+
+  const reviewIdeas = useMemo(
+    () => brandIdeas.filter((idea) => !isIdeaInVault(idea, cards)),
+    [brandIdeas, cards],
   );
 
   const pendingIdeas = useMemo(
@@ -131,6 +151,36 @@ export default function ClientReviewPortal({
     }
   };
 
+  const handleAddIdeaToBank = async (ideaData) => {
+    const idea = {
+      ...buildIdeaPayload(ideaData),
+      status: 'approved',
+      reviewedAt: Date.now(),
+    };
+
+    setActionError('');
+    try {
+      if (useCloudSync && onCloudQueueResponse) {
+        await onCloudQueueResponse({
+          action: 'create',
+          idea,
+          client,
+          timestamp: Date.now(),
+        });
+        return;
+      }
+
+      if (onAddIdeaToBank) {
+        onAddIdeaToBank(ideaData);
+        return;
+      }
+
+      throw new Error('Could not save to the bank.');
+    } catch (err) {
+      setActionError(err.message || 'Could not save to the bank. Please try again.');
+    }
+  };
+
   const handleApprove = async (ideaId, comment) => {
     const idea = pendingIdeas.find((i) => i.id === ideaId) || ideas.find((i) => i.id === ideaId);
     if (!idea || idea.status !== 'pending') return;
@@ -214,19 +264,45 @@ export default function ClientReviewPortal({
 
   const pendingCount = pendingIdeas.length;
 
+  const tabClass = (tabId) =>
+    `px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition ${
+      activeTab === tabId
+        ? 'rounded-sm bg-[#810100] text-white'
+        : 'text-white/45 hover:text-white'
+    }`;
+
   if (embedded) {
     return (
       <section>
         <ClientPortalSectionHeader
-          title="Ideas"
-          description="Submit your own concepts or approve ideas from your production team."
+          title="Vault"
+          description="Review new concepts from your team, submit your own, and browse approved ideas waiting for a shoot."
         >
-          {pendingCount > 0 && (
+          {pendingCount > 0 && activeTab === 'review' && (
             <span className="border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-amber-200/90">
               {pendingCount} awaiting approval
             </span>
           )}
+          {vaultIdeas.length > 0 && (
+            <span className="border border-violet-500/25 bg-violet-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-violet-200/90">
+              {vaultIdeas.length} in bank
+            </span>
+          )}
         </ClientPortalSectionHeader>
+
+        <div className={`${glassSegmentClass} mb-5 flex w-fit gap-0.5 p-0.5`}>
+          {VAULT_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={tabClass(tab.id)}
+            >
+              {tab.label}
+              {tab.id === 'bank' && vaultIdeas.length > 0 ? ` (${vaultIdeas.length})` : ''}
+            </button>
+          ))}
+        </div>
 
         {actionError && (
           <p className="mb-4 border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-200/90">
@@ -234,22 +310,36 @@ export default function ClientReviewPortal({
           </p>
         )}
 
-        <VideoIdeaQuickAdd
-          clientOnly={client}
-          onAdd={handleAddIdea}
-          submitLabel="Submit idea"
-          hint="Paste a reference link and press Enter — your team will see it in the list below."
-        />
+        {activeTab === 'review' ? (
+          <>
+            <VideoIdeaQuickAdd
+              clientOnly={client}
+              onAdd={handleAddIdea}
+              onAddToBank={handleAddIdeaToBank}
+              submitLabel="Submit for review"
+              hint="Submit for team review, or add straight to the bank."
+            />
 
-        <ClientIdeasTable
-          ideas={brandIdeas}
-          client={client}
-          clientColor={clientColor}
-          clientLogo={clientLogo}
-          onApprove={handleApprove}
-          onDecline={handleDecline}
-          busyIds={busyIds}
-        />
+            <ClientIdeasTable
+              ideas={reviewIdeas}
+              client={client}
+              clientColor={clientColor}
+              clientLogo={clientLogo}
+              onApprove={handleApprove}
+              onDecline={handleDecline}
+              busyIds={busyIds}
+            />
+          </>
+        ) : (
+          <>
+            <VideoIdeaQuickAdd
+              clientOnly={client}
+              variant="bank"
+              onAddToBank={handleAddIdeaToBank}
+            />
+            <IdeaVaultTable ideas={vaultIdeas} readOnly hideClientColumn />
+          </>
+        )}
       </section>
     );
   }

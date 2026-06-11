@@ -97,7 +97,7 @@ export default function ShootDayPlanningRow({
               onClick={() => onReturnToVault(card)}
               className="rounded-lg border border-violet-500/25 px-2.5 py-1 text-xs font-medium text-violet-200 transition hover:bg-violet-500/10"
             >
-              Return to idea bank
+              Return to bank
             </button>
           )}
           {onRemove && !readOnly && (

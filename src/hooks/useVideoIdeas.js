@@ -5,6 +5,7 @@ import {
 } from "../constants";
 import { loadClientResponses, clearClientResponses } from "../utils/clientShare";
 import { stripDemoVideoIdeas, getRejectedVideoIdeaIds } from "../utils/demoVideoIdeas";
+import { buildBankIdeaData } from "../utils/videoIdeas";
 import { notifyMutation } from "../utils/undoHistory";
 import { useReloadFromStorage } from "./useReloadFromStorage";
 import { SUPABASE_ENABLED } from "../lib/supabaseClient";
@@ -87,6 +88,13 @@ export function useVideoIdeas() {
     setIdeas((prev) => [...prev, idea]);
   }, []);
 
+  const addIdeaToBank = useCallback((ideaData) => {
+    notifyMutation();
+    const idea = createIdea(buildBankIdeaData(ideaData));
+    setIdeas((prev) => [...prev, idea]);
+    return idea;
+  }, []);
+
   const updateIdea = useCallback((id, updates, options = {}) => {
     notifyMutation(options);
     setIdeas((prev) =>
@@ -158,6 +166,7 @@ export function useVideoIdeas() {
     ideasSyncLoaded: syncLoaded,
     replaceIdeas,
     addIdea,
+    addIdeaToBank,
     updateIdea,
     deleteIdea,
     deleteIdeas,

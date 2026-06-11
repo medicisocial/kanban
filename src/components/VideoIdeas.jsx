@@ -10,8 +10,8 @@ import { getVaultIdeas, isIdeaInVault, isIdeaScheduled } from '../utils/videoIde
 import { btnSecondaryClass, glassSegmentClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 const IDEA_TABS = [
-  { id: 'review', label: 'Client review' },
-  { id: 'vault', label: 'Idea bank' },
+  { id: 'review', label: 'Review' },
+  { id: 'vault', label: 'Bank' },
 ];
 
 export default function VideoIdeas({
@@ -19,6 +19,7 @@ export default function VideoIdeas({
   cards,
   clientFilter,
   onAddIdea,
+  onAddIdeaToBank,
   onApprove,
   onDecline,
   onDeleteIdea,
@@ -108,7 +109,7 @@ export default function VideoIdeas({
     const label = idea?.title ? `"${idea.title}"` : 'this idea';
     if (
       !window.confirm(
-        `Delete ${label} from the idea bank? This cannot be undone.`,
+        `Delete ${label} from the bank? This cannot be undone.`,
       )
     ) {
       return;
@@ -126,8 +127,8 @@ export default function VideoIdeas({
   return (
     <section>
       <ClientPortalSectionHeader
-        title="Content Ideas"
-        description="Collect client approvals, then schedule approved concepts from the idea bank when you plan a shoot."
+        title="Vault"
+        description="Collect client approvals, then schedule approved concepts from the bank when you plan a shoot."
       >
         {pendingCount > 0 && activeTab === 'review' && (
           <span className="border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-amber-200/90">
@@ -136,7 +137,7 @@ export default function VideoIdeas({
         )}
         {vaultIdeas.length > 0 && (
           <span className="border border-violet-500/25 bg-violet-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-violet-200/90">
-            {vaultIdeas.length} in idea bank
+            {vaultIdeas.length} in bank
           </span>
         )}
       </ClientPortalSectionHeader>
@@ -162,6 +163,7 @@ export default function VideoIdeas({
           <VideoIdeaQuickAdd
             clientFilter={clientFilter}
             onAdd={onAddIdea}
+            onAddToBank={onAddIdeaToBank}
             onAdded={() => {
               setActiveTab('review');
               setStatusFilter('pending');
@@ -197,12 +199,19 @@ export default function VideoIdeas({
           />
         </>
       ) : (
-        <IdeaVaultTable
-          ideas={vaultIdeas}
-          onEdit={setIdeaModal}
-          onSchedule={setScheduleIdea}
-          onDelete={handleDeleteVaultIdea}
-        />
+        <>
+          <VideoIdeaQuickAdd
+            clientFilter={clientFilter}
+            variant="bank"
+            onAddToBank={onAddIdeaToBank}
+          />
+          <IdeaVaultTable
+            ideas={vaultIdeas}
+            onEdit={setIdeaModal}
+            onSchedule={setScheduleIdea}
+            onDelete={handleDeleteVaultIdea}
+          />
+        </>
       )}
 
       {ideaModal && (

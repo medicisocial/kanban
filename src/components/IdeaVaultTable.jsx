@@ -22,6 +22,8 @@ export default function IdeaVaultTable({
   onEdit,
   onSchedule,
   onDelete,
+  readOnly = false,
+  hideClientColumn = false,
 }) {
   const { getClientColor } = useClientsContext();
   const [expandedId, setExpandedId] = useState(null);
@@ -39,9 +41,15 @@ export default function IdeaVaultTable({
   if (sorted.length === 0) {
     return (
       <div className={`${surfacePanelClass} px-4 py-16 text-center`}>
-        <p className="text-sm text-white/45">No approved ideas waiting for a shoot day.</p>
+        <p className="text-sm text-white/45">
+          {readOnly
+            ? 'No approved concepts waiting for a shoot day.'
+            : 'No approved concepts in the bank yet.'}
+        </p>
         <p className="mt-2 text-xs text-white/35">
-          When clients approve concepts, they land here until you schedule them on a shoot.
+          {readOnly
+            ? 'When your team approves ideas, they appear here until scheduled on a shoot.'
+            : 'When clients approve concepts, they land in the bank until you schedule them on a shoot.'}
         </p>
       </div>
     );
@@ -51,7 +59,8 @@ export default function IdeaVaultTable({
     <div className={`${surfacePanelClass} overflow-hidden`}>
       <div className="border-b border-white/10 px-4 py-3">
         <p className="text-xs text-white/45">
-          {sorted.length} idea{sorted.length === 1 ? '' : 's'} ready to schedule
+          {sorted.length} concept{sorted.length === 1 ? '' : 's'}{' '}
+          {readOnly ? 'ready to schedule' : 'in the bank'}
         </p>
       </div>
 
@@ -82,9 +91,10 @@ export default function IdeaVaultTable({
                     {idea.contentType}
                   </span>
                 )}
-                <span className="text-white/70">{idea.client}</span>
+                {!hideClientColumn && <span className="text-white/70">{idea.client}</span>}
                 <span>{formatPortalDate(idea.reviewedAt || idea.createdAt)}</span>
               </div>
+              {!readOnly && (
               <div className={mobileActionRowClass}>
                 <button
                   type="button"
@@ -108,6 +118,7 @@ export default function IdeaVaultTable({
                   Delete
                 </button>
               </div>
+              )}
               {expanded && (
                 <div className="mt-3 border border-white/10 bg-white/[0.02] p-3 text-sm text-white/70">
                   {idea.description && <p>{idea.description}</p>}
@@ -128,9 +139,13 @@ export default function IdeaVaultTable({
               <th className="w-[28%]"><span className={tableHeaderClass}>Title</span></th>
               <th className="w-[12%]"><span className={tableHeaderClass}>Reference</span></th>
               <th className="w-[10%]"><span className={tableHeaderClass}>Type</span></th>
-              <th className="w-[14%]"><span className={tableHeaderClass}>Client</span></th>
+              {!hideClientColumn && (
+                <th className="w-[14%]"><span className={tableHeaderClass}>Client</span></th>
+              )}
               <th className="w-[10%]"><span className={tableHeaderClass}>Approved</span></th>
-              <th className="w-[26%]"><span className={tableHeaderClass}>Actions</span></th>
+              {!readOnly && (
+                <th className="w-[26%]"><span className={tableHeaderClass}>Actions</span></th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -151,15 +166,18 @@ export default function IdeaVaultTable({
                   <td className={`${tableCellClass} text-xs uppercase tracking-wider text-white/55`}>
                     {idea.contentType || '—'}
                   </td>
+                  {!hideClientColumn && (
                   <td className={tableCellClass}>
                     <div className="flex items-center gap-2">
                       <ClientAvatar client={idea.client} size="md" color={clientColor} />
                       <span className="truncate text-xs text-white/70">{idea.client}</span>
                     </div>
                   </td>
+                  )}
                   <td className={`${tableCellClass} text-xs tabular-nums text-white/55`}>
                     {formatPortalDate(idea.reviewedAt || idea.createdAt)}
                   </td>
+                  {!readOnly && (
                   <td className={tableCellClass}>
                     <div className="flex flex-wrap items-center gap-1">
                       <button
@@ -185,6 +203,7 @@ export default function IdeaVaultTable({
                       </button>
                     </div>
                   </td>
+                  )}
                 </tr>
               );
             })}

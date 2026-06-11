@@ -105,4 +105,19 @@ assert(
   'one-off projects in To Create cannot return to vault',
 );
 
+function buildBankIdeaData(ideaData = {}) {
+  const now = Date.now();
+  return {
+    ...ideaData,
+    status: 'approved',
+    boardCardId: null,
+    reviewedAt: now,
+  };
+}
+
+const bankPayload = buildBankIdeaData({ title: 'Direct bank idea', client: 'Plume' });
+assert(bankPayload.status === 'approved', 'bank payload is approved');
+assert(bankPayload.boardCardId === null, 'bank payload has no board card');
+assert(bankPayload.reviewedAt, 'bank payload sets reviewedAt');
+
 console.log('Video idea vault tests passed.');

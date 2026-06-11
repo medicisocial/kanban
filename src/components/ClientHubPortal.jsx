@@ -218,6 +218,7 @@ export default function ClientHubPortal({ onSignOut }) {
         <ClientReviewPortal
           client={brand}
           ideas={ideas}
+          cards={cards}
           useCloudSync
           embedded
           onCloudQueueResponse={handleIdeaResponse}
