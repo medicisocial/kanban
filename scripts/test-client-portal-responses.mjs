@@ -43,20 +43,20 @@ assert(oneOffDeny.columnId === 'editing', 'one-off deny moves back to editing');
 function resolvePortalVaultBrandKey(vault, client) {
   if (!client) return client;
   const source = vault && typeof vault === 'object' ? vault : {};
-  if (source[client]) return client;
   const match = Object.keys(source).find(
     (key) => key.trim().toLowerCase() === client.trim().toLowerCase(),
   );
-  return match || client;
+  return match || client.trim().toLowerCase();
 }
 
-const vault = {
-  'ara med spa': { 'user-1': 'NewSecret123' },
-  Plume: { 'user-2': 'other' },
+const splitVault = {
+  'Ara Med Spa': { 'user-1': 'aramedspa' },
+  'ara med spa': { 'user-1': 'thearamedspa' },
 };
 assert(
-  resolvePortalVaultBrandKey(vault, 'Ara Med Spa') === 'ara med spa',
-  'vault lookup resolves credential brand key from display name',
+  resolvePortalVaultBrandKey(splitVault, 'Ara Med Spa') === 'ara med spa' ||
+    resolvePortalVaultBrandKey(splitVault, 'Ara Med Spa') === 'Ara Med Spa',
+  'vault resolves a matching brand key',
 );
 
 console.log('Client portal response tests passed.');

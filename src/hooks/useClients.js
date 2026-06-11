@@ -33,7 +33,12 @@ import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { useSingletonSync } from '../lib/useSingletonSync';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { registerPortalCredentialBrand } from '../lib/syncHelpers';
-import { loadPortalPasswordVault, savePortalPasswordVault } from '../utils/clientPortalPasswordVault';
+import {
+  collapsePortalPasswordVaultBrandKeys,
+  loadPortalPasswordVault,
+  savePortalPasswordVault,
+  getPortalPasswordForUser as readVaultPassword,
+} from '../utils/clientPortalPasswordVault';
 import { saveStaffBrandAssets } from '../utils/staffBrandAssetsApi';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
 
@@ -118,10 +123,11 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
     companyFiles: stripSuppressed(source.companyFiles || {}),
     specialMenus: stripSuppressed(source.specialMenus || {}),
     photoGalleryLinks: stripSuppressed(source.photoGalleryLinks || {}),
-    portalPasswordVault: stripSuppressed(mergePortalPasswordVault(
-      source.portalPasswordVault,
-      source.portalPasswordVault ? {} : loadLegacyPortalPasswordVault(),
-    )),
+    portalPasswordVault: stripSuppressed(
+      collapsePortalPasswordVaultBrandKeys(
+        mergePortalPasswordVault(source.portalPasswordVault || {}, loadLegacyPortalPasswordVault()),
+      ),
+    ),
     contentTypeColors: normalizeContentTypeColors(source.contentTypeColors || {}),
     customColorPalette: normalizeCustomColorPalette(source.customColorPalette),
   };
@@ -489,22 +495,7 @@ export function useClients() {
   );
 
   const getPortalPasswordForUser = useCallback(
-    (client, userId) => {
-      if (!client || !userId) return '';
-      const vaultKeys = new Set([client]);
-      for (const brand of Object.keys(state.portalPasswordVault || {})) {
-        if (clientNamesConflict(brand, client)) vaultKeys.add(brand);
-      }
-      for (const brand of vaultKeys) {
-        const fromState = state.portalPasswordVault?.[brand]?.[userId];
-        if (fromState) return fromState;
-      }
-      const localVault = loadPortalPasswordVault();
-      for (const brand of vaultKeys) {
-        if (localVault[brand]?.[userId]) return localVault[brand][userId];
-      }
-      return '';
-    },
+    (client, userId) => readVaultPassword(client, userId),
     [state.portalPasswordVault],
   );
 
@@ -601,8 +592,11 @@ export function useClients() {
           delete nextVault[key];
         }
       }
-      savePortalPasswordVault(nextVault);
-      return { ...prev, portalPasswordVault: nextVault };
+      savePortalPasswordVault(collapsePortalPasswordVaultBrandKeys(nextVault));
+      return {
+        ...prev,
+        portalPasswordVault: collapsePortalPasswordVaultBrandKeys(nextVault),
+      };
     });
   }, [applyClientsWorkspaceUpdate]);
 

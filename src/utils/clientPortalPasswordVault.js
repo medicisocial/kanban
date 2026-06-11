@@ -32,6 +32,20 @@ function readLocalVault() {
  * cache. Local entries win so a password saved on this device always re-displays
  * after refresh, even before the cloud workspace finishes syncing.
  */
+export function collapsePortalPasswordVaultBrandKeys(vault = {}) {
+  const merged = {};
+  for (const [brand, users] of Object.entries(vault || {})) {
+    if (!users || typeof users !== 'object') continue;
+    let canonical = Object.keys(merged).find((key) => clientNamesConflict(key, brand));
+    if (!canonical) {
+      canonical = brand.trim().toLowerCase();
+      merged[canonical] = {};
+    }
+    merged[canonical] = { ...merged[canonical], ...users };
+  }
+  return merged;
+}
+
 export function loadPortalPasswordVault() {
   const cloud = readCloudVault();
   const local = readLocalVault();
@@ -43,7 +57,7 @@ export function loadPortalPasswordVault() {
       ...(local[brand] && typeof local[brand] === 'object' ? local[brand] : {}),
     };
   }
-  return merged;
+  return collapsePortalPasswordVaultBrandKeys(merged);
 }
 
 export function savePortalPasswordVault(vault) {
@@ -53,17 +67,26 @@ export function savePortalPasswordVault(vault) {
 /** Resolve vault map key when display name differs from credential brand id (e.g. "Ara Med Spa" vs "ara med spa"). */
 export function resolvePortalVaultBrandKey(vault, client) {
   if (!client) return client;
-  const source = vault && typeof vault === 'object' ? vault : {};
-  if (source[client]) return client;
-  const match = Object.keys(source).find((key) => clientNamesConflict(key, client));
-  return match || client;
+  const collapsed = collapsePortalPasswordVaultBrandKeys(vault);
+  const match = Object.keys(collapsed).find((key) => clientNamesConflict(key, client));
+  return match || client.trim().toLowerCase();
 }
 
 export function getPortalPasswordForUser(client, userId) {
   if (!client || !userId) return '';
+
+  // Dedicated local vault always wins — it survives refresh even when the
+  // clients workspace blob still has a stale display-name key ("Ara Med Spa").
+  const local = readLocalVault();
+  for (const [brand, users] of Object.entries(local)) {
+    if (clientNamesConflict(brand, client) && users?.[userId]) {
+      return String(users[userId]).trim();
+    }
+  }
+
   const vault = loadPortalPasswordVault();
   const brandKey = resolvePortalVaultBrandKey(vault, client);
-  return vault[brandKey]?.[userId] || '';
+  return vault[brandKey]?.[userId] ? String(vault[brandKey][userId]).trim() : '';
 }
 
 export function updatePortalPasswordVault(client, draftUsers, savedUsers, { vaultBrandKey = client } = {}) {
@@ -100,5 +123,5 @@ export function updatePortalPasswordVault(client, draftUsers, savedUsers, { vaul
       delete vault[key];
     }
   }
-  savePortalPasswordVault(vault);
+  savePortalPasswordVault(collapsePortalPasswordVaultBrandKeys(vault));
 }

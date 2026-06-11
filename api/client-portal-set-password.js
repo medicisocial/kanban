@@ -98,13 +98,14 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: orgCheck.error || 'Forbidden org scope.' });
   }
   const resolvedOrgId = orgCheck.orgId;
+  const brandKey = String(brand).trim().toLowerCase();
 
   try {
     const needsExistingRow = users.some((draft) => !String(draft?.password || '').trim());
     let existingUsers = [];
     if (needsExistingRow) {
       existingUsers = normalizeBrandUsers(
-        await fetchRecord('client_portal_credentials', brand, resolvedOrgId),
+        await fetchRecord('client_portal_credentials', brandKey, resolvedOrgId),
       );
     }
     const existingById = new Map(existingUsers.map((user) => [user.id, user]));
@@ -163,21 +164,24 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Set a username and password for at least one portal user.' });
     }
 
-    await upsertRecord('client_portal_credentials', brand, nextUsers, resolvedOrgId);
+    await upsertRecord('client_portal_credentials', brandKey, nextUsers, resolvedOrgId);
 
-    // Vault patch is best-effort and must not block the response — the large
-    // clients workspace row is often locked by background staff sync.
+    let vaultWarning = null;
     if (Object.keys(brandVault).length) {
-      void patchClientsPortalPasswordVault(brand, brandVault, resolvedOrgId).catch((vaultError) => {
+      try {
+        await patchClientsPortalPasswordVault(brandKey, brandVault, resolvedOrgId);
+      } catch (vaultError) {
+        vaultWarning =
+          'Portal login saved, but the password may not show on other devices until sync completes.';
         console.warn(
-          '[client-portal-set-password] background vault patch failed:',
+          '[client-portal-set-password] vault patch failed:',
           vaultError?.message || vaultError,
         );
-      });
+      }
     }
 
     const usersForClient = nextUsers.map(({ _passwordChangeAuthorized: _ignored, ...user }) => user);
-    return res.status(200).json({ ok: true, users: usersForClient });
+    return res.status(200).json({ ok: true, users: usersForClient, vaultWarning });
   } catch (error) {
     const detail = String(error?.message || error || '').trim();
     console.error('[client-portal-set-password] failed:', detail);
