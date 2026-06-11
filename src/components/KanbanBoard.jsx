@@ -12,7 +12,7 @@ import {
   rectIntersection,
 } from '@dnd-kit/core';
 import { COLUMNS, BOARD_COLUMN_GROUPS } from '../constants';
-import { filterCards, getBoardCards, sortPipelineCards } from '../utils';
+import { filterCards, getBoardCards, getPipelineClientNames, sortPipelineCards } from '../utils';
 import KanbanColumn from './KanbanColumn';
 import CardPreview from './CardPreview';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
@@ -51,14 +51,24 @@ function collisionDetection(args) {
   return closestCenter(args);
 }
 
-function KanbanBoard({
+function KanbanClientSectionHeader({ client, color }) {
+  return (
+    <div className="kanban-client-pipeline-header">
+      <span className="kanban-client-pipeline-dot" style={{ backgroundColor: color }} aria-hidden />
+      <h3 className="kanban-client-pipeline-title">{client}</h3>
+    </div>
+  );
+}
+
+const KanbanBoardView = memo(function KanbanBoardView({
   cards,
   onAddCard,
   onCardClick,
   onDeleteCard,
   onMoveCard,
-  clientFilter,
+  boardClient,
   embedded = false,
+  nested = false,
 }) {
   const [activeCard, setActiveCard] = useState(null);
   const [dragPreview, setDragPreview] = useState(null);
@@ -71,11 +81,9 @@ function KanbanBoard({
   );
 
   const filteredCards = useMemo(
-    () => filterCards(getBoardCards(cards), { client: clientFilter }),
-    [cards, clientFilter],
+    () => filterCards(getBoardCards(cards), { client: boardClient }),
+    [cards, boardClient],
   );
-
-  const visibleGroups = BOARD_COLUMN_GROUPS;
 
   const boardCards = useMemo(() => {
     if (!dragPreview) return filteredCards;
@@ -103,56 +111,73 @@ function KanbanBoard({
     return map;
   }, [boardCards]);
 
+  const handleAddCard = useCallback(
+    (columnId) => {
+      onAddCard(columnId, { client: boardClient });
+    },
+    [boardClient, onAddCard],
+  );
 
-  const handleDragStart = useCallback((event) => {
-    const card = cards.find((c) => c.id === event.active.id);
-    if (card) {
-      setDragPreview({
-        cardId: card.id,
-        originColumnId: card.columnId,
-        previewColumnId: card.columnId,
+  const handleDragStart = useCallback(
+    (event) => {
+      const card = cards.find((c) => c.id === event.active.id);
+      if (card) {
+        setDragPreview({
+          cardId: card.id,
+          originColumnId: card.columnId,
+          previewColumnId: card.columnId,
+        });
+      }
+      setActiveCard(card || null);
+    },
+    [cards],
+  );
+
+  const handleDragOver = useCallback(
+    (event) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const activeData = active.data.current;
+      if (activeData?.type !== 'card') return;
+
+      const targetColumnId = resolveColumnId(over, cards);
+      if (!targetColumnId) return;
+
+      setDragPreview((prev) => {
+        if (!prev || prev.cardId !== active.id) return prev;
+        if (prev.previewColumnId === targetColumnId) return prev;
+        return { ...prev, previewColumnId: targetColumnId };
       });
-    }
-    setActiveCard(card || null);
-  }, [cards]);
+    },
+    [cards],
+  );
 
-  const handleDragOver = useCallback((event) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
+  const handleDragEnd = useCallback(
+    (event) => {
+      const { active, over } = event;
+      const originColumnId = dragPreview?.originColumnId;
+      setActiveCard(null);
+      setDragPreview(null);
 
-    const activeData = active.data.current;
-    if (activeData?.type !== 'card') return;
+      if (!over) return;
 
-    const targetColumnId = resolveColumnId(over, cards);
-    if (!targetColumnId) return;
+      const targetColumnId = resolveColumnId(over, cards);
+      if (!targetColumnId) return;
 
-    setDragPreview((prev) => {
-      if (!prev || prev.cardId !== active.id) return prev;
-      if (prev.previewColumnId === targetColumnId) return prev;
-      return { ...prev, previewColumnId: targetColumnId };
-    });
-  }, [cards]);
-
-  const handleDragEnd = useCallback((event) => {
-    const { active, over } = event;
-    const originColumnId = dragPreview?.originColumnId;
-    setActiveCard(null);
-    setDragPreview(null);
-
-    if (!over) return;
-
-    const targetColumnId = resolveColumnId(over, cards);
-    if (!targetColumnId) return;
-
-    if (originColumnId && originColumnId !== targetColumnId) {
-      onMoveCard(active.id, targetColumnId);
-    }
-  }, [cards, dragPreview, onMoveCard]);
+      if (originColumnId && originColumnId !== targetColumnId) {
+        onMoveCard(active.id, targetColumnId);
+      }
+    },
+    [cards, dragPreview, onMoveCard],
+  );
 
   const handleDragCancel = useCallback(() => {
     setActiveCard(null);
     setDragPreview(null);
   }, []);
+
+  const showEmptyState = embedded && !nested && filteredCards.length === 0;
 
   return (
     <DndContext
@@ -163,23 +188,26 @@ function KanbanBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      {embedded && <ClientPortalSectionHeader title="Pipeline" compact />}
+      {embedded && !nested && <ClientPortalSectionHeader title="Pipeline" compact />}
 
-      {embedded && filteredCards.length === 0 && (
+      {showEmptyState && (
         <div className="mb-4 border border-dashed border-white/10 px-6 py-10 text-center">
           <p className="text-sm text-white/45">No cards match the current filters.</p>
         </div>
       )}
 
-      <div
-        className={`kanban-board-scroll flex w-full overflow-x-auto overscroll-x-contain ${
-          embedded
-            ? 'pb-2 md:-mx-8 md:scroll-px-8 md:px-8 lg:-mx-10 lg:scroll-px-10 lg:px-10'
-            : 'scroll-px-4 pb-6 sm:scroll-px-6'
-        }`}
-      >
-        <div className="flex w-max gap-3 px-1">
-          {visibleGroups.map((group) => {
+      {!showEmptyState && (
+        <div
+          className={`kanban-board-scroll flex w-full overflow-x-auto overscroll-x-contain ${
+            embedded
+              ? nested
+                ? 'pb-1 md:-mx-8 md:scroll-px-8 md:px-8 lg:-mx-10 lg:scroll-px-10 lg:px-10'
+                : 'pb-2 md:-mx-8 md:scroll-px-8 md:px-8 lg:-mx-10 lg:scroll-px-10 lg:px-10'
+              : 'scroll-px-4 pb-6 sm:scroll-px-6'
+          }`}
+        >
+          <div className="flex w-max gap-3 px-1">
+            {BOARD_COLUMN_GROUPS.map((group) => {
               const isArchive = group.collapsible;
               const solo = group.columnIds.length === 1;
               const primaryColumn = COLUMN_BY_ID[group.columnIds[0]];
@@ -205,7 +233,10 @@ function KanbanBoard({
               }
 
               return (
-                <section key={group.id} className={`kanban-stage glass-surface ${solo ? '' : 'kanban-stage-wide'}`}>
+                <section
+                  key={group.id}
+                  className={`kanban-stage glass-surface ${solo ? '' : 'kanban-stage-wide'}`}
+                >
                   <div className="kanban-stage-header">
                     <h3 className="kanban-stage-title">{group.label}</h3>
                     <div className="kanban-stage-actions">
@@ -221,12 +252,22 @@ function KanbanBoard({
                       {solo && canAdd && (
                         <button
                           type="button"
-                          onClick={() => onAddCard(primaryColumn.id)}
+                          onClick={() => handleAddCard(primaryColumn.id)}
                           className="kanban-stage-add"
                           aria-label={`Add card to ${group.label}`}
                         >
-                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                          <svg
+                            className="h-3.5 w-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M12 4v16m8-8H4"
+                            />
                           </svg>
                         </button>
                       )}
@@ -241,7 +282,7 @@ function KanbanBoard({
                           key={column.id}
                           column={column}
                           cards={cardsByColumn[column.id]}
-                          onAddCard={onAddCard}
+                          onAddCard={handleAddCard}
                           onCardClick={onCardClick}
                           onDeleteCard={onDeleteCard}
                           embedded={embedded}
@@ -252,9 +293,10 @@ function KanbanBoard({
                   </div>
                 </section>
               );
-          })}
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       <DragOverlay
         style={{ cursor: 'grabbing' }}
@@ -263,6 +305,71 @@ function KanbanBoard({
         {activeCard ? <CardPreview card={activeCard} /> : null}
       </DragOverlay>
     </DndContext>
+  );
+});
+
+function KanbanBoard({
+  cards,
+  onAddCard,
+  onCardClick,
+  onDeleteCard,
+  onMoveCard,
+  clientFilter,
+  getClientColor,
+  embedded = false,
+}) {
+  const pipelineClients = useMemo(() => getPipelineClientNames(cards), [cards]);
+  const showAllClients = !clientFilter || clientFilter === 'all';
+  const resolveClientColor = useCallback(
+    (client) => getClientColor?.(client) || '#9ca3af',
+    [getClientColor],
+  );
+
+  if (showAllClients && pipelineClients.length === 0) {
+    return (
+      <>
+        {embedded && <ClientPortalSectionHeader title="Pipeline" compact />}
+        <div className="mb-4 border border-dashed border-white/10 px-6 py-10 text-center">
+          <p className="text-sm text-white/45">No pipeline cards yet.</p>
+        </div>
+      </>
+    );
+  }
+
+  if (!showAllClients || pipelineClients.length === 1) {
+    const boardClient = showAllClients ? pipelineClients[0] : clientFilter;
+    return (
+      <KanbanBoardView
+        cards={cards}
+        onAddCard={onAddCard}
+        onCardClick={onCardClick}
+        onDeleteCard={onDeleteCard}
+        onMoveCard={onMoveCard}
+        boardClient={boardClient}
+        embedded={embedded}
+      />
+    );
+  }
+
+  return (
+    <div className="kanban-pipeline-by-client">
+      {embedded && <ClientPortalSectionHeader title="Pipeline" compact />}
+      {pipelineClients.map((client) => (
+        <section key={client} className="kanban-client-pipeline">
+          <KanbanClientSectionHeader client={client} color={resolveClientColor(client)} />
+          <KanbanBoardView
+            cards={cards}
+            onAddCard={onAddCard}
+            onCardClick={onCardClick}
+            onDeleteCard={onDeleteCard}
+            onMoveCard={onMoveCard}
+            boardClient={client}
+            embedded={embedded}
+            nested
+          />
+        </section>
+      ))}
+    </div>
   );
 }
 

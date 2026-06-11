@@ -1,5 +1,6 @@
 import { addDays, parseDateKey, toDateKey } from './utils/calendar';
 import { isScheduledPostType } from './constants';
+import { cardIsAssignedToStaff } from './utils/staffMembers';
 
 export function formatDate(dateStr) {
   if (!dateStr) return '';
@@ -84,7 +85,14 @@ export function sortPipelineCards(cards) {
   return [...cards].sort(comparePipelineCards);
 }
 
-import { cardIsAssignedToStaff } from './utils/staffMembers';
+export function getPipelineClientNames(cards) {
+  const names = new Set(
+    getBoardCards(cards)
+      .map((card) => card.client)
+      .filter(Boolean),
+  );
+  return [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
 
 export function filterCards(cards, { client, assigneeFilter = false, staffName = '', clientAccountManagers = {} }) {
   return cards.filter((card) => {

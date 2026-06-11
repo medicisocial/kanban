@@ -106,7 +106,7 @@ export default function AppShell({ onSignOut }) {
   const { meetings, meetingsSyncLoaded, replaceMeetings, addMeeting, updateMeeting, deleteMeeting } =
     useMeetings();
   const { authRequired, ready, logout, session, org, orgReady } = useStaffAuth();
-  const { teamMembers, clientAccountManagers } = useClientsContext();
+  const { teamMembers, clientAccountManagers, getClientColor } = useClientsContext();
 
   const { canUndo, undo } = useUndoHistory({
     cards,
@@ -1022,15 +1022,16 @@ export default function AppShell({ onSignOut }) {
         <section>
           <KanbanBoard
             cards={cards}
-            onAddCard={(columnId) => {
-              const client = clientFilter !== 'all' ? clientFilter : undefined;
-              const newCard = addCard(columnId, { client });
+            onAddCard={(columnId, { client } = {}) => {
+              const resolvedClient = client ?? (clientFilter !== 'all' ? clientFilter : undefined);
+              const newCard = addCard(columnId, { client: resolvedClient });
               if (newCard) setSelectedCard(newCard);
             }}
             onCardClick={handleCardClick}
             onDeleteCard={handleDelete}
             onMoveCard={handleMoveCard}
             clientFilter={clientFilter}
+            getClientColor={getClientColor}
             embedded
           />
         </section>
