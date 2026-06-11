@@ -29,7 +29,6 @@ export default function ShootDayDetail({
   onAddShootDay,
   onAddShootItem,
   onAddShootItemForClient,
-  onAssignExistingToShoot,
   onAddCardsToShoot,
   getPlan,
   onUpdatePlan,

@@ -1165,7 +1165,6 @@ export default function AppShell({ onSignOut }) {
           onCardClick={handleCardClick}
           onUpdateCard={updateCard}
           onAddShootItem={handleAddShootItem}
-          onAssignExistingToShoot={handleAssignExistingToShoot}
           onAddCardsToShoot={openAddCardsToShoot}
           getPlan={getPlan}
           onUpdatePlan={updatePlan}

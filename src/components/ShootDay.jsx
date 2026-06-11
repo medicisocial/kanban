@@ -29,7 +29,6 @@ export default function ShootDay({
   onCardClick,
   onUpdateCard,
   onAddShootItem,
-  onAssignExistingToShoot,
   onAddCardsToShoot,
   getPlan,
   onUpdatePlan,
@@ -240,7 +239,6 @@ export default function ShootDay({
               onAddShootDay={() => setShootModal({ mode: 'day' })}
               onAddShootItem={() => setShootModal({ mode: 'item' })}
               onAddShootItemForClient={(client) => setShootModal({ mode: 'item', client, lockFields: true })}
-              onAssignExistingToShoot={onAssignExistingToShoot}
               onAddCardsToShoot={onAddCardsToShoot}
               getPlan={getPlan}
               onUpdatePlan={onUpdatePlan}
