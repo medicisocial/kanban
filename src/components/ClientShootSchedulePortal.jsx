@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   getClientShootCards,
   resolveShootCardReferenceVideo,
@@ -6,17 +6,23 @@ import {
 } from '../utils/clientPortalAuth';
 import { clientMatchesBrand } from '../utils/clients';
 import {
+  addDays,
+  addMonths,
   buildShootTimeline,
   formatShootDayLabel,
+  getDefaultShootDate,
   getShootDayTitle,
   getShootPlanKey,
+  groupCardsByShootDate,
   parseDateKey,
   sortCardsByShootTime,
+  toDateKey,
 } from '../utils/shootDay';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import ShootLocationLink from './ShootLocationLink';
 import ShootDayTimeline from './ShootDayTimeline';
-import { surfacePanelClass } from './clientPortal/clientPortalUi';
+import ShootDayMonthView from './ShootDayMonthView';
+import { btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 function resolvePlanForClient(plans, client, dateKey) {
   const direct = plans?.[getShootPlanKey(client, dateKey)];
@@ -99,52 +105,122 @@ export default function ClientShootSchedulePortal({
   clientColor,
   embedded = false,
   upcomingOnly = true,
+  focusRequest = null,
 }) {
   const shootCards = useMemo(
     () => getClientShootCards(stripInternalCardsForClientPortal(cards), { upcomingOnly }),
     [cards, upcomingOnly],
   );
 
-  const grouped = useMemo(() => {
-    return shootCards.reduce((acc, card) => {
-      const key = card.shootDate;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(card);
-      return acc;
-    }, {});
-  }, [shootCards]);
+  const shootsByDate = useMemo(() => groupCardsByShootDate(shootCards), [shootCards]);
 
-  const dates = Object.keys(grouped).sort();
+  const visiblePlans = useMemo(() => {
+    const filtered = {};
+    for (const [key, plan] of Object.entries(plans || {})) {
+      if (clientMatchesBrand(plan?.client, client)) filtered[key] = plan;
+    }
+    return filtered;
+  }, [plans, client]);
 
-  const content =
-    dates.length === 0 ? (
-      <div className={`${surfacePanelClass} px-6 py-16 text-center`}>
-        <p className="text-sm text-white/45">No upcoming shoots scheduled.</p>
+  const getPlan = useCallback(
+    (planClient, dateKey) => resolvePlanForClient(plans, planClient, dateKey),
+    [plans],
+  );
+
+  const [focusDate, setFocusDate] = useState(() => {
+    if (focusRequest?.dateKey) return parseDateKey(focusRequest.dateKey);
+    return getDefaultShootDate();
+  });
+  const [viewMode, setViewMode] = useState(focusRequest?.dateKey ? 'day' : 'month');
+
+  const dateKey = toDateKey(focusDate);
+  const dayCards = shootsByDate[dateKey] || [];
+  const dayPlan = resolvePlanForClient(plans, client, dateKey);
+
+  const goPrev = () => {
+    setFocusDate((current) => (viewMode === 'day' ? addDays(current, -1) : addMonths(current, -1)));
+  };
+
+  const goNext = () => {
+    setFocusDate((current) => (viewMode === 'day' ? addDays(current, 1) : addMonths(current, 1)));
+  };
+
+  const goToday = () => setFocusDate(getDefaultShootDate());
+
+  const handleDayClick = (day) => {
+    setFocusDate(day);
+    setViewMode('day');
+  };
+
+  const navBtnClass = `${btnSecondaryClass} px-3 py-1.5 text-[11px] normal-case tracking-normal`;
+
+  const scheduleBody = (
+    <>
+      {viewMode === 'day' && (
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={() => setViewMode('month')}
+            className={navBtnClass}
+          >
+            ← Month calendar
+          </button>
+        </div>
+      )}
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={goPrev} className={navBtnClass}>
+            ← {viewMode === 'day' ? 'Prev day' : 'Prev month'}
+          </button>
+          <button type="button" onClick={goToday} className={navBtnClass}>
+            Today
+          </button>
+          <button type="button" onClick={goNext} className={navBtnClass}>
+            {viewMode === 'day' ? 'Next day' : 'Next month'} →
+          </button>
+        </div>
       </div>
-    ) : (
-      <div className="space-y-10">
-        {dates.map((dateKey) => (
-          <ClientShootDaySection
-            key={dateKey}
-            client={client}
-            dateKey={dateKey}
-            cards={grouped[dateKey]}
-            plan={resolvePlanForClient(plans, client, dateKey)}
-            clientColor={clientColor}
-            ideas={ideas}
+
+      {shootCards.length === 0 && viewMode === 'month' && (
+        <p className="mb-4 text-sm text-white/45">No upcoming shoots scheduled.</p>
+      )}
+
+      {viewMode === 'month' && (
+        <p className="mb-4 text-xs text-gray-500">Click a day to open your shoot schedule.</p>
+      )}
+
+      {viewMode === 'day' ? (
+        <ClientShootDaySection
+          client={client}
+          dateKey={dateKey}
+          cards={dayCards}
+          plan={dayPlan}
+          clientColor={clientColor}
+          ideas={ideas}
+        />
+      ) : (
+        <div className={`${surfacePanelClass} p-4`}>
+          <ShootDayMonthView
+            focusDate={focusDate}
+            shootsByDate={shootsByDate}
+            plans={visiblePlans}
+            onDayClick={handleDayClick}
+            getPlan={getPlan}
           />
-        ))}
-      </div>
-    );
+        </div>
+      )}
+    </>
+  );
 
   if (embedded) {
     return (
       <section>
         <ClientPortalSectionHeader
           title="Shoot Schedule"
-          description="Your upcoming shoot days with times, locations, and reference videos — the same view your production team uses."
+          description="Browse upcoming shoot days on the calendar, then open a day for times, locations, and reference videos."
         />
-        {content}
+        {scheduleBody}
       </section>
     );
   }
@@ -154,10 +230,10 @@ export default function ClientShootSchedulePortal({
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-white">Shoot Schedule</h2>
         <p className="mt-1 text-sm text-gray-400">
-          Upcoming shoot days with timeline, locations, and reference videos.
+          Browse shoot days on the calendar, then open a day for the full timeline.
         </p>
       </div>
-      {content}
+      {scheduleBody}
     </div>
   );
 }
