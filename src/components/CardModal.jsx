@@ -33,6 +33,9 @@ const CARD_TABS = [
   { id: 'references', label: 'References' },
 ];
 
+/** Text fields in the modal sync to cloud only when Done / close — not while typing. */
+const SAVE_ON_CLOSE = { deferCommit: true };
+
 export default function CardModal({
   card,
   cards = [],
@@ -57,19 +60,31 @@ export default function CardModal({
     isContentCalendarCard(card) && hasCalendarClientNote(card);
   const accountManagers = getMemberNamesForRole('Account Manager');
 
-  useEffect(() => {
-    if (pendingTabRef.current) {
-      setActiveTab(pendingTabRef.current);
-      pendingTabRef.current = null;
-    } else {
-      setActiveTab('details');
-    }
-  }, [card?.id]);
+  const pendingCardIdRef = useRef(null);
+  const pendingUpdatesRef = useRef({});
+
+  const queueUpdate = useCallback((patch) => {
+    if (!patch || typeof patch !== 'object') return;
+    pendingUpdatesRef.current = { ...pendingUpdatesRef.current, ...patch };
+  }, []);
+
+  const flushPendingUpdates = useCallback(() => {
+    const updates = pendingUpdatesRef.current;
+    const id = pendingCardIdRef.current;
+    pendingUpdatesRef.current = {};
+    if (!id || !Object.keys(updates).length) return;
+    onUpdate(id, updates, { recordUndo: false });
+  }, [onUpdate]);
 
   useEffect(() => {
+    pendingCardIdRef.current = card?.id ?? null;
+    pendingUpdatesRef.current = {};
     beginBatch();
-    return () => endBatch();
-  }, [card?.id]);
+    return () => {
+      flushPendingUpdates();
+      endBatch();
+    };
+  }, [card?.id, flushPendingUpdates]);
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -82,6 +97,15 @@ export default function CardModal({
       document.body.style.overflow = '';
     };
   }, [onClose]);
+
+  useEffect(() => {
+    if (pendingTabRef.current) {
+      setActiveTab(pendingTabRef.current);
+      pendingTabRef.current = null;
+    } else {
+      setActiveTab('details');
+    }
+  }, [card?.id]);
 
   const shootDayCards = useMemo(() => {
     if (!card?.shootDate || !needsShootSchedule(card?.contentType)) return [];
@@ -103,31 +127,26 @@ export default function CardModal({
 
   const commitTextField = useCallback(
     (field, value) => {
-      if (!card?.id) return;
-      onUpdate(card.id, { [field]: value }, { recordUndo: false });
+      queueUpdate({ [field]: value });
     },
-    [card?.id, onUpdate],
+    [queueUpdate],
   );
 
   const commitNotes = useCallback(
     (value) => {
-      if (!card?.id) return;
+      if (!card) return;
       if (card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card))) {
-        onUpdate(
-          card.id,
-          {
-            storyOccurrenceNotes: {
-              ...parseStoryOccurrenceNotes(card.storyOccurrenceNotes),
-              [card.occurrenceDate]: value,
-            },
+        queueUpdate({
+          storyOccurrenceNotes: {
+            ...parseStoryOccurrenceNotes(card.storyOccurrenceNotes),
+            [card.occurrenceDate]: value,
           },
-          { recordUndo: false },
-        );
+        });
         return;
       }
       commitTextField('notes', value);
     },
-    [card, commitTextField, onUpdate],
+    [card, commitTextField, queueUpdate],
   );
 
   const notesValue =
@@ -137,7 +156,7 @@ export default function CardModal({
 
   const commitShootTime = useCallback(
     (value) => {
-      if (!card?.id) return;
+      if (!card) return;
       const updates = { shootTime: value };
       const start = parseTimeToMinutes(value);
       const end = parseTimeToMinutes(card.shootEndTime);
@@ -145,9 +164,9 @@ export default function CardModal({
         updates.shootEndTime = getDefaultShootEndTime(value, card.contentType);
       }
       if (!value) updates.shootEndTime = '';
-      onUpdate(card.id, updates, { recordUndo: false });
+      queueUpdate(updates);
     },
-    [card, onUpdate],
+    [card, queueUpdate],
   );
 
   if (!card) return null;
@@ -332,6 +351,7 @@ export default function CardModal({
             <>
           <Field label="Task Title">
             <DebouncedField
+              {...SAVE_ON_CLOSE}
               resetKey={card.id}
               value={card.title}
               onCommit={(value) => commitTextField('title', value)}
@@ -342,6 +362,7 @@ export default function CardModal({
 
           <Field label="Video File Link">
             <DebouncedField
+              {...SAVE_ON_CLOSE}
               resetKey={card.id}
               type="url"
               value={card.dropboxLink}
@@ -475,6 +496,7 @@ export default function CardModal({
 
           <Field label={card.occurrenceDate && (hasStoryRecurrence(card) || hasStoryDailyRange(card)) ? `Notes (${occurrenceLabel})` : 'Notes'}>
             <DebouncedField
+              {...SAVE_ON_CLOSE}
               resetKey={`${card.id}:${card.occurrenceDate || ''}`}
               as="textarea"
               value={notesValue}
@@ -661,6 +683,7 @@ export default function CardModal({
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Start time">
                   <DebouncedTimeInput
+                    {...SAVE_ON_CLOSE}
                     resetKey={card.id}
                     value={card.shootTime || ''}
                     onCommit={commitShootTime}
@@ -670,6 +693,7 @@ export default function CardModal({
                 </Field>
                 <Field label="End time">
                   <DebouncedTimeInput
+                    {...SAVE_ON_CLOSE}
                     resetKey={card.id}
                     value={card.shootEndTime || ''}
                     onCommit={(value) => commitTextField('shootEndTime', value)}
@@ -680,6 +704,7 @@ export default function CardModal({
                 </Field>
                 <Field label="Models / Talent">
                   <DebouncedModelTagInput
+                    {...SAVE_ON_CLOSE}
                     resetKey={card.id}
                     value={card.shootModels || ''}
                     onCommit={(value) => commitTextField('shootModels', value)}
@@ -688,6 +713,7 @@ export default function CardModal({
                 </Field>
                 <Field label="Props & Needs">
                   <DebouncedField
+                    {...SAVE_ON_CLOSE}
                     resetKey={card.id}
                     value={card.shootNeeds}
                     onCommit={(value) => commitTextField('shootNeeds', value)}
@@ -883,6 +909,7 @@ export default function CardModal({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Reference Music">
               <DebouncedField
+                {...SAVE_ON_CLOSE}
                 resetKey={card.id}
                 type="url"
                 value={card.referenceMusic}
@@ -898,6 +925,7 @@ export default function CardModal({
             </Field>
             <Field label="Reference Video">
               <DebouncedField
+                {...SAVE_ON_CLOSE}
                 resetKey={card.id}
                 value={card.referenceVideo}
                 onCommit={(value) => commitTextField('referenceVideo', value)}

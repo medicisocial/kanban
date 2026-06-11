@@ -4,7 +4,7 @@ import ModelTagInput from './ModelTagInput';
 
 export const DEBOUNCED_FIELD_DELAY_MS = 450;
 
-function useDebouncedLocalValue(value, resetKey, delay, onCommit, flushOnUnmount = true) {
+function useDebouncedLocalValue(value, resetKey, delay, onCommit, flushOnUnmount = true, deferCommit = false) {
   const [local, setLocal] = useState(value ?? '');
   const timerRef = useRef(null);
   const localRef = useRef(local);
@@ -31,10 +31,11 @@ function useDebouncedLocalValue(value, resetKey, delay, onCommit, flushOnUnmount
   const schedule = useCallback(
     (next) => {
       setLocal(next);
+      if (deferCommit) return;
       clearTimeout(timerRef.current);
       timerRef.current = setTimeout(flush, delay);
     },
-    [delay, flush],
+    [delay, deferCommit, flush],
   );
 
   useEffect(() => {
@@ -57,9 +58,17 @@ function DebouncedField({
   delay = DEBOUNCED_FIELD_DELAY_MS,
   as = 'input',
   flushOnUnmount = true,
+  deferCommit = false,
   ...props
 }) {
-  const { local, schedule } = useDebouncedLocalValue(value, resetKey, delay, onCommit, flushOnUnmount);
+  const { local, schedule } = useDebouncedLocalValue(
+    value,
+    resetKey,
+    delay,
+    onCommit,
+    flushOnUnmount,
+    deferCommit,
+  );
 
   const handleChange = (event) => {
     schedule(event.target.value);
@@ -78,9 +87,17 @@ export function DebouncedTimeInput({
   resetKey,
   delay = DEBOUNCED_FIELD_DELAY_MS,
   flushOnUnmount = true,
+  deferCommit = false,
   ...props
 }) {
-  const { local, schedule } = useDebouncedLocalValue(value, resetKey, delay, onCommit, flushOnUnmount);
+  const { local, schedule } = useDebouncedLocalValue(
+    value,
+    resetKey,
+    delay,
+    onCommit,
+    flushOnUnmount,
+    deferCommit,
+  );
 
   return (
     <TimeInput
@@ -97,9 +114,17 @@ export function DebouncedModelTagInput({
   resetKey,
   delay = DEBOUNCED_FIELD_DELAY_MS,
   flushOnUnmount = true,
+  deferCommit = false,
   ...props
 }) {
-  const { local, schedule } = useDebouncedLocalValue(value, resetKey, delay, onCommit, flushOnUnmount);
+  const { local, schedule } = useDebouncedLocalValue(
+    value,
+    resetKey,
+    delay,
+    onCommit,
+    flushOnUnmount,
+    deferCommit,
+  );
 
   return <ModelTagInput {...props} value={local} onChange={schedule} />;
 }
