@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "check:imports": "node scripts/check-module-imports.mjs",
-    "build": "node scripts/check-module-imports.mjs && node scripts/test-sync-merge.mjs && node scripts/test-brand-asset-upload.mjs && node scripts/test-file-preview-download.mjs && node scripts/test-pdf-document.mjs && node scripts/test-calendar-staff-cards.mjs && node scripts/test-portal-brand-profile.mjs && node scripts/test-client-portal-responses.mjs && node scripts/test-company-file-pick.mjs && vite build",
+    "build": "node scripts/check-module-imports.mjs && node scripts/test-sync-merge.mjs && node scripts/test-client-records-assembly.mjs && node scripts/test-brand-asset-upload.mjs && node scripts/test-file-preview-download.mjs && node scripts/test-pdf-document.mjs && node scripts/test-calendar-staff-cards.mjs && node scripts/test-portal-brand-profile.mjs && node scripts/test-client-portal-responses.mjs && node scripts/test-company-file-pick.mjs && vite build",
     "preview": "vite preview",
     "setup:service-role": "node scripts/rotate-supabase-secret-key-playwright.mjs",
     "setup:service-role:edge": "powershell -ExecutionPolicy Bypass -File scripts/launch-edge-debug.ps1; node scripts/sync-service-role-from-edge.mjs",

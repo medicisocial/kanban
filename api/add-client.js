@@ -2,6 +2,10 @@ import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
 import { fetchRecord, isSupabaseConfigured, upsertRecord } from './_lib/supabase.mjs';
 import {
+  brandProfilePatchFromWorkspaceBrand,
+  patchBrandProfileRecord,
+} from './_lib/brandRecordStore.mjs';
+import {
   fetchClientBrandNameRow,
   isInternalClientBrandName,
   normalizeClientBrandName,
@@ -147,22 +151,18 @@ export default async function handler(req, res) {
     }
 
     const nextNames = [...names, resolvedName];
-    const nextWorkspace = {
-      ...workspace,
+    const slimWorkspace = {
       names: nextNames,
-      colors: {
-        ...(workspace.colors || {}),
-        [resolvedName]: nextColor,
-      },
+      colors: { ...(workspace.colors || {}), [resolvedName]: nextColor },
       logos: logo ? { ...(workspace.logos || {}), [resolvedName]: logo } : { ...(workspace.logos || {}) },
-      accountManagers: { ...(workspace.accountManagers || {}) },
       businessTypes: businessType
         ? { ...(workspace.businessTypes || {}), [resolvedName]: businessType }
         : { ...(workspace.businessTypes || {}) },
-      contacts: { ...(workspace.contacts || {}) },
-      socialLogins: { ...(workspace.socialLogins || {}) },
-      companyFiles: { ...(workspace.companyFiles || {}) },
-      specialMenus: { ...(workspace.specialMenus || {}) },
+      accountManagers: { ...(workspace.accountManagers || {}) },
+      removedNames: workspace.removedNames || [],
+      restoredNames: workspace.restoredNames || [],
+      contentTypeColors: workspace.contentTypeColors || {},
+      customColorPalette: workspace.customColorPalette || [],
     };
 
     await upsertClientRecordOnServer(resolvedOrgId, resolvedName, {
@@ -170,7 +170,25 @@ export default async function handler(req, res) {
       logo,
       businessType,
     });
-    await upsertRecord('clients', 'workspace', nextWorkspace, resolvedOrgId);
+
+    await patchBrandProfileRecord(
+      resolvedOrgId,
+      resolvedName,
+      brandProfilePatchFromWorkspaceBrand(resolvedName, slimWorkspace),
+    );
+
+    await upsertRecord(
+      'clients',
+      'workspace',
+      {
+        names: nextNames,
+        removedNames: slimWorkspace.removedNames,
+        restoredNames: slimWorkspace.restoredNames,
+        contentTypeColors: slimWorkspace.contentTypeColors,
+        customColorPalette: slimWorkspace.customColorPalette,
+      },
+      resolvedOrgId,
+    );
 
     return res.status(200).json({
       ok: true,
@@ -179,9 +197,9 @@ export default async function handler(req, res) {
       alreadyInWorkspace: false,
       clientsPatch: {
         names: nextNames,
-        colors: nextWorkspace.colors,
-        logos: nextWorkspace.logos,
-        businessTypes: nextWorkspace.businessTypes,
+        colors: slimWorkspace.colors,
+        logos: slimWorkspace.logos,
+        businessTypes: slimWorkspace.businessTypes,
       },
     });
   } catch (error) {

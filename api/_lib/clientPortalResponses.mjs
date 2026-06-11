@@ -5,7 +5,7 @@ import {
 import { normalizeClientContacts, mergeClientSocialLogins } from './clientProfile.mjs';
 import { normalizeClientCompanyFiles } from './clientCompanyFiles.mjs';
 import { normalizeClientSpecialMenus } from './clientSpecialMenus.mjs';
-import { applyAuthoritativeBrandAssets } from './clientsWorkspaceMerge.mjs';
+import { patchBrandProfileRecord } from './brandRecordStore.mjs';
 import {
   brandKeysMatch,
   resolveBrandStorageKey,
@@ -219,50 +219,34 @@ export async function handleProfilePortalResponse(orgId, sessionBrand, profile =
 
   const workspace = (await fetchRecord('clients', 'workspace', orgId)) || {};
   const brandKey = resolveWorkspaceBrandKey(sessionBrand, workspace);
+  const displayName = resolvePortalBrandDisplayNameFromStore(sessionBrand, workspace) || brandKey;
   const businessType = workspace.businessTypes?.[brandKey] || '';
-  const nextWorkspace = { ...workspace };
+  const patch = { displayName };
 
   if (profile.contacts) {
-    nextWorkspace.contacts = {
-      ...(workspace.contacts || {}),
-      [brandKey]: normalizeClientContacts(profile.contacts),
-    };
+    patch.contacts = normalizeClientContacts(profile.contacts);
   }
 
   if (profile.socialLogins) {
-    nextWorkspace.socialLogins = {
-      ...(workspace.socialLogins || {}),
-      [brandKey]: mergeClientSocialLogins(workspace.socialLogins?.[brandKey], profile.socialLogins),
-    };
+    patch.socialLogins = mergeClientSocialLogins(
+      workspace.socialLogins?.[brandKey],
+      profile.socialLogins,
+    );
   }
 
   if (profile.companyFiles !== undefined) {
-    nextWorkspace.companyFiles = {
-      ...(workspace.companyFiles || {}),
-      [brandKey]: normalizeClientCompanyFiles(profile.companyFiles, businessType),
-    };
+    patch.companyFiles = normalizeClientCompanyFiles(profile.companyFiles, businessType);
   }
 
   if (profile.specialMenus !== undefined) {
-    nextWorkspace.specialMenus = {
-      ...(workspace.specialMenus || {}),
-      [brandKey]: normalizeClientSpecialMenus(profile.specialMenus),
-    };
+    patch.specialMenus = normalizeClientSpecialMenus(profile.specialMenus);
   }
 
   if (profile.photoGalleryLink !== undefined) {
-    nextWorkspace.photoGalleryLinks = {
-      ...(workspace.photoGalleryLinks || {}),
-      [brandKey]: String(profile.photoGalleryLink || '').trim(),
-    };
+    patch.photoGalleryLink = String(profile.photoGalleryLink || '').trim();
   }
 
-  const merged = applyAuthoritativeBrandAssets(nextWorkspace, {
-    companyFilesByBrand: nextWorkspace.companyFiles,
-    specialMenusByBrand: nextWorkspace.specialMenus,
-  });
-
-  await upsertRecord('clients', 'workspace', merged, orgId);
+  await patchBrandProfileRecord(orgId, brandKey, patch);
   return { ok: true };
 }
 

@@ -2,7 +2,9 @@ import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs
 import {
   deleteRecords,
   fetchSyncRows,
+  getSupabaseUrl,
   isSupabaseConfigured,
+  resolveAuthReadKey,
   upsertRecords,
 } from './_lib/supabase.mjs';
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
@@ -86,6 +88,20 @@ async function isAuthorized(req) {
   return safeVerifySupabaseToken(token);
 }
 
+async function fetchClientRecordRows(orgId) {
+  const url = getSupabaseUrl();
+  const key = resolveAuthReadKey();
+  if (!url || !key) return [];
+
+  const endpoint =
+    `${url}/rest/v1/client_records?select=id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,updated_at&org_id=eq.${encodeURIComponent(orgId)}`;
+  const response = await fetch(endpoint, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
+  if (!response.ok) return [];
+  return response.json();
+}
+
 export default async function handler(req, res) {
   if (!(await isAuthorized(req))) {
     return unauthorized(res, 'Unauthorized');
@@ -107,7 +123,10 @@ export default async function handler(req, res) {
     }
 
     try {
-      const rows = await fetchSyncRows(table, orgCheck.orgId);
+      const rows =
+        table === 'client_records'
+          ? await fetchClientRecordRows(orgCheck.orgId)
+          : await fetchSyncRows(table, orgCheck.orgId);
       return ok(res, { rows: rows || [] });
     } catch (error) {
       console.error('[staff-sync] fetch failed:', error?.message || error);

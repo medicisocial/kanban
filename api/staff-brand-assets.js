@@ -1,7 +1,7 @@
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
-import { fetchRecord, getSupabaseUrl, isSupabaseConfigured, upsertRecord } from './_lib/supabase.mjs';
-import { applyAuthoritativeBrandAssets } from './_lib/clientsWorkspaceMerge.mjs';
+import { fetchRecord, isSupabaseConfigured, upsertRecord } from './_lib/supabase.mjs';
+import { patchBrandProfileRecord } from './_lib/brandRecordStore.mjs';
 import { normalizeClientCompanyFiles } from './_lib/clientCompanyFiles.mjs';
 import { normalizeClientSpecialMenus } from './_lib/clientSpecialMenus.mjs';
 
@@ -74,73 +74,31 @@ export default async function handler(req, res) {
   const resolvedOrgId = orgCheck.orgId;
 
   try {
+    const brandKey = String(brand).trim().toLowerCase();
     const workspace = (await fetchRecord('clients', 'workspace', resolvedOrgId)) || {};
     const businessType = workspace.businessTypes?.[brand] || '';
-    const patch = {};
+    const patch = { displayName: brand };
 
     if (companyFiles !== undefined) {
       if (!Array.isArray(companyFiles)) {
         return res.status(400).json({ error: 'companyFiles must be an array.' });
       }
-      patch.companyFiles = {
-        ...(workspace.companyFiles || {}),
-        [brand]: normalizeClientCompanyFiles(companyFiles, businessType),
-      };
+      patch.companyFiles = normalizeClientCompanyFiles(companyFiles, businessType);
     }
 
     if (specialMenus !== undefined) {
       if (!Array.isArray(specialMenus)) {
         return res.status(400).json({ error: 'specialMenus must be an array.' });
       }
-      patch.specialMenus = {
-        ...(workspace.specialMenus || {}),
-        [brand]: normalizeClientSpecialMenus(specialMenus),
-      };
+      patch.specialMenus = normalizeClientSpecialMenus(specialMenus);
     }
 
-    const nextWorkspace = applyAuthoritativeBrandAssets(workspace, {
-      companyFilesByBrand: patch.companyFiles,
-      specialMenusByBrand: patch.specialMenus,
-    });
-    // Legacy `clients` blob write has been removed — triggers keep it in sync during transition.
-    // Write to the new normalized client_records typed columns.
-    const brandKey = String(brand).trim().toLowerCase();
-    const baseUrl = getSupabaseUrl();
-    const apiKey = (
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.SUPABASE_ANON_KEY ||
-      process.env.VITE_SUPABASE_ANON_KEY ||
-      ''
-    ).trim();
-    if (baseUrl && apiKey && brandKey) {
-      const headers = {
-        apikey: apiKey,
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates,return=minimal',
-      };
-      const payload = {};
-      if (companyFiles !== undefined) {
-        payload.company_files = nextWorkspace.companyFiles?.[brand] || [];
-      }
-      if (specialMenus !== undefined) {
-        payload.special_menus = nextWorkspace.specialMenus?.[brand] || [];
-      }
-      if (Object.keys(payload).length > 0) {
-        payload.org_id = resolvedOrgId;
-        payload.brand_key = brandKey;
-        await fetch(`${baseUrl}/rest/v1/client_records`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify([payload]),
-        }).catch((e) => console.warn('[staff-brand-assets] client_records sync error:', e?.message || e));
-      }
-    }
+    await patchBrandProfileRecord(resolvedOrgId, brandKey, patch);
 
     return res.status(200).json({
       ok: true,
-      companyFiles: patch.companyFiles?.[brand],
-      specialMenus: patch.specialMenus?.[brand],
+      companyFiles: patch.companyFiles,
+      specialMenus: patch.specialMenus,
     });
   } catch (error) {
     console.error('[staff-brand-assets] failed:', error?.message || error);

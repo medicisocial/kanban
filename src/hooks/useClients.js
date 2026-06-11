@@ -41,6 +41,7 @@ import {
 } from '../utils/clientPortalPasswordVault';
 import { saveStaffBrandAssets } from '../utils/staffBrandAssetsApi';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
+import { useClientRecordsSync } from './useClientRecordsSync';
 
 function loadLegacyPortalPasswordVault() {
   try {
@@ -198,6 +199,17 @@ export function useClients() {
     setValue: (next) => setState(normalizeClientsState(next, { includeDefaults })),
     loadLocal: loadClientsForSync,
     recordId: 'workspace',
+  });
+
+  useClientRecordsSync({
+    workspaceState: state,
+    setWorkspaceState: (updater) => {
+      setState((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater;
+        return normalizeClientsState(next, { includeDefaults });
+      });
+    },
+    orgReady: Boolean(orgId),
   });
 
   // Debounce localStorage writes to avoid thrashing during rapid edits.

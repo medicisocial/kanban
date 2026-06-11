@@ -1,5 +1,5 @@
 import { findTeamMember, verifyTeamMemberPassword } from './_lib/teamAuth.mjs';
-import { canUseSupabaseForAuth, fetchRowsAcrossOrgs } from './_lib/supabase.mjs';
+import { canUseSupabaseForAuth, fetchRowsAcrossOrgs, getSupabaseUrl, resolveAuthReadKey } from './_lib/supabase.mjs';
 import { checkRateLimit, rateLimitKeyFromRequest } from './_lib/rateLimit.mjs';
 import {
   badRequest,
@@ -14,6 +14,19 @@ import {
 const TEAM_STORAGE_KEY = 'medici-social-team';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+async function fetchStaffAccountRows() {
+  const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const key = serviceRole || resolveAuthReadKey();
+  const url = getSupabaseUrl();
+  if (!url || !key) return null;
+
+  const response = await fetch(`${url}/rest/v1/staff_accounts?select=member_id,org_id,username,email,password,name,roles`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
+  if (!response.ok) return null;
+  return response.json();
+}
+
 /**
  * Load team members across all orgs via Supabase.
  */
@@ -23,6 +36,27 @@ async function resolveTeamLogin(username) {
   }
 
   try {
+    const staffRows = await fetchStaffAccountRows();
+    if (staffRows?.length) {
+      const key = username.trim().toLowerCase();
+      for (const row of staffRows) {
+        const member = {
+          id: row.member_id,
+          username: row.username,
+          email: row.email,
+          password: row.password,
+          name: row.name,
+          roles: Array.isArray(row.roles) ? row.roles : [],
+        };
+        if (
+          member.username?.trim().toLowerCase() === key ||
+          member.email?.trim().toLowerCase() === key
+        ) {
+          return { member, orgId: row.org_id };
+        }
+      }
+    }
+
     const rows = await fetchRowsAcrossOrgs('team_members');
     if (rows) {
       for (const row of rows) {

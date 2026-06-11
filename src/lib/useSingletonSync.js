@@ -27,6 +27,10 @@ import {
   mergeClientsWorkspaceFileMap,
   mergeClientsWorkspaceNames,
 } from '../utils/clientsWorkspaceMerge';
+import {
+  mergeSlimClientsWorkspace,
+  slimClientsWorkspaceForCloudPush,
+} from '../utils/clientsWorkspacePush';
 
 /**
  * Key-order-stable JSON so the redundant-write guard compares by *content*.
@@ -308,30 +312,37 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
               syncedParsed = null;
             }
 
-            dataToWrite = mergeClientsWorkspaceData(existing, value);
-            if (Array.isArray(value?.names) || Array.isArray(existing?.names)) {
-              dataToWrite.names = mergeClientsWorkspaceNames(
-                existing?.names,
-                value?.names,
-                syncedParsed?.names,
-              );
-            }
+            if (SUPABASE_ENABLED) {
+              const slimIncoming = slimClientsWorkspaceForCloudPush(value);
+              const slimExisting = slimClientsWorkspaceForCloudPush(existing);
+              const slimSynced = syncedParsed ? slimClientsWorkspaceForCloudPush(syncedParsed) : null;
+              dataToWrite = mergeSlimClientsWorkspace(slimExisting, slimIncoming, slimSynced);
+            } else {
+              dataToWrite = mergeClientsWorkspaceData(existing, value);
+              if (Array.isArray(value?.names) || Array.isArray(existing?.names)) {
+                dataToWrite.names = mergeClientsWorkspaceNames(
+                  existing?.names,
+                  value?.names,
+                  syncedParsed?.names,
+                );
+              }
 
-            if (value?.companyFiles) {
-              dataToWrite.companyFiles = mergeClientsWorkspaceFileMap(
-                existing?.companyFiles,
-                value?.companyFiles,
-                syncedParsed?.companyFiles ?? existing?.companyFiles,
-                mergeBrandCompanyFiles,
-              );
-            }
-            if (value?.specialMenus) {
-              dataToWrite.specialMenus = mergeClientsWorkspaceFileMap(
-                existing?.specialMenus,
-                value?.specialMenus,
-                syncedParsed?.specialMenus ?? existing?.specialMenus,
-                mergeBrandSpecialMenus,
-              );
+              if (value?.companyFiles) {
+                dataToWrite.companyFiles = mergeClientsWorkspaceFileMap(
+                  existing?.companyFiles,
+                  value?.companyFiles,
+                  syncedParsed?.companyFiles ?? existing?.companyFiles,
+                  mergeBrandCompanyFiles,
+                );
+              }
+              if (value?.specialMenus) {
+                dataToWrite.specialMenus = mergeClientsWorkspaceFileMap(
+                  existing?.specialMenus,
+                  value?.specialMenus,
+                  syncedParsed?.specialMenus ?? existing?.specialMenus,
+                  mergeBrandSpecialMenus,
+                );
+              }
             }
           } catch (mergeErr) {
             console.warn(`[supabase:${table}] merge-before-write failed:`, mergeErr?.message || mergeErr);

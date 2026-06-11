@@ -3,6 +3,7 @@ import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
 import {
   fetchCollectionMap,
   fetchRecord,
+  getPortalPasswordVault,
   isSupabaseConfigured,
   upsertRecord,
 } from './_lib/supabase.mjs';
@@ -48,9 +49,24 @@ export default async function handler(req, res) {
       fetchRecord('clients', 'workspace', orgId),
     ]);
 
-    const vault = clientsWorkspace?.portalPasswordVault || {};
-    const nextMap = { ...(credentialMap || {}) };
+    const vault = {};
     const clientNames = Array.isArray(clientsWorkspace?.names) ? clientsWorkspace.names : [];
+    for (const brand of clientNames) {
+      if (!brand || String(brand).startsWith('__')) continue;
+      try {
+        const brandVault = await getPortalPasswordVault(brand, orgId);
+        if (brandVault && typeof brandVault === 'object' && Object.keys(brandVault).length) {
+          vault[brand] = brandVault;
+        }
+      } catch {
+        /* fall back to legacy blob below */
+      }
+    }
+    const legacyVault = clientsWorkspace?.portalPasswordVault || {};
+    for (const [brand, brandVault] of Object.entries(legacyVault)) {
+      vault[brand] = { ...(vault[brand] || {}), ...(brandVault || {}) };
+    }
+    const nextMap = { ...(credentialMap || {}) };
     const brands = new Set([
       ...clientNames.filter((name) => name && !String(name).startsWith('__')),
       ...Object.keys(vault),

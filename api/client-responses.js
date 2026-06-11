@@ -7,20 +7,16 @@ import {
   mergeClientPortalAuth,
 } from './_lib/clientPortalAuth.mjs';
 import { normalizeClientContacts, mergeClientSocialLogins } from './_lib/clientProfile.mjs';
-import { normalizeClientCompanyFiles } from './_lib/clientCompanyFiles.mjs';
-import { normalizeClientSpecialMenus } from './_lib/clientSpecialMenus.mjs';
 import {
   buildCalendarNoteUpdates,
   buildCalendarNoteDeleteUpdates,
-  isPortalContentCalendarCard,
 } from './_lib/calendarNote.mjs';
 import { handleClientPortalResponse } from './_lib/clientPortalResponses.mjs';
+import { patchBrandProfileRecord } from './_lib/brandRecordStore.mjs';
 import {
   canUseSupabaseForAuth,
-  fetchCollection,
   fetchCollectionMap,
   fetchRecord,
-  fetchSyncRows,
   isSupabaseConfigured,
   upsertRecord,
 } from './_lib/supabase.mjs';
@@ -55,69 +51,50 @@ export default async function handler(req, res) {
     if (!isClientSessionValid(session)) return unauthorized(res);
     if (!isSupabaseConfigured()) return unavailable(res);
 
-    const { orgId, brand, username } = session;
+    const { orgId, brand } = session;
     const body = req.body || {};
 
     try {
-      const workspace = await fetchRecord('clients', 'workspace', orgId);
-      const data = normalizeData(workspace);
-      const contacts = data.contacts || {};
-      const socialLogins = data.socialLogins || {};
-      const ideas = data.ideas || {};
-
-      const updatedWorkspace = { ...data };
-
-      if (body.idea) {
-        const brandIdeas = Array.isArray(ideas[brand]) ? [...ideas[brand]] : [];
-        const existingIndex = brandIdeas.findIndex((i) => i.id === body.idea.id);
-        if (existingIndex >= 0) {
-          brandIdeas[existingIndex] = { ...brandIdeas[existingIndex], ...body.idea };
-        } else {
-          brandIdeas.push(body.idea);
-        }
-        updatedWorkspace.ideas = { ...ideas, [brand]: brandIdeas };
+      if (body.idea?.id) {
+        const idea = {
+          ...body.idea,
+          client: body.idea.client || brand,
+          status: body.idea.status || 'pending',
+          createdAt: body.idea.createdAt || Date.now(),
+        };
+        await upsertRecord('video_ideas', idea.id, idea, orgId);
       }
 
+      const profilePatch = { displayName: brand };
       if (body.contacts) {
-        updatedWorkspace.contacts = {
-          ...contacts,
-          [brand]: normalizeClientContacts(body.contacts),
-        };
+        profilePatch.contacts = normalizeClientContacts(body.contacts);
       }
-
       if (body.socialLogins) {
-        updatedWorkspace.socialLogins = {
-          ...socialLogins,
-          [brand]: mergeClientSocialLogins(socialLogins[brand], body.socialLogins),
-        };
+        profilePatch.socialLogins = mergeClientSocialLogins({}, body.socialLogins);
+      }
+      if (body.contacts || body.socialLogins) {
+        await patchBrandProfileRecord(orgId, brand, profilePatch);
       }
 
       if (body.myNotes && body.cardId) {
-        const updatedNotes = buildCalendarNoteUpdates(data, {
-          brand,
-          cardId: body.cardId,
-          note: body.myNotes,
-          username,
-          orgId,
-        });
-        if (updatedNotes) {
-          updatedWorkspace.notes = updatedWorkspace.notes || {};
-          updatedWorkspace.notes[brand] = updatedNotes;
+        const card = await fetchRecord('cards', body.cardId, orgId);
+        if (card) {
+          const updates = buildCalendarNoteUpdates(card, {
+            comment: body.myNotes,
+            timestamp: Date.now(),
+          });
+          await upsertRecord('cards', body.cardId, { ...card, ...updates }, orgId);
         }
       }
 
-      if (body.deletedNoteIds?.length) {
-        const deletedNotes = buildCalendarNoteDeleteUpdates(data, {
-          brand,
-          deleteIds: body.deletedNoteIds,
-        });
-        if (deletedNotes) {
-          updatedWorkspace.notes = updatedWorkspace.notes || {};
-          updatedWorkspace.notes[brand] = deletedNotes;
+      if (body.deletedNoteIds?.length && body.cardId) {
+        const card = await fetchRecord('cards', body.cardId, orgId);
+        if (card) {
+          const updates = buildCalendarNoteDeleteUpdates(card, { timestamp: Date.now() });
+          await upsertRecord('cards', body.cardId, { ...card, ...updates }, orgId);
         }
       }
 
-      await upsertRecord('clients', 'workspace', updatedWorkspace, orgId);
       return res.status(200).json({ ok: true });
     } catch (error) {
       console.error('[client-responses] PUT failed:', error?.message || error);
