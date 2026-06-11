@@ -1,64 +1,94 @@
 import { useMemo } from 'react';
-import { getContentTypeStyle } from '../constants';
 import {
   getClientShootCards,
   resolveShootCardReferenceVideo,
   stripInternalCardsForClientPortal,
 } from '../utils/clientPortalAuth';
 import { clientMatchesBrand } from '../utils/clients';
-import { formatTime } from '../utils';
-import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
-import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
-import ShootLocationLink from './ShootLocationLink';
 import {
-  glassInsetClass,
-  statusBadgeClass,
-  statusDotClass,
-  surfacePanelClass,
-} from './clientPortal/clientPortalUi';
+  buildShootTimeline,
+  formatShootDayLabel,
+  getShootDayTitle,
+  getShootPlanKey,
+  parseDateKey,
+  sortCardsByShootTime,
+} from '../utils/shootDay';
+import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
+import ShootLocationLink from './ShootLocationLink';
+import ShootDayTimeline from './ShootDayTimeline';
+import { surfacePanelClass } from './clientPortal/clientPortalUi';
 
-function ShootScheduleCard({ card, ideas }) {
-  const referenceVideo = resolveShootCardReferenceVideo(card, ideas);
-  const typeStyle = getContentTypeStyle(card.contentType);
-
+function resolvePlanForClient(plans, client, dateKey) {
+  const direct = plans?.[getShootPlanKey(client, dateKey)];
+  if (direct) return direct;
   return (
-    <article
-      className={`${glassInsetClass} mb-2 p-3 transition-colors last:mb-0 hover:border-white/12`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <p
-          className="text-[10px] font-medium uppercase tracking-wider"
-          style={{ color: typeStyle.border }}
-        >
-          {card.contentType}
-        </p>
-        <span className={statusBadgeClass('scheduled')}>
-          <span className={statusDotClass('scheduled')} />
-          Shoot
-        </span>
-      </div>
-      <h4 className="mt-1.5 text-sm font-medium text-white">{card.title}</h4>
-      {card.shootTime && (
-        <p className="mt-1 text-[11px] tabular-nums text-white/45">{formatTime(card.shootTime)}</p>
-      )}
-      {card.shootModels && (
-        <p className="mt-1 text-[11px] text-white/45">Talent: {card.shootModels}</p>
-      )}
-      {referenceVideo ? (
-        <p className="mt-1.5">
-          <ReferenceVideoLink url={referenceVideo} compact />
-        </p>
-      ) : null}
-    </article>
+    Object.values(plans || {}).find(
+      (entry) => clientMatchesBrand(entry?.client, client) && entry?.dateKey === dateKey,
+    ) || {}
   );
 }
 
-function formatShootDayTitle(dateKey) {
-  return new Date(`${dateKey}T12:00:00`).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
+function enrichShootCardsForPortal(cards, ideas) {
+  return cards.map((card) => {
+    const referenceVideo = resolveShootCardReferenceVideo(card, ideas);
+    if (!referenceVideo || referenceVideo === card.referenceVideo) return card;
+    return { ...card, referenceVideo };
   });
+}
+
+function ClientShootDaySection({ client, dateKey, cards, plan, clientColor, ideas }) {
+  const enrichedCards = useMemo(
+    () => enrichShootCardsForPortal(sortCardsByShootTime(cards), ideas),
+    [cards, ideas],
+  );
+  const timeline = useMemo(() => buildShootTimeline(enrichedCards), [enrichedCards]);
+  const focusDate = parseDateKey(dateKey);
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-white/5 bg-[#111111]">
+      <header className="border-b border-white/5 px-4 py-4 sm:px-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold text-white">{getShootDayTitle(plan, client)}</h3>
+            <p className="text-xs text-gray-500">
+              <span style={{ color: clientColor }}>{client}</span>
+              {' · '}
+              {formatShootDayLabel(focusDate)}
+              {' · '}
+              {enrichedCards.length} item{enrichedCards.length === 1 ? '' : 's'}
+              {timeline.length > 0 &&
+                ` · ${timeline.length} timed slot${timeline.length === 1 ? '' : 's'}`}
+            </p>
+            {plan?.location?.trim() && (
+              <p className="mt-2 text-xs">
+                <ShootLocationLink location={plan.location} showIcon />
+              </p>
+            )}
+          </div>
+          <span
+            className="rounded-full px-3 py-1 text-xs font-semibold"
+            style={{ backgroundColor: `${clientColor}22`, color: clientColor }}
+          >
+            {enrichedCards.length}
+          </span>
+        </div>
+      </header>
+
+      <div className="p-4 sm:p-5">
+        {enrichedCards.length === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-500">No content scheduled for this shoot.</p>
+        ) : (
+          <ShootDayTimeline
+            entries={timeline}
+            plan={plan}
+            allCards={enrichedCards}
+            client={client}
+            dateKey={dateKey}
+          />
+        )}
+      </div>
+    </section>
+  );
 }
 
 export default function ClientShootSchedulePortal({
@@ -66,6 +96,7 @@ export default function ClientShootSchedulePortal({
   cards,
   ideas = [],
   plans,
+  clientColor,
   embedded = false,
   upcomingOnly = true,
 }) {
@@ -91,45 +122,18 @@ export default function ClientShootSchedulePortal({
         <p className="text-sm text-white/45">No upcoming shoots scheduled.</p>
       </div>
     ) : (
-      <div className="kanban-board-scroll flex w-full overflow-x-auto overscroll-x-contain pb-2 md:-mx-8 md:scroll-px-8 md:px-8 lg:-mx-10 lg:scroll-px-10 lg:px-10">
-        <div className="flex w-max gap-3 px-1">
-          {dates.map((dateKey) => {
-            const dayCards = grouped[dateKey];
-            const plan = Object.values(plans || {}).find(
-              (entry) => clientMatchesBrand(entry?.client, client) && entry?.dateKey === dateKey,
-            );
-
-            return (
-              <section key={dateKey} className="kanban-stage glass-surface flex flex-col">
-                <div className="kanban-stage-header">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className={statusDotClass('scheduled')} />
-                    <h3 className="kanban-stage-title">{formatShootDayTitle(dateKey)}</h3>
-                  </div>
-                  <span className="text-xs font-semibold tabular-nums text-white/40">
-                    {dayCards.length}
-                  </span>
-                </div>
-                {plan?.location && (
-                  <p className="mb-2 text-[11px] leading-snug text-white/45">
-                    Location:{' '}
-                    <ShootLocationLink
-                      location={plan.location}
-                      linkClassName="text-[#c88] underline-offset-2 hover:underline"
-                    />
-                  </p>
-                )}
-                <div className="kanban-stage-columns kanban-stage-columns-solo">
-                  <div className="kanban-column-cards">
-                    {dayCards.map((card) => (
-                      <ShootScheduleCard key={card.id} card={card} ideas={ideas} />
-                    ))}
-                  </div>
-                </div>
-              </section>
-            );
-          })}
-        </div>
+      <div className="space-y-10">
+        {dates.map((dateKey) => (
+          <ClientShootDaySection
+            key={dateKey}
+            client={client}
+            dateKey={dateKey}
+            cards={grouped[dateKey]}
+            plan={resolvePlanForClient(plans, client, dateKey)}
+            clientColor={clientColor}
+            ideas={ideas}
+          />
+        ))}
       </div>
     );
 
@@ -138,7 +142,7 @@ export default function ClientShootSchedulePortal({
       <section>
         <ClientPortalSectionHeader
           title="Shoot Schedule"
-          description="Upcoming scheduled shoots, locations, and reference videos for each reel."
+          description="Your upcoming shoot days with times, locations, and reference videos — the same view your production team uses."
         />
         {content}
       </section>
@@ -146,11 +150,11 @@ export default function ClientShootSchedulePortal({
   }
 
   return (
-    <div className="mx-auto max-w-[900px] px-4 py-6 sm:px-6">
+    <div className="mx-auto max-w-[1200px] px-4 py-6 sm:px-6">
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-white">Shoot schedule</h2>
+        <h2 className="text-xl font-semibold text-white">Shoot Schedule</h2>
         <p className="mt-1 text-sm text-gray-400">
-          Upcoming scheduled shoots and reference videos for each reel.
+          Upcoming shoot days with timeline, locations, and reference videos.
         </p>
       </div>
       {content}
