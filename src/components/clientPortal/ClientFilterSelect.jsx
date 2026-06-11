@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useClientsContext } from '../../context/ClientsContext';
+import { sortClientNamesAlphabetically } from '../../utils/clients';
 
 function FilterChevron({ open }) {
   return (
@@ -77,7 +78,7 @@ export default function ClientFilterSelect({ value, onChange }) {
   };
 
   const options = [{ id: 'all', label: 'All clients', color: 'rgba(255, 255, 255, 0.42)' }].concat(
-    clients.map((client) => ({
+    sortClientNamesAlphabetically(clients).map((client) => ({
       id: client,
       label: client,
       color: getClientColor(client),

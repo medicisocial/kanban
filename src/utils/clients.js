@@ -68,6 +68,14 @@ export function mergeDefaultClients(names, defaults) {
   return merged;
 }
 
+export function sortClientNamesAlphabetically(names = []) {
+  return [...names].sort((a, b) =>
+    normalizeClientName(a).localeCompare(normalizeClientName(b), undefined, { sensitivity: 'base' }),
+  );
+}
+
 export function getClientPortalBrands(clients, internalClient) {
-  return clients.filter((client) => client !== internalClient);
+  return sortClientNamesAlphabetically(
+    clients.filter((client) => client !== internalClient),
+  );
 }
