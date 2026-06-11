@@ -452,7 +452,7 @@ export default function AccountManagerTodo({
         <div className="mx-auto grid max-w-[2200px] grid-cols-1 gap-4 lg:min-w-[920px] lg:grid-cols-4 lg:items-start">
         <PortalTaskSection
           title="Set post date"
-          subtitle="Pipeline cards missing a target publish date."
+          subtitle="To Create and Editing cards (plus review stages) missing a target publish date."
           action={
             <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-xs text-violet-200">
               {orderedSetPostDateTasks.length}

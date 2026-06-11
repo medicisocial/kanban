@@ -1070,7 +1070,7 @@ export default function AppShell({ onSignOut }) {
 
       {activeView === "todo" && (
         <CompanyTasks
-          cards={workspaceCards}
+          cards={cards}
           adminTasks={workspaceAdminTasks}
           clientFilter={clientFilter}
           embedded

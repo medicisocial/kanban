@@ -18,12 +18,16 @@ const COLUMN_SORT_ORDER = {
   finished: 6,
 };
 
+/** Pipeline stages where account managers still plan publish dates (incl. after handoff to Editing). */
+export const POST_DATE_TASK_COLUMN_IDS = ['shoot', 'editing', 'not-approved', 'in-review'];
+
 export function cardNeedsPostDate(card) {
   if (card.isOneOffProject || card.contentType === 'One-off Project') return false;
   if (!isScheduledPostType(card.contentType)) return false;
-  if (card.dueDate) return false;
+  if (String(card.dueDate || '').trim()) return false;
   if (card.postedAt) return false;
   if (card.columnId === 'finished') return false;
+  if (!POST_DATE_TASK_COLUMN_IDS.includes(card.columnId)) return false;
   return true;
 }
 
