@@ -63,7 +63,11 @@ import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
 import { buildWorkspaceHomeSummary, buildNavBadgeCounts } from "../utils/workspaceHome";
 import { useStaffWorkspaceScope } from "../hooks/useStaffWorkspaceScope";
 import { scopeAdminTasksForStaff, scopeCardsForStaff } from "../utils/staffWorkspaceScope";
-import { canReturnCardToVault, findIdeaBoardCard, getVaultIdeas } from "../utils/videoIdeas";
+import {
+  findIdeaBoardCard,
+  findIdeaForCard,
+  getVaultIdeas,
+} from "../utils/videoIdeas";
 
 export default function AppShell({ onSignOut }) {
   const importData = parseImportParam();
@@ -438,8 +442,8 @@ export default function AppShell({ onSignOut }) {
 
   const handleReturnCardToVault = useCallback(
     (card) => {
-      if (!canReturnCardToVault(card)) return;
-      const idea = ideas.find((entry) => entry.id === card.sourceIdeaId);
+      const idea = findIdeaForCard(card, ideas);
+      if (!idea) return;
       const label = idea?.title || card.title || "this reel";
       if (
         !window.confirm(
@@ -451,7 +455,7 @@ export default function AppShell({ onSignOut }) {
       beginBatch();
       try {
         deleteCard(card.id);
-        if (idea) updateIdea(idea.id, { boardCardId: null });
+        updateIdea(idea.id, { boardCardId: null });
         if (selectedCard?.id === card.id) setSelectedCard(null);
       } finally {
         endBatch();
@@ -1080,6 +1084,7 @@ export default function AppShell({ onSignOut }) {
         <section>
           <KanbanBoard
             cards={cards}
+            ideas={ideas}
             onAddCard={(columnId, { client } = {}) => {
               const resolvedClient = client ?? (clientFilter !== 'all' ? clientFilter : undefined);
               const newCard = addCard(columnId, { client: resolvedClient });
@@ -1130,6 +1135,7 @@ export default function AppShell({ onSignOut }) {
       {activeView === "todo" && (
         <CompanyTasks
           cards={cards}
+          ideas={ideas}
           adminTasks={workspaceAdminTasks}
           clientFilter={clientFilter}
           embedded
@@ -1149,6 +1155,7 @@ export default function AppShell({ onSignOut }) {
           onSendBackForEditing={handleSendBackForEditing}
           onMoveTask={handleMoveEditorTask}
           onHandoff={handleHandoffRequest}
+          onReturnToVault={handleReturnCardToVault}
           onNavigate={handleNavigate}
           onPlanPostDate={setPlanDateCard}
         />
@@ -1157,6 +1164,7 @@ export default function AppShell({ onSignOut }) {
       {activeView === "shoot" && (
         <ShootDay
           cards={cards}
+          ideas={ideas}
           clientFilter={clientFilter}
           plans={plans}
           focusRequest={shootFocus}
@@ -1204,6 +1212,7 @@ export default function AppShell({ onSignOut }) {
         <CardModal
           card={selectedCard}
           cards={cards}
+          ideas={ideas}
           plans={plans}
           onClose={() => setSelectedCard(null)}
           onUpdate={handleUpdate}

@@ -4,6 +4,7 @@ import KanbanCard from './KanbanCard';
 export default function KanbanColumn({
   column,
   cards,
+  ideas = [],
   onAddCard,
   onCardClick,
   onDeleteCard,
@@ -47,6 +48,7 @@ export default function KanbanColumn({
           <KanbanCard
             key={card.id}
             card={card}
+            ideas={ideas}
             onClick={onCardClick}
             onDelete={onDeleteCard}
             onReturnToVault={column.id === 'shoot' ? onReturnToVault : undefined}

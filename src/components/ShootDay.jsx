@@ -24,6 +24,7 @@ import { btnPrimaryClass, btnSecondaryClass, inputClass, surfacePanelClass, glas
 
 export default function ShootDay({
   cards,
+  ideas = [],
   clientFilter,
   plans,
   onCardClick,
@@ -234,6 +235,7 @@ export default function ShootDay({
               shootCount={shootCards.length}
               hasShootDay={hasShootDay}
               cards={cards}
+              ideas={ideas}
               onCardClick={onCardClick}
               onUpdateCard={onUpdateCard}
               onAddShootDay={() => setShootModal({ mode: 'day' })}

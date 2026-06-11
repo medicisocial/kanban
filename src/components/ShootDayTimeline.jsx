@@ -21,6 +21,7 @@ export default function ShootDayTimeline({
   entries,
   plan,
   allCards = [],
+  ideas = [],
   client,
   dateKey,
   onUpdateCard,
@@ -234,7 +235,7 @@ export default function ShootDayTimeline({
                         <span>{entry.card.shootScript ? 'View script' : 'Write script'}</span>
                       </button>
                     )}
-                    {onReturnToVault && canReturnCardToVault(entry.card) && (
+                    {onReturnToVault && canReturnCardToVault(entry.card, ideas) && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -294,7 +295,7 @@ export default function ShootDayTimeline({
                     <span className="ml-2 text-xs text-gray-600">({card.contentType})</span>
                   </span>
                 )}
-                {onReturnToVault && canReturnCardToVault(card) && (
+                {onReturnToVault && canReturnCardToVault(card, ideas) && (
                   <button
                     type="button"
                     onClick={() => onReturnToVault(card)}

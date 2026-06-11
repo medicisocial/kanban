@@ -62,6 +62,7 @@ function KanbanClientSectionHeader({ client, color }) {
 
 const KanbanBoardView = memo(function KanbanBoardView({
   cards,
+  ideas = [],
   onAddCard,
   onCardClick,
   onDeleteCard,
@@ -283,6 +284,7 @@ const KanbanBoardView = memo(function KanbanBoardView({
                           key={column.id}
                           column={column}
                           cards={cardsByColumn[column.id]}
+                          ideas={ideas}
                           onAddCard={handleAddCard}
                           onCardClick={onCardClick}
                           onDeleteCard={onDeleteCard}
@@ -312,6 +314,7 @@ const KanbanBoardView = memo(function KanbanBoardView({
 
 function KanbanBoard({
   cards,
+  ideas = [],
   onAddCard,
   onCardClick,
   onDeleteCard,
@@ -344,6 +347,7 @@ function KanbanBoard({
     return (
       <KanbanBoardView
         cards={cards}
+        ideas={ideas}
         onAddCard={onAddCard}
         onCardClick={onCardClick}
         onDeleteCard={onDeleteCard}
@@ -363,6 +367,7 @@ function KanbanBoard({
           <KanbanClientSectionHeader client={client} color={resolveClientColor(client)} />
           <KanbanBoardView
             cards={cards}
+            ideas={ideas}
             onAddCard={onAddCard}
             onCardClick={onCardClick}
             onDeleteCard={onDeleteCard}

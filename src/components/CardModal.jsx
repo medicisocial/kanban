@@ -39,6 +39,7 @@ const SAVE_ON_CLOSE = { deferCommit: true, commitOnBlur: true };
 function CardModal({
   card,
   cards = [],
+  ideas = [],
   plans = {},
   onClose,
   onUpdate,
@@ -673,7 +674,7 @@ function CardModal({
                   On this shoot · {formatDate(card.shootDate)}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {onReturnToVault && canReturnCardToVault(card) && (
+                  {onReturnToVault && canReturnCardToVault(card, ideas) && (
                     <button
                       type="button"
                       onClick={() => onReturnToVault(card)}

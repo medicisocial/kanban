@@ -24,6 +24,7 @@ export default function ShootDayDetail({
   shootCount,
   hasShootDay,
   cards,
+  ideas = [],
   onCardClick,
   onUpdateCard,
   onAddShootDay,
@@ -81,6 +82,7 @@ export default function ShootDayDetail({
               client={client}
               dateKey={dateKey}
               clientCards={clientCards}
+              ideas={ideas}
               onCardClick={onCardClick}
               onUpdateCard={onUpdateCard}
               onAddShootItem={onAddShootItem}
@@ -104,6 +106,7 @@ function ClientShootSection({
   client,
   dateKey,
   clientCards,
+  ideas = [],
   onCardClick,
   onUpdateCard,
   onAddShootItem,
@@ -269,6 +272,7 @@ function ClientShootSection({
                 <ShootDayPlanningRow
                   key={card.id}
                   card={card}
+                  ideas={ideas}
                   onUpdate={onUpdateCard}
                   onRemove={onRemoveFromSchedule}
                   onReturnToVault={onReturnToVault}
@@ -290,6 +294,7 @@ function ClientShootSection({
             entries={timeline}
             plan={plan}
             allCards={clientCards}
+            ideas={ideas}
             client={client}
             dateKey={dateKey}
             onUpdateCard={onUpdateCard}

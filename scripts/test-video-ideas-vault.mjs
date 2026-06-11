@@ -27,9 +27,23 @@ function isIdeaScheduled(idea, cards = []) {
   return !isIdeaInVault(idea, cards);
 }
 
-function canReturnCardToVault(card) {
-  if (!card?.sourceIdeaId) return false;
-  return card.columnId === 'shoot';
+function findIdeaForCard(card, ideas = []) {
+  if (!card || card.columnId !== 'shoot') return null;
+  if (card.sourceIdeaId) {
+    const bySource = ideas.find(
+      (idea) => idea.id === card.sourceIdeaId && idea.status === 'approved',
+    );
+    if (bySource) return bySource;
+  }
+  return (
+    ideas.find(
+      (idea) => idea.status === 'approved' && idea.boardCardId === card.id,
+    ) || null
+  );
+}
+
+function canReturnCardToVault(card, ideas = []) {
+  return Boolean(findIdeaForCard(card, ideas));
 }
 
 const idea = {
@@ -68,12 +82,22 @@ assert(
   'scheduled idea is tracked as on pipeline',
 );
 
+const ideas = [
+  { id: 'idea-2', status: 'approved', boardCardId: 'card-2' },
+];
+
 assert(
-  canReturnCardToVault({ sourceIdeaId: 'idea-2', columnId: 'shoot' }),
+  canReturnCardToVault({ sourceIdeaId: 'idea-2', columnId: 'shoot' }, ideas),
   'shoot cards from ideas can return to vault',
 );
 assert(
-  !canReturnCardToVault({ sourceIdeaId: 'idea-2', columnId: 'editing' }),
+  canReturnCardToVault({ id: 'card-legacy', columnId: 'shoot' }, [
+    { id: 'idea-3', status: 'approved', boardCardId: 'card-legacy' },
+  ]),
+  'legacy boardCardId link can return to vault',
+);
+assert(
+  !canReturnCardToVault({ sourceIdeaId: 'idea-2', columnId: 'editing' }, ideas),
   'cards that moved past To Create cannot return to vault',
 );
 

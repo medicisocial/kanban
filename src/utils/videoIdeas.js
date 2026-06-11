@@ -31,7 +31,22 @@ export function isIdeaScheduled(idea, cards = []) {
   return !isIdeaInVault(idea, cards);
 }
 
-export function canReturnCardToVault(card) {
-  if (!card?.sourceIdeaId) return false;
-  return card.columnId === 'shoot';
+/** Approved idea linked to a To Create card (by sourceIdeaId or boardCardId). */
+export function findIdeaForCard(card, ideas = []) {
+  if (!card || card.columnId !== 'shoot') return null;
+  if (card.sourceIdeaId) {
+    const bySource = ideas.find(
+      (idea) => idea.id === card.sourceIdeaId && idea.status === 'approved',
+    );
+    if (bySource) return bySource;
+  }
+  return (
+    ideas.find(
+      (idea) => idea.status === 'approved' && idea.boardCardId === card.id,
+    ) || null
+  );
+}
+
+export function canReturnCardToVault(card, ideas = []) {
+  return Boolean(findIdeaForCard(card, ideas));
 }

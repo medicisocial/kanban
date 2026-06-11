@@ -4,6 +4,7 @@ import { getContentTypeStyle } from '../constants';
 import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import { formatDate, formatTime } from '../utils';
 import { buildContentCreatorTasks } from '../utils/contentCreatorTodo';
+import { canReturnCardToVault } from '../utils/videoIdeas';
 import { useStaffWorkspaceScope } from '../hooks/useStaffWorkspaceScope';
 import { btnSecondaryClass } from './clientPortal/clientPortalUi';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
@@ -11,9 +12,11 @@ import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
 
 export default function ContentCreatorTodo({
   cards,
+  ideas = [],
   clientFilter,
   onOpenCard,
   onHandoff,
+  onReturnToVault,
   onNavigate,
 }) {
   const { getClientColor } = useClientsContext();
@@ -76,13 +79,24 @@ export default function ContentCreatorTodo({
                 </p>
                 <CardLinks card={task.card} compact />
               </button>
-              <button
-                type="button"
-                onClick={() => onHandoff?.(task.card)}
-                className="tesla-task-card-action shrink-0"
-              >
-                Hand off
-              </button>
+              <div className="flex shrink-0 flex-col gap-1.5">
+                {onReturnToVault && canReturnCardToVault(task.card, ideas) && (
+                  <button
+                    type="button"
+                    onClick={() => onReturnToVault(task.card)}
+                    className="rounded-lg border border-violet-500/25 bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-200 transition hover:bg-violet-500/15"
+                  >
+                    Return to bank
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onHandoff?.(task.card)}
+                  className="tesla-task-card-action"
+                >
+                  Hand off
+                </button>
+              </div>
             </div>
           </TeamTaskCard>
         );

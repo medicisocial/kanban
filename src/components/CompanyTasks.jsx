@@ -9,6 +9,7 @@ import { btnPrimaryClass, glassSegmentClass } from './clientPortal/clientPortalU
 
 export default function CompanyTasks({
   cards,
+  ideas = [],
   adminTasks,
   clientFilter,
   embedded = false,
@@ -28,6 +29,7 @@ export default function CompanyTasks({
   onSendBackForEditing,
   onMoveTask,
   onHandoff,
+  onReturnToVault,
   onNavigate,
   onPlanPostDate,
 }) {
@@ -90,9 +92,11 @@ export default function CompanyTasks({
       {activeRole === 'creator' && (
         <ContentCreatorTodo
           cards={cards}
+          ideas={ideas}
           clientFilter={clientFilter}
           onOpenCard={onOpenCard}
           onHandoff={onHandoff}
+          onReturnToVault={onReturnToVault}
           onNavigate={onNavigate}
         />
       )}

@@ -14,6 +14,7 @@ const SAVE_ON_BLUR = { deferCommit: true, commitOnBlur: true };
 
 export default function ShootDayPlanningRow({
   card,
+  ideas = [],
   onUpdate,
   onRemove,
   onReturnToVault,
@@ -90,7 +91,7 @@ export default function ShootDayPlanningRow({
               {card.shootScript ? "Edit script" : "Write script"}
             </button>
           )}
-          {onReturnToVault && canReturnCardToVault(card) && !readOnly && (
+          {onReturnToVault && canReturnCardToVault(card, ideas) && !readOnly && (
             <button
               type="button"
               onClick={() => onReturnToVault(card)}

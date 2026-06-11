@@ -10,7 +10,7 @@ import CardTitleLink from './CardTitleLink';
 import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
 import { canReturnCardToVault } from '../utils/videoIdeas';
 
-export default function KanbanCard({ card, onClick, onDelete, onReturnToVault }) {
+export default function KanbanCard({ card, ideas = [], onClick, onDelete, onReturnToVault }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: card.id,
     data: { type: 'card', card, columnId: card.columnId },
@@ -21,7 +21,7 @@ export default function KanbanCard({ card, onClick, onDelete, onReturnToVault })
   const scheduleDate = card.dueDate || (isOneOff ? card.shootDate : '');
   const scheduleTime = card.dueTime || (isOneOff ? card.shootTime : '');
   const overdue = isOverdue(scheduleDate) && card.columnId !== 'scheduled' && !isOneOff;
-  const showReturnToBank = Boolean(onReturnToVault && canReturnCardToVault(card));
+  const showReturnToBank = Boolean(onReturnToVault && canReturnCardToVault(card, ideas));
 
   return (
     <div
@@ -106,7 +106,7 @@ export default function KanbanCard({ card, onClick, onDelete, onReturnToVault })
             onReturnToVault(card);
           }}
           onPointerDown={(event) => event.stopPropagation()}
-          className="mt-2 text-[10px] font-medium text-violet-300/90 transition hover:text-violet-200"
+          className="mt-2 w-full rounded-lg border border-violet-500/25 bg-violet-500/10 px-2.5 py-1 text-[10px] font-medium text-violet-200 transition hover:bg-violet-500/15"
         >
           Return to idea bank
         </button>
