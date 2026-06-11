@@ -64,7 +64,13 @@ The `018_architectural_refactor` migration introduces proper relational tables:
 
 ### Dual-write pattern
 
-During transition, all content tables have FK references to `brands`. API endpoints write to the new normalized tables, and DB triggers keep the legacy blob in sync for backward compatibility. **Legacy blob writes have been removed from the API code** — all writes go through the new tables.
+During transition, all content tables have FK references to `brands`. API endpoints write to the new normalized tables. **Legacy blob writes have been removed from the API code** — all writes go through the new tables.
+
+**Migration 024 (SaaS cleanup):**
+- Client **names** live on `brands` / `client_records` — not `clients.data.names`.
+- **Portal logins** write to `portal_users` (`replace_brand_portal_users` RPC); `client_portal_credentials` is kept in sync via trigger for compat.
+- **Staff login** reads `staff_accounts` first (`team-auth.js`); `team_members` remains the staff-sync write target with DB trigger sync.
+- Portal response **queues** are offline/share-link only in cloud mode; cloud export pulls from Supabase via staff-sync.
 
 ### Client portal brand-scoped queries
 

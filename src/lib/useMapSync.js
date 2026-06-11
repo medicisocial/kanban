@@ -46,7 +46,7 @@ import {
  *
  * When Supabase is disabled this is a no-op and the hook keeps using localStorage.
  */
-export function useMapSync({ table, map, setMap, loadLocal }) {
+export function useMapSync({ table, map, setMap, loadLocal, enabled = true }) {
   const { orgId, orgReady, isLegacyOrg } = useStaffAuth();
   const storeRef = useRef(null);
   const syncedRef = useRef(null); // Map<key, JSON string of last-synced value>
@@ -67,6 +67,10 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
   localMapRef.current = map;
 
   useEffect(() => {
+    if (!enabled) {
+      markSyncLoaded();
+      return undefined;
+    }
     if (!SUPABASE_ENABLED || !supabase) return undefined;
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -276,7 +280,7 @@ export function useMapSync({ table, map, setMap, loadLocal }) {
       window.removeEventListener('focus', onFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId, orgReady, table, isLegacyOrg]);
+  }, [orgId, orgReady, table, isLegacyOrg, enabled]);
 
   useEffect(() => {
     if (!SUPABASE_ENABLED) return;

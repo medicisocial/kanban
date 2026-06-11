@@ -200,12 +200,23 @@ export async function fetchRowsAcrossOrgs(table) {
 }
 
 /**
- * Client portal login: service role reads all orgs; anon key reads the legacy org only
- * (RLS allows select on org_id = medici).
+ * Client portal login: prefer normalized portal_users; fall back to legacy credentials.
  */
 export async function fetchClientPortalCredentialsRows() {
   const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (serviceRole) {
+    try {
+      const { fetchPortalUsersForLogin, portalUserRowsToCredentialRows } = await import(
+        './portalUsersStore.mjs'
+      );
+      const rows = await fetchPortalUsersForLogin();
+      if (rows?.length) {
+        return portalUserRowsToCredentialRows(rows);
+      }
+    } catch (error) {
+      console.warn('[supabase] portal_users login fetch failed:', error?.message || error);
+    }
+
     try {
       const rows = await fetchRowsAcrossOrgsWithKey('client_portal_credentials', serviceRole);
       if (rows) return rows;

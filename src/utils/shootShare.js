@@ -1,4 +1,5 @@
 import { encodeSharePayload, decodeSharePayload, decodeShareQueryParam } from './sharePayload';
+import { shouldUsePortalResponseQueue, queueStorageKey } from './portalResponseQueue';
 
 export function getShootPortalParams() {
   const params = new URLSearchParams(window.location.search);
@@ -175,8 +176,9 @@ export function applyShootSubmission(submission, cards, { updateCard, updatePlan
 }
 
 export function loadShootResponses() {
+  if (!shouldUsePortalResponseQueue()) return [];
   try {
-    const raw = localStorage.getItem(RESPONSES_KEY);
+    const raw = localStorage.getItem(queueStorageKey(RESPONSES_KEY));
     if (raw) return JSON.parse(raw);
   } catch {
     /* ignore */
@@ -185,10 +187,12 @@ export function loadShootResponses() {
 }
 
 export function saveShootResponses(responses) {
-  localStorage.setItem(RESPONSES_KEY, JSON.stringify(responses));
+  if (!shouldUsePortalResponseQueue()) return;
+  localStorage.setItem(queueStorageKey(RESPONSES_KEY), JSON.stringify(responses));
 }
 
 export function queueShootResponse(response) {
+  if (!shouldUsePortalResponseQueue()) return;
   const key = `${response.client}|${response.dateKey}`;
   const existing = loadShootResponses().filter(
     (r) => `${r.client}|${r.dateKey}` !== key,
@@ -197,5 +201,6 @@ export function queueShootResponse(response) {
 }
 
 export function clearShootResponses() {
-  localStorage.removeItem(RESPONSES_KEY);
+  if (!shouldUsePortalResponseQueue()) return;
+  localStorage.removeItem(queueStorageKey(RESPONSES_KEY));
 }

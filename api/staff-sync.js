@@ -102,6 +102,30 @@ async function fetchClientRecordRows(orgId) {
   return response.json();
 }
 
+async function fetchPortalUserRows(orgId) {
+  const url = getSupabaseUrl();
+  const key = resolveAuthReadKey();
+  if (!url || !key) return [];
+
+  const endpoint =
+    `${url}/rest/v1/portal_users?select=id,username,password_hash,display_name,avatar,updated_at,brands!inner(brand_key,display_name,org_id)&brands.org_id=eq.${encodeURIComponent(orgId)}`;
+  const response = await fetch(endpoint, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
+  if (!response.ok) return [];
+  const rows = await response.json();
+  return (Array.isArray(rows) ? rows : []).map((row) => ({
+    id: row.id,
+    username: row.username,
+    password_hash: row.password_hash,
+    display_name: row.display_name,
+    avatar: row.avatar,
+    updated_at: row.updated_at,
+    brand_key: row.brands?.brand_key || '',
+    brands: row.brands,
+  }));
+}
+
 export default async function handler(req, res) {
   if (!(await isAuthorized(req))) {
     return unauthorized(res, 'Unauthorized');
@@ -126,7 +150,9 @@ export default async function handler(req, res) {
       const rows =
         table === 'client_records'
           ? await fetchClientRecordRows(orgCheck.orgId)
-          : await fetchSyncRows(table, orgCheck.orgId);
+          : table === 'portal_users'
+            ? await fetchPortalUserRows(orgCheck.orgId)
+            : await fetchSyncRows(table, orgCheck.orgId);
       return ok(res, { rows: rows || [] });
     } catch (error) {
       console.error('[staff-sync] fetch failed:', error?.message || error);

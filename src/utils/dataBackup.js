@@ -16,6 +16,7 @@ import {
 } from '../constants';
 import { orgScopedKey } from '../lib/orgStorage';
 import { isCloudSourceOfTruth } from '../lib/cloudSourceOfTruth';
+import { buildCloudBackupPayload } from './cloudBackupExport';
 
 export const BACKUP_VERSION = 1;
 
@@ -104,13 +105,18 @@ export function buildBackupPayload() {
 }
 
 export function buildBackupPayloadForPush() {
-  const data = readWorkspaceData();
+  if (isCloudSourceOfTruth()) return null;
   return {
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     app: 'medici-social-kanban',
-    data,
+    data: readWorkspaceData(),
   };
+}
+
+export async function buildBackupPayloadForExport() {
+  if (isCloudSourceOfTruth()) return buildCloudBackupPayload();
+  return buildBackupPayloadForPush();
 }
 
 export function applyBackupPayload(payload) {
@@ -142,6 +148,10 @@ export function hasWorkspaceData(payload = buildBackupPayload()) {
     return true;
   }
 
+  if (payload?.source === 'supabase' && payload?.data && Object.keys(payload.data).length > 0) {
+    return true;
+  }
+
   return false;
 }
 
@@ -152,8 +162,8 @@ export function getPayloadTimestamp(payload) {
   return Number.isFinite(time) ? time : 0;
 }
 
-export function exportBackupFile() {
-  const payload = buildBackupPayloadForPush();
+function downloadBackupPayload(payload) {
+  if (!payload?.data) return;
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const stamp = new Date().toISOString().slice(0, 10);
@@ -162,6 +172,20 @@ export function exportBackupFile() {
   anchor.download = `medici-social-backup-${stamp}.json`;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+export function exportBackupFile() {
+  if (isCloudSourceOfTruth()) {
+    void (async () => {
+      try {
+        downloadBackupPayload(await buildCloudBackupPayload());
+      } catch {
+        alert('Could not export backup from cloud. Check your connection and try again.');
+      }
+    })();
+    return;
+  }
+  downloadBackupPayload(buildBackupPayloadForPush());
 }
 
 export function importBackupFile(file) {

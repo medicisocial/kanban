@@ -22,6 +22,27 @@ function normalizeBrandKey(brand) {
   return String(brand || '').trim().toLowerCase();
 }
 
+export async function fetchOrgBrandNames(orgIdOverride) {
+  const { url, key, orgId } = getWriteConfig(orgIdOverride);
+  if (!url || !key) return [];
+
+  const response = await fetchWithTimeout(
+    `${url}/rest/v1/rpc/get_org_brand_names`,
+    {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_org_id: orgId }),
+    },
+  );
+  if (!response.ok) return [];
+  const payload = await response.json();
+  return Array.isArray(payload) ? payload.map(String) : [];
+}
+
 export async function fetchBrandProfileRecord(orgId, brand, orgIdOverride) {
   const { url, key, orgId: resolvedOrgId } = getWriteConfig(orgIdOverride || orgId);
   if (!url || !key) return null;

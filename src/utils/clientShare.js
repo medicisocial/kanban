@@ -1,5 +1,7 @@
 import { clientMatchesBrand } from './clients';
 import { encodeSharePayload, decodeSharePayload, decodeShareQueryParam } from './sharePayload';
+import { shouldUsePortalResponseQueue, queueStorageKey } from './portalResponseQueue';
+import { CLIENT_RESPONSES_STORAGE_KEY } from '../constants';
 
 export function getClientPortalClient() {
   const params = new URLSearchParams(window.location.search);
@@ -85,8 +87,9 @@ export function mergePortalIdeas(storedIdeas, client, snapshot) {
 }
 
 export function loadClientResponses() {
+  if (!shouldUsePortalResponseQueue()) return [];
   try {
-    const raw = localStorage.getItem('medici-social-client-responses');
+    const raw = localStorage.getItem(queueStorageKey(CLIENT_RESPONSES_STORAGE_KEY));
     if (raw) return JSON.parse(raw);
   } catch {
     /* ignore */
@@ -95,17 +98,20 @@ export function loadClientResponses() {
 }
 
 export function saveClientResponses(responses) {
-  localStorage.setItem('medici-social-client-responses', JSON.stringify(responses));
+  if (!shouldUsePortalResponseQueue()) return;
+  localStorage.setItem(queueStorageKey(CLIENT_RESPONSES_STORAGE_KEY), JSON.stringify(responses));
 }
 
 export function queueClientResponse(response) {
+  if (!shouldUsePortalResponseQueue()) return;
   const existing = loadClientResponses();
   const filtered = existing.filter((r) => r.ideaId !== response.ideaId);
   saveClientResponses([...filtered, response]);
 }
 
 export function clearClientResponses() {
-  localStorage.removeItem('medici-social-client-responses');
+  if (!shouldUsePortalResponseQueue()) return;
+  localStorage.removeItem(queueStorageKey(CLIENT_RESPONSES_STORAGE_KEY));
 }
 
 function compactIdeaResponse(response) {

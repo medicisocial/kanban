@@ -40,6 +40,32 @@ async function buildAuthHeaders() {
   return null;
 }
 
+export async function clearBrandPortalUsers(brand) {
+  const headers = await buildAuthHeaders();
+  if (!headers) {
+    return { ok: false, error: 'Staff sign-in required.' };
+  }
+
+  try {
+    const response = await fetchWithTimeout(
+      '/api/client-portal-set-password',
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ brand, orgId: getOrgId(), clear: true }),
+      },
+      SAVE_PASSWORD_TIMEOUT_MS,
+    );
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return { ok: false, error: payload.error || 'Could not clear portal users.' };
+    }
+    return { ok: true, users: [] };
+  } catch (error) {
+    return { ok: false, error: error?.message || 'Could not clear portal users.' };
+  }
+}
+
 export async function saveClientPortalPasswords({ brand, users }) {
   const headers = await buildAuthHeaders();
   if (!headers) {

@@ -1,13 +1,9 @@
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
-import {
-  fetchRecord,
-  isSupabaseConfigured,
-  patchPortalPasswordVault,
-  upsertRecord,
-} from './_lib/supabase.mjs';
+import { isSupabaseConfigured, patchPortalPasswordVault } from './_lib/supabase.mjs';
 import { hashValue, normalizeBrandUsers } from './_lib/clientPortalAuth.mjs';
 import { hasConfiguredPortalUsers } from './_lib/authCriticalSync.mjs';
+import { replaceBrandPortalUsers, fetchPortalUsersByOrg } from './_lib/portalUsersStore.mjs';
 
 function unauthorized(res) {
   return res.status(401).json({ error: 'Unauthorized' });
@@ -88,8 +84,11 @@ export default async function handler(req, res) {
   if (!(await isAuthorized(req))) return unauthorized(res);
   if (!isSupabaseConfigured()) return unavailable(res);
 
-  const { brand, users, orgId } = req.body || {};
-  if (!brand || !Array.isArray(users) || !users.length) {
+  const { brand, users, orgId, clear } = req.body || {};
+  if (!brand) {
+    return res.status(400).json({ error: 'Missing brand.' });
+  }
+  if (!clear && (!Array.isArray(users) || !users.length)) {
     return res.status(400).json({ error: 'Missing brand or users.' });
   }
 
@@ -101,12 +100,16 @@ export default async function handler(req, res) {
   const brandKey = String(brand).trim().toLowerCase();
 
   try {
+    if (clear) {
+      await replaceBrandPortalUsers(resolvedOrgId, brandKey, [], { allowEmpty: true });
+      return res.status(200).json({ ok: true, users: [] });
+    }
+
     const needsExistingRow = users.some((draft) => !String(draft?.password || '').trim());
     let existingUsers = [];
     if (needsExistingRow) {
-      existingUsers = normalizeBrandUsers(
-        await fetchRecord('client_portal_credentials', brandKey, resolvedOrgId),
-      );
+      const map = await fetchPortalUsersByOrg(resolvedOrgId);
+      existingUsers = normalizeBrandUsers(map[brandKey] || map[brand] || []);
     }
     const existingById = new Map(existingUsers.map((user) => [user.id, user]));
     const existingByUsername = new Map(
@@ -164,7 +167,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Set a username and password for at least one portal user.' });
     }
 
-    await upsertRecord('client_portal_credentials', brandKey, nextUsers, resolvedOrgId);
+    const hasPasswordChange = Object.keys(brandVault).length > 0;
+    const savedUsers = await replaceBrandPortalUsers(resolvedOrgId, brandKey, nextUsers, {
+      allowPasswordChange: hasPasswordChange,
+    });
 
     let vaultWarning = null;
     if (Object.keys(brandVault).length) {
@@ -180,7 +186,9 @@ export default async function handler(req, res) {
       }
     }
 
-    const usersForClient = nextUsers.map(({ _passwordChangeAuthorized: _ignored, ...user }) => user);
+    const usersForClient = normalizeBrandUsers(savedUsers.length ? savedUsers : nextUsers).map(
+      ({ _passwordChangeAuthorized: _ignored, ...user }) => user,
+    );
     return res.status(200).json({ ok: true, users: usersForClient, vaultWarning });
   } catch (error) {
     const detail = String(error?.message || error || '').trim();

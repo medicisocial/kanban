@@ -59,7 +59,10 @@ const slim = slimClientsWorkspaceForCloudPush(workspace);
 if (slim.colors || slim.contacts) {
   throw new Error('slimClientsWorkspaceForCloudPush should omit per-brand maps');
 }
-if (!Array.isArray(slim.names) || !slim.contentTypeColors) {
+if (slim.names) {
+  throw new Error('slimClientsWorkspaceForCloudPush should omit names (brands table is source of truth)');
+}
+if (!slim.contentTypeColors) {
   throw new Error('slimClientsWorkspaceForCloudPush should keep org-level keys');
 }
 

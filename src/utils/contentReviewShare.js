@@ -1,4 +1,5 @@
 import { clientMatchesBrand } from './clients';
+import { shouldUsePortalResponseQueue, queueStorageKey } from './portalResponseQueue';
 
 const RESPONSES_KEY = 'medici-social-content-review-responses';
 
@@ -86,8 +87,9 @@ export function mergePortalCards(storedCards, client, snapshot) {
 }
 
 export function loadContentReviewResponses() {
+  if (!shouldUsePortalResponseQueue()) return [];
   try {
-    const raw = localStorage.getItem(RESPONSES_KEY);
+    const raw = localStorage.getItem(queueStorageKey(RESPONSES_KEY));
     if (raw) return JSON.parse(raw);
   } catch {
     /* ignore */
@@ -96,17 +98,20 @@ export function loadContentReviewResponses() {
 }
 
 export function saveContentReviewResponses(responses) {
-  localStorage.setItem(RESPONSES_KEY, JSON.stringify(responses));
+  if (!shouldUsePortalResponseQueue()) return;
+  localStorage.setItem(queueStorageKey(RESPONSES_KEY), JSON.stringify(responses));
 }
 
 export function queueContentReviewResponse(response) {
+  if (!shouldUsePortalResponseQueue()) return;
   const existing = loadContentReviewResponses();
   const filtered = existing.filter((r) => r.cardId !== response.cardId);
   saveContentReviewResponses([...filtered, response]);
 }
 
 export function clearContentReviewResponses() {
-  localStorage.removeItem(RESPONSES_KEY);
+  if (!shouldUsePortalResponseQueue()) return;
+  localStorage.removeItem(queueStorageKey(RESPONSES_KEY));
 }
 
 function compactContentResponse(response) {

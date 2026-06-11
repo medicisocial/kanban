@@ -3,6 +3,7 @@ import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
 import { fetchRecord, isSupabaseConfigured, upsertRecord } from './_lib/supabase.mjs';
 import {
   brandProfilePatchFromWorkspaceBrand,
+  fetchOrgBrandNames,
   patchBrandProfileRecord,
 } from './_lib/brandRecordStore.mjs';
 import {
@@ -37,6 +38,12 @@ function workspaceHasClientName(names, displayName) {
   return (Array.isArray(names) ? names : []).some(
     (name) => normalizeClientBrandName(name) === key,
   );
+}
+
+async function resolveExistingBrandName(orgId, displayName) {
+  const names = await fetchOrgBrandNames(orgId);
+  const key = normalizeClientBrandName(displayName);
+  return names.find((name) => normalizeClientBrandName(name) === key) || null;
 }
 
 async function verifySupabaseAccessToken(token) {
@@ -99,23 +106,19 @@ export default async function handler(req, res) {
   let reservedName = null;
 
   try {
-    const workspace = (await fetchRecord('clients', 'workspace', resolvedOrgId)) || {};
-    const names = Array.isArray(workspace.names) ? [...workspace.names] : [];
-
-    if (workspaceHasClientName(names, display)) {
-      const existingName =
-        names.find((name) => normalizeClientBrandName(name) === normalizeClientBrandName(display)) ||
-        display;
+    const orgBrandNames = await fetchOrgBrandNames(resolvedOrgId);
+    const existingInOrg = await resolveExistingBrandName(resolvedOrgId, display);
+    if (existingInOrg) {
       return res.status(200).json({
         ok: true,
-        name: existingName,
+        name: existingInOrg,
         healed: false,
         alreadyInWorkspace: true,
         clientsPatch: {
-          names,
-          colors: workspace.colors || {},
-          logos: workspace.logos || {},
-          businessTypes: workspace.businessTypes || {},
+          names: [...orgBrandNames],
+          colors: {},
+          logos: {},
+          businessTypes: {},
         },
       });
     }
@@ -150,20 +153,14 @@ export default async function handler(req, res) {
       healed = true;
     }
 
-    const nextNames = [...names, resolvedName];
+    const nextNames = [...orgBrandNames, resolvedName];
     const slimWorkspace = {
-      names: nextNames,
-      colors: { ...(workspace.colors || {}), [resolvedName]: nextColor },
-      logos: logo ? { ...(workspace.logos || {}), [resolvedName]: logo } : { ...(workspace.logos || {}) },
-      businessTypes: businessType
-        ? { ...(workspace.businessTypes || {}), [resolvedName]: businessType }
-        : { ...(workspace.businessTypes || {}) },
-      accountManagers: { ...(workspace.accountManagers || {}) },
-      removedNames: workspace.removedNames || [],
-      restoredNames: workspace.restoredNames || [],
-      contentTypeColors: workspace.contentTypeColors || {},
-      customColorPalette: workspace.customColorPalette || [],
+      colors: { [resolvedName]: nextColor },
+      logos: logo ? { [resolvedName]: logo } : {},
+      businessTypes: businessType ? { [resolvedName]: businessType } : {},
     };
+
+    const workspace = (await fetchRecord('clients', 'workspace', resolvedOrgId)) || {};
 
     await upsertClientRecordOnServer(resolvedOrgId, resolvedName, {
       color: nextColor,
@@ -181,11 +178,10 @@ export default async function handler(req, res) {
       'clients',
       'workspace',
       {
-        names: nextNames,
-        removedNames: slimWorkspace.removedNames,
-        restoredNames: slimWorkspace.restoredNames,
-        contentTypeColors: slimWorkspace.contentTypeColors,
-        customColorPalette: slimWorkspace.customColorPalette,
+        removedNames: workspace.removedNames || [],
+        restoredNames: { ...(workspace.restoredNames || {}), [normalizeClientBrandName(resolvedName)]: Date.now() },
+        contentTypeColors: workspace.contentTypeColors || {},
+        customColorPalette: workspace.customColorPalette || [],
       },
       resolvedOrgId,
     );

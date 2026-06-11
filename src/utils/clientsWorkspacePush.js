@@ -1,6 +1,5 @@
 /** Keys that stay in the legacy clients workspace blob (org-level, not per-brand). */
 export const CLIENTS_BLOB_ONLY_KEYS = [
-  'names',
   'removedNames',
   'restoredNames',
   'contentTypeColors',
@@ -44,6 +43,7 @@ export function mergeSlimClientsWorkspace(existing = {}, incoming = {}, synced =
     }
     merged[key] = incoming[key];
   }
+  delete merged.names;
   return merged;
 }
 

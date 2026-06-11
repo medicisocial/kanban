@@ -898,7 +898,7 @@ if (typeof localStorage !== 'undefined') {
     local,
     syncedStr: JSON.stringify({ names: ['Plume'], contentTypeColors: { reel: '#222' } }),
   });
-  assert(JSON.stringify(merged.names) === JSON.stringify(['Plume', 'Casalu']), 'org names merge from remote');
+  assert(JSON.stringify(merged.names) === JSON.stringify(['Plume']), 'cloud mode keeps local names from client_records, not remote blob');
   assert(merged.colors?.Plume === '#000', 'local brand colors kept, not overwritten by remote blob');
   assert(!merged.colors?.Casalu, 'remote brand colors ignored in supabase merge');
   assert(!merged.portalPasswordVault?.Casalu, 'remote vault ignored in supabase merge');
@@ -917,9 +917,8 @@ if (typeof localStorage !== 'undefined') {
     contentTypeColors: { reel: '#222' },
   };
   const merged = mergeSlimClientsWorkspace(existing, incoming);
-  assert(JSON.stringify(merged.names) === JSON.stringify(['Plume', 'Casalu']), 'slim merge updates names');
-  assert(merged.colors?.Plume === '#000', 'slim merge does not touch deprecated brand maps');
   assert(merged.contentTypeColors?.reel === '#222', 'slim merge updates org palette');
+  assert(merged.names === undefined, 'slim merge strips names from clients blob');
 }
 
 console.log('Sync merge tests passed.');

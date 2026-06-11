@@ -13,6 +13,8 @@ import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { isCloudSourceOfTruth } from '../lib/cloudSourceOfTruth';
 import { useMapSync } from '../lib/useMapSync';
+import { useStaffAuth } from '../context/StaffAuthContext';
+import { usePortalUsersSync } from './usePortalUsersSync';
 import { initialSyncMapState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { getOrgId } from '../lib/orgSession';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
@@ -25,7 +27,7 @@ import {
 } from '../lib/syncHelpers';
 import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from '../lib/staffSupabaseAuth';
 import { saveClientPortalCredentialsDirect } from '../utils/saveClientPortalCredentialsDirect';
-import { saveClientPortalPasswords } from '../utils/setPortalPasswordApi';
+import { saveClientPortalPasswords, clearBrandPortalUsers } from '../utils/setPortalPasswordApi';
 
 function loadCredentials() {
   try {
@@ -40,6 +42,7 @@ function loadCredentials() {
 export { loadCredentials };
 
 export function useClientPortalCredentials() {
+  const { orgId } = useStaffAuth();
   const [credentials, setCredentials] = useState(() =>
     initialSyncMapState(loadCredentials, { table: 'client_portal_credentials' }),
   );
@@ -60,6 +63,13 @@ export function useClientPortalCredentials() {
     map: credentials,
     setMap: setCredentials,
     loadLocal: loadCredentials,
+    enabled: !isCloudSourceOfTruth(),
+  });
+
+  usePortalUsersSync({
+    credentials,
+    setCredentials,
+    orgReady: Boolean(orgId) && isCloudSourceOfTruth(),
   });
 
   // Keep localStorage as a write-through cache only in offline mode.
@@ -241,10 +251,15 @@ export function useClientPortalCredentials() {
   }, [setClientPortalUsers]);
 
   const clearClientPortalCredential = useCallback(async (client) => {
-    tombstoneSyncedDeletes('client_portal_credentials', [client]);
+    const credentialBrandKey = resolveCredentialBrandKey(credentialsRef.current, client);
+    if (isCloudSourceOfTruth() && SUPABASE_ENABLED) {
+      await clearBrandPortalUsers(credentialBrandKey || client);
+    } else {
+      tombstoneSyncedDeletes('client_portal_credentials', [client]);
+    }
     setCredentials((prev) => {
       const next = { ...prev };
-      delete next[client];
+      delete next[credentialBrandKey || client];
       if (!isCloudSourceOfTruth()) {
         writeOrgScopedJson(CLIENT_PORTAL_AUTH_STORAGE_KEY, next);
       }

@@ -700,7 +700,8 @@ export function mergeClientsWorkspaceStateSupabase({ remote, local, syncedStr })
 
   if (local == null) {
     const tombstones = mergeClientNameTombstones(slimRemote, slimRemote);
-    return stripSuppressedClientNames(slimRemote, suppressedClientNameKeys(tombstones));
+    const base = stripSuppressedClientNames(slimRemote, suppressedClientNameKeys(tombstones));
+    return { ...base, names: [] };
   }
   if (remote == null) return local;
 
@@ -716,7 +717,7 @@ export function mergeClientsWorkspaceStateSupabase({ remote, local, syncedStr })
 
   if (syncedStr == null) {
     const merged = { ...local, ...slimRemote };
-    merged.names = mergeClientsWorkspaceNames(slimRemote.names, local.names, null);
+    merged.names = Array.isArray(local?.names) ? local.names : [];
     const tombstones = mergeClientNameTombstones(slimRemote, local);
     merged.removedNames = tombstones.removedNames;
     merged.restoredNames = tombstones.restoredNames;
@@ -724,7 +725,7 @@ export function mergeClientsWorkspaceStateSupabase({ remote, local, syncedStr })
   }
 
   const merged = { ...local };
-  merged.names = mergeClientsWorkspaceNames(slimRemote.names, local.names, slimSynced?.names);
+  merged.names = Array.isArray(local?.names) ? local.names : [];
 
   for (const key of CLIENTS_BLOB_ONLY_KEYS) {
     if (key === 'names') continue;
