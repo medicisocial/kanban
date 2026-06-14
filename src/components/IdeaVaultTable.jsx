@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
-import { getContentTypeStyle } from '../constants';
 import { normalizeLink } from '../utils/links';
 import ClientAvatar from './ClientAvatar';
 import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
@@ -12,14 +11,25 @@ import {
   mobileActionRowClass,
   mobileCardClass,
   mobileMetaClass,
+  selectClass,
   surfacePanelClass,
   tableCellClass,
   tableHeaderClass,
   tableRowClass,
 } from './clientPortal/clientPortalUi';
-import { contentTypeLabelProps } from '../utils/contentTypeColors';
 
 const referenceInputClass = `${inputClass} !py-1.5 !text-xs min-w-[140px]`;
+const typeSelectClass = `${selectClass} w-full min-w-[96px] !py-1.5 !text-xs uppercase tracking-wider`;
+
+const BANK_TYPE_OPTIONS = [
+  { value: 'Reel', label: 'Reel' },
+  { value: 'Carousel', label: 'Carousel' },
+  { value: 'Static Post', label: 'Static' },
+];
+
+function bankTypeLabel(value) {
+  return BANK_TYPE_OPTIONS.find((option) => option.value === value)?.label || value || '—';
+}
 
 function IdeaReferenceField({ ideaId, value = '', onSave, readOnly = false, compact = false }) {
   const commitReference = (raw) => {
@@ -62,12 +72,46 @@ function IdeaReferenceField({ ideaId, value = '', onSave, readOnly = false, comp
   );
 }
 
+function IdeaContentTypeField({ ideaId, value = 'Reel', onSave, readOnly = false }) {
+  const options =
+    value && !BANK_TYPE_OPTIONS.some((option) => option.value === value)
+      ? [{ value, label: value }, ...BANK_TYPE_OPTIONS]
+      : BANK_TYPE_OPTIONS;
+
+  if (readOnly) {
+    return (
+      <span className="text-xs uppercase tracking-wider text-white/55">{bankTypeLabel(value)}</span>
+    );
+  }
+
+  return (
+    <select
+      value={value || 'Reel'}
+      onChange={(event) => {
+        const next = event.target.value;
+        if (next !== value) onSave?.(ideaId, next);
+      }}
+      onClick={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
+      className={typeSelectClass}
+      aria-label="Content type"
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export default function IdeaVaultTable({
   ideas,
   onEdit,
   onSchedule,
   onDelete,
   onUpdateReference,
+  onUpdateContentType,
   readOnly = false,
   hideClientColumn = false,
 }) {
@@ -113,7 +157,6 @@ export default function IdeaVaultTable({
       <div className="md:hidden">
         {sorted.map((idea) => {
           const expanded = expandedId === idea.id;
-          const typeStyle = getContentTypeStyle(idea.contentType);
           return (
             <div key={idea.id} className={mobileCardClass}>
               <button
@@ -136,11 +179,12 @@ export default function IdeaVaultTable({
                 />
               </div>
               <div className={mobileMetaClass}>
-                {idea.contentType && (
-                  <span {...contentTypeLabelProps(typeStyle, 'uppercase tracking-wider')}>
-                    {idea.contentType}
-                  </span>
-                )}
+                <IdeaContentTypeField
+                  ideaId={idea.id}
+                  value={idea.contentType}
+                  onSave={onUpdateContentType}
+                  readOnly={readOnly}
+                />
                 {!hideClientColumn && <span className="text-white/70">{idea.client}</span>}
               </div>
               {!readOnly && (
@@ -199,7 +243,6 @@ export default function IdeaVaultTable({
           <tbody>
             {sorted.map((idea) => {
               const clientColor = getClientColor(idea.client);
-              const typeStyle = getContentTypeStyle(idea.contentType);
               return (
                 <tr key={idea.id} className={tableRowClass}>
                   <td className={tableCellClass}>
@@ -216,8 +259,13 @@ export default function IdeaVaultTable({
                       readOnly={readOnly}
                     />
                   </td>
-                  <td className={`${tableCellClass} text-xs uppercase tracking-wider text-white/55`}>
-                    {idea.contentType || '—'}
+                  <td className={tableCellClass}>
+                    <IdeaContentTypeField
+                      ideaId={idea.id}
+                      value={idea.contentType}
+                      onSave={onUpdateContentType}
+                      readOnly={readOnly}
+                    />
                   </td>
                   {!hideClientColumn && (
                   <td className={tableCellClass}>
