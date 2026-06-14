@@ -20,6 +20,8 @@ import {
 
 const referenceInputClass = `${inputClass} !py-1.5 !text-xs min-w-[140px]`;
 const typeSelectClass = `${selectClass} w-full min-w-[96px] !py-1.5 !text-xs uppercase tracking-wider`;
+const bankRowMetaClass = `${tableCellClass} align-top`;
+const bankRowControlClass = `${tableCellClass} align-middle`;
 
 const BANK_TYPE_OPTIONS = [
   { value: 'Reel', label: 'Reel' },
@@ -53,18 +55,21 @@ function IdeaReferenceField({ ideaId, value = '', onSave, readOnly = false, comp
   }
 
   return (
-    <div className="min-w-0" onClick={(event) => event.stopPropagation()}>
+    <div
+      className={`flex min-w-0 items-center gap-2 ${compact ? 'flex-wrap' : ''}`}
+      onClick={(event) => event.stopPropagation()}
+    >
       <DebouncedField
         value={value || ''}
         resetKey={ideaId}
         onCommit={commitReference}
         commitOnBlur
         placeholder="Paste link…"
-        className={referenceInputClass}
+        className={`${referenceInputClass} min-w-0 flex-1`}
         onPaste={handlePaste}
       />
       {value?.trim() ? (
-        <div className="mt-1">
+        <div className="shrink-0">
           <ReferenceVideoLink url={value} compact />
         </div>
       ) : null}
@@ -245,13 +250,13 @@ export default function IdeaVaultTable({
               const clientColor = getClientColor(idea.client);
               return (
                 <tr key={idea.id} className={tableRowClass}>
-                  <td className={tableCellClass}>
+                  <td className={bankRowMetaClass}>
                     <p className="font-medium text-white">{idea.title || 'Untitled idea'}</p>
                     {idea.description && (
                       <p className="mt-0.5 line-clamp-1 text-xs text-white/40">{idea.description}</p>
                     )}
                   </td>
-                  <td className={tableCellClass}>
+                  <td className={bankRowControlClass}>
                     <IdeaReferenceField
                       ideaId={idea.id}
                       value={idea.referenceVideo}
@@ -259,7 +264,7 @@ export default function IdeaVaultTable({
                       readOnly={readOnly}
                     />
                   </td>
-                  <td className={tableCellClass}>
+                  <td className={bankRowControlClass}>
                     <IdeaContentTypeField
                       ideaId={idea.id}
                       value={idea.contentType}
@@ -268,7 +273,7 @@ export default function IdeaVaultTable({
                     />
                   </td>
                   {!hideClientColumn && (
-                  <td className={tableCellClass}>
+                  <td className={bankRowControlClass}>
                     <div className="flex items-center gap-2">
                       <ClientAvatar client={idea.client} size="md" color={clientColor} />
                       <span className="truncate text-xs text-white/70">{idea.client}</span>
@@ -276,7 +281,7 @@ export default function IdeaVaultTable({
                   </td>
                   )}
                   {!readOnly && (
-                  <td className={tableCellClass}>
+                  <td className={bankRowControlClass}>
                     <div className="flex flex-wrap items-center gap-1">
                       <button
                         type="button"
