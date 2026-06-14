@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { getContentTypeStyle } from '../constants';
+import { normalizeLink } from '../utils/links';
 import ClientAvatar from './ClientAvatar';
 import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
+import DebouncedField from './DebouncedField';
 import {
   btnGhostClass,
   btnPrimaryClass,
+  inputClass,
   mobileActionRowClass,
   mobileCardClass,
   mobileMetaClass,
@@ -16,11 +19,55 @@ import {
 } from './clientPortal/clientPortalUi';
 import { contentTypeLabelProps } from '../utils/contentTypeColors';
 
+const referenceInputClass = `${inputClass} !py-1.5 !text-xs min-w-[140px]`;
+
+function IdeaReferenceField({ ideaId, value = '', onSave, readOnly = false, compact = false }) {
+  const commitReference = (raw) => {
+    const referenceVideo = normalizeLink(String(raw || '').trim()) || '';
+    if (referenceVideo === (value || '')) return;
+    onSave?.(ideaId, referenceVideo);
+  };
+
+  const handlePaste = (event) => {
+    const pasted = event.clipboardData?.getData('text')?.trim();
+    if (!pasted) return;
+    const normalized = normalizeLink(pasted);
+    if (normalized) {
+      event.preventDefault();
+      commitReference(normalized);
+    }
+  };
+
+  if (readOnly) {
+    return <ReferenceVideoLink url={value} compact={compact} />;
+  }
+
+  return (
+    <div className="min-w-0" onClick={(event) => event.stopPropagation()}>
+      <DebouncedField
+        value={value || ''}
+        resetKey={ideaId}
+        onCommit={commitReference}
+        commitOnBlur
+        placeholder="Paste link…"
+        className={referenceInputClass}
+        onPaste={handlePaste}
+      />
+      {value?.trim() ? (
+        <div className="mt-1">
+          <ReferenceVideoLink url={value} compact />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function IdeaVaultTable({
   ideas,
   onEdit,
   onSchedule,
   onDelete,
+  onUpdateReference,
   readOnly = false,
   hideClientColumn = false,
 }) {
@@ -79,11 +126,15 @@ export default function IdeaVaultTable({
               {idea.description && !expanded && (
                 <p className="mt-1 line-clamp-2 text-xs text-white/40">{idea.description}</p>
               )}
-              {idea.referenceVideo && (
-                <div className="mt-2">
-                  <ReferenceVideoLink url={idea.referenceVideo} compact />
-                </div>
-              )}
+              <div className="mt-2">
+                <IdeaReferenceField
+                  ideaId={idea.id}
+                  value={idea.referenceVideo}
+                  onSave={onUpdateReference}
+                  readOnly={readOnly}
+                  compact
+                />
+              </div>
               <div className={mobileMetaClass}>
                 {idea.contentType && (
                   <span {...contentTypeLabelProps(typeStyle, 'uppercase tracking-wider')}>
@@ -158,7 +209,12 @@ export default function IdeaVaultTable({
                     )}
                   </td>
                   <td className={tableCellClass}>
-                    <ReferenceVideoLink url={idea.referenceVideo} />
+                    <IdeaReferenceField
+                      ideaId={idea.id}
+                      value={idea.referenceVideo}
+                      onSave={onUpdateReference}
+                      readOnly={readOnly}
+                    />
                   </td>
                   <td className={`${tableCellClass} text-xs uppercase tracking-wider text-white/55`}>
                     {idea.contentType || '—'}

@@ -209,6 +209,7 @@ export default function VideoIdeas({
             onEdit={setIdeaModal}
             onSchedule={setScheduleIdea}
             onDelete={handleDeleteVaultIdea}
+            onUpdateReference={(ideaId, referenceVideo) => onUpdateIdea(ideaId, { referenceVideo })}
           />
         </>
       )}
