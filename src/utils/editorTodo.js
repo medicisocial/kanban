@@ -1,5 +1,6 @@
 import { COLUMNS } from '../constants';
 import { toDateKey } from './calendar';
+import { matchesClientFilter } from './clients';
 
 export const EDIT_TASK_COLUMNS = ['editing', 'not-approved'];
 export const APPROVE_TASK_COLUMNS = ['in-review'];
@@ -227,7 +228,7 @@ export function filterEditorTasks(tasks, { assignee, client, includeCompleted = 
   return tasks.filter((task) => {
     if (task.isOneOffProject && task.completed && !includeCompleted) return false;
     if (assignee && assignee !== 'all' && task.assignedTo !== assignee) return false;
-    if (client && client !== 'all' && task.client !== client) return false;
+    if (!matchesClientFilter(task.client, client)) return false;
     return true;
   });
 }

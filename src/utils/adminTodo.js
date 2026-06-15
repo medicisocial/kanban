@@ -1,5 +1,6 @@
 import { toDateKey } from './calendar';
 import { formatEditorDateLabel } from './editorTodo';
+import { matchesClientFilter } from './clients';
 
 export function buildAdminTodoTasks(tasks) {
   return tasks
@@ -52,7 +53,7 @@ export function filterAdminTasks(tasks, { client, assignee, includeCompleted = t
   return tasks.filter((task) => {
     if (task.completed && !includeCompleted) return false;
     if (assignee && assignee !== 'all' && task.assignedTo !== assignee) return false;
-    if (client && client !== 'all' && task.client !== client) return false;
+    if (!matchesClientFilter(task.client, client)) return false;
     return true;
   });
 }

@@ -8,7 +8,32 @@ export function compareClientNames(a, b, clientOrder = []) {
 }
 
 export function getClientColor(client, clientColors) {
-  return clientColors?.[client] || '#9ca3af';
+  return resolveClientMapValue(client, clientColors) || '#9ca3af';
+}
+
+export function resolveClientMapValue(client, map = {}) {
+  if (!client || !map || typeof map !== 'object') return undefined;
+  if (Object.prototype.hasOwnProperty.call(map, client)) return map[client];
+  const targetKey = clientBrandNameKey(client);
+  for (const [name, value] of Object.entries(map)) {
+    if (clientBrandNameKey(name) === targetKey) return value;
+  }
+  return undefined;
+}
+
+export function formatClientDisplayName(name) {
+  const trimmed = normalizeClientName(String(name || ''));
+  if (!trimmed) return '';
+  if (trimmed === trimmed.toLowerCase() && /[a-z]/.test(trimmed)) {
+    return trimmed.replace(/\b[a-z]/g, (char) => char.toUpperCase());
+  }
+  return trimmed;
+}
+
+export function matchesClientFilter(itemClient, clientFilter) {
+  if (!clientFilter || clientFilter === 'all') return true;
+  if (!itemClient) return false;
+  return clientMatchesBrand(itemClient, clientFilter);
 }
 
 export function pickNextClientColor(clientColors, palette) {
@@ -87,12 +112,20 @@ const ALL_CLIENTS_FILTER_OPTION = {
 };
 
 export function buildClientFilterOptions(clients, getClientColor) {
-  return [
-    ALL_CLIENTS_FILTER_OPTION,
-    ...sortClientNamesAlphabetically(clients).map((client) => ({
-      id: client,
-      label: client,
+  const seen = new Set();
+  const clientOptions = [];
+
+  for (const client of sortClientNamesAlphabetically(clients)) {
+    const key = clientBrandNameKey(client);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const label = formatClientDisplayName(client);
+    clientOptions.push({
+      id: label,
+      label,
       color: getClientColor(client),
-    })),
-  ];
+    });
+  }
+
+  return [ALL_CLIENTS_FILTER_OPTION, ...clientOptions];
 }

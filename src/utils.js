@@ -1,6 +1,7 @@
 import { addDays, parseDateKey, toDateKey } from './utils/calendar';
 import { isScheduledPostType } from './constants';
 import { cardIsAssignedToStaff } from './utils/staffMembers';
+import { matchesClientFilter } from './utils/clients';
 
 export function formatDate(dateStr) {
   if (!dateStr) return '';
@@ -96,7 +97,7 @@ export function getPipelineClientNames(cards) {
 
 export function filterCards(cards, { client, assigneeFilter = false, staffName = '', clientAccountManagers = {} }) {
   return cards.filter((card) => {
-    if (client && client !== 'all' && card.client !== client) return false;
+    if (!matchesClientFilter(card.client, client)) return false;
     if (assigneeFilter && staffName && !cardIsAssignedToStaff(card, staffName, clientAccountManagers)) {
       return false;
     }

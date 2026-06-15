@@ -4,6 +4,7 @@ import {
   withStoryOccurrence,
 } from './calendar';
 import { formatEditorDateLabel } from './editorTodo';
+import { matchesClientFilter } from './clients';
 import { isPastScheduledBoardPost } from '../utils';
 import { isScheduledPostType } from '../constants';
 import { cardIsAssignedToAccountManager } from './staffMembers';
@@ -294,7 +295,7 @@ export function groupAccountManagerTasksByDate(tasks, todayKey = toDateKey(new D
 
 export function filterAccountManagerTasks(tasks, { client, assignee }) {
   return tasks.filter((task) => {
-    if (client && client !== 'all' && task.client !== client) return false;
+    if (!matchesClientFilter(task.client, client)) return false;
     if (assignee && assignee !== 'all' && task.accountManager !== assignee) return false;
     return true;
   });

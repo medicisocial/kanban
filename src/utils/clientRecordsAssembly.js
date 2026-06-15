@@ -1,4 +1,19 @@
-import { clientBrandNameKey } from './clients.js';
+import { clientBrandNameKey, formatClientDisplayName } from './clients.js';
+
+function pickPreferredClientName(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  if (clientBrandNameKey(a) !== clientBrandNameKey(b)) return a;
+  if (a === a.toLowerCase() && b !== b.toLowerCase()) return b;
+  if (b === b.toLowerCase() && a !== a.toLowerCase()) return a;
+  return a;
+}
+
+function clientNameFromRecordRow(row) {
+  const display = String(row.display_name || '').trim();
+  const brandKey = String(row.brand_key || '').trim();
+  return formatClientDisplayName(display || brandKey);
+}
 
 function unionClientNamesFromRecords(existingNames = [], rows = []) {
   const seen = new Set();
@@ -7,15 +22,20 @@ function unionClientNamesFromRecords(existingNames = [], rows = []) {
     const key = clientBrandNameKey(name);
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    merged.push(name);
+    merged.push(formatClientDisplayName(name));
   }
   for (const row of rows) {
-    const name = row.display_name || row.brand_key;
+    const name = clientNameFromRecordRow(row);
     if (!name) continue;
     const key = clientBrandNameKey(name);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    merged.push(String(name).trim());
+    const existingIndex = merged.findIndex((entry) => clientBrandNameKey(entry) === key);
+    if (existingIndex === -1) {
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(name);
+      continue;
+    }
+    merged[existingIndex] = pickPreferredClientName(merged[existingIndex], name);
   }
   return merged;
 }
@@ -40,7 +60,7 @@ export function mergeClientRecordRowsIntoWorkspace(workspace = {}, rows = []) {
   const next = { ...workspace };
   next.names = unionClientNamesFromRecords(workspace.names, rows);
   for (const row of rows) {
-    const client = row.display_name || row.brand_key;
+    const client = clientNameFromRecordRow(row);
     if (!client) continue;
     if (row.client_color) {
       next.colors = { ...(next.colors || {}), [client]: row.client_color };

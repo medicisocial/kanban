@@ -2,8 +2,10 @@ import { toDateKey, parseDateKey, addDays } from './calendar';
 import { isOverdue } from '../utils';
 import { cardIsAssignedToStaff } from './staffMembers';
 
+import { matchesClientFilter } from './clients';
+
 function matchesClient(item, clientFilter) {
-  return clientFilter === 'all' || item.client === clientFilter;
+  return matchesClientFilter(item.client, clientFilter);
 }
 
 function isDueWithinDays(dateKey, days, todayKey = toDateKey(new Date())) {

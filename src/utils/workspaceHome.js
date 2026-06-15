@@ -1,4 +1,5 @@
 import { toDateKey } from './calendar';
+import { matchesClientFilter } from './clients';
 import { isScheduledPostType } from '../constants';
 import {
   cardIsAssignedToStaff,
@@ -56,8 +57,8 @@ function matchesAccountManagerQueue(card, staffName, clientAccountManagers, pers
   return cardIsAssignedToAccountManager(card, staffName, clientAccountManagers);
 }
 
-function matchesClientFilter(item, clientFilter) {
-  return clientFilter === 'all' || item.client === clientFilter;
+function matchesClientFilterItem(item, clientFilter) {
+  return matchesClientFilter(item.client, clientFilter);
 }
 
 function buildEditorQueueCounts(
@@ -86,7 +87,7 @@ function buildShootsTodayCount(
       card.shootDate &&
       isToday(card.shootDate) &&
       card.contentType !== 'Story' &&
-      matchesClientFilter(card, clientFilter) &&
+      matchesClientFilterItem(card, clientFilter) &&
       (!personalScope || !staffName || cardIsAssignedToContentCreator(card, staffName)),
   ).length;
 }
@@ -151,7 +152,7 @@ function buildPersonalWorkspaceHomeSummary({
       card.columnId === 'scheduled' &&
       card.dueDate &&
       isThisWeek(card.dueDate) &&
-      matchesClientFilter(card, clientFilter) &&
+      matchesClientFilterItem(card, clientFilter) &&
       cardIsAssignedToStaff(card, staffName, clientAccountManagers),
   );
 
@@ -211,7 +212,7 @@ export function buildWorkspaceHomeSummary({
     });
   }
 
-  const matchesClient = (item) => matchesClientFilter(item, clientFilter);
+  const matchesClient = (item) => matchesClientFilterItem(item, clientFilter);
 
   const scopedCards = cards.filter(matchesClient);
   const scopedIdeas = ideas.filter(matchesClient);

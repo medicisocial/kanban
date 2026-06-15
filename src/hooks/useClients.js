@@ -12,7 +12,7 @@ import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import { normalizeContentTypeColors } from '../utils/contentTypeColors';
 import { normalizeCustomColorPalette, normalizeHexColor } from '../utils/colorHex';
 import { DEFAULT_CLIENT_BUSINESS_TYPES, normalizeBusinessType } from '../utils/eventFormSchemas';
-import { normalizeClientName, pickNextClientColor, mergeDefaultClients, clientNamesConflict, isInternalClientName, clientBrandNameKey, isTestClientName } from '../utils/clients';
+import { normalizeClientName, pickNextClientColor, mergeDefaultClients, clientNamesConflict, isInternalClientName, clientBrandNameKey, isTestClientName, getClientColor as lookupClientColorUtil } from '../utils/clients';
 import {
   mergeClientNameTombstones,
   suppressedClientNameKeys,
@@ -407,7 +407,7 @@ export function useClients() {
   }, [orgId, includeDefaults]);
 
   const getClientColor = useCallback(
-    (client) => state.colors[client] || '#9ca3af',
+    (client) => lookupClientColorUtil(client, state.colors),
     [state.colors],
   );
 

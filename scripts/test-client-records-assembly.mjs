@@ -66,4 +66,19 @@ if (!slim.contentTypeColors) {
   throw new Error('slimClientsWorkspaceForCloudPush should keep org-level keys');
 }
 
+const araRows = [
+  {
+    display_name: 'Ara Med Spa',
+    brand_key: 'ara med spa',
+    client_color: '#ec4899',
+  },
+];
+const araMerged = mergeClientRecordRowsIntoWorkspace({ names: ['ara med spa'] }, araRows);
+if (!araMerged.names.includes('Ara Med Spa')) {
+  throw new Error('mergeClientRecordRowsIntoWorkspace should canonicalize ara med spa display name');
+}
+if (araMerged.colors['Ara Med Spa'] !== '#ec4899' && araMerged.colors['ara med spa'] !== '#ec4899') {
+  throw new Error('mergeClientRecordRowsIntoWorkspace should apply color under canonical client name');
+}
+
 console.log('Client records assembly tests passed.');

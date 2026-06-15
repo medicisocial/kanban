@@ -1,4 +1,5 @@
 import { isOneOffProjectCard } from '../constants';
+import { matchesClientFilter } from './clients';
 
 /** Approved ideas waiting to be scheduled on a shoot day. */
 export function findIdeaBoardCard(idea, cards = []) {
@@ -22,7 +23,7 @@ export function isIdeaInVault(idea, cards = []) {
 export function getVaultIdeas(ideas, cards = [], { client } = {}) {
   return ideas.filter((idea) => {
     if (!isIdeaInVault(idea, cards)) return false;
-    if (client && client !== 'all' && idea.client !== client) return false;
+    if (!matchesClientFilter(idea.client, client)) return false;
     return true;
   });
 }

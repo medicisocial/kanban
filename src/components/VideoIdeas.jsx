@@ -7,6 +7,7 @@ import AdminIdeasTable from './clientPortal/AdminIdeasTable';
 import IdeaVaultTable from './IdeaVaultTable';
 import ScheduleVaultIdeaModal from './ScheduleVaultIdeaModal';
 import { getVaultIdeas, isIdeaInVault, isIdeaScheduled } from '../utils/videoIdeas';
+import { matchesClientFilter } from '../utils/clients';
 import { btnPrimaryClass, btnSecondaryClass, glassSegmentClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 const IDEA_TABS = [
@@ -43,7 +44,7 @@ export default function VideoIdeas({
 
   const filteredByClient = useMemo(() => {
     if (!clientFilter || clientFilter === 'all') return ideas;
-    return ideas.filter((idea) => idea.client === clientFilter);
+    return ideas.filter((idea) => matchesClientFilter(idea.client, clientFilter));
   }, [ideas, clientFilter]);
 
   const reviewIdeas = useMemo(
