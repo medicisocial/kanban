@@ -1,35 +1,11 @@
 import { getOrgId } from '../lib/orgSession';
-import { loadStaffSession } from './staffAuth';
-import { SUPABASE_ENABLED, supabase } from '../lib/supabaseClient';
+import { buildStaffApiAuthHeaders } from '../lib/staffApiAuth';
 import { fetchWithTimeout } from './withTimeout';
 
 const STAFF_BRAND_ASSETS_TIMEOUT_MS = 60000;
 
 async function buildAuthHeaders() {
-  const session = loadStaffSession();
-  if (session?.username && session?.signature) {
-    return {
-      Authorization: `Bearer ${btoa(JSON.stringify(session))}`,
-      'Content-Type': 'application/json',
-    };
-  }
-
-  if (SUPABASE_ENABLED && supabase) {
-    try {
-      const { data } = await supabase.auth.getSession();
-      const token = data?.session?.access_token;
-      if (token) {
-        return {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        };
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-
-  return null;
+  return buildStaffApiAuthHeaders();
 }
 
 export async function saveStaffBrandAssets({ brand, companyFiles, specialMenus }) {

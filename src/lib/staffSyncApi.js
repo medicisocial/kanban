@@ -1,40 +1,12 @@
-import { supabase, SUPABASE_ENABLED } from './supabaseClient';
-import { loadStaffSession } from '../utils/staffAuth';
+import { SUPABASE_ENABLED } from './supabaseClient';
 import { getOrgId } from './orgSession';
-
-function staffSessionHeaders() {
-  const session = loadStaffSession();
-  if (!session?.username || !session?.signature) return null;
-  return {
-    Authorization: `Bearer ${btoa(JSON.stringify(session))}`,
-    'Content-Type': 'application/json',
-  };
-}
-
-async function supabaseSessionHeaders() {
-  if (!SUPABASE_ENABLED || !supabase) return null;
-  try {
-    const { data } = await supabase.auth.getSession();
-    const token = data?.session?.access_token;
-    if (!token) return null;
-    return {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function buildAuthHeaders() {
-  return staffSessionHeaders() || (await supabaseSessionHeaders());
-}
+import { buildStaffApiAuthHeaders } from './staffApiAuth';
 
 /** Server-side Supabase writes when the browser cannot write directly with RLS. */
 export async function pushStaffSync({ table, changed = [], removed = [], orgId = getOrgId() }) {
   if (!changed.length && !removed.length) return true;
 
-  const headers = await buildAuthHeaders();
+  const headers = await buildStaffApiAuthHeaders();
   if (!headers) return false;
 
   const response = await fetch('/api/staff-sync', {
@@ -67,7 +39,7 @@ export async function pushStaffSyncRows(
 ) {
   if (!rows.length && !removed.length) return true;
 
-  const headers = await buildAuthHeaders();
+  const headers = await buildStaffApiAuthHeaders();
   if (!headers) return false;
 
   const response = await fetch('/api/staff-sync', {
@@ -100,7 +72,7 @@ const STAFF_FETCH_TIMEOUT_MS = 5000;
 export async function fetchStaffSyncRows(table, orgId = getOrgId()) {
   if (!SUPABASE_ENABLED) return null;
 
-  const headers = await buildAuthHeaders();
+  const headers = await buildStaffApiAuthHeaders();
   if (!headers) return null;
 
   const params = new URLSearchParams({ table, orgId });

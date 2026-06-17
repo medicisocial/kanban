@@ -49,6 +49,27 @@ const patches = diffBrandProfilePatches(
 if (patches.length !== 1 || patches[0].brandKey !== 'arco fit') {
   throw new Error('diffBrandProfilePatches should detect color change');
 }
+if (patches[0].patch.clientColor !== '#333333' || patches[0].patch.contacts) {
+  throw new Error('diffBrandProfilePatches should only include changed profile fields');
+}
+
+const contactPatches = diffBrandProfilePatches(
+  workspace,
+  {
+    ...workspace,
+    contacts: {
+      ...workspace.contacts,
+      Plume: [...workspace.contacts.Plume, { name: 'Manager', email: 'mgr@test.com' }],
+    },
+  },
+  ['Plume'],
+);
+if (contactPatches.length !== 1 || !Array.isArray(contactPatches[0].patch.contacts)) {
+  throw new Error('diffBrandProfilePatches should emit a contacts-only patch');
+}
+if (contactPatches[0].patch.clientLogo !== undefined) {
+  throw new Error('diffBrandProfilePatches should omit unchanged logo on contacts save');
+}
 
 const patch = brandProfilePatchFromWorkspaceBrand('Plume', merged);
 if (patch.clientColor !== '#222222') {

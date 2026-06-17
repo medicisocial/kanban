@@ -1,6 +1,6 @@
 import { SUPABASE_ENABLED, supabase } from '../lib/supabaseClient';
 import { getOrgId } from '../lib/orgSession';
-import { loadStaffSession } from './staffAuth';
+import { buildStaffApiAuthHeaders } from '../lib/staffApiAuth';
 import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from '../lib/staffSupabaseAuth';
 import { slimClientsWorkspaceForCloudPush } from './clientsWorkspacePush';
 
@@ -11,7 +11,7 @@ export {
 } from './clientRecordsAssembly.js';
 
 async function patchBrandProfileRpc(orgId, brandKey, patch) {
-  if (!supabase) return false;
+  if (!supabase) return { ok: false, error: 'Supabase client unavailable.' };
   const { error } = await supabase.rpc('patch_brand_profile', {
     p_org_id: orgId,
     p_brand_key: brandKey,
@@ -19,69 +19,62 @@ async function patchBrandProfileRpc(orgId, brandKey, patch) {
   });
   if (error) {
     console.warn('[client-records] patch_brand_profile failed:', error.message || error);
-    return false;
+    return { ok: false, error: error.message || 'patch_brand_profile failed.' };
   }
-  return true;
-}
-
-async function buildBrandRecordAuthHeaders() {
-  const session = loadStaffSession();
-  if (session?.username && session?.signature) {
-    return {
-      Authorization: `Bearer ${btoa(JSON.stringify(session))}`,
-      'Content-Type': 'application/json',
-    };
-  }
-  if (!supabase) return null;
-  const { data } = await supabase.auth.getSession();
-  const token = data?.session?.access_token;
-  if (!token) return null;
-  return {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  };
+  return { ok: true };
 }
 
 async function patchBrandProfileViaApi(orgId, brandKey, patch) {
-  const headers = await buildBrandRecordAuthHeaders();
-  if (!headers) return false;
+  const headers = await buildStaffApiAuthHeaders();
+  if (!headers) {
+    return { ok: false, error: 'Staff sign-in required to save client profiles.' };
+  }
   try {
     const response = await fetch('/api/brand-record', {
       method: 'POST',
       headers,
       body: JSON.stringify({ brand: brandKey, orgId, patch }),
     });
-    return response.ok;
-  } catch {
-    return false;
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: payload.error || `Could not save brand profile (${response.status}).`,
+      };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err?.message || 'Could not reach the brand profile API.' };
   }
 }
 
 export async function pushBrandProfilePatches(orgId, patches = []) {
   if (!SUPABASE_ENABLED || !patches.length) return { ok: true };
 
-  let failures = 0;
+  let lastError = '';
 
   for (const { brandKey, patch } of patches) {
     // patch_brand_profile is service_role-only (migration 027); browser RPC usually fails.
-    let ok = await patchBrandProfileViaApi(orgId, brandKey, patch);
-    if (!ok) {
+    let result = await patchBrandProfileViaApi(orgId, brandKey, patch);
+    if (!result.ok) {
       let canWrite = await hasStaffSupabaseSession();
       if (!canWrite) {
         await ensureStaffSupabaseSession();
         canWrite = await hasStaffSupabaseSession();
       }
       if (canWrite) {
-        ok = await patchBrandProfileRpc(orgId, brandKey, patch);
+        result = await patchBrandProfileRpc(orgId, brandKey, patch);
       }
     }
-    if (!ok) failures += 1;
+    if (!result.ok) {
+      lastError = result.error || lastError;
+    }
   }
 
-  if (failures > 0) {
+  if (lastError) {
     return {
       ok: false,
-      error: `Could not save ${failures} client profile update${failures === 1 ? '' : 's'} to the cloud.`,
+      error: lastError,
     };
   }
 

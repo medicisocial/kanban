@@ -113,12 +113,20 @@ export function diffBrandProfilePatches(prev = {}, next = {}, clientNames = []) 
     if (!client) continue;
     const prevPatch = brandProfilePatchFromWorkspaceBrand(client, prev);
     const nextPatch = brandProfilePatchFromWorkspaceBrand(client, next);
-    if (JSON.stringify(prevPatch) !== JSON.stringify(nextPatch)) {
-      patches.push({
-        brandKey: clientBrandNameKey(client),
-        patch: nextPatch,
-      });
+    const changed = {};
+    for (const [key, value] of Object.entries(nextPatch || {})) {
+      if (JSON.stringify(prevPatch?.[key]) !== JSON.stringify(value)) {
+        changed[key] = value;
+      }
     }
+    if (!Object.keys(changed).length) continue;
+    if (!changed.displayName && nextPatch?.displayName) {
+      changed.displayName = nextPatch.displayName;
+    }
+    patches.push({
+      brandKey: clientBrandNameKey(client),
+      patch: changed,
+    });
   }
   return patches;
 }
