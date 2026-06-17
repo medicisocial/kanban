@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useClientsContext } from '../../context/ClientsContext';
 import {
@@ -47,13 +47,39 @@ export default function ClientEmailSendModal({
     return merged;
   }, [recipients, extras]);
 
+  const sessionRef = useRef({ open: false, client: '' });
+
   useEffect(() => {
-    if (!open) return;
-    setSelected(new Set(recipients.map((entry) => entry.email)));
-    setExtraEmail('');
-    setExtras([]);
-    setError('');
-    setMessage('');
+    if (!open) {
+      sessionRef.current = { open: false, client: '' };
+      return;
+    }
+
+    const isNewSession =
+      !sessionRef.current.open || sessionRef.current.client !== client;
+    sessionRef.current = { open: true, client };
+
+    if (isNewSession) {
+      setSelected(new Set(recipients.map((entry) => entry.email)));
+      setExtraEmail('');
+      setExtras([]);
+      setError('');
+      setMessage('');
+      return;
+    }
+
+    // Same dialog session — sync newly loaded contacts without clearing typed email.
+    setSelected((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const entry of recipients) {
+        if (!next.has(entry.email)) {
+          next.add(entry.email);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
   }, [open, client, recipients]);
 
   useEffect(() => {
