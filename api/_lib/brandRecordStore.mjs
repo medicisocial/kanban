@@ -1,4 +1,8 @@
 import { getSupabaseUrl, getWriteConfig } from './supabase.mjs';
+import {
+  buildClientRecordUpsertRow,
+  patchNeedsBrandProfileRpc,
+} from './clientRecordsPatch.mjs';
 
 const SERVER_FETCH_TIMEOUT_MS = 15000;
 const SERVER_WRITE_TIMEOUT_MS = 55000;
@@ -67,7 +71,7 @@ export async function fetchBrandProfileRecord(orgId, brand, orgIdOverride) {
   return payload && typeof payload === 'object' ? payload : null;
 }
 
-export async function patchBrandProfileRecord(orgId, brand, patch, orgIdOverride) {
+async function patchBrandProfileViaRpc(orgId, brandKey, patch, orgIdOverride) {
   const { url, key, orgId: resolvedOrgId } = getWriteConfig(orgIdOverride || orgId);
   if (!url || !key) throw new Error('Supabase is not configured.');
 
@@ -83,7 +87,7 @@ export async function patchBrandProfileRecord(orgId, brand, patch, orgIdOverride
       },
       body: JSON.stringify({
         p_org_id: resolvedOrgId,
-        p_brand_key: normalizeBrandKey(brand),
+        p_brand_key: brandKey,
         p_patch: patch && typeof patch === 'object' ? patch : {},
       }),
     },
@@ -92,6 +96,39 @@ export async function patchBrandProfileRecord(orgId, brand, patch, orgIdOverride
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
     throw new Error(`patch_brand_profile failed: ${response.status} ${detail}`.trim());
+  }
+}
+
+export async function patchBrandProfileRecord(orgId, brand, patch, orgIdOverride) {
+  const { url, key, orgId: resolvedOrgId } = getWriteConfig(orgIdOverride || orgId);
+  if (!url || !key) throw new Error('Supabase is not configured.');
+
+  const brandKey = normalizeBrandKey(brand);
+  const safePatch = patch && typeof patch === 'object' ? patch : {};
+
+  if (patchNeedsBrandProfileRpc(safePatch)) {
+    await patchBrandProfileViaRpc(resolvedOrgId, brandKey, safePatch, orgIdOverride);
+    return;
+  }
+
+  const row = buildClientRecordUpsertRow(resolvedOrgId, brandKey, safePatch);
+  const response = await fetchWithTimeout(
+    `${url}/rest/v1/client_records`,
+    {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify([row]),
+    },
+    SERVER_WRITE_TIMEOUT_MS,
+  );
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`client_records upsert failed: ${response.status} ${detail}`.trim());
   }
 }
 

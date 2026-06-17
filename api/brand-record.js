@@ -58,7 +58,15 @@ export default async function handler(req, res) {
     await patchBrandProfileRecord(orgCheck.orgId, brand, patch);
     return res.status(200).json({ ok: true });
   } catch (error) {
-    console.error('[brand-record] patch failed:', error?.message || error);
-    return res.status(500).json({ error: 'Could not save brand profile.' });
+    const detail = error?.message || String(error);
+    console.error('[brand-record] patch failed:', detail);
+    const clientMessage =
+      detail.includes('client_records upsert failed') ||
+      detail.includes('patch_brand_profile failed')
+        ? 'Could not save brand profile to Supabase. Check your connection and try again.'
+        : detail.includes('SUPABASE_SERVICE_ROLE_KEY')
+          ? 'Cloud sync is misconfigured on the server.'
+          : 'Could not save brand profile.';
+    return res.status(500).json({ error: clientMessage, detail });
   }
 }

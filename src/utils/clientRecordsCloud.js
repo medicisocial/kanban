@@ -4,6 +4,10 @@ import { buildStaffApiAuthHeaders } from '../lib/staffApiAuth';
 import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from '../lib/staffSupabaseAuth';
 import { slimClientsWorkspaceForCloudPush } from './clientsWorkspacePush';
 import { fetchStaffSyncRows } from '../lib/staffSyncApi';
+import {
+  buildClientRecordUpsertRow,
+  patchNeedsBrandProfileRpc,
+} from './clientRecordsPatch.js';
 
 export {
   brandProfilePatchFromWorkspaceBrand,
@@ -31,6 +35,19 @@ export async function fetchClientRecordRows(orgId = getOrgId()) {
 
   const rows = await fetchStaffSyncRows('client_records', orgId);
   return Array.isArray(rows) ? rows : [];
+}
+
+async function patchBrandProfileDirect(orgId, brandKey, patch) {
+  if (!supabase) return { ok: false, error: 'Supabase client unavailable.' };
+  const row = buildClientRecordUpsertRow(orgId, brandKey, patch);
+  const { error } = await supabase.from('client_records').upsert(row, {
+    onConflict: 'org_id,brand_key',
+  });
+  if (error) {
+    console.warn('[client_records] direct upsert failed:', error.message || error);
+    return { ok: false, error: error.message || 'Could not save to Supabase.' };
+  }
+  return { ok: true };
 }
 
 async function patchBrandProfileRpc(orgId, brandKey, patch) {
@@ -62,7 +79,10 @@ async function patchBrandProfileViaApi(orgId, brandKey, patch) {
     if (!response.ok) {
       return {
         ok: false,
-        error: payload.error || `Could not save brand profile (${response.status}).`,
+        error:
+          payload.error ||
+          payload.detail ||
+          `Could not save brand profile (${response.status}).`,
       };
     }
     return { ok: true };
@@ -79,21 +99,23 @@ async function patchBrandProfileToSupabase(orgId, brandKey, patch) {
   }
 
   if (canWrite) {
-    const rpcResult = await patchBrandProfileRpc(orgId, brandKey, patch);
-    if (rpcResult.ok) return rpcResult;
-    // RPC denied (e.g. migration 028 not applied yet) — fall back to server API.
+    const result = patchNeedsBrandProfileRpc(patch)
+      ? await patchBrandProfileRpc(orgId, brandKey, patch)
+      : await patchBrandProfileDirect(orgId, brandKey, patch);
+    if (result.ok) return result;
+
     const apiResult = await patchBrandProfileViaApi(orgId, brandKey, patch);
     if (apiResult.ok) return apiResult;
     return {
       ok: false,
-      error: rpcResult.error || apiResult.error || 'Could not save client profile.',
+      error: result.error || apiResult.error || 'Could not save client profile.',
     };
   }
 
   return patchBrandProfileViaApi(orgId, brandKey, patch);
 }
 
-/** Persist profile field patches to Supabase client_records (direct RPC when signed in). */
+/** Persist profile field patches to Supabase client_records. */
 export async function pushBrandProfilePatches(orgId, patches = []) {
   if (!SUPABASE_ENABLED || !patches.length) return { ok: true };
 
