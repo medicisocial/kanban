@@ -16,16 +16,19 @@ import {
  */
 export function useClientRecordsSync({ workspaceState, setWorkspaceState, orgReady }) {
   const [recordsHydrated, setRecordsHydrated] = useState(!SUPABASE_ENABLED);
-  const hydratingRef = useRef(false);
 
   useEffect(() => {
-    if (!SUPABASE_ENABLED || !orgReady) {
-      setRecordsHydrated(!SUPABASE_ENABLED);
+    if (!SUPABASE_ENABLED) {
+      setRecordsHydrated(true);
       return undefined;
     }
 
+    if (!orgReady) {
+      const timeoutId = setTimeout(() => setRecordsHydrated(true), 4000);
+      return () => clearTimeout(timeoutId);
+    }
+
     let cancelled = false;
-    hydratingRef.current = true;
     setRecordsHydrated(false);
 
     void (async () => {
@@ -37,11 +40,10 @@ export function useClientRecordsSync({ workspaceState, setWorkspaceState, orgRea
           syncLocalTombstonesToCloudIfNeeded();
           setWorkspaceState((prev) => mergeClientRecordRowsIntoWorkspace(prev, rows));
         }
+      } catch (err) {
+        console.warn('[client_records] hydrate failed:', err?.message || err);
       } finally {
-        if (!cancelled) {
-          hydratingRef.current = false;
-          setRecordsHydrated(true);
-        }
+        setRecordsHydrated(true);
       }
     })();
 

@@ -263,7 +263,7 @@ export default function ClientManagementPage({
     );
   }
 
-  if (profileClients.length === 0) {
+  if (clientsReady && profileClients.length === 0) {
     return (
       <section>
         <ClientPortalSectionHeader
