@@ -49,6 +49,14 @@ assert(mergedFromRecords.names.length === 2, 'client_records hydrate must popula
 assert(mergedFromRecords.names.includes('Fulshear Regional'), 'display names should come from rows');
 assert(mergedFromRecords.colors.Plume === '#222222', 'profile fields should hydrate from rows');
 
+// ── 2b. Client filter options populate from hydrated names ──────────────────
+import { buildClientFilterOptions } from '../src/utils/clients.js';
+
+const filterOptions = buildClientFilterOptions(mergedFromRecords.names, () => '#111111');
+assert(filterOptions.length >= 3, 'filter should include All clients plus hydrated brands');
+assert(filterOptions.some((opt) => opt.label === 'Plume'), 'filter should list Plume');
+assert(filterOptions.some((opt) => opt.label === 'Fulshear Regional'), 'filter should list Fulshear Regional');
+
 // ── 3. Live Supabase load (medici) ──────────────────────────────────────────
 const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
 const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();

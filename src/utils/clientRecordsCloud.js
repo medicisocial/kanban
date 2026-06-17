@@ -104,8 +104,8 @@ async function fetchBrandNameRowsFallback(orgId) {
   return [];
 }
 
-const CLIENT_RECORDS_FETCH_ATTEMPTS = 4;
-const CLIENT_RECORDS_RETRY_MS = 350;
+const CLIENT_RECORDS_FETCH_ATTEMPTS = 6;
+const CLIENT_RECORDS_RETRY_MS = 400;
 
 /** Load normalized client profile rows — Supabase + staff-sync in parallel. */
 export async function fetchClientRecordRows(orgId = getOrgId()) {
@@ -120,11 +120,8 @@ export async function fetchClientRecordRows(orgId = getOrgId()) {
     if (directRows.length) return directRows;
     if (Array.isArray(apiRows) && apiRows.length) return apiRows;
 
-    // On later attempts also try the RPC fallback (works with anon key)
-    if (attempt >= 1) {
-      const rpcFallback = await fetchBrandNamesViaRpc(orgId);
-      if (rpcFallback?.length) return rpcFallback;
-    }
+    const fallbackRows = await fetchBrandNameRowsFallback(orgId);
+    if (fallbackRows.length) return fallbackRows;
 
     if (attempt < CLIENT_RECORDS_FETCH_ATTEMPTS - 1) {
       await new Promise((resolve) => {
@@ -133,7 +130,7 @@ export async function fetchClientRecordRows(orgId = getOrgId()) {
     }
   }
 
-  return fetchBrandNameRowsFallback(orgId);
+  return [];
 }
 
 async function patchBrandProfileRpc(orgId, brandKey, patch) {

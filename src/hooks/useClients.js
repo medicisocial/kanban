@@ -175,7 +175,7 @@ async function syncClientsWorkspace() {
 }
 
 export function useClients() {
-  const { isLegacyOrg, planType, orgId, orgReady } = useStaffAuth();
+  const { isLegacyOrg, planType, orgId } = useStaffAuth();
   const includeDefaults = isLegacyOrg && !isCloudSourceOfTruth();
   const [state, setState] = useState(() =>
     normalizeClientsState(
@@ -272,12 +272,15 @@ export function useClients() {
 
   const { recordsHydrated } = useClientRecordsSync({
     setWorkspaceState: setWorkspaceStateFromRecords,
-    orgReady,
     orgId,
+    hasClientNames: () => stateRef.current.names?.length > 0,
   });
 
+  const hasClientNames = state.names.length > 0;
   // Cloud client names/profiles come from client_records — do not block on the slim clients blob.
-  const clientsReady = !SUPABASE_ENABLED || (isCloudSourceOfTruth() ? recordsHydrated : syncLoaded);
+  const clientsReady =
+    !SUPABASE_ENABLED ||
+    (isCloudSourceOfTruth() ? recordsHydrated || hasClientNames : syncLoaded);
   const persistTimerRef = useRef(null);
   useEffect(() => {
     if (isCloudSourceOfTruth()) return;
