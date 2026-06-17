@@ -64,6 +64,16 @@ export async function pushStaffSyncSingleton(table, recordId, data) {
 }
 
 const STAFF_FETCH_TIMEOUT_MS = 5000;
+const AUTH_HEADER_TIMEOUT_MS = 2000;
+
+async function staffSyncAuthHeaders() {
+  return Promise.race([
+    buildStaffApiAuthHeaders(),
+    new Promise((resolve) => {
+      setTimeout(() => resolve(null), AUTH_HEADER_TIMEOUT_MS);
+    }),
+  ]);
+}
 
 /**
  * Load a workspace table through /api/staff-sync (service-role on the server).
@@ -72,7 +82,7 @@ const STAFF_FETCH_TIMEOUT_MS = 5000;
 export async function fetchStaffSyncRows(table, orgId = getOrgId()) {
   if (!SUPABASE_ENABLED) return null;
 
-  const headers = await buildStaffApiAuthHeaders();
+  const headers = await staffSyncAuthHeaders();
   if (!headers) return null;
 
   const params = new URLSearchParams({ table, orgId });

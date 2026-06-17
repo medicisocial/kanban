@@ -13,10 +13,12 @@ export {
 
 /** Slim select for fast filter/sidebar — skips heavy jsonb profile fields. */
 export const CLIENT_RECORDS_LIST_SELECT =
-  'org_id,brand_key,display_name,client_color,updated_at,deleted_company_file_ids';
+  'org_id,brand_key,display_name,client_color,updated_at';
 
 const CLIENT_RECORDS_FULL_SELECT =
   'id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,deleted_company_file_ids,updated_at';
+
+const DIRECT_READ_TIMEOUT_MS = 3000;
 
 async function fetchClientRecordRowsDirect(orgId, select) {
   if (!supabase) return [];
@@ -28,35 +30,29 @@ async function fetchClientRecordRowsDirect(orgId, select) {
   return Array.isArray(data) ? data : [];
 }
 
-function pickClientRecordRows(directRows, apiRows) {
-  if (Array.isArray(apiRows) && apiRows.length && !directRows.length) return apiRows;
+async function readClientRecords(orgId, select) {
+  const directRows = await Promise.race([
+    fetchClientRecordRowsDirect(orgId, select),
+    new Promise((resolve) => {
+      setTimeout(() => resolve([]), DIRECT_READ_TIMEOUT_MS);
+    }),
+  ]);
   if (directRows.length) return directRows;
-  if (Array.isArray(apiRows) && apiRows.length) return apiRows;
-  return [];
+
+  const apiRows = await fetchStaffSyncRows('client_records', orgId);
+  return Array.isArray(apiRows) ? apiRows : [];
 }
 
-/** Fast list load — parallel Supabase + staff-sync, slim columns only. */
+/** Fast list load — direct Supabase first, staff-sync fallback only if empty. */
 export async function fetchClientRecordListRows(orgId = getOrgId()) {
   if (!SUPABASE_ENABLED) return [];
-
-  const [directRows, apiRows] = await Promise.all([
-    fetchClientRecordRowsDirect(orgId, CLIENT_RECORDS_LIST_SELECT),
-    fetchStaffSyncRows('client_records', orgId),
-  ]);
-
-  return pickClientRecordRows(directRows, apiRows);
+  return readClientRecords(orgId, CLIENT_RECORDS_LIST_SELECT);
 }
 
-/** Full profile load — for client detail pages after list is visible. */
+/** Full profile load — for client detail after list is visible. */
 export async function fetchClientRecordFullRows(orgId = getOrgId()) {
   if (!SUPABASE_ENABLED) return [];
-
-  const [directRows, apiRows] = await Promise.all([
-    fetchClientRecordRowsDirect(orgId, CLIENT_RECORDS_FULL_SELECT),
-    fetchStaffSyncRows('client_records', orgId),
-  ]);
-
-  return pickClientRecordRows(directRows, apiRows);
+  return readClientRecords(orgId, CLIENT_RECORDS_FULL_SELECT);
 }
 
 /** @deprecated Use fetchClientRecordListRows — kept for tests and API parity. */
