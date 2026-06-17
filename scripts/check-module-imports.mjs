@@ -15,6 +15,9 @@ const GUARDED_SYMBOLS = [
   'subscribeClientPortalChanges',
   'pushStaffSync',
   'pushStaffSyncRecords',
+  'encodeSharePayload',
+  'decodeSharePayload',
+  'decodeShareQueryParam',
 ];
 
 function walk(dir, files = []) {

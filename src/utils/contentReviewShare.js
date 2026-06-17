@@ -1,6 +1,7 @@
 import { clientMatchesBrand } from './clients';
 import { isCloudSourceOfTruth } from '../lib/cloudSourceOfTruth';
 import { shouldUsePortalResponseQueue, queueStorageKey } from './portalResponseQueue';
+import { encodeSharePayload, decodeSharePayload, decodeShareQueryParam } from './sharePayload';
 
 const RESPONSES_KEY = 'medici-social-content-review-responses';
 
