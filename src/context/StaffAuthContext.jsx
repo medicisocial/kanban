@@ -1,13 +1,16 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   clearStaffSession,
+  clearStaffSignedOut,
   createStaffSession,
   isOpsStaffEmail,
   isStaffAuthConfigured,
   isStaffAuthRequired,
   isStaffSessionValid,
   loadStaffSession,
+  markStaffSignedOut,
   saveStaffSession,
+  shouldSuppressStaffAutoRestore,
   verifyStaffCredentials,
 } from '../utils/staffAuth';
 import { SUPABASE_ENABLED, supabase } from '../lib/supabaseClient';
@@ -17,7 +20,6 @@ import { clearSyncedWorkspaceCache } from '../lib/orgStorage';
 import { authenticateTeamMemberCredentials } from '../utils/teamAuth';
 import {
   ensureStaffSupabaseSession,
-  signOutStaffSupabaseSession,
 } from '../lib/staffSupabaseAuth';
 import {
   fetchUserOrganization,
@@ -25,7 +27,7 @@ import {
   looksLikeEmail,
   resetPasswordForEmail,
   signInWithEmail,
-  signOutSupabaseAuth,
+  signOutSupabaseAuthAsync,
   signUpWorkspace,
   updateUserPassword,
 } from '../lib/saasAuth';
@@ -109,6 +111,8 @@ export function StaffAuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [org, setOrg] = useState(null);
   const [ready, setReady] = useState(!authRequired);
+  const sessionRef = useRef(null);
+  sessionRef.current = session;
 
   const applyLegacyOrg = useCallback(() => {
     const legacyOrg = buildLegacyOrg();
@@ -135,7 +139,7 @@ export function StaffAuthProvider({ children }) {
   useEffect(() => {
     if (!authRequired) {
       applyLegacyOrg();
-      if (SUPABASE_ENABLED) {
+      if (SUPABASE_ENABLED && !shouldSuppressStaffAutoRestore()) {
         ensureStaffSupabaseSession().catch(() => {});
       }
       setReady(true);
@@ -146,7 +150,7 @@ export function StaffAuthProvider({ children }) {
 
     (async () => {
       const stored = loadStaffSession();
-      if (stored && (await isStaffSessionValid(stored))) {
+      if (stored && !shouldSuppressStaffAutoRestore() && (await isStaffSessionValid(stored))) {
         if (!cancelled) {
           setSession(stored);
           applyLegacyOrg();
@@ -154,7 +158,9 @@ export function StaffAuthProvider({ children }) {
             clearSyncedWorkspaceCache(LEGACY_ORG_ID);
           }
         }
-        ensureStaffSupabaseSession().catch(() => {});
+        if (!shouldSuppressStaffAutoRestore()) {
+          ensureStaffSupabaseSession().catch(() => {});
+        }
         if (!cancelled) setReady(true);
         return;
       }
@@ -164,6 +170,7 @@ export function StaffAuthProvider({ children }) {
       if (isPublicMarketingPage()) {
         if (!cancelled) setReady(true);
         (async () => {
+          if (shouldSuppressStaffAutoRestore()) return;
           const supabaseSession = await withTimeout(
             getSupabaseAuthSession(),
             3000,
@@ -182,7 +189,7 @@ export function StaffAuthProvider({ children }) {
         return;
       }
 
-      if (!isAuthGatePage()) {
+      if (!isAuthGatePage() && !shouldSuppressStaffAutoRestore()) {
         const supabaseSession = await withTimeout(
           getSupabaseAuthSession(),
           AUTH_BOOTSTRAP_TIMEOUT_MS,
@@ -213,13 +220,14 @@ export function StaffAuthProvider({ children }) {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, supabaseSession) => {
       if (event === 'SIGNED_OUT') {
-        // Clear any SaaS session so the UI doesn't show stale state.
-        setSession((prev) => (prev?.type === 'saas' ? null : prev));
+        setSession(null);
         return;
       }
+      if (shouldSuppressStaffAutoRestore()) return;
       if (!supabaseSession?.user) return;
-      if (session?.username) return;
-      if (session?.type === 'saas') return;
+      const activeSession = sessionRef.current;
+      if (activeSession?.username) return;
+      if (activeSession?.type === 'saas') return;
 
       const ok = await resolveSaasOrg(supabaseSession.user);
       if (ok) {
@@ -234,9 +242,10 @@ export function StaffAuthProvider({ children }) {
     return () => {
       authListener?.subscription?.unsubscribe();
     };
-  }, [resolveSaasOrg, session]);
+  }, [resolveSaasOrg]);
 
   const login = useCallback(async (username, password) => {
+    clearStaffSignedOut();
     const loginId = normalizePortalLogin(username);
     const trimmedPassword = String(password || '').trim();
     const isOpsLogin = isOpsStaffEmail(loginId);
@@ -266,7 +275,7 @@ export function StaffAuthProvider({ children }) {
       if (saasResult.ok) {
         const ok = await withTimeout(resolveSaasOrg(saasResult.user), AUTH_BOOTSTRAP_TIMEOUT_MS, false);
         if (!ok) {
-          signOutSupabaseAuth();
+          await signOutSupabaseAuthAsync();
           return {
             ok: false,
             error: 'Account exists but no workspace was found. Contact support.',
@@ -294,6 +303,7 @@ export function StaffAuthProvider({ children }) {
   }, [applyLegacyOrg, resolveSaasOrg]);
 
   const signup = useCallback(async ({ email, password, orgName, planType }) => {
+    clearStaffSignedOut();
     const result = await signUpWorkspace({ email, password, orgName, planType });
     if (!result.ok) return result;
 
@@ -355,13 +365,13 @@ export function StaffAuthProvider({ children }) {
   const logout = useCallback(() => {
     // Clear org-scoped cache before resetting so getOrgId() still returns the
     // current org when clearOrgScopedCache reads it.
+    markStaffSignedOut();
     if (org?.id) clearSyncedWorkspaceCache(org.id);
     clearStaffSession();
-    signOutStaffSupabaseSession();
-    signOutSupabaseAuth();
     setSession(null);
     setOrg(null);
     resetOrgSession();
+    void signOutSupabaseAuthAsync().catch(() => {});
   }, [org?.id]);
 
   const value = useMemo(

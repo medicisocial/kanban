@@ -1,5 +1,6 @@
 import { signInWithEmail } from './saasAuth';
 import { supabase, SUPABASE_ENABLED } from './supabaseClient';
+import { shouldSuppressStaffAutoRestore } from '../utils/staffAuth';
 
 const STAFF_SUPABASE_EMAIL = (
   import.meta.env.VITE_SUPABASE_STAFF_EMAIL || 'info@medicisocial.com'
@@ -40,6 +41,7 @@ export async function signInStaffSupabaseSession(typedPassword) {
 /** Re-use an existing session or sign in when staff is already authenticated in the app. */
 export async function ensureStaffSupabaseSession(typedPassword) {
   if (!SUPABASE_ENABLED || !supabase) return { ok: true };
+  if (shouldSuppressStaffAutoRestore()) return { ok: true };
   if (await hasStaffSupabaseSession()) return { ok: true };
   return signInStaffSupabaseSession(typedPassword);
 }

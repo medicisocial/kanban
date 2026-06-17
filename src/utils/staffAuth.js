@@ -1,4 +1,6 @@
 export const STAFF_SESSION_KEY = 'medici-staff-session';
+/** Tab-scoped flag set on explicit sign-out so Supabase session restore is skipped. */
+export const STAFF_SIGNED_OUT_KEY = 'medici-staff-signed-out';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const PROD_STAFF_USERNAME = 'info@medicisocial.com';
@@ -156,4 +158,33 @@ export function saveStaffSession(session) {
 
 export function clearStaffSession() {
   localStorage.removeItem(STAFF_SESSION_KEY);
+}
+
+export function markStaffSignedOut() {
+  try {
+    sessionStorage.setItem(STAFF_SIGNED_OUT_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearStaffSignedOut() {
+  try {
+    sessionStorage.removeItem(STAFF_SIGNED_OUT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isStaffSignedOut() {
+  try {
+    return sessionStorage.getItem(STAFF_SIGNED_OUT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** True when Supabase auth should not silently re-establish a staff session. */
+export function shouldSuppressStaffAutoRestore() {
+  return isStaffSignedOut();
 }
