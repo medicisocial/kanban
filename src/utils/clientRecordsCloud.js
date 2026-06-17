@@ -43,9 +43,29 @@ function brandRowsFromDisplayNames(orgId, names = []) {
     .filter(Boolean);
 }
 
+/** Try the get_org_brand_names RPC (grants anon/authenticated/service_role). This is the most reliable path. */
+async function fetchBrandNamesViaRpc(orgId) {
+  if (!supabase) return null;
+  try {
+    const { data: rpcNames, error: rpcError } = await supabase.rpc('get_org_brand_names', {
+      p_org_id: orgId,
+    });
+    if (!rpcError && Array.isArray(rpcNames) && rpcNames.length) {
+      return brandRowsFromDisplayNames(orgId, rpcNames);
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 /** Last-resort name list when client_records rows are temporarily unreachable. */
 async function fetchBrandNameRowsFallback(orgId) {
   if (!supabase) return [];
+
+  // Try the RPC first — it grants anon execution, so it works before auth is ready.
+  const rpcRows = await fetchBrandNamesViaRpc(orgId);
+  if (rpcRows?.length) return rpcRows;
 
   const { data, error } = await supabase
     .from('brands')
@@ -62,11 +82,20 @@ async function fetchBrandNameRowsFallback(orgId) {
   }
 
   try {
-    const { data: rpcNames, error: rpcError } = await supabase.rpc('get_org_brand_names', {
-      p_org_id: orgId,
-    });
-    if (!rpcError && Array.isArray(rpcNames) && rpcNames.length) {
-      return brandRowsFromDisplayNames(orgId, rpcNames);
+    const { data: directNames, error: directError } = await supabase
+      .from('client_records')
+      .select('brand_key, display_name')
+      .eq('org_id', orgId)
+      .limit(1);
+    if (!directError && Array.isArray(directNames) && directNames.length) {
+      // If we got even one row back, try a full read
+      const { data: allRows } = await supabase
+        .from('client_records')
+        .select('org_id, brand_key, display_name, client_color, logo, contacts, social_logins, company_files, special_menus, photo_gallery_link, business_type, account_manager, updated_at')
+        .eq('org_id', orgId);
+      if (Array.isArray(allRows) && allRows.length) {
+        return allRows;
+      }
     }
   } catch {
     /* ignore */
@@ -90,6 +119,12 @@ export async function fetchClientRecordRows(orgId = getOrgId()) {
 
     if (directRows.length) return directRows;
     if (Array.isArray(apiRows) && apiRows.length) return apiRows;
+
+    // On later attempts also try the RPC fallback (works with anon key)
+    if (attempt >= 1) {
+      const rpcFallback = await fetchBrandNamesViaRpc(orgId);
+      if (rpcFallback?.length) return rpcFallback;
+    }
 
     if (attempt < CLIENT_RECORDS_FETCH_ATTEMPTS - 1) {
       await new Promise((resolve) => {

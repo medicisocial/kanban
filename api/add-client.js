@@ -199,13 +199,29 @@ export default async function handler(req, res) {
       },
     });
   } catch (error) {
-    console.error('[add-client] failed:', error?.message || error);
+    const detail = error?.message || error?.detail || String(error);
+    const stack = error?.stack || '';
+    console.error('[add-client] failed:', detail);
+    if (stack) console.error('[add-client] stack:', stack);
+
+    // Log any response body that was embedded in the error
+    if (error?.responseBody) {
+      console.error('[add-client] response body:', error.responseBody);
+    }
+
     if (reservedName) {
       await releaseClientBrandNameOnServer(resolvedOrgId, reservedName).catch(() => {});
     }
+    const clientMessage =
+      detail.includes('supabase') || detail.includes('timed out')
+        ? 'Cloud sync returned an error. Check your connection and try again.'
+        : detail.includes('not configured')
+          ? 'Cloud sync is not configured. Contact support.'
+          : 'Could not add client. Try again in a moment.';
     return res.status(500).json({
       ok: false,
-      error: 'Could not add client. Try again in a moment.',
+      error: clientMessage,
+      detail,
     });
   }
 }

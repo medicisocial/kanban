@@ -15,7 +15,7 @@ import {
 
 const ORG_WAIT_MS = 4000;
 const HYDRATE_RETRY_MS = 500;
-const HYDRATE_MAX_ATTEMPTS = 10;
+const HYDRATE_MAX_ATTEMPTS = 4;
 
 function hasCachedClientNames() {
   try {
