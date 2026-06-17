@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { getContentTypeStyle } from '../constants';
 import { contentTypePillProps } from '../utils/contentTypeColors';
+import { buildPeerApprovalMessage } from '../utils/contentReviewShare';
 import { useClientsContext } from '../context/ClientsContext';
 import { glassInsetClass, inputClass } from './clientPortal/clientPortalUi';
 
-export default function ContentReviewCard({ card, onApprove, onDeny }) {
+export default function ContentReviewCard({ card, peerResponses = [], onApprove, onDeny }) {
   const [comment, setComment] = useState('');
   const [denyError, setDenyError] = useState('');
   const { getClientColor } = useClientsContext();
@@ -58,6 +59,17 @@ export default function ContentReviewCard({ card, onApprove, onDeny }) {
         {card.notes && (
           <p className="mb-3 text-sm text-gray-400">{card.notes}</p>
         )}
+
+        {peerResponses
+          .filter((entry) => entry.action === 'approved')
+          .map((entry) => (
+            <p
+              key={`${entry.email}-${entry.timestamp}`}
+              className="mb-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200"
+            >
+              {buildPeerApprovalMessage(entry, card.contentType)}
+            </p>
+          ))}
 
         <label className="block">
           <span className="mb-1.5 block text-xs font-medium text-gray-400">

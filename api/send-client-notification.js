@@ -1,4 +1,5 @@
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
+import { registerContentReviewShareInvites } from './_lib/contentReviewShare.mjs';
 import {
   isEmailConfigured,
   normalizeShareType,
@@ -79,6 +80,16 @@ export default async function handler(req, res) {
       portalUrl,
       itemCount,
     });
+
+    if (shareType === 'review') {
+      const orgId = String(session?.orgId || process.env.ORG_ID || process.env.VITE_ORG_ID || 'medici').trim();
+      await registerContentReviewShareInvites({
+        orgId,
+        shareUrl,
+        recipients,
+      });
+    }
+
     return res.status(200).json({ ok: true, ...result });
   } catch (error) {
     console.error('[send-client-notification] failed:', error?.message || error);

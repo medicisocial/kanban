@@ -7,6 +7,10 @@ import {
   queueContentReviewResponse,
   shouldApplyContentReviewViaShareApi,
   submitContentReviewShareResponse,
+  fetchContentReviewShareState,
+  getContentReviewReviewer,
+  getPeerShareResponses,
+  normalizeContentReviewShare,
 } from '../utils/contentReviewShare';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import { clientMatchesBrand } from '../utils/clients';
@@ -33,38 +37,88 @@ export default function ClientContentReviewPortal({
   const [copied, setCopied] = useState(false);
 
   const [actionError, setActionError] = useState('');
+  const reviewerEmail = getContentReviewReviewer();
+  const useShareCloudApply = shouldApplyContentReviewViaShareApi();
+
+  const mergeShareCardDetails = (card, shareCard) => {
+    if (!shareCard) return card;
+    return {
+      ...card,
+      ...shareCard,
+      contentReviewShare: normalizeContentReviewShare(
+        shareCard.contentReviewShare || card.contentReviewShare,
+      ),
+    };
+  };
 
   useEffect(() => {
-    if (useCloudSync) {
-      const pending = stripInternalCardsForClientPortal(cards).filter(
-        (card) =>
-          clientMatchesBrand(card.client, client) &&
-          card.columnId === 'in-review' &&
-          !respondedIds.includes(card.id),
-      );
-      setLocalCards(pending);
-      setDone(pending.length === 0);
-      return;
+    let cancelled = false;
+
+    async function loadCards() {
+      if (useCloudSync) {
+        const pending = stripInternalCardsForClientPortal(cards).filter(
+          (card) =>
+            clientMatchesBrand(card.client, client) &&
+            card.columnId === 'in-review' &&
+            !respondedIds.includes(card.id),
+        );
+        if (!cancelled) {
+          setLocalCards(pending);
+          setDone(pending.length === 0);
+        }
+        return;
+      }
+
+      const snapshot = parseContentShareHash();
+      let shareCards = [];
+
+      if (useShareCloudApply && snapshot?.cards?.length) {
+        try {
+          const payload = await fetchContentReviewShareState({
+            brand: client,
+            cardIds: snapshot.cards.map((item) => item.id),
+          });
+          shareCards = payload.cards || [];
+        } catch (err) {
+          if (!cancelled) {
+            setActionError(err.message || 'Could not load review items.');
+          }
+        }
+      }
+
+      const shareById = new Map(shareCards.map((card) => [card.id, card]));
+      const merged = mergePortalCards(
+        stripInternalCardsForClientPortal(cards).map((card) => mergeShareCardDetails(card, shareById.get(card.id))),
+        client,
+        snapshot,
+        { reviewerEmail },
+      )
+        .map((card) => mergeShareCardDetails(card, shareById.get(card.id)))
+        .filter((card) => !respondedIds.includes(card.id));
+
+      if (!cancelled) {
+        setLocalCards(merged);
+        setDone(merged.length === 0);
+      }
     }
 
-    const snapshot = parseContentShareHash();
-    const merged = mergePortalCards(
-      stripInternalCardsForClientPortal(cards),
-      client,
-      snapshot,
-    ).filter(
-      (card) => !respondedIds.includes(card.id),
-    );
-    setLocalCards(merged);
-    setDone(merged.length === 0);
-  }, [cards, client, respondedIds, useCloudSync]);
+    loadCards();
+    return () => {
+      cancelled = true;
+    };
+  }, [cards, client, respondedIds, useCloudSync, useShareCloudApply, reviewerEmail]);
 
   const clientColor = getClientColor(client);
   const clientLogo = getClientLogo(client);
-  const useShareCloudApply = shouldApplyContentReviewViaShareApi();
   const canSyncLocally = !useCloudSync && !useShareCloudApply && cards.some(
     (c) => clientMatchesBrand(c.client, client) && c.columnId === 'in-review',
   );
+
+  const resolveReviewerName = (card) => {
+    const share = normalizeContentReviewShare(card?.contentReviewShare);
+    const invited = share.invited.find((entry) => entry.email === reviewerEmail);
+    return invited?.name || '';
+  };
 
   const recordResponse = async (response) => {
     setSessionResponses((prev) => [
@@ -78,6 +132,8 @@ export default function ClientContentReviewPortal({
         action: response.action,
         comment: response.comment,
         timestamp: response.timestamp,
+        reviewerEmail,
+        reviewerName: resolveReviewerName(response.card),
       });
       return;
     }
@@ -224,6 +280,7 @@ export default function ClientContentReviewPortal({
               <ContentReviewCard
                 key={card.id}
                 card={card}
+                peerResponses={getPeerShareResponses(card.contentReviewShare, reviewerEmail)}
                 onApprove={handleApprove}
                 onDeny={handleDeny}
               />

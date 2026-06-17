@@ -1,8 +1,9 @@
-/** First-approval-wins for multi-recipient content review share links. */
+/** Multi-recipient content review — deny overrides approval. */
 
 function mergeContentReviewQueueEntry(existing, incoming) {
   if (!incoming?.cardId) return existing || null;
-  if (existing?.action === 'approved') return existing;
+  if (incoming.action === 'denied') return incoming;
+  if (existing?.action === 'denied') return existing;
   if (incoming.action === 'approved') return incoming;
   return incoming;
 }
@@ -12,15 +13,22 @@ function finalizeContentReviewResponses(responses) {
   for (const response of responses || []) {
     if (!response?.cardId) continue;
     const prev = byCardId.get(response.cardId);
-    if (response.action === 'approved') {
+    if (response.action === 'denied') {
       byCardId.set(response.cardId, response);
       continue;
     }
-    if (!prev || prev.action !== 'approved') {
+    if (!prev || prev.action !== 'denied') {
       byCardId.set(response.cardId, response);
     }
   }
   return [...byCardId.values()];
+}
+
+function resolveShareBoardAction(responses) {
+  const list = Array.isArray(responses) ? responses : [];
+  if (list.some((entry) => entry.action === 'denied')) return 'denied';
+  if (list.some((entry) => entry.action === 'approved')) return 'approved';
+  return null;
 }
 
 function assert(condition, message) {
@@ -33,28 +41,38 @@ assert(
   mergeContentReviewQueueEntry(
     { cardId, action: 'approved', comment: 'Looks good' },
     { cardId, action: 'denied', comment: 'Wait' },
-  ).action === 'approved',
-  'queued approval is not replaced by a later deny',
+  ).action === 'denied',
+  'queued deny replaces an earlier approval',
 );
 
 assert(
   mergeContentReviewQueueEntry(
     { cardId, action: 'denied', comment: 'Revise' },
     { cardId, action: 'approved', comment: 'Actually fine' },
-  ).action === 'approved',
-  'queued approval replaces an earlier deny',
+  ).action === 'denied',
+  'queued deny is not replaced by a later approval',
 );
 
 const finalized = finalizeContentReviewResponses([
-  { cardId, action: 'denied', comment: 'No' },
   { cardId, action: 'approved', comment: 'Yes' },
-  { cardId: 'card-2', action: 'denied', comment: 'Fix hook' },
+  { cardId, action: 'denied', comment: 'No' },
+  { cardId: 'card-2', action: 'approved', comment: 'Good' },
 ]);
 
 assert(finalized.length === 2, 'one final response per card');
 assert(
-  finalized.find((entry) => entry.cardId === cardId)?.action === 'approved',
-  'approval wins when collapsing responses for the same card',
+  finalized.find((entry) => entry.cardId === cardId)?.action === 'denied',
+  'deny wins when collapsing responses for the same card',
+);
+
+const shareResponses = [
+  { email: 'matt@example.com', name: 'Matt', action: 'approved', comment: '', timestamp: 1 },
+  { email: 'jason@example.com', name: 'Jason', action: 'denied', comment: 'Fix hook', timestamp: 2 },
+];
+assert(resolveShareBoardAction(shareResponses) === 'denied', 'any deny sends the card back to edit');
+assert(
+  resolveShareBoardAction([shareResponses[0]]) === 'approved',
+  'one approval is enough when nobody denies',
 );
 
 console.log('test-content-review-first-approve: ok');

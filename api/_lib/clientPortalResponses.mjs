@@ -12,6 +12,12 @@ import {
   resolvePortalBrandLabel,
 } from './portalBrandProfile.mjs';
 import { fetchRecord, upsertRecord } from './supabase.mjs';
+import {
+  findLatestApproveResponse,
+  findLatestDenyResponse,
+  recordShareResponse,
+  resolveShareBoardAction,
+} from './contentReviewShare.mjs';
 
 function buildContentReviewDenyUpdates(card, comment, timestamp = Date.now()) {
   const trimmed = String(comment || '').trim();
@@ -92,6 +98,46 @@ export async function handleContentPortalResponse(orgId, sessionBrand, response 
 
   const timestamp = Number(response.timestamp) || Date.now();
   const comment = String(response.comment || '').trim();
+  const reviewerEmail = String(response.reviewerEmail || response.email || '').trim().toLowerCase();
+  const reviewerName = String(response.reviewerName || response.name || '').trim();
+
+  if (action === 'denied' && !comment) {
+    throw new Error('Revision notes are required.');
+  }
+
+  if (reviewerEmail) {
+    const share = recordShareResponse(card.contentReviewShare, {
+      email: reviewerEmail,
+      name: reviewerName,
+      action: action === 'approved' ? 'approved' : 'denied',
+      comment,
+      timestamp,
+    });
+    const boardAction = resolveShareBoardAction(share.responses);
+    let updates = {
+      contentReviewShare: share,
+      updatedAt: timestamp,
+    };
+
+    if (boardAction === 'denied') {
+      const latestDeny = findLatestDenyResponse(share.responses);
+      updates = {
+        ...updates,
+        ...buildContentReviewDenyUpdates(card, latestDeny?.comment || comment, latestDeny?.timestamp || timestamp),
+      };
+    } else if (boardAction === 'approved') {
+      const latestApprove = findLatestApproveResponse(share.responses);
+      updates = {
+        ...updates,
+        columnId: 'approved',
+        status: 'Approved',
+        clientComment: latestApprove?.comment || comment,
+      };
+    }
+
+    await saveCard(orgId, cardId, { ...card, ...updates });
+    return { ok: true, cardId, columnId: updates.columnId || card.columnId, boardAction };
+  }
 
   if (action === 'approved') {
     if (card.columnId === 'approved') {
@@ -111,10 +157,7 @@ export async function handleContentPortalResponse(orgId, sessionBrand, response 
   }
 
   if (action === 'denied') {
-    if (card.columnId === 'approved') {
-      return { ok: true, skipped: true, reason: 'already-approved', cardId };
-    }
-    if (card.columnId !== 'in-review') {
+    if (card.columnId !== 'in-review' && card.columnId !== 'approved') {
       return { ok: true, skipped: true, reason: 'not-in-review', cardId };
     }
     const updates = buildContentReviewDenyUpdates(card, comment, timestamp);

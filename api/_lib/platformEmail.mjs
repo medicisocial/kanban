@@ -1,3 +1,5 @@
+import { appendReviewerToShareUrl } from './contentReviewShare.mjs';
+
 const SHARE_TYPES = new Set(['ideas', 'calendar', 'review', 'portal_invite']);
 
 function getAgencyName() {
@@ -172,17 +174,21 @@ export async function sendClientNotificationEmails({
   itemCount,
 }) {
   const agencyName = getAgencyName();
-  const email = buildNotificationEmail({
-    shareType,
-    client,
-    agencyName,
-    shareUrl,
-    portalUrl,
-    itemCount,
-  });
 
   const results = [];
   for (const recipient of recipients) {
+    const recipientShareUrl =
+      shareType === 'review'
+        ? appendReviewerToShareUrl(shareUrl, recipient.email)
+        : shareUrl;
+    const email = buildNotificationEmail({
+      shareType,
+      client,
+      agencyName,
+      shareUrl: recipientShareUrl,
+      portalUrl,
+      itemCount,
+    });
     const sent = await sendPlatformEmail({
       to: recipient.email,
       subject: email.subject,
@@ -194,7 +200,14 @@ export async function sendClientNotificationEmails({
 
   return {
     agencyName,
-    subject: email.subject,
+    subject: results.length ? buildNotificationEmail({
+      shareType,
+      client,
+      agencyName,
+      shareUrl,
+      portalUrl,
+      itemCount,
+    }).subject : '',
     sent: results.length,
     results,
   };
