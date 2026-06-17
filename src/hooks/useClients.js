@@ -244,19 +244,21 @@ export function useClients() {
     recordId: 'workspace',
   });
 
+  const setWorkspaceStateFromRecords = useCallback((updater) => {
+    setState((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      const normalized = normalizeClientsState(next, { includeDefaults });
+      if (isCloudSourceOfTruth() && Array.isArray(normalized.names) && normalized.names.length) {
+        writeOrgScopedJson(CLIENTS_STORAGE_KEY, { names: normalized.names });
+      }
+      return normalized;
+    });
+  }, [includeDefaults]);
+
   const { recordsHydrated } = useClientRecordsSync({
-    workspaceState: state,
-    setWorkspaceState: (updater) => {
-      setState((prev) => {
-        const next = typeof updater === 'function' ? updater(prev) : updater;
-        const normalized = normalizeClientsState(next, { includeDefaults });
-        if (isCloudSourceOfTruth() && Array.isArray(normalized.names) && normalized.names.length) {
-          writeOrgScopedJson(CLIENTS_STORAGE_KEY, { names: normalized.names });
-        }
-        return normalized;
-      });
-    },
+    setWorkspaceState: setWorkspaceStateFromRecords,
     orgReady,
+    orgId,
   });
 
   // Cloud client names/profiles come from client_records — do not block on the slim clients blob.
