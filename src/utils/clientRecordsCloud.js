@@ -29,9 +29,8 @@ async function getSupabaseAccessTokenQuick() {
 
 async function fetchClientRecordRowsDirect(orgId) {
   if (!supabase) return [];
-  const token = await getSupabaseAccessTokenQuick();
-  if (!token) return [];
-
+  // Do not require a user JWT — anon RLS allows legacy medici reads; authenticated
+  // sessions still send their JWT automatically via the Supabase client.
   const { data, error } = await supabase
     .from('client_records')
     .select(CLIENT_RECORDS_SELECT)
@@ -43,17 +42,76 @@ async function fetchClientRecordRowsDirect(orgId) {
   return Array.isArray(data) ? data : [];
 }
 
+function brandRowsFromDisplayNames(orgId, names = []) {
+  return names
+    .map((displayName) => {
+      const name = String(displayName || '').trim();
+      if (!name) return null;
+      return {
+        org_id: orgId,
+        brand_key: name.toLowerCase(),
+        display_name: name,
+      };
+    })
+    .filter(Boolean);
+}
+
+/** Last-resort name list when client_records rows are temporarily unreachable. */
+async function fetchBrandNameRowsFallback(orgId) {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('brands')
+    .select('brand_key, display_name')
+    .eq('org_id', orgId);
+  if (!error && Array.isArray(data) && data.length) {
+    return data
+      .filter((row) => row?.display_name && !String(row.brand_key || '').startsWith('__'))
+      .map((row) => ({
+        org_id: orgId,
+        brand_key: row.brand_key,
+        display_name: row.display_name,
+      }));
+  }
+
+  try {
+    const { data: rpcNames, error: rpcError } = await supabase.rpc('get_org_brand_names', {
+      p_org_id: orgId,
+    });
+    if (!rpcError && Array.isArray(rpcNames) && rpcNames.length) {
+      return brandRowsFromDisplayNames(orgId, rpcNames);
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return [];
+}
+
+const CLIENT_RECORDS_FETCH_ATTEMPTS = 4;
+const CLIENT_RECORDS_RETRY_MS = 350;
+
 /** Load normalized client profile rows — Supabase + staff-sync in parallel. */
 export async function fetchClientRecordRows(orgId = getOrgId()) {
   if (!SUPABASE_ENABLED) return [];
 
-  const [directRows, apiRows] = await Promise.all([
-    fetchClientRecordRowsDirect(orgId),
-    fetchStaffSyncRows('client_records', orgId),
-  ]);
+  for (let attempt = 0; attempt < CLIENT_RECORDS_FETCH_ATTEMPTS; attempt += 1) {
+    const [directRows, apiRows] = await Promise.all([
+      fetchClientRecordRowsDirect(orgId),
+      fetchStaffSyncRows('client_records', orgId),
+    ]);
 
-  if (directRows.length) return directRows;
-  return Array.isArray(apiRows) ? apiRows : [];
+    if (directRows.length) return directRows;
+    if (Array.isArray(apiRows) && apiRows.length) return apiRows;
+
+    if (attempt < CLIENT_RECORDS_FETCH_ATTEMPTS - 1) {
+      await new Promise((resolve) => {
+        setTimeout(resolve, CLIENT_RECORDS_RETRY_MS * (attempt + 1));
+      });
+    }
+  }
+
+  return fetchBrandNameRowsFallback(orgId);
 }
 
 async function patchBrandProfileDirect(orgId, brandKey, patch) {

@@ -140,6 +140,10 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
         applyingRemoteRef.current = true;
         syncedRef.current = JSON.stringify(null);
         markSyncLoaded();
+        if (table === 'clients' && isCloudSourceOfTruth()) {
+          // Names and profiles live in client_records — never wipe local state when the slim blob row is missing.
+          return;
+        }
         setValue(null);
         return;
       } catch (err) {

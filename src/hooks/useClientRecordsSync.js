@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CLIENTS_STORAGE_KEY } from '../constants';
 import { readOrgScopedJson } from '../lib/orgStorage';
-import { SUPABASE_ENABLED } from '../lib/supabaseClient';
+import { SUPABASE_ENABLED, supabase } from '../lib/supabaseClient';
 import { getOrgId } from '../lib/orgSession';
 import {
   fetchClientRecordRows,
@@ -33,9 +33,22 @@ export function useClientRecordsSync({ setWorkspaceState, orgReady, orgId }) {
   setWorkspaceStateRef.current = setWorkspaceState;
 
   const hydratedOrgRef = useRef(null);
+  const [hydrateNonce, setHydrateNonce] = useState(0);
   const [recordsHydrated, setRecordsHydrated] = useState(
     () => !SUPABASE_ENABLED || hasCachedClientNames(),
   );
+
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !supabase) return undefined;
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) return;
+      hydratedOrgRef.current = null;
+      setHydrateNonce((current) => current + 1);
+    });
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!SUPABASE_ENABLED) {
@@ -72,8 +85,8 @@ export function useClientRecordsSync({ setWorkspaceState, orgReady, orgId }) {
           hydrateBrandFileTombstonesFromRows(rows);
           syncLocalTombstonesToCloudIfNeeded();
           setWorkspaceStateRef.current((prev) => mergeClientRecordRowsIntoWorkspace(prev, rows));
+          hydratedOrgRef.current = activeOrgId;
         }
-        hydratedOrgRef.current = activeOrgId;
       } catch (err) {
         console.warn('[client_records] hydrate failed:', err?.message || err);
       } finally {
@@ -85,7 +98,7 @@ export function useClientRecordsSync({ setWorkspaceState, orgReady, orgId }) {
       cancelled = true;
       clearTimeout(safetyTimeout);
     };
-  }, [orgReady, orgId]);
+  }, [orgReady, orgId, hydrateNonce]);
 
   return { recordsHydrated };
 }
