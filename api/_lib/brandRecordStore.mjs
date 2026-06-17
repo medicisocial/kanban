@@ -1,8 +1,4 @@
 import { getSupabaseUrl, getWriteConfig, resolveAnonKey, resolveServerKeyOrAnon } from './supabase.mjs';
-import {
-  buildClientRecordUpsertRow,
-  patchNeedsBrandProfileRpc,
-} from './clientRecordsPatch.mjs';
 
 const SERVER_FETCH_TIMEOUT_MS = 15000;
 const SERVER_WRITE_TIMEOUT_MS = 55000;
@@ -71,22 +67,22 @@ export async function fetchBrandProfileRecord(orgId, brand, orgIdOverride) {
   return payload && typeof payload === 'object' ? payload : null;
 }
 
-async function patchBrandProfileViaRpc(orgId, brandKey, patch, orgIdOverride) {
-  const { url, key, orgId: resolvedOrgId } = getWriteConfig(orgIdOverride || orgId);
-  if (!url || !key) throw new Error('Supabase is not configured.');
+async function patchBrandProfileViaRpc(orgId, brandKey, patch, orgIdOverride, authOverride = null) {
+  const auth = authOverride || resolveBrandRecordWriteAuth(null);
+  if (!auth?.url || !auth.key) throw new Error('Supabase is not configured.');
 
   const response = await fetchWithTimeout(
-    `${url}/rest/v1/rpc/patch_brand_profile`,
+    `${auth.url}/rest/v1/rpc/patch_brand_profile`,
     {
       method: 'POST',
       headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
+        apikey: auth.key,
+        Authorization: `Bearer ${auth.authorization}`,
         'Content-Type': 'application/json',
         Prefer: 'return=minimal',
       },
       body: JSON.stringify({
-        p_org_id: resolvedOrgId,
+        p_org_id: orgIdOverride || orgId,
         p_brand_key: brandKey,
         p_patch: patch && typeof patch === 'object' ? patch : {},
       }),
@@ -103,21 +99,21 @@ function resolveBrandRecordWriteAuth(userToken) {
   const url = getSupabaseUrl();
   if (!url) return null;
 
-  if (userToken) {
-    const anonKey = resolveAnonKey();
-    if (!anonKey) return null;
-    return { url, key: anonKey, authorization: userToken };
+  const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (serviceRole) {
+    return { url, key: serviceRole, authorization: serviceRole };
   }
 
-  try {
-    const { url: writeUrl, key } = getWriteConfig();
-    if (!writeUrl || !key) return null;
-    return { url: writeUrl, key, authorization: key };
-  } catch {
-    const fallbackKey = resolveServerKeyOrAnon();
-    if (!fallbackKey) return null;
-    return { url, key: fallbackKey, authorization: fallbackKey };
+  if (userToken) {
+    const anonKey = resolveAnonKey();
+    if (anonKey) {
+      return { url, key: anonKey, authorization: userToken };
+    }
   }
+
+  const fallbackKey = resolveServerKeyOrAnon();
+  if (!fallbackKey) return null;
+  return { url, key: fallbackKey, authorization: fallbackKey };
 }
 
 export async function patchBrandProfileRecord(orgId, brand, patch, orgIdOverride, options = {}) {
@@ -128,30 +124,7 @@ export async function patchBrandProfileRecord(orgId, brand, patch, orgIdOverride
   const brandKey = normalizeBrandKey(brand);
   const safePatch = patch && typeof patch === 'object' ? patch : {};
 
-  if (patchNeedsBrandProfileRpc(safePatch)) {
-    await patchBrandProfileViaRpc(resolvedOrgId, brandKey, safePatch, orgIdOverride);
-    return;
-  }
-
-  const row = buildClientRecordUpsertRow(resolvedOrgId, brandKey, safePatch);
-  const response = await fetchWithTimeout(
-    `${auth.url}/rest/v1/client_records`,
-    {
-      method: 'POST',
-      headers: {
-        apikey: auth.key,
-        Authorization: `Bearer ${auth.authorization}`,
-        'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates,return=minimal',
-      },
-      body: JSON.stringify([row]),
-    },
-    SERVER_WRITE_TIMEOUT_MS,
-  );
-  if (!response.ok) {
-    const detail = await response.text().catch(() => '');
-    throw new Error(`client_records upsert failed: ${response.status} ${detail}`.trim());
-  }
+  await patchBrandProfileViaRpc(resolvedOrgId, brandKey, safePatch, orgIdOverride, auth);
 }
 
 export async function fetchClientRecordRows(orgIdOverride) {

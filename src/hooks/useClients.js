@@ -189,7 +189,7 @@ export function useClients() {
   }, [state]);
 
   const applyClientsWorkspaceUpdate = useCallback(
-    async (updater) => {
+    async (updater, options = {}) => {
       const prev = normalizeClientsState(stateRef.current, { includeDefaults });
       const nextState = updater(prev);
       if (!nextState) {
@@ -201,7 +201,11 @@ export function useClients() {
 
       if (SUPABASE_ENABLED && orgId) {
         const names = Array.isArray(normalized.names) ? normalized.names : [];
-        const patches = diffBrandProfilePatches(prev, normalized, names);
+        const syncClientNames =
+          Array.isArray(options.syncClients) && options.syncClients.length
+            ? options.syncClients.filter(Boolean)
+            : names;
+        const patches = diffBrandProfilePatches(prev, normalized, syncClientNames);
         if (patches.length) {
           const pushResult = await pushBrandProfilePatches(orgId, patches);
           if (!pushResult.ok) {
@@ -483,8 +487,8 @@ export function useClients() {
         ...prev.accountManagers,
         [client]: accountManager,
       },
-    }));
-  }, []);
+    }), { syncClients: [client] });
+  }, [applyClientsWorkspaceUpdate]);
 
   const setClientColor = useCallback(async (client, color) => {
     const hex = normalizeHexColor(color);
@@ -492,8 +496,8 @@ export function useClients() {
     return applyClientsWorkspaceUpdate((prev) => ({
       ...prev,
       colors: { ...prev.colors, [client]: hex },
-    }));
-  }, []);
+    }), { syncClients: [client] });
+  }, [applyClientsWorkspaceUpdate]);
 
   const setClientLogo = useCallback(async (client, logo) => {
     if (!client) return { ok: false, error: 'Missing client.' };
@@ -506,8 +510,8 @@ export function useClients() {
         delete nextLogos[client];
       }
       return { ...prev, logos: nextLogos };
-    });
-  }, []);
+    }, { syncClients: [client] });
+  }, [applyClientsWorkspaceUpdate]);
 
   const setClientBusinessType = useCallback(async (client, businessType) => {
     if (!client) return { ok: false, error: 'Missing client.' };
@@ -517,8 +521,8 @@ export function useClients() {
         ...prev.businessTypes,
         [client]: normalizeBusinessType(businessType),
       },
-    }));
-  }, []);
+    }), { syncClients: [client] });
+  }, [applyClientsWorkspaceUpdate]);
 
   const saveClientProfile = useCallback(async (client, patch = {}) => {
     if (!client) return { ok: false, error: 'Missing client.' };
@@ -553,8 +557,8 @@ export function useClients() {
         };
       }
       return next;
-    });
-  }, []);
+    }, { syncClients: [client] });
+  }, [applyClientsWorkspaceUpdate]);
 
   const getClientPhotoGalleryLink = useCallback(
     (client) => resolveClientMapValue(client, state.photoGalleryLinks) || '',
@@ -694,8 +698,8 @@ export function useClients() {
         ...prev.contacts,
         [client]: normalized,
       },
-    }));
-  }, []);
+    }), { syncClients: [client] });
+  }, [applyClientsWorkspaceUpdate]);
 
   const getClientSocialLogins = useCallback(
     (client) => normalizeClientSocialLogins(resolveClientMapValue(client, state.socialLogins)),
@@ -711,8 +715,8 @@ export function useClients() {
         ...prev.socialLogins,
         [client]: mergeClientSocialLogins(prev.socialLogins[client], logins),
       },
-    }));
-  }, []);
+    }), { syncClients: [client] });
+  }, [applyClientsWorkspaceUpdate]);
 
   const getClientCompanyFiles = useCallback(
     (client) =>
@@ -751,7 +755,7 @@ export function useClients() {
           ...(prev.companyFiles || {}),
           [client]: normalized,
         },
-      }));
+      }), { syncClients: [client] });
     },
     [applyClientsWorkspaceUpdate],
   );
@@ -778,7 +782,7 @@ export function useClients() {
           ...(prev.specialMenus || {}),
           [client]: normalized,
         },
-      }));
+      }), { syncClients: [client] });
     },
     [applyClientsWorkspaceUpdate],
   );

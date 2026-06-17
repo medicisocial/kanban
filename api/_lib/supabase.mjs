@@ -67,7 +67,7 @@ function getReadConfig(orgIdOverride) {
 }
 
 /** Write paths (staff-sync POST) require the service role in production. */
-function getWriteConfig(orgIdOverride) {
+export function getWriteConfig(orgIdOverride) {
   const url = getSupabaseUrl();
   const key = resolveServerKey();
   const orgId = orgIdOverride || getDefaultOrgId();

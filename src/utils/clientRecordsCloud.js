@@ -1,12 +1,9 @@
 import { SUPABASE_ENABLED, supabase } from '../lib/supabaseClient';
 import { getOrgId } from '../lib/orgSession';
 import { buildStaffApiAuthHeaders } from '../lib/staffApiAuth';
+import { ensureStaffSupabaseSession } from '../lib/staffSupabaseAuth';
 import { slimClientsWorkspaceForCloudPush } from './clientsWorkspacePush';
 import { fetchStaffSyncRows } from '../lib/staffSyncApi';
-import {
-  buildClientRecordUpsertRow,
-  patchNeedsBrandProfileRpc,
-} from './clientRecordsPatch.js';
 
 export {
   brandProfilePatchFromWorkspaceBrand,
@@ -16,16 +13,6 @@ export {
 
 const CLIENT_RECORDS_SELECT =
   'id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,updated_at';
-
-async function getSupabaseAccessTokenQuick() {
-  if (!supabase) return null;
-  try {
-    const { data } = await supabase.auth.getSession();
-    return data?.session?.access_token || null;
-  } catch {
-    return null;
-  }
-}
 
 async function fetchClientRecordRowsDirect(orgId) {
   if (!supabase) return [];
@@ -114,24 +101,6 @@ export async function fetchClientRecordRows(orgId = getOrgId()) {
   return fetchBrandNameRowsFallback(orgId);
 }
 
-async function patchBrandProfileDirect(orgId, brandKey, patch) {
-  if (!supabase) return { ok: false, error: 'Supabase client unavailable.' };
-  const token = await getSupabaseAccessTokenQuick();
-  if (!token) {
-    return { ok: false, error: 'Sign in required to save client profiles to Supabase.' };
-  }
-
-  const row = buildClientRecordUpsertRow(orgId, brandKey, patch);
-  const { error } = await supabase.from('client_records').upsert(row, {
-    onConflict: 'org_id,brand_key',
-  });
-  if (error) {
-    console.warn('[client_records] direct upsert failed:', error.message || error);
-    return { ok: false, error: error.message || 'Could not save to Supabase.' };
-  }
-  return { ok: true };
-}
-
 async function patchBrandProfileRpc(orgId, brandKey, patch) {
   if (!supabase) return { ok: false, error: 'Supabase client unavailable.' };
   const { error } = await supabase.rpc('patch_brand_profile', {
@@ -174,13 +143,10 @@ async function patchBrandProfileViaApi(orgId, brandKey, patch) {
 }
 
 async function patchBrandProfileToSupabase(orgId, brandKey, patch) {
-  const token = await getSupabaseAccessTokenQuick();
-  if (token) {
-    const result = patchNeedsBrandProfileRpc(patch)
-      ? await patchBrandProfileRpc(orgId, brandKey, patch)
-      : await patchBrandProfileDirect(orgId, brandKey, patch);
-    if (result.ok) return result;
-  }
+  await ensureStaffSupabaseSession();
+
+  const rpcResult = await patchBrandProfileRpc(orgId, brandKey, patch);
+  if (rpcResult.ok) return rpcResult;
 
   const apiResult = await patchBrandProfileViaApi(orgId, brandKey, patch);
   if (apiResult.ok) return apiResult;
@@ -188,6 +154,7 @@ async function patchBrandProfileToSupabase(orgId, brandKey, patch) {
   return {
     ok: false,
     error:
+      rpcResult.error ||
       apiResult.error ||
       'Could not save client profile. Sign out and sign in again, then retry.',
   };
