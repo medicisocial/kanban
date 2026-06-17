@@ -10,22 +10,6 @@ import {
   syncLocalTombstonesToCloudIfNeeded,
 } from '../utils/brandFileTombstones.js';
 
-const HYDRATE_RETRY_MS = 600;
-const HYDRATE_MAX_ATTEMPTS = 8;
-
-async function fetchClientRecordRowsWithRetry(orgId) {
-  for (let attempt = 0; attempt < HYDRATE_MAX_ATTEMPTS; attempt += 1) {
-    const rows = await fetchClientRecordRows(orgId);
-    if (Array.isArray(rows)) return rows;
-    if (attempt < HYDRATE_MAX_ATTEMPTS - 1) {
-      await new Promise((resolve) => {
-        setTimeout(resolve, HYDRATE_RETRY_MS);
-      });
-    }
-  }
-  return [];
-}
-
 /**
  * Hydrate brand profile maps from Supabase client_records (direct read, API fallback).
  * Writes go to Supabase via pushBrandProfilePatches in useClients.
@@ -46,14 +30,12 @@ export function useClientRecordsSync({ workspaceState, setWorkspaceState, orgRea
 
     void (async () => {
       try {
-        const rows = await fetchClientRecordRowsWithRetry(getOrgId());
+        const rows = await fetchClientRecordRows(getOrgId());
         if (cancelled) return;
         if (rows.length) {
           hydrateBrandFileTombstonesFromRows(rows);
           syncLocalTombstonesToCloudIfNeeded();
           setWorkspaceState((prev) => mergeClientRecordRowsIntoWorkspace(prev, rows));
-        } else {
-          console.warn('[client_records] hydrate — no rows yet; Supabase saves still enabled');
         }
       } finally {
         if (!cancelled) {

@@ -1,7 +1,6 @@
 import { SUPABASE_ENABLED, supabase } from '../lib/supabaseClient';
 import { getOrgId } from '../lib/orgSession';
 import { buildStaffApiAuthHeaders } from '../lib/staffApiAuth';
-import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from '../lib/staffSupabaseAuth';
 import { slimClientsWorkspaceForCloudPush } from './clientsWorkspacePush';
 import { fetchStaffSyncRows } from '../lib/staffSyncApi';
 import {
@@ -18,27 +17,52 @@ export {
 const CLIENT_RECORDS_SELECT =
   'id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,updated_at';
 
-/** Load normalized client profile rows — Supabase client first, staff-sync API fallback. */
+async function getSupabaseAccessTokenQuick() {
+  if (!supabase) return null;
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.access_token || null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchClientRecordRowsDirect(orgId) {
+  if (!supabase) return [];
+  const token = await getSupabaseAccessTokenQuick();
+  if (!token) return [];
+
+  const { data, error } = await supabase
+    .from('client_records')
+    .select(CLIENT_RECORDS_SELECT)
+    .eq('org_id', orgId);
+  if (error) {
+    console.warn('[client_records] direct Supabase fetch failed:', error.message || error);
+    return [];
+  }
+  return Array.isArray(data) ? data : [];
+}
+
+/** Load normalized client profile rows — Supabase + staff-sync in parallel. */
 export async function fetchClientRecordRows(orgId = getOrgId()) {
   if (!SUPABASE_ENABLED) return [];
 
-  if (supabase && (await hasStaffSupabaseSession())) {
-    const { data, error } = await supabase
-      .from('client_records')
-      .select(CLIENT_RECORDS_SELECT)
-      .eq('org_id', orgId);
-    if (!error && Array.isArray(data)) return data;
-    if (error) {
-      console.warn('[client_records] direct Supabase fetch failed:', error.message || error);
-    }
-  }
+  const [directRows, apiRows] = await Promise.all([
+    fetchClientRecordRowsDirect(orgId),
+    fetchStaffSyncRows('client_records', orgId),
+  ]);
 
-  const rows = await fetchStaffSyncRows('client_records', orgId);
-  return Array.isArray(rows) ? rows : [];
+  if (directRows.length) return directRows;
+  return Array.isArray(apiRows) ? apiRows : [];
 }
 
 async function patchBrandProfileDirect(orgId, brandKey, patch) {
   if (!supabase) return { ok: false, error: 'Supabase client unavailable.' };
+  const token = await getSupabaseAccessTokenQuick();
+  if (!token) {
+    return { ok: false, error: 'Sign in required to save client profiles to Supabase.' };
+  }
+
   const row = buildClientRecordUpsertRow(orgId, brandKey, patch);
   const { error } = await supabase.from('client_records').upsert(row, {
     onConflict: 'org_id,brand_key',
@@ -65,7 +89,7 @@ async function patchBrandProfileRpc(orgId, brandKey, patch) {
 }
 
 async function patchBrandProfileViaApi(orgId, brandKey, patch) {
-  const headers = await buildStaffApiAuthHeaders();
+  const headers = await buildStaffApiAuthHeaders({ preferSupabaseJwt: true });
   if (!headers) {
     return { ok: false, error: 'Staff sign-in required to save client profiles.' };
   }
@@ -92,27 +116,23 @@ async function patchBrandProfileViaApi(orgId, brandKey, patch) {
 }
 
 async function patchBrandProfileToSupabase(orgId, brandKey, patch) {
-  let canWrite = await hasStaffSupabaseSession();
-  if (!canWrite) {
-    await ensureStaffSupabaseSession();
-    canWrite = await hasStaffSupabaseSession();
-  }
-
-  if (canWrite) {
+  const token = await getSupabaseAccessTokenQuick();
+  if (token) {
     const result = patchNeedsBrandProfileRpc(patch)
       ? await patchBrandProfileRpc(orgId, brandKey, patch)
       : await patchBrandProfileDirect(orgId, brandKey, patch);
     if (result.ok) return result;
-
-    const apiResult = await patchBrandProfileViaApi(orgId, brandKey, patch);
-    if (apiResult.ok) return apiResult;
-    return {
-      ok: false,
-      error: result.error || apiResult.error || 'Could not save client profile.',
-    };
   }
 
-  return patchBrandProfileViaApi(orgId, brandKey, patch);
+  const apiResult = await patchBrandProfileViaApi(orgId, brandKey, patch);
+  if (apiResult.ok) return apiResult;
+
+  return {
+    ok: false,
+    error:
+      apiResult.error ||
+      'Could not save client profile. Sign out and sign in again, then retry.',
+  };
 }
 
 /** Persist profile field patches to Supabase client_records. */

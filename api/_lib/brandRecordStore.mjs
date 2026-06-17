@@ -1,4 +1,4 @@
-import { getSupabaseUrl, getWriteConfig } from './supabase.mjs';
+import { getSupabaseUrl, getWriteConfig, resolveAnonKey, resolveServerKeyOrAnon } from './supabase.mjs';
 import {
   buildClientRecordUpsertRow,
   patchNeedsBrandProfileRpc,
@@ -99,9 +99,31 @@ async function patchBrandProfileViaRpc(orgId, brandKey, patch, orgIdOverride) {
   }
 }
 
-export async function patchBrandProfileRecord(orgId, brand, patch, orgIdOverride) {
-  const { url, key, orgId: resolvedOrgId } = getWriteConfig(orgIdOverride || orgId);
-  if (!url || !key) throw new Error('Supabase is not configured.');
+function resolveBrandRecordWriteAuth(userToken) {
+  const url = getSupabaseUrl();
+  if (!url) return null;
+
+  if (userToken) {
+    const anonKey = resolveAnonKey();
+    if (!anonKey) return null;
+    return { url, key: anonKey, authorization: userToken };
+  }
+
+  try {
+    const { url: writeUrl, key } = getWriteConfig();
+    if (!writeUrl || !key) return null;
+    return { url: writeUrl, key, authorization: key };
+  } catch {
+    const fallbackKey = resolveServerKeyOrAnon();
+    if (!fallbackKey) return null;
+    return { url, key: fallbackKey, authorization: fallbackKey };
+  }
+}
+
+export async function patchBrandProfileRecord(orgId, brand, patch, orgIdOverride, options = {}) {
+  const resolvedOrgId = orgIdOverride || orgId;
+  const auth = resolveBrandRecordWriteAuth(options.userToken);
+  if (!auth?.url || !auth.key) throw new Error('Supabase is not configured.');
 
   const brandKey = normalizeBrandKey(brand);
   const safePatch = patch && typeof patch === 'object' ? patch : {};
@@ -113,12 +135,12 @@ export async function patchBrandProfileRecord(orgId, brand, patch, orgIdOverride
 
   const row = buildClientRecordUpsertRow(resolvedOrgId, brandKey, safePatch);
   const response = await fetchWithTimeout(
-    `${url}/rest/v1/client_records`,
+    `${auth.url}/rest/v1/client_records`,
     {
       method: 'POST',
       headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
+        apikey: auth.key,
+        Authorization: `Bearer ${auth.authorization}`,
         'Content-Type': 'application/json',
         Prefer: 'resolution=merge-duplicates,return=minimal',
       },

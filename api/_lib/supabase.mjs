@@ -18,12 +18,19 @@ function isProductionRuntime() {
   return process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
 }
 
-function resolveAnonKey() {
+export function resolveAnonKey() {
   return (
     process.env.SUPABASE_ANON_KEY ||
     process.env.VITE_SUPABASE_ANON_KEY ||
     ''
   ).trim();
+}
+
+/** Service role when configured; otherwise anon (for JWT-scoped writes under RLS). */
+export function resolveServerKeyOrAnon() {
+  const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (serviceRole) return serviceRole;
+  return resolveAnonKey();
 }
 
 /** Key for server reads (client login, etc.). Prefers service role, falls back to anon. */

@@ -54,8 +54,15 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: orgCheck.error || 'Forbidden org scope.' });
   }
 
+  const staffSession = getSessionFromRequest(req);
+  const authHeader = req.headers.authorization || '';
+  const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  const userToken = bearer.split('.').length === 3 ? bearer : null;
+
   try {
-    await patchBrandProfileRecord(orgCheck.orgId, brand, patch);
+    await patchBrandProfileRecord(orgCheck.orgId, brand, patch, orgCheck.orgId, {
+      userToken: isStaffSessionValid(staffSession) ? null : userToken,
+    });
     return res.status(200).json({ ok: true });
   } catch (error) {
     const detail = error?.message || String(error);

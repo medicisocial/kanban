@@ -139,6 +139,19 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
   };
 }
 
+function loadCloudClientsBootstrap() {
+  if (!isCloudSourceOfTruth()) return null;
+  try {
+    const cached = readOrgScopedJson(CLIENTS_STORAGE_KEY, null);
+    if (cached && Array.isArray(cached.names) && cached.names.length > 0) {
+      return { names: cached.names };
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 function loadClientsRaw() {
   try {
     const parsed = readOrgScopedJson(CLIENTS_STORAGE_KEY, null);
@@ -164,7 +177,10 @@ export function useClients() {
   const { isLegacyOrg, planType, orgId } = useStaffAuth();
   const includeDefaults = isLegacyOrg && !isCloudSourceOfTruth();
   const [state, setState] = useState(() =>
-    normalizeClientsState(isCloudSourceOfTruth() ? null : loadClientsRaw(), { includeDefaults }),
+    normalizeClientsState(
+      loadCloudClientsBootstrap() || (isCloudSourceOfTruth() ? null : loadClientsRaw()),
+      { includeDefaults },
+    ),
   );
   const stateRef = useRef(state);
 
@@ -228,16 +244,22 @@ export function useClients() {
     recordId: 'workspace',
   });
 
-  useClientRecordsSync({
+  const { recordsHydrated } = useClientRecordsSync({
     workspaceState: state,
     setWorkspaceState: (updater) => {
       setState((prev) => {
         const next = typeof updater === 'function' ? updater(prev) : updater;
-        return normalizeClientsState(next, { includeDefaults });
+        const normalized = normalizeClientsState(next, { includeDefaults });
+        if (isCloudSourceOfTruth() && Array.isArray(normalized.names) && normalized.names.length) {
+          writeOrgScopedJson(CLIENTS_STORAGE_KEY, { names: normalized.names });
+        }
+        return normalized;
       });
     },
     orgReady: Boolean(orgId),
   });
+
+  const clientsReady = !SUPABASE_ENABLED || (syncLoaded && recordsHydrated);
   const persistTimerRef = useRef(null);
   useEffect(() => {
     if (isCloudSourceOfTruth()) return;
@@ -794,5 +816,6 @@ export function useClients() {
     customColorPalette: normalizeCustomColorPalette(state.customColorPalette),
     addCustomColor,
     removeCustomColor,
+    clientsReady,
   };
 }

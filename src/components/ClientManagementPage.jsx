@@ -50,6 +50,7 @@ export default function ClientManagementPage({
 }) {
   const {
     clients,
+    clientsReady,
     addClient,
     removeClient,
     getClientColor,
@@ -247,6 +248,20 @@ export default function ClientManagementPage({
       setRemovingClient(false);
     }
   };
+
+  if (!clientsReady && profileClients.length === 0) {
+    return (
+      <section>
+        <ClientPortalSectionHeader
+          title="Clients"
+          description="Manage brand profiles and portal logins."
+        />
+        <div className="border border-dashed border-white/10 px-6 py-16 text-center">
+          <p className="text-sm text-white/45">Loading clients…</p>
+        </div>
+      </section>
+    );
+  }
 
   if (profileClients.length === 0) {
     return (
