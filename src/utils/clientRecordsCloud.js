@@ -60,18 +60,29 @@ async function patchBrandProfileViaApi(orgId, brandKey, patch) {
 export async function pushBrandProfilePatches(orgId, patches = []) {
   if (!SUPABASE_ENABLED || !patches.length) return { ok: true };
 
-  let canWrite = await hasStaffSupabaseSession();
-  if (!canWrite) {
-    await ensureStaffSupabaseSession();
-    canWrite = await hasStaffSupabaseSession();
-  }
+  let failures = 0;
 
   for (const { brandKey, patch } of patches) {
-    if (canWrite) {
-      const ok = await patchBrandProfileRpc(orgId, brandKey, patch);
-      if (ok) continue;
+    // patch_brand_profile is service_role-only (migration 027); browser RPC usually fails.
+    let ok = await patchBrandProfileViaApi(orgId, brandKey, patch);
+    if (!ok) {
+      let canWrite = await hasStaffSupabaseSession();
+      if (!canWrite) {
+        await ensureStaffSupabaseSession();
+        canWrite = await hasStaffSupabaseSession();
+      }
+      if (canWrite) {
+        ok = await patchBrandProfileRpc(orgId, brandKey, patch);
+      }
     }
-    await patchBrandProfileViaApi(orgId, brandKey, patch);
+    if (!ok) failures += 1;
+  }
+
+  if (failures > 0) {
+    return {
+      ok: false,
+      error: `Could not save ${failures} client profile update${failures === 1 ? '' : 's'} to the cloud.`,
+    };
   }
 
   return { ok: true };

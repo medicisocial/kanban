@@ -12,7 +12,7 @@ import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import { normalizeContentTypeColors } from '../utils/contentTypeColors';
 import { normalizeCustomColorPalette, normalizeHexColor } from '../utils/colorHex';
 import { DEFAULT_CLIENT_BUSINESS_TYPES, normalizeBusinessType } from '../utils/eventFormSchemas';
-import { normalizeClientName, pickNextClientColor, mergeDefaultClients, clientNamesConflict, isInternalClientName, clientBrandNameKey, isTestClientName, getClientColor as lookupClientColorUtil } from '../utils/clients';
+import { normalizeClientName, pickNextClientColor, mergeDefaultClients, clientNamesConflict, isInternalClientName, clientBrandNameKey, isTestClientName, getClientColor as lookupClientColorUtil, resolveClientMapValue } from '../utils/clients';
 import {
   mergeClientNameTombstones,
   suppressedClientNameKeys,
@@ -43,6 +43,8 @@ import {
 import { saveStaffBrandAssets } from '../utils/staffBrandAssetsApi';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
 import { useClientRecordsSync } from './useClientRecordsSync';
+import { diffBrandProfilePatches, pushBrandProfilePatches } from '../utils/clientRecordsCloud.js';
+import { reportSyncIssue } from '../lib/workspaceSyncHealth';
 
 function loadLegacyPortalPasswordVault() {
   try {
@@ -171,18 +173,40 @@ export function useClients() {
   }, [state]);
 
   const applyClientsWorkspaceUpdate = useCallback(
-    (updater) => {
+    async (updater) => {
       const prev = normalizeClientsState(stateRef.current, { includeDefaults });
       const nextState = updater(prev);
       if (!nextState) {
-        return Promise.resolve({ ok: false, error: 'Could not update client data.' });
+        return { ok: false, error: 'Could not update client data.' };
       }
       const normalized = normalizeClientsState(nextState, { includeDefaults });
       stateRef.current = normalized;
       setState(normalized);
+
+      if (SUPABASE_ENABLED && orgId) {
+        const names = Array.isArray(normalized.names) ? normalized.names : [];
+        const patches = diffBrandProfilePatches(prev, normalized, names);
+        if (patches.length) {
+          const pushResult = await pushBrandProfilePatches(orgId, patches);
+          if (!pushResult.ok) {
+            reportSyncIssue({
+              level: 'error',
+              table: 'client_records',
+              message:
+                pushResult.error ||
+                'Client profile changes could not reach the cloud. Try again or refresh after signing in.',
+            });
+            return {
+              ok: false,
+              error: pushResult.error || 'Could not save client profile to the cloud.',
+            };
+          }
+        }
+      }
+
       return syncClientsWorkspace(normalized);
     },
-    [includeDefaults],
+    [includeDefaults, orgId],
   );
 
   const loadClientsForSync = useCallback(
@@ -412,17 +436,17 @@ export function useClients() {
   );
 
   const getClientLogo = useCallback(
-    (client) => state.logos[client] || null,
+    (client) => resolveClientMapValue(client, state.logos) || null,
     [state.logos],
   );
 
   const getClientAccountManager = useCallback(
-    (client) => state.accountManagers[client] || '',
+    (client) => resolveClientMapValue(client, state.accountManagers) || '',
     [state.accountManagers],
   );
 
   const getClientBusinessType = useCallback(
-    (client) => normalizeBusinessType(state.businessTypes[client] || ''),
+    (client) => normalizeBusinessType(resolveClientMapValue(client, state.businessTypes) || ''),
     [state.businessTypes],
   );
 
@@ -508,7 +532,7 @@ export function useClients() {
   }, []);
 
   const getClientPhotoGalleryLink = useCallback(
-    (client) => state.photoGalleryLinks?.[client] || '',
+    (client) => resolveClientMapValue(client, state.photoGalleryLinks) || '',
     [state.photoGalleryLinks],
   );
 
@@ -631,19 +655,7 @@ export function useClients() {
   }, [applyClientsWorkspaceUpdate]);
 
   const getClientContacts = useCallback(
-    (client) => {
-      const contactsMap = state.contacts || {};
-      if (Object.prototype.hasOwnProperty.call(contactsMap, client)) {
-        return normalizeClientContacts(contactsMap[client]);
-      }
-      const targetKey = clientBrandNameKey(client);
-      for (const [name, value] of Object.entries(contactsMap)) {
-        if (clientBrandNameKey(name) === targetKey) {
-          return normalizeClientContacts(value);
-        }
-      }
-      return [];
-    },
+    (client) => normalizeClientContacts(resolveClientMapValue(client, state.contacts) || []),
     [state.contacts],
   );
 
@@ -661,7 +673,7 @@ export function useClients() {
   }, []);
 
   const getClientSocialLogins = useCallback(
-    (client) => normalizeClientSocialLogins(state.socialLogins[client]),
+    (client) => normalizeClientSocialLogins(resolveClientMapValue(client, state.socialLogins)),
     [state.socialLogins],
   );
 
@@ -682,8 +694,8 @@ export function useClients() {
       filterDeletedCompanyFiles(
         client,
         normalizeClientCompanyFiles(
-          state.companyFiles?.[client],
-          normalizeBusinessType(state.businessTypes?.[client] || ''),
+          resolveClientMapValue(client, state.companyFiles),
+          normalizeBusinessType(resolveClientMapValue(client, state.businessTypes) || ''),
         ),
       ),
     [state.companyFiles, state.businessTypes],
@@ -720,7 +732,7 @@ export function useClients() {
   );
 
   const getClientSpecialMenus = useCallback(
-    (client) => normalizeClientSpecialMenus(state.specialMenus?.[client]),
+    (client) => normalizeClientSpecialMenus(resolveClientMapValue(client, state.specialMenus)),
     [state.specialMenus],
   );
 

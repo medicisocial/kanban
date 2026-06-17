@@ -1,4 +1,36 @@
-import { clientBrandNameKey, formatClientDisplayName } from './clients.js';
+import { clientBrandNameKey, formatClientDisplayName, resolveClientMapValue } from './clients.js';
+
+function isEmptyBrandField(field, value) {
+  if (value === null || value === undefined) return true;
+  if (field === 'contacts' || field === 'companyFiles' || field === 'specialMenus') {
+    return Array.isArray(value) && value.length === 0;
+  }
+  if (field === 'socialLogins' || field === 'logo') {
+    return typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0;
+  }
+  if (
+    field === 'clientColor' ||
+    field === 'photoGalleryLink' ||
+    field === 'businessType' ||
+    field === 'accountManager'
+  ) {
+    return String(value || '').trim() === '';
+  }
+  return false;
+}
+
+function applyRemoteBrandField(next, field, mapKey, client, remoteValue) {
+  const localValue = resolveClientMapValue(client, next[mapKey] || {});
+  if (isEmptyBrandField(field, remoteValue) && !isEmptyBrandField(field, localValue)) {
+    if (localValue !== undefined) {
+      next[mapKey] = { ...(next[mapKey] || {}), [client]: localValue };
+    }
+    return;
+  }
+  if (!isEmptyBrandField(field, remoteValue)) {
+    next[mapKey] = { ...(next[mapKey] || {}), [client]: remoteValue };
+  }
+}
 
 function pickPreferredClientName(a, b) {
   if (!a) return b;
@@ -44,15 +76,15 @@ export function brandProfilePatchFromWorkspaceBrand(client, workspace = {}) {
   if (!client) return null;
   return {
     displayName: client,
-    clientColor: workspace.colors?.[client] || '',
-    clientLogo: workspace.logos?.[client] || {},
-    contacts: workspace.contacts?.[client] || [],
-    socialLogins: workspace.socialLogins?.[client] || {},
-    companyFiles: workspace.companyFiles?.[client] || [],
-    specialMenus: workspace.specialMenus?.[client] || [],
-    photoGalleryLink: workspace.photoGalleryLinks?.[client] || '',
-    businessType: workspace.businessTypes?.[client] || '',
-    accountManager: workspace.accountManagers?.[client] || '',
+    clientColor: resolveClientMapValue(client, workspace.colors) || '',
+    clientLogo: resolveClientMapValue(client, workspace.logos) || {},
+    contacts: resolveClientMapValue(client, workspace.contacts) || [],
+    socialLogins: resolveClientMapValue(client, workspace.socialLogins) || {},
+    companyFiles: resolveClientMapValue(client, workspace.companyFiles) || [],
+    specialMenus: resolveClientMapValue(client, workspace.specialMenus) || [],
+    photoGalleryLink: resolveClientMapValue(client, workspace.photoGalleryLinks) || '',
+    businessType: resolveClientMapValue(client, workspace.businessTypes) || '',
+    accountManager: resolveClientMapValue(client, workspace.accountManagers) || '',
   };
 }
 
@@ -62,36 +94,15 @@ export function mergeClientRecordRowsIntoWorkspace(workspace = {}, rows = []) {
   for (const row of rows) {
     const client = clientNameFromRecordRow(row);
     if (!client) continue;
-    if (row.client_color) {
-      next.colors = { ...(next.colors || {}), [client]: row.client_color };
-    }
-    if (row.logo && typeof row.logo === 'object' && Object.keys(row.logo).length) {
-      next.logos = { ...(next.logos || {}), [client]: row.logo };
-    }
-    if (Array.isArray(row.contacts)) {
-      next.contacts = { ...(next.contacts || {}), [client]: row.contacts };
-    }
-    if (row.social_logins && typeof row.social_logins === 'object') {
-      next.socialLogins = { ...(next.socialLogins || {}), [client]: row.social_logins };
-    }
-    if (Array.isArray(row.company_files)) {
-      next.companyFiles = { ...(next.companyFiles || {}), [client]: row.company_files };
-    }
-    if (Array.isArray(row.special_menus)) {
-      next.specialMenus = { ...(next.specialMenus || {}), [client]: row.special_menus };
-    }
-    if (row.photo_gallery_link) {
-      next.photoGalleryLinks = {
-        ...(next.photoGalleryLinks || {}),
-        [client]: row.photo_gallery_link,
-      };
-    }
-    if (row.business_type) {
-      next.businessTypes = { ...(next.businessTypes || {}), [client]: row.business_type };
-    }
-    if (row.account_manager) {
-      next.accountManagers = { ...(next.accountManagers || {}), [client]: row.account_manager };
-    }
+    applyRemoteBrandField(next, 'clientColor', 'colors', client, row.client_color || '');
+    applyRemoteBrandField(next, 'logo', 'logos', client, row.logo);
+    applyRemoteBrandField(next, 'contacts', 'contacts', client, row.contacts);
+    applyRemoteBrandField(next, 'socialLogins', 'socialLogins', client, row.social_logins);
+    applyRemoteBrandField(next, 'companyFiles', 'companyFiles', client, row.company_files);
+    applyRemoteBrandField(next, 'specialMenus', 'specialMenus', client, row.special_menus);
+    applyRemoteBrandField(next, 'photoGalleryLink', 'photoGalleryLinks', client, row.photo_gallery_link || '');
+    applyRemoteBrandField(next, 'businessType', 'businessTypes', client, row.business_type || '');
+    applyRemoteBrandField(next, 'accountManager', 'accountManagers', client, row.account_manager || '');
   }
   return next;
 }

@@ -81,4 +81,19 @@ if (araMerged.colors['Ara Med Spa'] !== '#ec4899' && araMerged.colors['ara med s
   throw new Error('mergeClientRecordRowsIntoWorkspace should apply color under canonical client name');
 }
 
+const localContacts = mergeClientRecordRowsIntoWorkspace(
+  { names: ['Plume'], contacts: { Plume: [{ name: 'Local Owner', email: 'local@test.com' }] } },
+  [{ display_name: 'Plume', brand_key: 'plume', contacts: [] }],
+);
+if (localContacts.contacts.Plume?.[0]?.name !== 'Local Owner') {
+  throw new Error('mergeClientRecordRowsIntoWorkspace should not stomp local contacts with empty cloud rows');
+}
+
+const aliasedPatch = brandProfilePatchFromWorkspaceBrand('Plume', {
+  contacts: { plume: [{ name: 'Aliased Owner' }] },
+});
+if (aliasedPatch.contacts?.[0]?.name !== 'Aliased Owner') {
+  throw new Error('brandProfilePatchFromWorkspaceBrand should resolve brand-key aliases');
+}
+
 console.log('Client records assembly tests passed.');
