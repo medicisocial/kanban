@@ -50,3 +50,15 @@ export function mergeSlimClientsWorkspace(existing = {}, incoming = {}, synced =
 export function stripClientsBlobBrandFields(workspace = {}) {
   return slimClientsWorkspaceForCloudPush(workspace);
 }
+
+/** Apply only org-level clients blob fields in cloud mode — never touch names/profiles. */
+export function mergeCloudClientsBlobRemote(prev = {}, remote = {}) {
+  if (!remote || typeof remote !== 'object') return prev;
+  const slim = slimClientsWorkspaceForCloudPush(remote);
+  const next = { ...prev };
+  if (slim.removedNames !== undefined) next.removedNames = slim.removedNames;
+  if (slim.restoredNames !== undefined) next.restoredNames = slim.restoredNames;
+  if (slim.contentTypeColors !== undefined) next.contentTypeColors = slim.contentTypeColors;
+  if (slim.customColorPalette !== undefined) next.customColorPalette = slim.customColorPalette;
+  return next;
+}

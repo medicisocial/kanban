@@ -116,30 +116,44 @@ async function patchBrandProfileRpc(orgId, brandKey, patch) {
 }
 
 async function patchBrandProfileViaApi(orgId, brandKey, patch) {
-  const headers = await buildStaffApiAuthHeaders({ preferSupabaseJwt: true });
-  if (!headers) {
+  const legacyHeaders = await buildStaffApiAuthHeaders({ preferSupabaseJwt: false });
+  const jwtHeaders = legacyHeaders
+    ? await buildStaffApiAuthHeaders({ preferSupabaseJwt: true })
+    : null;
+  const headerSets = [legacyHeaders, jwtHeaders].filter(Boolean);
+  const seen = new Set();
+  const uniqueHeaders = headerSets.filter((headers) => {
+    const token = headers.Authorization || '';
+    if (seen.has(token)) return false;
+    seen.add(token);
+    return true;
+  });
+
+  if (!uniqueHeaders.length) {
     return { ok: false, error: 'Staff sign-in required to save client profiles.' };
   }
-  try {
-    const response = await fetch('/api/brand-record', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ brand: brandKey, orgId, patch }),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      return {
-        ok: false,
-        error:
-          payload.error ||
-          payload.detail ||
-          `Could not save brand profile (${response.status}).`,
-      };
+
+  let lastError = '';
+
+  for (const headers of uniqueHeaders) {
+    try {
+      const response = await fetch('/api/brand-record', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ brand: brandKey, orgId, patch }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok) return { ok: true };
+      lastError =
+        payload.error ||
+        payload.detail ||
+        `Could not save brand profile (${response.status}).`;
+    } catch (err) {
+      lastError = err?.message || 'Could not reach the brand profile API.';
     }
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err?.message || 'Could not reach the brand profile API.' };
   }
+
+  return { ok: false, error: lastError || 'Could not save client profile.' };
 }
 
 async function patchBrandProfileToSupabase(orgId, brandKey, patch) {

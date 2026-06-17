@@ -44,6 +44,7 @@ import { saveStaffBrandAssets } from '../utils/staffBrandAssetsApi';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
 import { useClientRecordsSync } from './useClientRecordsSync';
 import { diffBrandProfilePatches, pushBrandProfilePatches } from '../utils/clientRecordsCloud.js';
+import { mergeCloudClientsBlobRemote } from '../utils/clientsWorkspacePush';
 import { reportSyncIssue } from '../lib/workspaceSyncHealth';
 
 function loadLegacyPortalPasswordVault() {
@@ -243,7 +244,17 @@ export function useClients() {
   const syncLoaded = useSingletonSync({
     table: 'clients',
     value: state,
-    setValue: (next) => setState(normalizeClientsState(next, { includeDefaults })),
+    setValue: (next) => {
+      if (isCloudSourceOfTruth()) {
+        // Names/profiles come from client_records — slim blob only carries org-level keys.
+        if (next == null) return;
+        setState((prev) =>
+          normalizeClientsState(mergeCloudClientsBlobRemote(prev, next), { includeDefaults }),
+        );
+        return;
+      }
+      setState(normalizeClientsState(next, { includeDefaults }));
+    },
     loadLocal: loadClientsForSync,
     recordId: 'workspace',
   });

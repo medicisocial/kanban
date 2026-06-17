@@ -3,6 +3,7 @@ import { CLIENTS_STORAGE_KEY } from '../constants';
 import { readOrgScopedJson } from '../lib/orgStorage';
 import { SUPABASE_ENABLED, supabase } from '../lib/supabaseClient';
 import { getOrgId } from '../lib/orgSession';
+import { hasStaffSupabaseSession } from '../lib/staffSupabaseAuth';
 import {
   fetchClientRecordRows,
   mergeClientRecordRowsIntoWorkspace,
@@ -13,7 +14,8 @@ import {
 } from '../utils/brandFileTombstones.js';
 
 const ORG_WAIT_MS = 4000;
-const HYDRATE_SAFETY_MS = 8000;
+const HYDRATE_RETRY_MS = 500;
+const HYDRATE_MAX_ATTEMPTS = 10;
 
 function hasCachedClientNames() {
   try {
@@ -56,20 +58,15 @@ export function useClientRecordsSync({ setWorkspaceState, orgReady, orgId }) {
       return undefined;
     }
 
-    const safetyTimeout = setTimeout(() => setRecordsHydrated(true), HYDRATE_SAFETY_MS);
-
     if (!orgReady) {
       const orgWaitTimeout = setTimeout(() => setRecordsHydrated(true), ORG_WAIT_MS);
-      return () => {
-        clearTimeout(orgWaitTimeout);
-        clearTimeout(safetyTimeout);
-      };
+      return () => clearTimeout(orgWaitTimeout);
     }
 
     const activeOrgId = orgId || getOrgId();
     if (hydratedOrgRef.current === activeOrgId) {
       setRecordsHydrated(true);
-      return () => clearTimeout(safetyTimeout);
+      return undefined;
     }
 
     let cancelled = false;
@@ -79,13 +76,26 @@ export function useClientRecordsSync({ setWorkspaceState, orgReady, orgId }) {
 
     void (async () => {
       try {
-        const rows = await fetchClientRecordRows(activeOrgId);
-        if (cancelled) return;
-        if (rows.length) {
-          hydrateBrandFileTombstonesFromRows(rows);
-          syncLocalTombstonesToCloudIfNeeded();
-          setWorkspaceStateRef.current((prev) => mergeClientRecordRowsIntoWorkspace(prev, rows));
-          hydratedOrgRef.current = activeOrgId;
+        for (let attempt = 0; attempt < HYDRATE_MAX_ATTEMPTS; attempt += 1) {
+          if (cancelled) return;
+
+          const rows = await fetchClientRecordRows(activeOrgId);
+          if (cancelled) return;
+
+          if (rows.length) {
+            hydrateBrandFileTombstonesFromRows(rows);
+            syncLocalTombstonesToCloudIfNeeded();
+            setWorkspaceStateRef.current((prev) => mergeClientRecordRowsIntoWorkspace(prev, rows));
+            hydratedOrgRef.current = activeOrgId;
+            break;
+          }
+
+          if (attempt < HYDRATE_MAX_ATTEMPTS - 1) {
+            await hasStaffSupabaseSession();
+            await new Promise((resolve) => {
+              setTimeout(resolve, HYDRATE_RETRY_MS * (attempt + 1));
+            });
+          }
         }
       } catch (err) {
         console.warn('[client_records] hydrate failed:', err?.message || err);
@@ -96,7 +106,6 @@ export function useClientRecordsSync({ setWorkspaceState, orgReady, orgId }) {
 
     return () => {
       cancelled = true;
-      clearTimeout(safetyTimeout);
     };
   }, [orgReady, orgId, hydrateNonce]);
 
