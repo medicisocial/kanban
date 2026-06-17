@@ -5,7 +5,6 @@ import { loadClientRecords, subscribeClientRecords } from '../lib/clientRecordsS
 import { mergeClientRecordRowsIntoWorkspace } from '../utils/clientRecordsCloud.js';
 import {
   hydrateBrandFileTombstonesFromRows,
-  syncLocalTombstonesToCloudIfNeeded,
 } from '../utils/brandFileTombstones.js';
 
 /**
@@ -22,7 +21,6 @@ export function useClientRecordsFromSupabase({ setWorkspaceState, orgId }) {
   const applyRows = useCallback((rows) => {
     if (!Array.isArray(rows) || !rows.length) return;
     hydrateBrandFileTombstonesFromRows(rows);
-    syncLocalTombstonesToCloudIfNeeded();
     setWorkspaceStateRef.current((prev) => mergeClientRecordRowsIntoWorkspace(prev, rows));
   }, []);
 

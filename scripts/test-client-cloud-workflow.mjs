@@ -2,7 +2,7 @@
  * Cloud client load + save workflow — verifies both paths against live Supabase when configured.
  */
 import { mergeClientRecordRowsIntoWorkspace } from '../src/utils/clientRecordsAssembly.js';
-import { mergeCloudClientsBlobRemote } from '../src/utils/clientsWorkspacePush.js';
+import { mergeCloudClientsBlobRemote, mergeOrgSettingsIntoWorkspace } from '../src/utils/clientsWorkspacePush.js';
 import { diffBrandProfilePatches } from '../src/utils/clientRecordsAssembly.js';
 import { patchBrandProfileRecord, fetchClientRecordRows } from '../api/_lib/brandRecordStore.mjs';
 
@@ -29,6 +29,16 @@ assert(afterBlob.names.length === 2, 'slim clients blob merge must preserve clie
 assert(afterBlob.contacts['Fulshear Regional']?.[0]?.name === 'Rachel Durham', 'contacts must survive blob merge');
 assert(!afterBlob.colors?.Casalu, 'deprecated brand colors from blob must not overwrite workspace');
 assert(afterBlob.contentTypeColors?.Reel === '#ff0000', 'org contentTypeColors should merge from blob');
+
+const orgSettings = {
+  removedNames: { casalu: 1 },
+  contentTypeColors: { Reel: '#00ff00' },
+  customColorPalette: ['#111111'],
+};
+const afterSettings = mergeOrgSettingsIntoWorkspace(hydrated, orgSettings);
+assert(afterSettings.contentTypeColors?.Reel === '#00ff00', 'org settings merge should apply contentTypeColors');
+assert(afterSettings.removedNames?.casalu === 1, 'org settings merge should apply removedNames');
+assert(afterSettings.names.length === 2, 'org settings merge must preserve client names');
 
 // ── 2. client_records rows populate empty workspace names ───────────────────
 const rows = [

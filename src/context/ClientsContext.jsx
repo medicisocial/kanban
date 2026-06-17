@@ -24,18 +24,9 @@ export function ClientsProvider({ children }) {
 
       // set-password API already writes credentials + vault to Supabase — only refresh local vault cache.
       if (SUPABASE_ENABLED) {
-        updatePortalPasswordVault(client, draftUsers, result.users || [], {
+        const vaultResult = await updatePortalPasswordVault(client, draftUsers, result.users || [], {
           vaultBrandKey,
         });
-        // Sync the in-memory vault state so the password re-displays after refresh
-        // before cloud workspace blob refreshes. Otherwise getPortalPasswordForUser
-        // returns the stale in-memory value over the correct localStorage write-through.
-        const vaultResult = await clientsState.syncPortalPasswordVault(
-          client,
-          draftUsers,
-          result.users || [],
-          vaultBrandKey,
-        );
         if (vaultResult?.ok === false) {
           return {
             ok: false,

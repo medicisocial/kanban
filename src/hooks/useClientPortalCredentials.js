@@ -67,9 +67,9 @@ export function useClientPortalCredentials() {
   });
 
   usePortalUsersSync({
-    credentials,
     setCredentials,
     orgReady: Boolean(orgId) && isCloudSourceOfTruth(),
+    orgId,
   });
 
   // Keep localStorage as a write-through cache only in offline mode.

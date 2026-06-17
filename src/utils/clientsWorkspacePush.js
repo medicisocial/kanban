@@ -51,6 +51,17 @@ export function stripClientsBlobBrandFields(workspace = {}) {
   return slimClientsWorkspaceForCloudPush(workspace);
 }
 
+/** Apply org_workspace_settings row in cloud mode — never touch names/profiles. */
+export function mergeOrgSettingsIntoWorkspace(prev = {}, settings = {}) {
+  if (!settings || typeof settings !== 'object') return prev;
+  const next = { ...prev };
+  if (settings.removedNames !== undefined) next.removedNames = settings.removedNames;
+  if (settings.restoredNames !== undefined) next.restoredNames = settings.restoredNames;
+  if (settings.contentTypeColors !== undefined) next.contentTypeColors = settings.contentTypeColors;
+  if (settings.customColorPalette !== undefined) next.customColorPalette = settings.customColorPalette;
+  return next;
+}
+
 /** Apply only org-level clients blob fields in cloud mode — never touch names/profiles. */
 export function mergeCloudClientsBlobRemote(prev = {}, remote = {}) {
   if (!remote || typeof remote !== 'object') return prev;

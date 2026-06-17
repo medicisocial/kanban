@@ -55,7 +55,7 @@ function stableStringify(value) {
  *
  * When Supabase is disabled this is a no-op and the hook keeps using localStorage.
  */
-export function useSingletonSync({ table, value, setValue, loadLocal, recordId = 'state' }) {
+export function useSingletonSync({ table, value, setValue, loadLocal, recordId = 'state', enabled = true }) {
   const { orgId, orgReady, isLegacyOrg } = useStaffAuth();
   const storeRef = useRef(null);
   const syncedRef = useRef(null); // JSON string of last-synced value
@@ -88,6 +88,10 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
   }, []);
 
   useEffect(() => {
+    if (!enabled) {
+      markSyncLoaded();
+      return undefined;
+    }
     if (!SUPABASE_ENABLED || !orgReady || !orgId) return undefined;
 
     storeRef.current = createCollectionStore(table);
@@ -252,10 +256,10 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
       window.removeEventListener('focus', onFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId, orgReady, table, recordId, isLegacyOrg]);
+  }, [orgId, orgReady, table, recordId, isLegacyOrg, enabled]);
 
   useEffect(() => {
-    if (!SUPABASE_ENABLED) return;
+    if (!enabled || !SUPABASE_ENABLED) return;
     if (!loadedRef.current) return;
 
     const json = JSON.stringify(value);

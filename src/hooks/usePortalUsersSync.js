@@ -1,48 +1,74 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { isCloudSourceOfTruth } from '../lib/cloudSourceOfTruth';
-import { fetchStaffSyncRows } from '../lib/staffSyncApi';
 import { getOrgId } from '../lib/orgSession';
-import { normalizeBrandUsers } from '../utils/clientPortalCredentials';
+import { loadPortalUsers, subscribePortalUsers } from '../lib/portalUsersStore.js';
 
-function rowsToCredentialMap(rows = []) {
-  const map = {};
-  for (const row of rows) {
-    const brandKey = row.brand_key || row.brands?.brand_key;
-    if (!brandKey) continue;
-    const users = map[brandKey] || [];
-    users.push({
-      id: String(row.id),
-      username: row.username,
-      passwordHash: row.password_hash,
-      displayName: row.display_name || '',
-      avatar: row.avatar || null,
-    });
-    map[brandKey] = users;
-  }
-  return map;
-}
+/**
+ * Cloud mode: load portal credentials from portal_users (direct Supabase + realtime).
+ */
+export function usePortalUsersSync({ setCredentials, orgReady, orgId }) {
+  const setCredentialsRef = useRef(setCredentials);
+  setCredentialsRef.current = setCredentials;
 
-/** Hydrate portal credentials from normalized portal_users (cloud mode). */
-export function usePortalUsersSync({ credentials, setCredentials, orgReady }) {
-  const loadedRef = useRef(false);
+  const [portalUsersLoaded, setPortalUsersLoaded] = useState(
+    () => !SUPABASE_ENABLED || !isCloudSourceOfTruth(),
+  );
+  const loadGenerationRef = useRef(0);
 
-  const reload = useCallback(async () => {
-    if (!SUPABASE_ENABLED || !orgReady || !isCloudSourceOfTruth()) return;
-    const rows = await fetchStaffSyncRows('portal_users', getOrgId());
-    if (!Array.isArray(rows)) return;
-    setCredentials(rowsToCredentialMap(rows));
-    loadedRef.current = true;
-  }, [orgReady, setCredentials]);
+  const pullFromSupabase = useCallback(async (activeOrgId) => {
+    const map = await loadPortalUsers(activeOrgId);
+    setCredentialsRef.current(map);
+    return map;
+  }, []);
+
+  const reloadPortalUsers = useCallback(async () => {
+    if (!SUPABASE_ENABLED || !isCloudSourceOfTruth()) return;
+    const activeOrgId = orgId || getOrgId();
+    await pullFromSupabase(activeOrgId);
+  }, [orgId, pullFromSupabase]);
 
   useEffect(() => {
-    loadedRef.current = false;
-    void reload();
-  }, [reload]);
+    if (!SUPABASE_ENABLED || !orgReady || !isCloudSourceOfTruth()) {
+      setPortalUsersLoaded(true);
+      return undefined;
+    }
 
-  return { portalUsersLoaded: loadedRef.current, reloadPortalUsers: reload };
+    const activeOrgId = orgId || getOrgId();
+    const generation = loadGenerationRef.current + 1;
+    loadGenerationRef.current = generation;
+    setPortalUsersLoaded(false);
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        await pullFromSupabase(activeOrgId);
+      } catch (err) {
+        console.warn('[portal_users] Supabase load failed:', err?.message || err);
+      } finally {
+        if (!cancelled && loadGenerationRef.current === generation) {
+          setPortalUsersLoaded(true);
+        }
+      }
+    })();
+
+    const unsubscribe = subscribePortalUsers(activeOrgId, () => {
+      if (cancelled || loadGenerationRef.current !== generation) return;
+      void pullFromSupabase(activeOrgId).catch((err) => {
+        console.warn('[portal_users] Supabase refresh failed:', err?.message || err);
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [orgId, orgReady, pullFromSupabase]);
+
+  return { portalUsersLoaded, reloadPortalUsers };
 }
 
 export function mergePortalUserDraftIntoMap(map, brandKey, users) {
-  return { ...map, [brandKey]: normalizeBrandUsers(users) };
+  return { ...map, [brandKey]: users };
 }

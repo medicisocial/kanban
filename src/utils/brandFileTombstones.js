@@ -76,7 +76,7 @@ export function hydrateBrandFileTombstoneForBrand(brand, ids) {
 
 /** One-time: push any local-only tombstones to Supabase after cloud hydrate. */
 export function syncLocalTombstonesToCloudIfNeeded() {
-  if (!isCloudSourceOfTruth()) return;
+  if (isCloudSourceOfTruth()) return;
   const store = readStore();
   for (const [brand, ids] of Object.entries(store)) {
     if (!Array.isArray(ids) || !ids.length) continue;

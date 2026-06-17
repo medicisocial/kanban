@@ -40,10 +40,13 @@ import {
   savePortalPasswordVault,
   getPortalPasswordForUser as readVaultPassword,
 } from '../utils/clientPortalPasswordVault';
+import { patchPortalPasswordVaultViaApi } from '../utils/portalPasswordVaultApi';
 import { saveStaffBrandAssets } from '../utils/staffBrandAssetsApi';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
 import { useClientRecordsFromSupabase } from './useClientRecordsFromSupabase';
+import { useOrgWorkspaceSettingsFromSupabase } from './useOrgWorkspaceSettingsFromSupabase';
 import { diffBrandProfilePatches, pushBrandProfilePatches } from '../utils/clientRecordsCloud.js';
+import { pushOrgWorkspaceSettings } from '../utils/orgWorkspaceSettingsCloud.js';
 import { mergeCloudClientsBlobRemote } from '../utils/clientsWorkspacePush';
 import { reportSyncIssue } from '../lib/workspaceSyncHealth';
 
@@ -214,6 +217,15 @@ export function useClients() {
             };
           }
         }
+
+        if (isCloudSourceOfTruth()) {
+          void pushOrgWorkspaceSettings(orgId, {
+            removedNames: normalized.removedNames,
+            restoredNames: normalized.restoredNames,
+            contentTypeColors: normalized.contentTypeColors,
+            customColorPalette: normalized.customColorPalette,
+          });
+        }
       }
 
       return syncClientsWorkspace(normalized);
@@ -248,6 +260,7 @@ export function useClients() {
     },
     loadLocal: loadClientsForSync,
     recordId: 'workspace',
+    enabled: !isCloudSourceOfTruth(),
   });
 
   const setWorkspaceStateFromSupabase = useCallback((updater) => {
@@ -262,10 +275,17 @@ export function useClients() {
     orgId,
   });
 
+  const { settingsLoaded } = useOrgWorkspaceSettingsFromSupabase({
+    setWorkspaceState: setWorkspaceStateFromSupabase,
+    orgId,
+  });
+
   const hasClientNames = state.names.length > 0;
   const clientsReady =
     !SUPABASE_ENABLED ||
-    (isCloudSourceOfTruth() ? recordsLoaded || hasClientNames : syncLoaded);
+    (isCloudSourceOfTruth()
+      ? (recordsLoaded && settingsLoaded) || hasClientNames
+      : syncLoaded);
   const persistTimerRef = useRef(null);
   useEffect(() => {
     if (isCloudSourceOfTruth()) return;
@@ -665,10 +685,20 @@ export function useClients() {
       return collapsePortalPasswordVaultBrandKeys(nextVault);
     };
 
-    // Normalized portal_password_vault is the cloud source of truth — keep local
-    // cache only so passwords re-display after refresh without rewriting the blob.
+    // Normalized portal_password_vault is the cloud source of truth — in-memory cache + API.
     if (SUPABASE_ENABLED) {
-      savePortalPasswordVault(applyVaultUpdate(loadPortalPasswordVault()));
+      const updated = applyVaultUpdate(loadPortalPasswordVault());
+      savePortalPasswordVault(updated);
+      const brandVault =
+        updated[brandKey] ||
+        updated[String(client).trim().toLowerCase()] ||
+        {};
+      if (Object.keys(brandVault).length) {
+        const patchResult = await patchPortalPasswordVaultViaApi(brandKey, brandVault);
+        if (!patchResult.ok) {
+          return { ok: false, error: patchResult.error || 'Could not save portal password vault.' };
+        }
+      }
       return { ok: true };
     }
 
