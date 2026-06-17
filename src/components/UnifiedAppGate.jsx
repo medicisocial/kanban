@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { normalizePlanType } from '../constants/plans';
-import { clearClientSession, loadUsableClientSession } from '../utils/clientPortalAuth';
+import { clearClientSession, loadUsableClientSession, markClientSignedOut } from '../utils/clientPortalAuth';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { StaffAuthProvider, useStaffAuth } from '../context/StaffAuthContext';
 import { ClientsProvider } from '../context/ClientsContext';
@@ -157,6 +157,7 @@ function UnifiedAppGateInner() {
 
   const handleSignOut = useCallback(() => {
     setPreferredAuthMode(null);
+    markClientSignedOut();
     clearClientSession();
     setMode('login');
     const gate = {

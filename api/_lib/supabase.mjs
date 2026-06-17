@@ -33,7 +33,8 @@ export function resolveAuthReadKey() {
   return resolveAnonKey();
 }
 
-function resolveServerKey() {
+/** Server write key (service role in production). */
+export function resolveServerKey() {
   const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (serviceRole) return serviceRole;
 

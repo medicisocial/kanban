@@ -78,26 +78,36 @@ export async function signUpWorkspace({ email, password, orgName, planType = 'st
   }
 
   const normalizedPlan = normalizePlanType(planType);
-  const { data, error } = await supabase.auth.signUp({
-    email: email.trim(),
-    password,
-    options: {
-      data: {
-        org_name: orgName.trim(),
-        plan_type: normalizedPlan,
-      },
-    },
+  const response = await fetch('/api/signup-workspace', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: email.trim(),
+      password,
+      orgName: orgName.trim(),
+      planType: normalizedPlan,
+    }),
   });
 
-  if (error) {
-    return { ok: false, error: error.message || 'Could not create account.' };
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return { ok: false, error: payload.error || 'Could not create account.' };
   }
 
-  if (!data?.user) {
-    return { ok: false, error: 'Account was not created. Please try again.' };
+  if (!payload?.ok) {
+    return { ok: false, error: payload.error || 'Account was not created. Please try again.' };
   }
 
-  return { ok: true, user: data.user, session: data.session };
+  const signInResult = await signInWithEmail(email, password);
+  if (!signInResult.ok) {
+    return {
+      ok: true,
+      needsEmailConfirmation: true,
+      message: 'Account created. Check your email to confirm, then sign in.',
+    };
+  }
+
+  return { ok: true, user: signInResult.user, session: signInResult.session };
 }
 
 export async function signInWithEmail(email, password) {

@@ -1,5 +1,18 @@
 import { isUpcomingShootDateKey } from './shootDay';
 import { toDateKey } from './calendar';
+import {
+  clearClientSignedOut,
+  markClientSignedOut,
+  shouldSuppressClientAutoRestore,
+} from './clientPortalSignOut';
+
+export {
+  CLIENT_SIGNED_OUT_KEY,
+  clearClientSignedOut,
+  isClientSignedOut,
+  markClientSignedOut,
+  shouldSuppressClientAutoRestore,
+} from './clientPortalSignOut';
 
 export const CLIENT_SESSION_KEY = 'medici-client-portal-session';
 const CLIENT_API_TIMEOUT_MS = 15000;
@@ -62,6 +75,7 @@ export function isClientSessionUsable(session) {
 }
 
 export function loadUsableClientSession() {
+  if (shouldSuppressClientAutoRestore()) return null;
   const session = loadClientSession();
   if (!isClientSessionUsable(session)) {
     if (session) clearClientSession();
@@ -79,6 +93,7 @@ export function clearClientSession() {
 }
 
 export async function loginClientPortal(username, password) {
+  clearClientSignedOut();
   const response = await fetchClientApi('/api/client-auth', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -6,23 +6,13 @@ const STAFF_SUPABASE_EMAIL = (
   import.meta.env.VITE_SUPABASE_STAFF_EMAIL || 'info@medicisocial.com'
 ).trim();
 
-function getStaffSupabasePassword(typedPassword) {
-  const fromEnv = (import.meta.env.VITE_SUPABASE_STAFF_PASSWORD || '').trim();
-  if (fromEnv) return fromEnv;
-  return (typedPassword || '').trim();
-}
-
-/** Signs into Supabase Auth so the browser can write under RLS. */
+/** Signs into Supabase Auth so the browser can write under RLS (typed password only). */
 export async function signInStaffSupabaseSession(typedPassword) {
   if (!SUPABASE_ENABLED || !supabase) return { ok: true };
 
-  const password = getStaffSupabasePassword(typedPassword);
+  const password = String(typedPassword || '').trim();
   if (!password) {
-    return {
-      ok: false,
-      error:
-        'Database write access is not configured. Add VITE_SUPABASE_STAFF_PASSWORD in your environment, then redeploy.',
-    };
+    return { ok: true };
   }
 
   const result = await signInWithEmail(STAFF_SUPABASE_EMAIL, password);
@@ -38,11 +28,12 @@ export async function signInStaffSupabaseSession(typedPassword) {
   return { ok: true };
 }
 
-/** Re-use an existing session or sign in when staff is already authenticated in the app. */
+/** Re-use an existing Supabase session; never sign in with a bundled env password. */
 export async function ensureStaffSupabaseSession(typedPassword) {
   if (!SUPABASE_ENABLED || !supabase) return { ok: true };
   if (shouldSuppressStaffAutoRestore()) return { ok: true };
   if (await hasStaffSupabaseSession()) return { ok: true };
+  if (!typedPassword) return { ok: true };
   return signInStaffSupabaseSession(typedPassword);
 }
 

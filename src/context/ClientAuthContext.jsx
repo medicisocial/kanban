@@ -5,6 +5,7 @@ import {
   isClientHubPortal,
   loadUsableClientSession,
   loginClientPortal,
+  markClientSignedOut,
   submitClientPortalProfile,
   submitClientPortalResponse,
 } from '../utils/clientPortalAuth';
@@ -189,6 +190,7 @@ export function ClientAuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(() => {
+    markClientSignedOut();
     clearClientSession();
     setSession(null);
     setBrand('');
