@@ -5,6 +5,8 @@ import {
   mergePortalCards,
   buildContentImportUrl,
   queueContentReviewResponse,
+  shouldApplyContentReviewViaShareApi,
+  submitContentReviewShareResponse,
 } from '../utils/contentReviewShare';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import { clientMatchesBrand } from '../utils/clients';
@@ -59,7 +61,8 @@ export default function ClientContentReviewPortal({
 
   const clientColor = getClientColor(client);
   const clientLogo = getClientLogo(client);
-  const canSyncLocally = !useCloudSync && cards.some(
+  const useShareCloudApply = shouldApplyContentReviewViaShareApi();
+  const canSyncLocally = !useCloudSync && !useShareCloudApply && cards.some(
     (c) => clientMatchesBrand(c.client, client) && c.columnId === 'in-review',
   );
 
@@ -68,6 +71,16 @@ export default function ClientContentReviewPortal({
       ...prev.filter((r) => r.cardId !== response.cardId),
       response,
     ]);
+    if (useShareCloudApply) {
+      await submitContentReviewShareResponse({
+        brand: client,
+        cardId: response.cardId,
+        action: response.action,
+        comment: response.comment,
+        timestamp: response.timestamp,
+      });
+      return;
+    }
     if (useCloudSync && onCloudQueueResponse) {
       await onCloudQueueResponse(response);
       return;
@@ -223,7 +236,7 @@ export default function ClientContentReviewPortal({
           <p className="mt-2 text-sm text-white/45">
             Thank you for reviewing your content.
           </p>
-          {sessionResponses.length > 0 && !useCloudSync && !canSyncLocally && (
+          {sessionResponses.length > 0 && !useCloudSync && !canSyncLocally && !useShareCloudApply && (
             <div className="mt-6 text-left">
               <p className="text-sm text-white/55">Send your feedback to Medici Social</p>
               <p className="mt-1 text-xs text-white/35">

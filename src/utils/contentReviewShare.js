@@ -1,4 +1,5 @@
 import { clientMatchesBrand } from './clients';
+import { isCloudSourceOfTruth } from '../lib/cloudSourceOfTruth';
 import { shouldUsePortalResponseQueue, queueStorageKey } from './portalResponseQueue';
 
 const RESPONSES_KEY = 'medici-social-content-review-responses';
@@ -112,11 +113,38 @@ export function saveContentReviewResponses(responses) {
   localStorage.setItem(queueStorageKey(RESPONSES_KEY), JSON.stringify(responses));
 }
 
+/** Once approved, a card stays approved in the offline queue (multi-recipient share links). */
+export function mergeContentReviewQueueEntry(existing, incoming) {
+  if (!incoming?.cardId) return existing || null;
+  if (existing?.action === 'approved') return existing;
+  if (incoming.action === 'approved') return incoming;
+  return incoming;
+}
+
+/** Collapse queued responses so any approval wins over declines for the same card. */
+export function finalizeContentReviewResponses(responses) {
+  const byCardId = new Map();
+  for (const response of responses || []) {
+    if (!response?.cardId) continue;
+    const prev = byCardId.get(response.cardId);
+    if (response.action === 'approved') {
+      byCardId.set(response.cardId, response);
+      continue;
+    }
+    if (!prev || prev.action !== 'approved') {
+      byCardId.set(response.cardId, response);
+    }
+  }
+  return [...byCardId.values()];
+}
+
 export function queueContentReviewResponse(response) {
   if (!shouldUsePortalResponseQueue()) return;
   const existing = loadContentReviewResponses();
+  const prior = existing.find((r) => r.cardId === response.cardId);
+  const merged = mergeContentReviewQueueEntry(prior, response);
   const filtered = existing.filter((r) => r.cardId !== response.cardId);
-  saveContentReviewResponses([...filtered, response]);
+  saveContentReviewResponses([...filtered, merged]);
 }
 
 export function clearContentReviewResponses() {
@@ -188,13 +216,15 @@ export function buildContentReviewDenyUpdates(card, comment, timestamp = Date.no
 export function applyContentReviewResponses(cards, responses, { updateCard }) {
   let applied = 0;
 
-  for (const response of responses) {
+  for (const response of finalizeContentReviewResponses(responses)) {
     const card = cards.find((c) => c.id === response.cardId);
-    if (!card || card.columnId !== 'in-review') continue;
+    if (!card) continue;
 
     const comment = (response.comment || '').trim();
 
     if (response.action === 'approved') {
+      if (card.columnId === 'approved') continue;
+      if (!['in-review', 'not-approved'].includes(card.columnId)) continue;
       updateCard(response.cardId, {
         columnId: 'approved',
         status: 'Approved',
@@ -205,6 +235,8 @@ export function applyContentReviewResponses(cards, responses, { updateCard }) {
     }
 
     if (response.action === 'denied') {
+      if (card.columnId === 'approved') continue;
+      if (card.columnId !== 'in-review') continue;
       if (!comment) continue;
       updateCard(response.cardId, buildContentReviewDenyUpdates(card, comment, response.timestamp));
       applied += 1;
@@ -213,4 +245,27 @@ export function applyContentReviewResponses(cards, responses, { updateCard }) {
 
   if (applied > 0) clearContentReviewResponses();
   return applied;
+}
+
+export async function submitContentReviewShareResponse({
+  brand,
+  cardId,
+  action,
+  comment = '',
+  timestamp = Date.now(),
+}) {
+  const response = await fetch('/api/content-review-share', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ brand, cardId, action, comment, timestamp }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || 'Could not save your response.');
+  }
+  return payload;
+}
+
+export function shouldApplyContentReviewViaShareApi() {
+  return isCloudSourceOfTruth() && Boolean(getContentReviewPortalClient());
 }

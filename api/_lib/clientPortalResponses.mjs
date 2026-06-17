@@ -84,9 +84,6 @@ export async function handleContentPortalResponse(orgId, sessionBrand, response 
   if (!card) {
     throw new Error('Content item not found.');
   }
-  if (card.columnId !== 'in-review') {
-    return { ok: true, skipped: true, reason: 'not-in-review' };
-  }
 
   const brandContext = await resolveSessionBrandContext(orgId, sessionBrand);
   if (!itemMatchesSessionBrand(card.client, sessionBrand, brandContext)) {
@@ -97,6 +94,12 @@ export async function handleContentPortalResponse(orgId, sessionBrand, response 
   const comment = String(response.comment || '').trim();
 
   if (action === 'approved') {
+    if (card.columnId === 'approved') {
+      return { ok: true, skipped: true, reason: 'already-approved', cardId };
+    }
+    if (!['in-review', 'not-approved'].includes(card.columnId)) {
+      return { ok: true, skipped: true, reason: 'not-awaiting-review', cardId };
+    }
     await saveCard(orgId, cardId, {
       ...card,
       columnId: 'approved',
@@ -108,6 +111,12 @@ export async function handleContentPortalResponse(orgId, sessionBrand, response 
   }
 
   if (action === 'denied') {
+    if (card.columnId === 'approved') {
+      return { ok: true, skipped: true, reason: 'already-approved', cardId };
+    }
+    if (card.columnId !== 'in-review') {
+      return { ok: true, skipped: true, reason: 'not-in-review', cardId };
+    }
     const updates = buildContentReviewDenyUpdates(card, comment, timestamp);
     await saveCard(orgId, cardId, { ...card, ...updates });
     return { ok: true, cardId, columnId: updates.columnId };
