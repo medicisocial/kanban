@@ -90,10 +90,14 @@ export function brandProfilePatchFromWorkspaceBrand(client, workspace = {}) {
 
 export function mergeClientRecordRowsIntoWorkspace(workspace = {}, rows = []) {
   const next = { ...workspace };
+  const now = Date.now();
+  next.restoredNames = { ...(next.restoredNames || {}) };
   next.names = unionClientNamesFromRecords(workspace.names, rows);
   for (const row of rows) {
     const client = clientNameFromRecordRow(row);
     if (!client) continue;
+    const key = clientBrandNameKey(client);
+    if (key) next.restoredNames[key] = now;
     applyRemoteBrandField(next, 'clientColor', 'colors', client, row.client_color || '');
     applyRemoteBrandField(next, 'logo', 'logos', client, row.logo);
     applyRemoteBrandField(next, 'contacts', 'contacts', client, row.contacts);

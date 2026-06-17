@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { getOrgId } from '../lib/orgSession';
-import { loadClientRecords, subscribeClientRecords } from '../lib/clientRecordsStore.js';
+import {
+  loadClientRecords,
+  loadClientRecordsFull,
+  subscribeClientRecords,
+} from '../lib/clientRecordsStore.js';
 import { mergeClientRecordRowsIntoWorkspace } from '../utils/clientRecordsCloud.js';
 import { hydrateBrandFileTombstonesFromRows } from '../utils/brandFileTombstones.js';
-import { withTimeout } from '../utils/withTimeout.js';
-
-const LOAD_TIMEOUT_MS = 10000;
 
 /**
  * Cloud mode: load client names + profiles directly from Supabase client_records.
- * No localStorage bootstrap, no multi-path "hydration" — fetch once + realtime.
+ * List rows load first (fast); full profiles follow in the background.
  */
 export function useClientRecordsFromSupabase({ setWorkspaceState, orgId }) {
   const setWorkspaceStateRef = useRef(setWorkspaceState);
@@ -20,18 +21,30 @@ export function useClientRecordsFromSupabase({ setWorkspaceState, orgId }) {
   const loadGenerationRef = useRef(0);
   const loadedOrgRef = useRef(null);
 
-  const applyRows = useCallback((rows) => {
+  const applyRows = useCallback((rows, { markReady = false } = {}) => {
     if (!Array.isArray(rows)) return;
     if (rows.length) {
       hydrateBrandFileTombstonesFromRows(rows);
     }
     setWorkspaceStateRef.current((prev) => mergeClientRecordRowsIntoWorkspace(prev, rows));
+    if (markReady && rows.length) {
+      setRecordsLoaded(true);
+    }
   }, []);
 
   const pullFromSupabase = useCallback(async (activeOrgId) => {
-    const rows = await loadClientRecords(activeOrgId);
-    applyRows(rows);
-    return rows;
+    const listRows = await loadClientRecords(activeOrgId);
+    applyRows(listRows, { markReady: true });
+
+    void loadClientRecordsFull(activeOrgId)
+      .then((fullRows) => {
+        if (fullRows.length) applyRows(fullRows);
+      })
+      .catch((err) => {
+        console.warn('[client_records] full profile load failed:', err?.message || err);
+      });
+
+    return listRows;
   }, [applyRows]);
 
   useEffect(() => {
@@ -52,11 +65,7 @@ export function useClientRecordsFromSupabase({ setWorkspaceState, orgId }) {
 
     void (async () => {
       try {
-        await withTimeout(
-          pullFromSupabase(activeOrgId),
-          LOAD_TIMEOUT_MS,
-          'Client records load timed out.',
-        );
+        await pullFromSupabase(activeOrgId);
       } catch (err) {
         console.warn('[client_records] Supabase load failed:', err?.message || err);
       } finally {

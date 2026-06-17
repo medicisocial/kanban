@@ -9,6 +9,9 @@ import {
 } from '../utils/teamMembers';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
+import { isCloudSourceOfTruth } from '../lib/cloudSourceOfTruth';
+import { getOrgId } from '../lib/orgSession';
+import { fetchStaffSyncRows } from '../lib/staffSyncApi';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
@@ -37,6 +40,29 @@ export function useTeamMembers() {
     setTeamMembers(loadTeamMembers());
   }, []);
   useReloadFromStorage(reloadFromStorage);
+
+  // Cloud: prefetch team via staff-sync (parallel to collection sync) so avatars/names appear fast.
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !isCloudSourceOfTruth()) return undefined;
+
+    let cancelled = false;
+    const activeOrgId = getOrgId();
+
+    void fetchStaffSyncRows('team_members', activeOrgId).then((rows) => {
+      if (cancelled || !Array.isArray(rows) || !rows.length) return;
+      setTeamMembers((prev) => {
+        if (prev.length > 0) return prev;
+        const mapped = rows
+          .map((row) => normalizeTeamMember(row.data ?? row))
+          .filter(Boolean);
+        return mapped.length ? mapped : prev;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const syncLoaded = useCollectionSync({
     table: 'team_members',

@@ -1,13 +1,19 @@
 import { SUPABASE_ENABLED, supabase } from './supabaseClient';
-import { fetchClientRecordRows } from '../utils/clientRecordsCloud.js';
+import {
+  fetchClientRecordListRows,
+  fetchClientRecordFullRows,
+} from '../utils/clientRecordsCloud.js';
 
-const CLIENT_RECORDS_SELECT =
-  'id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,updated_at,deleted_company_file_ids';
-
-/** Load all client profile rows for an org — Supabase first, staff-sync fallback. */
+/** Load client list rows (fast) for filter/sidebar. */
 export async function loadClientRecords(orgId) {
   if (!SUPABASE_ENABLED || !orgId) return [];
-  return fetchClientRecordRows(orgId);
+  return fetchClientRecordListRows(orgId);
+}
+
+/** Load full profile rows — after list is visible. */
+export async function loadClientRecordsFull(orgId) {
+  if (!SUPABASE_ENABLED || !orgId) return [];
+  return fetchClientRecordFullRows(orgId);
 }
 
 /** Subscribe to client_records changes for an org (refetch on any change). */
@@ -40,4 +46,4 @@ export function subscribeClientRecords(orgId, onChange) {
   };
 }
 
-export { CLIENT_RECORDS_SELECT };
+export { CLIENT_RECORDS_LIST_SELECT as CLIENT_RECORDS_SELECT } from '../utils/clientRecordsCloud.js';

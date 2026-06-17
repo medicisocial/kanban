@@ -1,11 +1,8 @@
 import { SUPABASE_ENABLED, supabase } from '../lib/supabaseClient';
 import { getOrgId } from '../lib/orgSession';
 import { fetchStaffSyncRows } from '../lib/staffSyncApi';
-import { withTimeout } from './withTimeout.js';
 
 export { mergeOrgSettingsIntoWorkspace } from './clientsWorkspacePush.js';
-
-const SUPABASE_READ_TIMEOUT_MS = 8000;
 
 const ORG_SETTINGS_SELECT =
   'org_id,removed_names,restored_names,content_type_colors,custom_color_palette,updated_at';
@@ -34,24 +31,16 @@ function settingsFromSlimClientsBlob(data = {}) {
 
 async function fetchOrgSettingsDirect(orgId) {
   if (!supabase) return null;
-  try {
-    const { data, error } = await withTimeout(
-      supabase
-        .from('org_workspace_settings')
-        .select(ORG_SETTINGS_SELECT)
-        .eq('org_id', orgId)
-        .maybeSingle(),
-      SUPABASE_READ_TIMEOUT_MS,
-    );
-    if (error) {
-      console.warn('[org_workspace_settings] Supabase read failed:', error.message || error);
-      return null;
-    }
-    return rowToSettings(data);
-  } catch (err) {
-    console.warn('[org_workspace_settings] Supabase read failed:', err?.message || err);
+  const { data, error } = await supabase
+    .from('org_workspace_settings')
+    .select(ORG_SETTINGS_SELECT)
+    .eq('org_id', orgId)
+    .maybeSingle();
+  if (error) {
+    console.warn('[org_workspace_settings] Supabase read failed:', error.message || error);
     return null;
   }
+  return rowToSettings(data);
 }
 
 async function fetchOrgSettingsFallback(orgId) {
@@ -61,14 +50,16 @@ async function fetchOrgSettingsFallback(orgId) {
   return settingsFromSlimClientsBlob(workspace?.data);
 }
 
-/** Load org-level settings — Supabase direct read, slim clients blob fallback. */
+/** Load org-level settings — parallel Supabase + slim clients blob fallback. */
 export async function fetchOrgWorkspaceSettings(orgId = getOrgId()) {
   if (!SUPABASE_ENABLED || !orgId) return null;
 
-  const direct = await fetchOrgSettingsDirect(orgId);
-  if (direct) return direct;
+  const [direct, fallback] = await Promise.all([
+    fetchOrgSettingsDirect(orgId),
+    fetchOrgSettingsFallback(orgId),
+  ]);
 
-  return fetchOrgSettingsFallback(orgId);
+  return direct || fallback;
 }
 
 let pushTimer = null;

@@ -4,9 +4,6 @@ import { buildStaffApiAuthHeaders } from '../lib/staffApiAuth';
 import { ensureStaffSupabaseSession } from '../lib/staffSupabaseAuth';
 import { slimClientsWorkspaceForCloudPush } from './clientsWorkspacePush';
 import { fetchStaffSyncRows } from '../lib/staffSyncApi';
-import { withTimeout } from './withTimeout.js';
-
-const SUPABASE_READ_TIMEOUT_MS = 8000;
 
 export {
   brandProfilePatchFromWorkspaceBrand,
@@ -14,36 +11,57 @@ export {
   mergeClientRecordRowsIntoWorkspace,
 } from './clientRecordsAssembly.js';
 
-const CLIENT_RECORDS_SELECT =
+/** Slim select for fast filter/sidebar — skips heavy jsonb profile fields. */
+export const CLIENT_RECORDS_LIST_SELECT =
+  'org_id,brand_key,display_name,client_color,updated_at,deleted_company_file_ids';
+
+const CLIENT_RECORDS_FULL_SELECT =
   'id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,deleted_company_file_ids,updated_at';
 
-async function fetchClientRecordRowsDirect(orgId) {
+async function fetchClientRecordRowsDirect(orgId, select) {
   if (!supabase) return [];
-  try {
-    const { data, error } = await withTimeout(
-      supabase.from('client_records').select(CLIENT_RECORDS_SELECT).eq('org_id', orgId),
-      SUPABASE_READ_TIMEOUT_MS,
-    );
-    if (error) {
-      console.warn('[client_records] Supabase read failed:', error.message || error);
-      return [];
-    }
-    return Array.isArray(data) ? data : [];
-  } catch (err) {
-    console.warn('[client_records] Supabase read failed:', err?.message || err);
+  const { data, error } = await supabase.from('client_records').select(select).eq('org_id', orgId);
+  if (error) {
+    console.warn('[client_records] Supabase read failed:', error.message || error);
     return [];
   }
+  return Array.isArray(data) ? data : [];
 }
 
-/** Load client profile rows — Supabase direct read, staff-sync API fallback only. */
-export async function fetchClientRecordRows(orgId = getOrgId()) {
+function pickClientRecordRows(directRows, apiRows) {
+  if (Array.isArray(apiRows) && apiRows.length && !directRows.length) return apiRows;
+  if (directRows.length) return directRows;
+  if (Array.isArray(apiRows) && apiRows.length) return apiRows;
+  return [];
+}
+
+/** Fast list load — parallel Supabase + staff-sync, slim columns only. */
+export async function fetchClientRecordListRows(orgId = getOrgId()) {
   if (!SUPABASE_ENABLED) return [];
 
-  const directRows = await fetchClientRecordRowsDirect(orgId);
-  if (directRows.length) return directRows;
+  const [directRows, apiRows] = await Promise.all([
+    fetchClientRecordRowsDirect(orgId, CLIENT_RECORDS_LIST_SELECT),
+    fetchStaffSyncRows('client_records', orgId),
+  ]);
 
-  const apiRows = await fetchStaffSyncRows('client_records', orgId);
-  return Array.isArray(apiRows) ? apiRows : [];
+  return pickClientRecordRows(directRows, apiRows);
+}
+
+/** Full profile load — for client detail pages after list is visible. */
+export async function fetchClientRecordFullRows(orgId = getOrgId()) {
+  if (!SUPABASE_ENABLED) return [];
+
+  const [directRows, apiRows] = await Promise.all([
+    fetchClientRecordRowsDirect(orgId, CLIENT_RECORDS_FULL_SELECT),
+    fetchStaffSyncRows('client_records', orgId),
+  ]);
+
+  return pickClientRecordRows(directRows, apiRows);
+}
+
+/** @deprecated Use fetchClientRecordListRows — kept for tests and API parity. */
+export async function fetchClientRecordRows(orgId = getOrgId()) {
+  return fetchClientRecordFullRows(orgId);
 }
 
 async function patchBrandProfileRpc(orgId, brandKey, patch) {
