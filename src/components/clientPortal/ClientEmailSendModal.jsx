@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useClientsContext } from '../../context/ClientsContext';
 import {
   buildClientEmailRecipients,
@@ -54,6 +55,19 @@ export default function ClientEmailSendModal({
     setError('');
     setMessage('');
   }, [open, client, recipients]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose?.();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -117,9 +131,9 @@ export default function ClientEmailSendModal({
 
   const shareLabel = SHARE_LABELS[shareType] || 'Update';
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
@@ -200,6 +214,7 @@ export default function ClientEmailSendModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

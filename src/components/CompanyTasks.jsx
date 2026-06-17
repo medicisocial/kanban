@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useStaffWorkspaceScope } from '../hooks/useStaffWorkspaceScope';
+import { useClientEmailSend } from '../hooks/useClientEmailSend';
+import { buildContentReviewSharePayload } from '../utils/contentReviewShare';
 import EditorTodo from './EditorTodo';
 import AccountManagerTodo from './AccountManagerTodo';
 import AdminTodo from './AdminTodo';
@@ -35,6 +37,23 @@ export default function CompanyTasks({
 }) {
   const { visibleCompanyTaskTabs } = useStaffWorkspaceScope();
   const [activeRole, setActiveRole] = useState(initialRole);
+  const { openSend, modal: shareEmailModal } = useClientEmailSend('review');
+  const [shareError, setShareError] = useState('');
+
+  const handleShareWithClient = useCallback((task) => {
+    const card = task?.card ?? cards.find((entry) => entry.id === task?.cardId);
+    const client = task?.client || card?.client;
+    if (!card || !client) {
+      setShareError('Could not share — this task is missing card or client info.');
+      return;
+    }
+    try {
+      setShareError('');
+      openSend(buildContentReviewSharePayload(client, [card]));
+    } catch (err) {
+      setShareError(err?.message || 'Could not open the share email dialog.');
+    }
+  }, [cards, openSend]);
 
   useEffect(() => {
     setActiveRole(initialRole);
@@ -113,6 +132,7 @@ export default function CompanyTasks({
           onApproveReview={onApproveReview}
           onSendBackForEditing={onSendBackForEditing}
           onMoveTask={onMoveTask}
+          onShareWithClient={handleShareWithClient}
         />
       )}
 
@@ -129,6 +149,7 @@ export default function CompanyTasks({
           onMoveTask={onMoveTask}
           onSendBackForEditing={onSendBackForEditing}
           onPlanPostDate={onPlanPostDate}
+          onShareWithClient={handleShareWithClient}
         />
       )}
 
@@ -149,7 +170,13 @@ export default function CompanyTasks({
     return (
       <section>
         <ClientPortalSectionHeader title="Team tasks" compact />
+        {shareError && (
+          <p className="mb-4 border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-200/90">
+            {shareError}
+          </p>
+        )}
         {content}
+        {shareEmailModal}
       </section>
     );
   }
@@ -162,7 +189,13 @@ export default function CompanyTasks({
           Worklists for creators, editors, account managers, and administrative work.
         </p>
       </div>
+      {shareError && (
+        <p className="mb-4 border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-200/90">
+          {shareError}
+        </p>
+      )}
       {content}
+      {shareEmailModal}
     </div>
   );
 }

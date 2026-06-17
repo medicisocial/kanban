@@ -631,7 +631,19 @@ export function useClients() {
   }, [applyClientsWorkspaceUpdate]);
 
   const getClientContacts = useCallback(
-    (client) => normalizeClientContacts(state.contacts[client]),
+    (client) => {
+      const contactsMap = state.contacts || {};
+      if (Object.prototype.hasOwnProperty.call(contactsMap, client)) {
+        return normalizeClientContacts(contactsMap[client]);
+      }
+      const targetKey = clientBrandNameKey(client);
+      for (const [name, value] of Object.entries(contactsMap)) {
+        if (clientBrandNameKey(name) === targetKey) {
+          return normalizeClientContacts(value);
+        }
+      }
+      return [];
+    },
     [state.contacts],
   );
 
