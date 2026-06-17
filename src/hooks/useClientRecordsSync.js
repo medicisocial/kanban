@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
-import { fetchStaffSyncRows } from '../lib/staffSyncApi';
 import { getOrgId } from '../lib/orgSession';
-import { mergeClientRecordRowsIntoWorkspace } from '../utils/clientRecordsAssembly.js';
+import {
+  fetchClientRecordRows,
+  mergeClientRecordRowsIntoWorkspace,
+} from '../utils/clientRecordsCloud.js';
 import {
   hydrateBrandFileTombstonesFromRows,
   syncLocalTombstonesToCloudIfNeeded,
@@ -13,7 +15,7 @@ const HYDRATE_MAX_ATTEMPTS = 8;
 
 async function fetchClientRecordRowsWithRetry(orgId) {
   for (let attempt = 0; attempt < HYDRATE_MAX_ATTEMPTS; attempt += 1) {
-    const rows = await fetchStaffSyncRows('client_records', orgId);
+    const rows = await fetchClientRecordRows(orgId);
     if (Array.isArray(rows)) return rows;
     if (attempt < HYDRATE_MAX_ATTEMPTS - 1) {
       await new Promise((resolve) => {
@@ -25,8 +27,8 @@ async function fetchClientRecordRowsWithRetry(orgId) {
 }
 
 /**
- * Hydrate brand profile maps from normalized client_records.
- * Cloud writes run from applyClientsWorkspaceUpdate in useClients (not here).
+ * Hydrate brand profile maps from Supabase client_records (direct read, API fallback).
+ * Writes go to Supabase via pushBrandProfilePatches in useClients.
  */
 export function useClientRecordsSync({ workspaceState, setWorkspaceState, orgReady }) {
   const [recordsHydrated, setRecordsHydrated] = useState(!SUPABASE_ENABLED);
@@ -51,7 +53,7 @@ export function useClientRecordsSync({ workspaceState, setWorkspaceState, orgRea
           syncLocalTombstonesToCloudIfNeeded();
           setWorkspaceState((prev) => mergeClientRecordRowsIntoWorkspace(prev, rows));
         } else {
-          console.warn('[client_records] hydrate — no rows yet; cloud saves still enabled');
+          console.warn('[client_records] hydrate — no rows yet; Supabase saves still enabled');
         }
       } finally {
         if (!cancelled) {
