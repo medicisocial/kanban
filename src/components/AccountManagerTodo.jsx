@@ -3,6 +3,8 @@ import { getContentTypeStyle, COLUMNS } from '../constants';
 import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import { useClientsContext } from '../context/ClientsContext';
 import { useStaffAssigneeFilter } from '../hooks/useStaffWorkspaceScope';
+import { useClientEmailSend } from '../hooks/useClientEmailSend';
+import { buildContentReviewSharePayload } from '../utils/contentReviewShare';
 import TaskPostSchedule from './TaskPostSchedule';
 import { formatStoryScheduleSummary, toDateKey } from '../utils/calendar';
 import {
@@ -101,6 +103,7 @@ function InReviewTaskCard({
   onMoveTask,
   onApproveReview,
   onRequestEdits,
+  onShareWithClient,
   animationDelay,
 }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
@@ -178,6 +181,9 @@ function InReviewTaskCard({
           </label>
           <button type="button" onClick={openCard} className={taskActionBtnClass}>
             Edit
+          </button>
+          <button type="button" onClick={() => onShareWithClient?.(task)} className={taskActionBtnClass}>
+            Share with client
           </button>
           <button type="button" onClick={() => onApproveReview?.(task.cardId)} className={taskActionBtnClass}>
             Approve
@@ -354,6 +360,7 @@ export default function AccountManagerTodo({
   onPlanPostDate,
 }) {
   const { getClientColor, clientAccountManagers, getMemberNamesForRole } = useClientsContext();
+  const { openSend, modal: shareEmailModal } = useClientEmailSend('review');
   const accountManagers = getMemberNamesForRole('Account Manager');
   const todayKey = toDateKey(new Date());
   const { assigneeFilter, setAssigneeFilter, restrictAssigneeFilter } = useStaffAssigneeFilter();
@@ -417,6 +424,10 @@ export default function AccountManagerTodo({
     setNeedsEditsCard(null);
   };
 
+  const handleShareWithClient = (task) => {
+    if (!task?.card || !task.client) return;
+    openSend(buildContentReviewSharePayload(task.client, [task.card]));
+  };
 
   return (
     <div>
@@ -501,6 +512,7 @@ export default function AccountManagerTodo({
                   onMoveTask={onMoveTask}
                   onApproveReview={onApproveReview}
                   onRequestEdits={setNeedsEditsCard}
+                  onShareWithClient={handleShareWithClient}
                   animationDelay={`${0.08 + index * 0.05}s`}
                 />
               )}
@@ -573,6 +585,8 @@ export default function AccountManagerTodo({
           onSubmit={handleNeedsEditsSubmit}
         />
       )}
+
+      {shareEmailModal}
     </div>
   );
 }

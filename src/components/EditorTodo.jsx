@@ -3,6 +3,8 @@ import { getContentTypeStyle } from '../constants';
 import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import { useClientsContext } from '../context/ClientsContext';
 import { useStaffAssigneeFilter } from '../hooks/useStaffWorkspaceScope';
+import { useClientEmailSend } from '../hooks/useClientEmailSend';
+import { buildContentReviewSharePayload } from '../utils/contentReviewShare';
 import TaskPostSchedule from './TaskPostSchedule';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
 import {
@@ -41,6 +43,7 @@ function EditorTodoItem({
   onRequestEdits,
   onSendBackForEditing,
   onMoveTask,
+  onShareWithClient,
   getClientColor,
   animationDelay,
 }) {
@@ -143,6 +146,13 @@ function EditorTodoItem({
             <>
               <button
                 type="button"
+                onClick={() => onShareWithClient?.(task)}
+                className={taskActionBtnClass}
+              >
+                Share with client
+              </button>
+              <button
+                type="button"
                 onClick={() => onApproveReview?.(task.cardId)}
                 className={taskActionBtnClass}
               >
@@ -240,6 +250,7 @@ export default function EditorTodo({
   onMoveTask,
 }) {
   const { getClientColor, getMemberNamesForRole } = useClientsContext();
+  const { openSend, modal: shareEmailModal } = useClientEmailSend('review');
   const editors = getMemberNamesForRole('Editor');
   const { assigneeFilter, setAssigneeFilter, restrictAssigneeFilter } = useStaffAssigneeFilter();
   const [showCompleted, setShowCompleted] = useState(true);
@@ -272,6 +283,11 @@ export default function EditorTodo({
   const approveCount = reviewTasks.length;
   const oneOffCount = filteredTasks.filter((t) => t.isOneOffProject && !t.completed).length;
 
+  const handleShareWithClient = (task) => {
+    if (!task?.card || !task.client) return;
+    openSend(buildContentReviewSharePayload(task.client, [task.card]));
+  };
+
   const itemProps = {
     onOpenCard,
     onDeleteOneOffTask,
@@ -280,6 +296,7 @@ export default function EditorTodo({
     onRequestEdits: setNeedsEditsCard,
     onSendBackForEditing,
     onMoveTask,
+    onShareWithClient: handleShareWithClient,
     getClientColor,
   };
 
@@ -396,6 +413,8 @@ export default function EditorTodo({
           onSubmit={handleNeedsEditsSubmit}
         />
       )}
+
+      {shareEmailModal}
     </div>
   );
 }

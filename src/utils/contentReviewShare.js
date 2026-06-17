@@ -64,6 +64,16 @@ export function buildContentReviewShareUrl(client, reviewCards) {
   return `${base}?content=${encodeURIComponent(client)}#${payload}`;
 }
 
+/** Payload for ClientEmailSendModal from one or more in-review cards. */
+export function buildContentReviewSharePayload(client, reviewCards) {
+  const cards = (reviewCards || []).filter(Boolean);
+  return {
+    client,
+    shareUrl: buildContentReviewShareUrl(client, cards),
+    itemCount: cards.length,
+  };
+}
+
 export function mergePortalCards(storedCards, client, snapshot) {
   const stored = storedCards.filter(
     (c) => clientMatchesBrand(c.client, client) && c.columnId === 'in-review',
