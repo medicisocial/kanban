@@ -78,6 +78,24 @@ export function buildPeerApprovalMessage(response, contentType = 'reel') {
   return `${formatReviewerFirstName(response)} approved this ${label}`;
 }
 
+export function buildPeerDenialMessage(response, contentType = 'reel') {
+  const label = String(contentType || 'reel').toLowerCase();
+  return `${formatReviewerFirstName(response)} did not approve this ${label}`;
+}
+
+export function shouldShowShareReviewCard(share, reviewerEmail) {
+  const normalized = normalizeShareEmail(reviewerEmail);
+  if (!normalized) return true;
+  if (!reviewerHasResponded(share, normalized)) return true;
+  return getPeerShareResponses(share, normalized).some((entry) => entry.action === 'denied');
+}
+
+export function isShareReviewFeedbackOnly(share, reviewerEmail) {
+  const normalized = normalizeShareEmail(reviewerEmail);
+  if (!normalized || !reviewerHasResponded(share, normalized)) return false;
+  return getPeerShareResponses(share, normalized).some((entry) => entry.action === 'denied');
+}
+
 function expandContentSnapshot(data, client) {
   if (data.v === 2 && Array.isArray(data.i)) {
     return {
@@ -149,7 +167,7 @@ export function mergePortalCards(storedCards, client, snapshot, { reviewerEmail 
   const stored = storedCards.filter((c) => {
     if (!clientMatchesBrand(c.client, client)) return false;
     if (snapshotIds.has(c.id)) {
-      if (reviewerEmail && reviewerHasResponded(c.contentReviewShare, reviewerEmail)) return false;
+      if (reviewerEmail && !shouldShowShareReviewCard(c.contentReviewShare, reviewerEmail)) return false;
       return true;
     }
     return c.columnId === 'in-review';
@@ -160,7 +178,7 @@ export function mergePortalCards(storedCards, client, snapshot, { reviewerEmail 
   const byId = new Map(stored.map((c) => [c.id, c]));
   for (const item of snapshot.cards) {
     if (!clientMatchesBrand(item.client, client)) continue;
-    if (reviewerEmail && reviewerHasResponded(byId.get(item.id)?.contentReviewShare, reviewerEmail)) {
+    if (reviewerEmail && !shouldShowShareReviewCard(byId.get(item.id)?.contentReviewShare, reviewerEmail)) {
       continue;
     }
     if (!byId.has(item.id)) {

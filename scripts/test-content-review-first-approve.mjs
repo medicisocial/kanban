@@ -24,6 +24,23 @@ function finalizeContentReviewResponses(responses) {
   return [...byCardId.values()];
 }
 
+function shouldShowShareReviewCard(share, reviewerEmail) {
+  const normalized = String(reviewerEmail || '').trim().toLowerCase();
+  if (!normalized) return true;
+  const responses = share?.responses || [];
+  const viewerResponded = responses.some((entry) => entry.email === normalized);
+  if (!viewerResponded) return true;
+  return responses.some(
+    (entry) => entry.email !== normalized && entry.action === 'denied',
+  );
+}
+
+function buildPeerDenialMessage(response, contentType = 'reel') {
+  const name = response?.name?.split(/\s+/)[0] || 'Someone';
+  const label = String(contentType || 'reel').toLowerCase();
+  return `${name} did not approve this ${label}`;
+}
+
 function resolveShareBoardAction(responses) {
   const list = Array.isArray(responses) ? responses : [];
   if (list.some((entry) => entry.action === 'denied')) return 'denied';
@@ -73,6 +90,25 @@ assert(resolveShareBoardAction(shareResponses) === 'denied', 'any deny sends the
 assert(
   resolveShareBoardAction([shareResponses[0]]) === 'approved',
   'one approval is enough when nobody denies',
+);
+
+const shareRound = {
+  responses: shareResponses,
+};
+assert(
+  shouldShowShareReviewCard(shareRound, 'matt@example.com'),
+  'approver still sees the card after a peer denies so they can read why',
+);
+assert(
+  !shouldShowShareReviewCard(
+    { responses: [{ email: 'matt@example.com', action: 'approved' }] },
+    'matt@example.com',
+  ),
+  'hide card once viewer responded and no peer denial exists',
+);
+assert(
+  buildPeerDenialMessage({ name: 'Jason' }, 'Reel') === 'Jason did not approve this reel',
+  'denial banner names the reviewer',
 );
 
 console.log('test-content-review-first-approve: ok');

@@ -1,11 +1,17 @@
 import { useState } from 'react';
 import { getContentTypeStyle } from '../constants';
 import { contentTypePillProps } from '../utils/contentTypeColors';
-import { buildPeerApprovalMessage } from '../utils/contentReviewShare';
+import { buildPeerApprovalMessage, buildPeerDenialMessage } from '../utils/contentReviewShare';
 import { useClientsContext } from '../context/ClientsContext';
 import { glassInsetClass, inputClass } from './clientPortal/clientPortalUi';
 
-export default function ContentReviewCard({ card, peerResponses = [], onApprove, onDeny }) {
+export default function ContentReviewCard({
+  card,
+  peerResponses = [],
+  feedbackOnly = false,
+  onApprove,
+  onDeny,
+}) {
   const [comment, setComment] = useState('');
   const [denyError, setDenyError] = useState('');
   const { getClientColor } = useClientsContext();
@@ -64,13 +70,33 @@ export default function ContentReviewCard({ card, peerResponses = [], onApprove,
           .filter((entry) => entry.action === 'approved')
           .map((entry) => (
             <p
-              key={`${entry.email}-${entry.timestamp}`}
+              key={`approve-${entry.email}-${entry.timestamp}`}
               className="mb-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200"
             >
               {buildPeerApprovalMessage(entry, card.contentType)}
             </p>
           ))}
 
+        {peerResponses
+          .filter((entry) => entry.action === 'denied')
+          .map((entry) => (
+            <div
+              key={`deny-${entry.email}-${entry.timestamp}`}
+              className="mb-3 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-100"
+            >
+              <p className="font-medium">{buildPeerDenialMessage(entry, card.contentType)}</p>
+              {entry.comment ? (
+                <p className="mt-1.5 whitespace-pre-wrap text-rose-100/85">{entry.comment}</p>
+              ) : null}
+            </div>
+          ))}
+
+        {feedbackOnly ? (
+          <p className="text-sm text-white/50">
+            Your team is revising this based on the feedback above.
+          </p>
+        ) : (
+          <>
         <label className="block">
           <span className="mb-1.5 block text-xs font-medium text-gray-400">
             Your feedback (optional for approve, required if not approved)
@@ -109,6 +135,8 @@ export default function ContentReviewCard({ card, peerResponses = [], onApprove,
             Not approved
           </button>
         </div>
+          </>
+        )}
       </div>
     </article>
   );

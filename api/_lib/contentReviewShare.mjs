@@ -165,6 +165,24 @@ export function buildPeerApprovalMessage(response, contentType = 'reel') {
   return `${formatReviewerFirstName(response)} approved this ${label}`;
 }
 
+export function buildPeerDenialMessage(response, contentType = 'reel') {
+  const label = String(contentType || 'reel').toLowerCase();
+  return `${formatReviewerFirstName(response)} did not approve this ${label}`;
+}
+
+export function shouldShowShareReviewCard(share, reviewerEmail) {
+  const normalized = normalizeShareEmail(reviewerEmail);
+  if (!normalized) return true;
+  if (!reviewerHasResponded(share, normalized)) return true;
+  return getPeerShareResponses(share, normalized).some((entry) => entry.action === 'denied');
+}
+
+export function isShareReviewFeedbackOnly(share, reviewerEmail) {
+  const normalized = normalizeShareEmail(reviewerEmail);
+  if (!normalized || !reviewerHasResponded(share, normalized)) return false;
+  return getPeerShareResponses(share, normalized).some((entry) => entry.action === 'denied');
+}
+
 export async function registerContentReviewShareInvites({
   orgId,
   shareUrl,

@@ -10,7 +10,9 @@ import {
   fetchContentReviewShareState,
   getContentReviewReviewer,
   getPeerShareResponses,
+  isShareReviewFeedbackOnly,
   normalizeContentReviewShare,
+  shouldShowShareReviewCard,
 } from '../utils/contentReviewShare';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import { clientMatchesBrand } from '../utils/clients';
@@ -94,7 +96,11 @@ export default function ClientContentReviewPortal({
         { reviewerEmail },
       )
         .map((card) => mergeShareCardDetails(card, shareById.get(card.id)))
-        .filter((card) => !respondedIds.includes(card.id));
+        .filter((card) => {
+          if (respondedIds.includes(card.id)) return false;
+          if (!reviewerEmail) return true;
+          return shouldShowShareReviewCard(card.contentReviewShare, reviewerEmail);
+        });
 
       if (!cancelled) {
         setLocalCards(merged);
@@ -281,6 +287,7 @@ export default function ClientContentReviewPortal({
                 key={card.id}
                 card={card}
                 peerResponses={getPeerShareResponses(card.contentReviewShare, reviewerEmail)}
+                feedbackOnly={isShareReviewFeedbackOnly(card.contentReviewShare, reviewerEmail)}
                 onApprove={handleApprove}
                 onDeny={handleDeny}
               />
