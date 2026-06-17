@@ -275,7 +275,7 @@ export function useClients() {
     orgId,
   });
 
-  const { settingsLoaded } = useOrgWorkspaceSettingsFromSupabase({
+  useOrgWorkspaceSettingsFromSupabase({
     setWorkspaceState: setWorkspaceStateFromSupabase,
     orgId,
   });
@@ -283,9 +283,7 @@ export function useClients() {
   const hasClientNames = state.names.length > 0;
   const clientsReady =
     !SUPABASE_ENABLED ||
-    (isCloudSourceOfTruth()
-      ? (recordsLoaded && settingsLoaded) || hasClientNames
-      : syncLoaded);
+    (isCloudSourceOfTruth() ? recordsLoaded || hasClientNames : syncLoaded);
   const persistTimerRef = useRef(null);
   useEffect(() => {
     if (isCloudSourceOfTruth()) return;

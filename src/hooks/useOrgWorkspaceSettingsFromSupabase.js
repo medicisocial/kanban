@@ -6,17 +6,20 @@ import {
   subscribeOrgWorkspaceSettings,
 } from '../lib/orgWorkspaceSettingsStore.js';
 import { mergeOrgSettingsIntoWorkspace } from '../utils/orgWorkspaceSettingsCloud.js';
+import { withTimeout } from '../utils/withTimeout.js';
+
+const LOAD_TIMEOUT_MS = 10000;
 
 /**
  * Cloud mode: load org-level settings (tombstones, palettes) from org_workspace_settings.
- * Replaces the slim clients blob singleton sync.
+ * Replaces the slim clients blob singleton sync. Does not gate the client list UI.
  */
 export function useOrgWorkspaceSettingsFromSupabase({ setWorkspaceState, orgId }) {
   const setWorkspaceStateRef = useRef(setWorkspaceState);
   setWorkspaceStateRef.current = setWorkspaceState;
 
-  const [settingsLoaded, setSettingsLoaded] = useState(!SUPABASE_ENABLED);
   const loadGenerationRef = useRef(0);
+  const loadedOrgRef = useRef(null);
 
   const applySettings = useCallback((settings) => {
     if (!settings) return;
@@ -30,26 +33,26 @@ export function useOrgWorkspaceSettingsFromSupabase({ setWorkspaceState, orgId }
   }, [applySettings]);
 
   useEffect(() => {
-    if (!SUPABASE_ENABLED) {
-      setSettingsLoaded(true);
-      return undefined;
-    }
+    if (!SUPABASE_ENABLED) return undefined;
 
     const activeOrgId = orgId || getOrgId();
     const generation = loadGenerationRef.current + 1;
     loadGenerationRef.current = generation;
-    setSettingsLoaded(false);
 
     let cancelled = false;
 
     void (async () => {
       try {
-        await pullFromSupabase(activeOrgId);
+        await withTimeout(
+          pullFromSupabase(activeOrgId),
+          LOAD_TIMEOUT_MS,
+          'Org settings load timed out.',
+        );
       } catch (err) {
         console.warn('[org_workspace_settings] Supabase load failed:', err?.message || err);
       } finally {
         if (!cancelled && loadGenerationRef.current === generation) {
-          setSettingsLoaded(true);
+          loadedOrgRef.current = activeOrgId;
         }
       }
     })();
@@ -67,5 +70,5 @@ export function useOrgWorkspaceSettingsFromSupabase({ setWorkspaceState, orgId }
     };
   }, [orgId, pullFromSupabase]);
 
-  return { settingsLoaded };
+  return {};
 }

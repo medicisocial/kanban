@@ -4,6 +4,9 @@ import { buildStaffApiAuthHeaders } from '../lib/staffApiAuth';
 import { ensureStaffSupabaseSession } from '../lib/staffSupabaseAuth';
 import { slimClientsWorkspaceForCloudPush } from './clientsWorkspacePush';
 import { fetchStaffSyncRows } from '../lib/staffSyncApi';
+import { withTimeout } from './withTimeout.js';
+
+const SUPABASE_READ_TIMEOUT_MS = 8000;
 
 export {
   brandProfilePatchFromWorkspaceBrand,
@@ -16,15 +19,20 @@ const CLIENT_RECORDS_SELECT =
 
 async function fetchClientRecordRowsDirect(orgId) {
   if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('client_records')
-    .select(CLIENT_RECORDS_SELECT)
-    .eq('org_id', orgId);
-  if (error) {
-    console.warn('[client_records] Supabase read failed:', error.message || error);
+  try {
+    const { data, error } = await withTimeout(
+      supabase.from('client_records').select(CLIENT_RECORDS_SELECT).eq('org_id', orgId),
+      SUPABASE_READ_TIMEOUT_MS,
+    );
+    if (error) {
+      console.warn('[client_records] Supabase read failed:', error.message || error);
+      return [];
+    }
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.warn('[client_records] Supabase read failed:', err?.message || err);
     return [];
   }
-  return Array.isArray(data) ? data : [];
 }
 
 /** Load client profile rows — Supabase direct read, staff-sync API fallback only. */

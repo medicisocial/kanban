@@ -3,9 +3,10 @@ import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { getOrgId } from '../lib/orgSession';
 import { loadClientRecords, subscribeClientRecords } from '../lib/clientRecordsStore.js';
 import { mergeClientRecordRowsIntoWorkspace } from '../utils/clientRecordsCloud.js';
-import {
-  hydrateBrandFileTombstonesFromRows,
-} from '../utils/brandFileTombstones.js';
+import { hydrateBrandFileTombstonesFromRows } from '../utils/brandFileTombstones.js';
+import { withTimeout } from '../utils/withTimeout.js';
+
+const LOAD_TIMEOUT_MS = 10000;
 
 /**
  * Cloud mode: load client names + profiles directly from Supabase client_records.
@@ -17,10 +18,13 @@ export function useClientRecordsFromSupabase({ setWorkspaceState, orgId }) {
 
   const [recordsLoaded, setRecordsLoaded] = useState(!SUPABASE_ENABLED);
   const loadGenerationRef = useRef(0);
+  const loadedOrgRef = useRef(null);
 
   const applyRows = useCallback((rows) => {
-    if (!Array.isArray(rows) || !rows.length) return;
-    hydrateBrandFileTombstonesFromRows(rows);
+    if (!Array.isArray(rows)) return;
+    if (rows.length) {
+      hydrateBrandFileTombstonesFromRows(rows);
+    }
     setWorkspaceStateRef.current((prev) => mergeClientRecordRowsIntoWorkspace(prev, rows));
   }, []);
 
@@ -39,17 +43,25 @@ export function useClientRecordsFromSupabase({ setWorkspaceState, orgId }) {
     const activeOrgId = orgId || getOrgId();
     const generation = loadGenerationRef.current + 1;
     loadGenerationRef.current = generation;
-    setRecordsLoaded(false);
+    const isNewOrg = loadedOrgRef.current !== activeOrgId;
+    if (isNewOrg) {
+      setRecordsLoaded(false);
+    }
 
     let cancelled = false;
 
     void (async () => {
       try {
-        await pullFromSupabase(activeOrgId);
+        await withTimeout(
+          pullFromSupabase(activeOrgId),
+          LOAD_TIMEOUT_MS,
+          'Client records load timed out.',
+        );
       } catch (err) {
         console.warn('[client_records] Supabase load failed:', err?.message || err);
       } finally {
         if (!cancelled && loadGenerationRef.current === generation) {
+          loadedOrgRef.current = activeOrgId;
           setRecordsLoaded(true);
         }
       }
