@@ -42,7 +42,7 @@ import {
 } from '../utils/clientPortalPasswordVault';
 import { saveStaffBrandAssets } from '../utils/staffBrandAssetsApi';
 import { canAddClient, getPlanLimits } from '../utils/planLimits';
-import { useClientRecordsSync } from './useClientRecordsSync';
+import { useClientRecordsFromSupabase } from './useClientRecordsFromSupabase';
 import { diffBrandProfilePatches, pushBrandProfilePatches } from '../utils/clientRecordsCloud.js';
 import { mergeCloudClientsBlobRemote } from '../utils/clientsWorkspacePush';
 import { reportSyncIssue } from '../lib/workspaceSyncHealth';
@@ -140,18 +140,6 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
   };
 }
 
-function loadCloudClientsBootstrap() {
-  if (!isCloudSourceOfTruth()) return null;
-  try {
-    const cached = readOrgScopedJson(CLIENTS_STORAGE_KEY, null);
-    if (cached && Array.isArray(cached.names) && cached.names.length > 0) {
-      return { names: cached.names };
-    }
-  } catch {
-    /* ignore */
-  }
-  return null;
-}
 
 function loadClientsRaw() {
   try {
@@ -174,14 +162,17 @@ async function syncClientsWorkspace() {
   return { ok: true };
 }
 
+function emptyCloudClientsState() {
+  return normalizeClientsState(null, { includeDefaults: false });
+}
+
 export function useClients() {
   const { isLegacyOrg, planType, orgId } = useStaffAuth();
   const includeDefaults = isLegacyOrg && !isCloudSourceOfTruth();
   const [state, setState] = useState(() =>
-    normalizeClientsState(
-      loadCloudClientsBootstrap() || (isCloudSourceOfTruth() ? null : loadClientsRaw()),
-      { includeDefaults },
-    ),
+    isCloudSourceOfTruth()
+      ? emptyCloudClientsState()
+      : normalizeClientsState(loadClientsRaw(), { includeDefaults }),
   );
   const stateRef = useRef(state);
 
@@ -259,28 +250,22 @@ export function useClients() {
     recordId: 'workspace',
   });
 
-  const setWorkspaceStateFromRecords = useCallback((updater) => {
+  const setWorkspaceStateFromSupabase = useCallback((updater) => {
     setState((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      const normalized = normalizeClientsState(next, { includeDefaults });
-      if (isCloudSourceOfTruth() && Array.isArray(normalized.names) && normalized.names.length) {
-        writeOrgScopedJson(CLIENTS_STORAGE_KEY, { names: normalized.names });
-      }
-      return normalized;
+      return normalizeClientsState(next, { includeDefaults });
     });
   }, [includeDefaults]);
 
-  const { recordsHydrated } = useClientRecordsSync({
-    setWorkspaceState: setWorkspaceStateFromRecords,
+  const { recordsLoaded } = useClientRecordsFromSupabase({
+    setWorkspaceState: setWorkspaceStateFromSupabase,
     orgId,
-    hasClientNames: () => stateRef.current.names?.length > 0,
   });
 
   const hasClientNames = state.names.length > 0;
-  // Cloud client names/profiles come from client_records — do not block on the slim clients blob.
   const clientsReady =
     !SUPABASE_ENABLED ||
-    (isCloudSourceOfTruth() ? recordsHydrated || hasClientNames : syncLoaded);
+    (isCloudSourceOfTruth() ? recordsLoaded || hasClientNames : syncLoaded);
   const persistTimerRef = useRef(null);
   useEffect(() => {
     if (isCloudSourceOfTruth()) return;
