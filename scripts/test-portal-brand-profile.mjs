@@ -10,6 +10,7 @@ import {
   resolvePortalBrandLabel,
   matchesBrandContentRow,
   mergeBrandLinkedAndFallbackRows,
+  chooseBestBrandDisplayName,
 } from '../api/_lib/portalBrandProfile.mjs';
 import {
   attachBrandIdToContentRow,
@@ -88,6 +89,18 @@ assert(
     sessionBrand: 'ara med spa',
   }) === 'Ara Med Spa',
   'portal brand label uses resolved display name for all clients',
+);
+assert(
+  chooseBestBrandDisplayName(['ara med spa', 'Ara Med Spa']) === 'Ara Med Spa',
+  'brand display resolver prefers correctly cased client brand name',
+);
+assert(
+  resolvePortalBrandLabel({
+    profile: { brandKey: 'ara med spa', displayName: 'ara med spa' },
+    displayBrand: 'Ara Med Spa',
+    sessionBrand: 'ara med spa',
+  }) === 'Ara Med Spa',
+  'portal brand label does not let lowercase profile display override cased brand name',
 );
 
 const brandMap = buildBrandIdLookupMap([

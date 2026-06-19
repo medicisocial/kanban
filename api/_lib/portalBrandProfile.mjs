@@ -88,7 +88,26 @@ export function resolvePortalBrandDisplayNameFromStore(sessionBrand, clientStore
 
 /** Human-readable brand label for all client portal surfaces. */
 export function resolvePortalBrandLabel({ profile, displayBrand, sessionBrand }) {
-  return profile?.displayName || displayBrand || profile?.brandKey || sessionBrand || '';
+  const preferredDisplay = chooseBestBrandDisplayName([
+    displayBrand,
+    profile?.displayName,
+    profile?.brandKey,
+    sessionBrand,
+  ]);
+  return preferredDisplay || '';
+}
+
+function isAllLowercaseDisplayName(value) {
+  const text = String(value || '').trim();
+  return Boolean(text) && /[a-z]/.test(text) && text === text.toLowerCase();
+}
+
+export function chooseBestBrandDisplayName(candidates = []) {
+  const cleaned = candidates.map((candidate) => String(candidate || '').trim()).filter(Boolean);
+  if (!cleaned.length) return '';
+
+  const cased = cleaned.find((candidate) => !isAllLowercaseDisplayName(candidate));
+  return cased || cleaned[0];
 }
 
 export async function resolvePortalBrandDisplayName(orgId, sessionBrand) {
@@ -109,11 +128,12 @@ export async function resolvePortalBrandDisplayName(orgId, sessionBrand) {
           },
         },
       );
+      const displayCandidates = [];
       if (brandResponse.ok) {
         const brandRows = await brandResponse.json();
         const fromBrands = brandRows?.[0]?.display_name;
         if (fromBrands && brandKeysMatch(fromBrands, sessionBrand)) {
-          return String(fromBrands).trim();
+          displayCandidates.push(fromBrands);
         }
       }
 
@@ -130,9 +150,12 @@ export async function resolvePortalBrandDisplayName(orgId, sessionBrand) {
         const rows = await response.json();
         const displayName = rows?.[0]?.display_name;
         if (displayName && brandKeysMatch(displayName, sessionBrand)) {
-          return String(displayName).trim();
+          displayCandidates.push(displayName);
         }
       }
+
+      const bestDisplayName = chooseBestBrandDisplayName(displayCandidates);
+      if (bestDisplayName) return bestDisplayName;
     } catch (error) {
       console.warn('[portal-brand-profile] display name lookup failed:', error?.message || error);
     }
