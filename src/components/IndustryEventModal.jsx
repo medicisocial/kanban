@@ -335,7 +335,12 @@ export default function IndustryEventModal({
           )}
         </div>
 
-        <div className="flex shrink-0 flex-wrap gap-2 border-t border-white/10 px-5 py-4">
+        <div className="flex shrink-0 flex-col gap-3 border-t border-white/10 px-5 py-4">
+          {error && (
+            <p className="border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+              {error}
+            </p>
+          )}
           {isEdit && onDelete && !showReadOnly && (
             <button
               type="button"
@@ -350,7 +355,7 @@ export default function IndustryEventModal({
               Delete
             </button>
           )}
-          <div className="ml-auto flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 sm:ml-auto">
             <button type="button" onClick={onClose} disabled={saving} className={btnSecondaryClass}>
               Cancel
             </button>

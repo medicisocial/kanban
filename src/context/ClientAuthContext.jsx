@@ -202,9 +202,12 @@ export function ClientAuthProvider({ children }) {
 
   const queueCloudResponse = useCallback(
     async (type, response) => {
-      if (!session) return;
-      await submitClientPortalResponse(session, type, response);
+      if (!session) {
+        throw new Error('Session expired. Please sign in again.');
+      }
+      const result = await submitClientPortalResponse(session, type, response);
       await refreshPortalData(session);
+      return result;
     },
     [session, refreshPortalData],
   );

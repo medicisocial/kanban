@@ -179,10 +179,20 @@ export async function submitClientPortalResponse(session, type, response) {
     body: JSON.stringify({ type, response }),
   });
 
+  const contentType = res.headers.get('content-type') || '';
+  const payload = contentType.includes('application/json')
+    ? await res.json().catch(() => ({}))
+    : {};
+
   if (!res.ok) {
-    const payload = await res.json().catch(() => ({}));
-    throw new Error(payload.error || 'Could not save your response.');
+    const text = contentType.includes('application/json')
+      ? ''
+      : await res.text().catch(() => '');
+    const detail = payload.error || text.trim();
+    throw new Error(detail || `Could not save your response. (${res.status})`);
   }
+
+  return payload;
 }
 
 export async function submitClientPortalProfile(session, profile) {
