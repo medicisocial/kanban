@@ -242,16 +242,31 @@ async function queryRowsByBrandId(orgId, table, brandId) {
   return response.json();
 }
 
-async function loadBrandTableContent(orgId, brand, table, brandId) {
-  if (brandId) {
-    const linkedRows = await queryRowsByBrandId(orgId, table, brandId);
-    if (linkedRows.length > 0) {
-      return linkedRows;
-    }
+/** @internal test helper */
+export function mergeBrandLinkedAndFallbackRows(linkedRows = [], orgRows = [], brand, table) {
+  const merged = [];
+  const seen = new Set();
+
+  for (const row of linkedRows || []) {
+    if (!row?.id || seen.has(row.id)) continue;
+    merged.push(row);
+    seen.add(row.id);
   }
 
+  for (const row of orgRows || []) {
+    if (!row?.id || seen.has(row.id)) continue;
+    if (!rowMatchesBrand(row, brand, table)) continue;
+    merged.push(row);
+    seen.add(row.id);
+  }
+
+  return merged;
+}
+
+async function loadBrandTableContent(orgId, brand, table, brandId) {
+  const linkedRows = brandId ? await queryRowsByBrandId(orgId, table, brandId) : [];
   const orgRows = await queryOrgTableRows(orgId, table);
-  return orgRows.filter((row) => rowMatchesBrand(row, brand, table));
+  return mergeBrandLinkedAndFallbackRows(linkedRows, orgRows, brand, table);
 }
 
 export function resolveBrandProfileFromStore(clientStore, brand) {

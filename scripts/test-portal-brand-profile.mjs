@@ -9,6 +9,7 @@ import {
   resolvePortalBrandDisplayNameFromStore,
   resolvePortalBrandLabel,
   matchesBrandContentRow,
+  mergeBrandLinkedAndFallbackRows,
 } from '../api/_lib/portalBrandProfile.mjs';
 import {
   attachBrandIdToContentRow,
@@ -125,6 +126,23 @@ assert(
     'shoot_plans',
   ),
   'portal content fallback matches shoot plans by client text',
+);
+
+const mergedRows = mergeBrandLinkedAndFallbackRows(
+  [{ id: 'linked-event', data: { client: 'Ara Med Spa', title: 'Linked' } }],
+  [
+    { id: 'linked-event', data: { client: 'Ara Med Spa', title: 'Duplicate' } },
+    { id: 'fallback-event', data: { client: 'Ara Med Spa', title: 'Fallback' } },
+    { id: 'other-event', data: { client: 'Plume', title: 'Other' } },
+  ],
+  'ara med spa',
+  'events',
+);
+assert(
+  mergedRows.length === 2 &&
+    mergedRows.some((row) => row.id === 'linked-event') &&
+    mergedRows.some((row) => row.id === 'fallback-event'),
+  'brand content loader merges linked rows with same-client fallback rows',
 );
 
 console.log('Portal brand profile helper tests passed.');

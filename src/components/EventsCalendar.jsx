@@ -68,10 +68,9 @@ export default function EventsCalendar({
 
   const handleSave = (data) => {
     if (modal?.mode === 'edit' && modal.event) {
-      onUpdateEvent?.(modal.event.id, data);
-      return;
+      return onUpdateEvent?.(modal.event.id, data);
     }
-    onAddEvent?.(data);
+    return onAddEvent?.(data);
   };
 
   const navBtnClass = `${btnSecondaryClass} px-3 py-1.5 text-[11px] normal-case tracking-normal`;

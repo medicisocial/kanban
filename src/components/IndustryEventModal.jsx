@@ -68,6 +68,7 @@ export default function IndustryEventModal({
     return defaults;
   });
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const businessType = normalizeBusinessType(
     businessTypeProp || event?.businessType || getClientBusinessType(client),
@@ -105,7 +106,8 @@ export default function IndustryEventModal({
     setError('');
   };
 
-  const persist = (status) => {
+  const persist = async (status) => {
+    if (saving) return;
     if (status === 'submitted' && !date) {
       setError('Event date is required.');
       return;
@@ -140,12 +142,19 @@ export default function IndustryEventModal({
       return;
     }
 
-    onSave({
-      ...result.data,
-      ...(isEdit ? { id: event.id, createdAt: event.createdAt } : {}),
-      updatedAt: Date.now(),
-    });
-    onClose();
+    setSaving(true);
+    try {
+      await onSave({
+        ...result.data,
+        ...(isEdit ? { id: event.id, createdAt: event.createdAt } : {}),
+        updatedAt: Date.now(),
+      });
+      onClose();
+    } catch (saveError) {
+      setError(saveError?.message || 'Could not save event. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const statusLabel = event?.status === 'draft' ? 'Draft' : 'Submitted';
@@ -217,7 +226,7 @@ export default function IndustryEventModal({
               id="industry-event-form"
               onSubmit={(e) => {
                 e.preventDefault();
-                persist('submitted');
+                void persist('submitted');
               }}
               className="space-y-4"
             >
@@ -342,20 +351,21 @@ export default function IndustryEventModal({
             </button>
           )}
           <div className="ml-auto flex flex-wrap gap-2">
-            <button type="button" onClick={onClose} className={btnSecondaryClass}>
+            <button type="button" onClick={onClose} disabled={saving} className={btnSecondaryClass}>
               Cancel
             </button>
             {!showReadOnly && (
               <>
                 <button
                   type="button"
-                  onClick={() => persist('draft')}
+                  onClick={() => void persist('draft')}
+                  disabled={saving}
                   className={btnSecondaryClass}
                 >
-                  Save as Draft
+                  {saving ? 'Saving…' : 'Save as Draft'}
                 </button>
-                <button type="submit" form="industry-event-form" className={btnPrimaryClass}>
-                  Submit Event
+                <button type="submit" form="industry-event-form" disabled={saving} className={btnPrimaryClass}>
+                  {saving ? 'Submitting…' : 'Submit Event'}
                 </button>
               </>
             )}
