@@ -1,4 +1,5 @@
 import lzString from 'lz-string';
+import { decodeSharePayload } from '../api/_lib/sharePayload.mjs';
 
 const { compressToEncodedURIComponent } = lzString;
 
@@ -30,5 +31,7 @@ const url = buildContentReviewShareUrl('Plume', [{
 assert(url.includes('content=Plume'), 'share url includes client query param');
 assert(url.includes('#'), 'share url includes encoded card snapshot hash');
 assert(!url.includes('undefined'), 'share url does not contain undefined tokens');
+const decoded = decodeSharePayload(url.split('#')[1]);
+assert(decoded?.i?.[0]?.[0] === 'card-1', 'server share payload decoder can read compressed share URL');
 
 console.log('test-content-review-share-url: ok');

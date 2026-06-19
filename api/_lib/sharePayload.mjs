@@ -1,4 +1,6 @@
-import { decompressFromEncodedURIComponent } from 'lz-string';
+import lzString from 'lz-string';
+
+const { decompressFromEncodedURIComponent } = lzString;
 
 function parseLegacyPayload(encoded) {
   try {

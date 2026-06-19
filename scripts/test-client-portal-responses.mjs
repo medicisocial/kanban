@@ -2,6 +2,7 @@
  * Client portal response handlers — brand access + deny update parity.
  */
 import { brandKeysMatch, resolvePortalBrandDisplayNameFromStore } from '../api/_lib/portalBrandProfile.mjs';
+import { handleClientPortalResponse } from '../api/_lib/clientPortalResponses.mjs';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -57,6 +58,10 @@ assert(
   resolvePortalVaultBrandKey(splitVault, 'Ara Med Spa') === 'ara med spa' ||
     resolvePortalVaultBrandKey(splitVault, 'Ara Med Spa') === 'Ara Med Spa',
   'vault resolves a matching brand key',
+);
+assert(
+  typeof handleClientPortalResponse === 'function',
+  'server portal response handler imports without runtime module errors',
 );
 
 console.log('Client portal response tests passed.');
