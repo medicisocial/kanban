@@ -11,7 +11,7 @@ import {
   resolvePortalBrandDisplayName,
   resolvePortalBrandLabel,
 } from './portalBrandProfile.mjs';
-import { fetchRecord, upsertRecord } from './supabase.mjs';
+import { deleteRecord, fetchRecord, upsertRecord } from './supabase.mjs';
 import {
   findLatestApproveResponse,
   findLatestDenyResponse,
@@ -77,6 +77,82 @@ async function loadIdea(orgId, ideaId) {
 
 async function saveIdea(orgId, ideaId, idea) {
   await upsertRecord('video_ideas', ideaId, idea, orgId);
+}
+
+async function loadPortalOwnedRecord(orgId, table, id, sessionBrand, brandContext, label) {
+  if (!id) {
+    throw new Error(`Missing ${label} target.`);
+  }
+
+  const data = await fetchRecord(table, id, orgId);
+  if (!data || typeof data !== 'object') {
+    throw new Error(`${label} not found.`);
+  }
+  if (!itemMatchesSessionBrand(data.client, sessionBrand, brandContext)) {
+    throw new Error(`You do not have access to this ${label.toLowerCase()}.`);
+  }
+  return data;
+}
+
+function normalizePortalOwnedPayload(payload, sessionBrand, brandContext, label) {
+  if (!payload || typeof payload !== 'object' || !payload.id) {
+    throw new Error(`Missing ${label.toLowerCase()} payload.`);
+  }
+
+  const client = payload.client || brandContext.displayName || sessionBrand;
+  if (!itemMatchesSessionBrand(client, sessionBrand, brandContext)) {
+    throw new Error('You do not have access to this brand.');
+  }
+
+  return {
+    ...payload,
+    client,
+    updatedAt: Date.now(),
+  };
+}
+
+async function handlePortalOwnedCollectionResponse({
+  orgId,
+  sessionBrand,
+  response = {},
+  table,
+  payloadKey,
+  idKey,
+  label,
+}) {
+  const action = String(response.action || '').trim();
+  const brandContext = await resolveSessionBrandContext(orgId, sessionBrand);
+
+  if (action === 'create') {
+    const payload = normalizePortalOwnedPayload(response[payloadKey], sessionBrand, brandContext, label);
+    await upsertRecord(table, payload.id, {
+      ...payload,
+      createdAt: payload.createdAt || Date.now(),
+    }, orgId);
+    return { ok: true, id: payload.id };
+  }
+
+  const id = String(response[idKey] || response[payloadKey]?.id || '').trim();
+
+  if (action === 'update') {
+    const existing = await loadPortalOwnedRecord(orgId, table, id, sessionBrand, brandContext, label);
+    const payload = normalizePortalOwnedPayload(
+      { ...existing, ...response[payloadKey], id },
+      sessionBrand,
+      brandContext,
+      label,
+    );
+    await upsertRecord(table, id, payload, orgId);
+    return { ok: true, id };
+  }
+
+  if (action === 'delete') {
+    await loadPortalOwnedRecord(orgId, table, id, sessionBrand, brandContext, label);
+    await deleteRecord(table, id, orgId);
+    return { ok: true, id };
+  }
+
+  throw new Error(`Unsupported ${label.toLowerCase()} action.`);
 }
 
 export async function handleContentPortalResponse(orgId, sessionBrand, response = {}) {
@@ -274,6 +350,30 @@ export async function handleCalendarNotePortalResponse(orgId, sessionBrand, resp
   return { ok: true, cardId };
 }
 
+export async function handleEventPortalResponse(orgId, sessionBrand, response = {}) {
+  return handlePortalOwnedCollectionResponse({
+    orgId,
+    sessionBrand,
+    response,
+    table: 'events',
+    payloadKey: 'event',
+    idKey: 'eventId',
+    label: 'Event',
+  });
+}
+
+export async function handleMeetingPortalResponse(orgId, sessionBrand, response = {}) {
+  return handlePortalOwnedCollectionResponse({
+    orgId,
+    sessionBrand,
+    response,
+    table: 'meetings',
+    payloadKey: 'meeting',
+    idKey: 'meetingId',
+    label: 'Meeting',
+  });
+}
+
 export async function handleProfilePortalResponse(orgId, sessionBrand, profile = {}) {
   if (!profile || typeof profile !== 'object') {
     throw new Error('Missing profile payload.');
@@ -336,6 +436,10 @@ export async function handleClientPortalResponse(session, type, response) {
       return handleIdeaPortalResponse(orgId, sessionBrand, response);
     case 'calendar-note':
       return handleCalendarNotePortalResponse(orgId, sessionBrand, response);
+    case 'event':
+      return handleEventPortalResponse(orgId, sessionBrand, response);
+    case 'meeting':
+      return handleMeetingPortalResponse(orgId, sessionBrand, response);
     case 'profile':
       return handleProfilePortalResponse(orgId, sessionBrand, response);
     default:
