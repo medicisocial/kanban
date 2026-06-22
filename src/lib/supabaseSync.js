@@ -142,8 +142,12 @@ function buildTableStore(table, orgId, brandId) {
     },
 
     subscribe(onChange) {
+      const channelSuffix =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const channel = supabase
-        .channel(`${table}_${orgId}_${brandId || 'all'}_changes`)
+        .channel(`${table}_${orgId}_${brandId || 'all'}_${channelSuffix}_changes`)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table, filter: filters },

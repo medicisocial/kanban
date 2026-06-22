@@ -2,7 +2,6 @@ import { useState, useMemo, useCallback } from 'react';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import { IconChevronLeft, IconChevronRight } from './clientPortal/ClientPortalIcons';
-import { useFinances } from '../hooks/useFinances';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { useClientsContext } from '../context/ClientsContext';
 
@@ -73,7 +72,7 @@ function EditableAmount({ value, onSave, className = '' }) {
   );
 }
 
-export default function FinancesPage() {
+export default function FinancesPage({ finances }) {
   const {
     setMonthlyRetainer,
     setOneOffRevenue,
@@ -83,7 +82,7 @@ export default function FinancesPage() {
     getAllMonths,
     getAllClientsWithRetainers,
     currentYearMonth,
-  } = useFinances();
+  } = finances;
 
   const { session } = useStaffAuth();
   const { clients } = useClientsContext();

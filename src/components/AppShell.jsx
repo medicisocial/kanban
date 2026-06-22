@@ -111,17 +111,8 @@ export default function AppShell({ onSignOut }) {
     toggleAdminTaskComplete,
     deleteAdminTask,
   } = useAdminTasks();
-  const {
-    replaceFinances,
-    setMonthlyRetainer,
-    setOneOffRevenue,
-    setPayroll,
-    setExpenses,
-    getMonthlySnapshot,
-    getAllMonths,
-    getAllClientsWithRetainers,
-    currentYearMonth,
-  } = useFinances();
+  const financesController = useFinances();
+  const { replaceFinances } = financesController;
   const { events, replaceEvents, addEvent, updateEvent, deleteEvent } = useEvents();
   const { meetings, meetingsSyncLoaded, replaceMeetings, addMeeting, updateMeeting, deleteMeeting } =
     useMeetings();
@@ -1239,7 +1230,7 @@ export default function AppShell({ onSignOut }) {
       )}
 
       {activeView === "finances" && (
-        <FinancesPage />
+        <FinancesPage finances={financesController} />
       )}
 
       {selectedCard && (
