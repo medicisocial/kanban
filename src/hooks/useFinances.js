@@ -29,6 +29,81 @@ function loadFinances() {
   return [];
 }
 
+function createLineItem(overrides = {}) {
+  return {
+    id: crypto.randomUUID(),
+    name: '',
+    amount: 0,
+    category: '',
+    ...overrides,
+  };
+}
+
+function getRevenueMonth(revenue, yearMonth) {
+  return revenue?.data?.[yearMonth] && typeof revenue.data[yearMonth] === 'object'
+    ? revenue.data[yearMonth]
+    : {};
+}
+
+function getRetainerEntries(monthRevenue) {
+  return Object.entries(monthRevenue || {}).filter(([key, value]) => {
+    if (key === 'oneOff' || key === 'retainerTotal') return false;
+    return typeof value === 'number' || typeof value === 'string';
+  });
+}
+
+function calculateRetainerTotal(monthRevenue) {
+  return getRetainerEntries(monthRevenue).reduce((sum, [, value]) => sum + (Number(value) || 0), 0);
+}
+
+function normalizePayrollMonth(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const staff = Array.isArray(value.staff)
+      ? value.staff.map((item) => createLineItem(item)).filter((item) => item.name || item.amount)
+      : [];
+    const ownerComp = Number(value.ownerComp) || 0;
+    return {
+      staff,
+      ownerComp,
+      total: staff.reduce((sum, item) => sum + (Number(item.amount) || 0), 0) + ownerComp,
+    };
+  }
+  return {
+    staff: [],
+    ownerComp: 0,
+    total: Number(value) || 0,
+    legacyTotal: Number(value) || 0,
+  };
+}
+
+function normalizeExpensesMonth(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const expenses = Array.isArray(value.expenses)
+      ? value.expenses.map((item) => createLineItem(item)).filter((item) => item.name || item.amount)
+      : [];
+    const subscriptions = Array.isArray(value.subscriptions)
+      ? value.subscriptions.map((item) => createLineItem(item)).filter((item) => item.name || item.amount)
+      : [];
+    const oneTime = Number(value.oneTime) || 0;
+    return {
+      expenses,
+      subscriptions,
+      oneTime,
+      total:
+        oneTime +
+        expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0) +
+        subscriptions.reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
+    };
+  }
+  return {
+    expenses: [],
+    subscriptions: [],
+    oneTime: 0,
+    total: Number(value) || 0,
+    legacyTotal: Number(value) || 0,
+  };
+}
+
 /**
  * Creates or ensures a finance record shape.
  * Each record is { id, data: { ... } } where id is 'revenue', 'payroll', or 'expenses'.
@@ -93,9 +168,7 @@ export function useFinances() {
       }
       const month = { ...data[yearMonth] };
       month[client] = Number(amount) || 0;
-      // Recalculate retainer total
-      const clientKeys = Object.keys(month).filter((k) => k !== 'oneOff');
-      month.retainerTotal = clientKeys.reduce((sum, k) => sum + (Number(month[k]) || 0), 0);
+      month.retainerTotal = calculateRetainerTotal(month);
       data[yearMonth] = month;
       return [...rest, { id: 'revenue', data }];
     });
@@ -130,6 +203,69 @@ export function useFinances() {
     });
   }, []);
 
+  const addPayrollStaff = useCallback((yearMonth, staff) => {
+    notifyMutation();
+    setFinances((prev) => {
+      const record = prev.find((r) => r.id === 'payroll');
+      const rest = prev.filter((r) => r.id !== 'payroll');
+      const data = record?.data ? { ...record.data } : {};
+      const month = normalizePayrollMonth(data[yearMonth]);
+      const nextStaff = createLineItem(staff);
+      data[yearMonth] = {
+        staff: [...month.staff, nextStaff],
+        ownerComp: month.ownerComp,
+      };
+      return [...rest, { id: 'payroll', data }];
+    });
+  }, []);
+
+  const updatePayrollStaff = useCallback((yearMonth, staffId, updates) => {
+    notifyMutation();
+    setFinances((prev) => {
+      const record = prev.find((r) => r.id === 'payroll');
+      const rest = prev.filter((r) => r.id !== 'payroll');
+      const data = record?.data ? { ...record.data } : {};
+      const month = normalizePayrollMonth(data[yearMonth]);
+      data[yearMonth] = {
+        staff: month.staff.map((item) =>
+          item.id === staffId ? createLineItem({ ...item, ...updates }) : item,
+        ),
+        ownerComp: month.ownerComp,
+      };
+      return [...rest, { id: 'payroll', data }];
+    });
+  }, []);
+
+  const deletePayrollStaff = useCallback((yearMonth, staffId) => {
+    notifyMutation();
+    setFinances((prev) => {
+      const record = prev.find((r) => r.id === 'payroll');
+      const rest = prev.filter((r) => r.id !== 'payroll');
+      const data = record?.data ? { ...record.data } : {};
+      const month = normalizePayrollMonth(data[yearMonth]);
+      data[yearMonth] = {
+        staff: month.staff.filter((item) => item.id !== staffId),
+        ownerComp: month.ownerComp,
+      };
+      return [...rest, { id: 'payroll', data }];
+    });
+  }, []);
+
+  const setOwnerComp = useCallback((yearMonth, amount) => {
+    notifyMutation();
+    setFinances((prev) => {
+      const record = prev.find((r) => r.id === 'payroll');
+      const rest = prev.filter((r) => r.id !== 'payroll');
+      const data = record?.data ? { ...record.data } : {};
+      const month = normalizePayrollMonth(data[yearMonth]);
+      data[yearMonth] = {
+        staff: month.staff,
+        ownerComp: Number(amount) || 0,
+      };
+      return [...rest, { id: 'payroll', data }];
+    });
+  }, []);
+
   /** Set expenses for a month. */
   const setExpenses = useCallback((yearMonth, amount) => {
     notifyMutation();
@@ -142,6 +278,78 @@ export function useFinances() {
     });
   }, []);
 
+  const addExpenseItem = useCallback((yearMonth, item, type = 'expenses') => {
+    notifyMutation();
+    setFinances((prev) => {
+      const record = prev.find((r) => r.id === 'expenses');
+      const rest = prev.filter((r) => r.id !== 'expenses');
+      const data = record?.data ? { ...record.data } : {};
+      const month = normalizeExpensesMonth(data[yearMonth]);
+      const key = type === 'subscriptions' ? 'subscriptions' : 'expenses';
+      data[yearMonth] = {
+        expenses: month.expenses,
+        subscriptions: month.subscriptions,
+        oneTime: month.oneTime,
+        [key]: [...month[key], createLineItem(item)],
+      };
+      return [...rest, { id: 'expenses', data }];
+    });
+  }, []);
+
+  const updateExpenseItem = useCallback((yearMonth, itemId, updates, type = 'expenses') => {
+    notifyMutation();
+    setFinances((prev) => {
+      const record = prev.find((r) => r.id === 'expenses');
+      const rest = prev.filter((r) => r.id !== 'expenses');
+      const data = record?.data ? { ...record.data } : {};
+      const month = normalizeExpensesMonth(data[yearMonth]);
+      const key = type === 'subscriptions' ? 'subscriptions' : 'expenses';
+      data[yearMonth] = {
+        expenses: month.expenses,
+        subscriptions: month.subscriptions,
+        oneTime: month.oneTime,
+        [key]: month[key].map((item) =>
+          item.id === itemId ? createLineItem({ ...item, ...updates }) : item,
+        ),
+      };
+      return [...rest, { id: 'expenses', data }];
+    });
+  }, []);
+
+  const deleteExpenseItem = useCallback((yearMonth, itemId, type = 'expenses') => {
+    notifyMutation();
+    setFinances((prev) => {
+      const record = prev.find((r) => r.id === 'expenses');
+      const rest = prev.filter((r) => r.id !== 'expenses');
+      const data = record?.data ? { ...record.data } : {};
+      const month = normalizeExpensesMonth(data[yearMonth]);
+      const key = type === 'subscriptions' ? 'subscriptions' : 'expenses';
+      data[yearMonth] = {
+        expenses: month.expenses,
+        subscriptions: month.subscriptions,
+        oneTime: month.oneTime,
+        [key]: month[key].filter((item) => item.id !== itemId),
+      };
+      return [...rest, { id: 'expenses', data }];
+    });
+  }, []);
+
+  const setOneTimeExpenses = useCallback((yearMonth, amount) => {
+    notifyMutation();
+    setFinances((prev) => {
+      const record = prev.find((r) => r.id === 'expenses');
+      const rest = prev.filter((r) => r.id !== 'expenses');
+      const data = record?.data ? { ...record.data } : {};
+      const month = normalizeExpensesMonth(data[yearMonth]);
+      data[yearMonth] = {
+        expenses: month.expenses,
+        subscriptions: month.subscriptions,
+        oneTime: Number(amount) || 0,
+      };
+      return [...rest, { id: 'expenses', data }];
+    });
+  }, []);
+
   /** Get all data for a given month across revenue/payroll/expenses. */
   const getMonthlySnapshot = useCallback(
     (yearMonth) => {
@@ -149,21 +357,30 @@ export function useFinances() {
       const payroll = finances.find((r) => r.id === 'payroll');
       const expenses = finances.find((r) => r.id === 'expenses');
 
-      const monthRevenue = revenue?.data?.[yearMonth] || {};
-      const retainerTotal = Number(monthRevenue.retainerTotal) || 0;
+      const monthRevenue = getRevenueMonth(revenue, yearMonth);
+      const retainerTotal = calculateRetainerTotal(monthRevenue);
       const oneOff = Number(monthRevenue.oneOff) || 0;
       const totalRevenue = retainerTotal + oneOff;
-      const totalPayroll = Number(payroll?.data?.[yearMonth]) || 0;
-      const totalExpenses = Number(expenses?.data?.[yearMonth]) || 0;
+      const payrollMonth = normalizePayrollMonth(payroll?.data?.[yearMonth]);
+      const expensesMonth = normalizeExpensesMonth(expenses?.data?.[yearMonth]);
+      const totalPayroll = payrollMonth.total;
+      const totalExpenses = expensesMonth.total;
       const netProfit = totalRevenue - totalPayroll - totalExpenses;
 
       return {
-        retainers: { ...monthRevenue },
+        retainers: Object.fromEntries(getRetainerEntries(monthRevenue)),
         retainerTotal,
         oneOff,
         totalRevenue,
         payroll: totalPayroll,
+        payrollStaff: payrollMonth.staff,
+        ownerComp: payrollMonth.ownerComp,
+        legacyPayroll: payrollMonth.legacyTotal || 0,
         expenses: totalExpenses,
+        expenseItems: expensesMonth.expenses,
+        subscriptions: expensesMonth.subscriptions,
+        oneTimeExpenses: expensesMonth.oneTime,
+        legacyExpenses: expensesMonth.legacyTotal || 0,
         netProfit,
       };
     },
@@ -205,7 +422,15 @@ export function useFinances() {
     setMonthlyRetainer,
     setOneOffRevenue,
     setPayroll,
+    addPayrollStaff,
+    updatePayrollStaff,
+    deletePayrollStaff,
+    setOwnerComp,
     setExpenses,
+    addExpenseItem,
+    updateExpenseItem,
+    deleteExpenseItem,
+    setOneTimeExpenses,
     getMonthlySnapshot,
     getAllMonths,
     getAllClientsWithRetainers,

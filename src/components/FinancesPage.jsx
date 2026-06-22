@@ -74,12 +74,130 @@ function EditableAmount({ value, onSave, className = '' }) {
   );
 }
 
+const financeInputClass =
+  'w-full rounded border border-white/15 bg-black/30 px-2 py-1.5 text-xs text-white outline-none transition focus:border-emerald-400';
+
+function AddLineItemForm({ label, amountLabel = 'Monthly amount', includeCategory = false, onAdd }) {
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const [amount, setAmount] = useState('');
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const trimmedName = name.trim();
+    const parsedAmount = parse$(amount);
+    if (!trimmedName && !parsedAmount) return;
+    onAdd({
+      name: trimmedName || label,
+      category: category.trim(),
+      amount: parsedAmount,
+    });
+    setName('');
+    setCategory('');
+    setAmount('');
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className={`mt-3 grid grid-cols-1 gap-2 ${
+        includeCategory ? 'sm:grid-cols-[1fr_10rem_9rem_auto]' : 'sm:grid-cols-[1fr_9rem_auto]'
+      }`}
+    >
+      <input
+        type="text"
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        placeholder={label}
+        className={financeInputClass}
+      />
+      {includeCategory && (
+        <input
+          type="text"
+          value={category}
+          onChange={(event) => setCategory(event.target.value)}
+          placeholder="Category"
+          className={financeInputClass}
+        />
+      )}
+      <input
+        type="text"
+        value={amount}
+        onChange={(event) => setAmount(event.target.value)}
+        placeholder={amountLabel}
+        className={`${financeInputClass} text-right`}
+      />
+      <button type="submit" className={`${btnSecondaryClass} justify-center py-1.5 text-[10px]`}>
+        Add
+      </button>
+    </form>
+  );
+}
+
+function FinanceLineItems({
+  items = [],
+  emptyLabel,
+  showCategory = false,
+  onUpdate,
+  onDelete,
+}) {
+  if (!items.length) {
+    return <p className="mt-3 text-xs text-white/35">{emptyLabel}</p>;
+  }
+
+  return (
+    <div className="mt-3 divide-y divide-white/5">
+      {items.map((item) => (
+        <div key={item.id} className="grid grid-cols-1 gap-2 py-2 sm:grid-cols-[1fr_10rem_7rem_auto] sm:items-center">
+          <input
+            type="text"
+            value={item.name}
+            onChange={(event) => onUpdate(item.id, { name: event.target.value })}
+            className={financeInputClass}
+          />
+          {showCategory ? (
+            <input
+              type="text"
+              value={item.category || ''}
+              onChange={(event) => onUpdate(item.id, { category: event.target.value })}
+              placeholder="Category"
+              className={financeInputClass}
+            />
+          ) : (
+            <span className="hidden text-xs text-white/30 sm:block">{item.category || ''}</span>
+          )}
+          <EditableAmount
+            value={item.amount}
+            onSave={(amount) => onUpdate(item.id, { amount })}
+            className="justify-self-end text-white"
+          />
+          <button
+            type="button"
+            onClick={() => onDelete(item.id)}
+            className="justify-self-start text-xs text-white/35 hover:text-rose-300 sm:justify-self-end"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function FinancesPage({ finances }) {
   const {
     setMonthlyRetainer,
     setOneOffRevenue,
     setPayroll,
+    addPayrollStaff,
+    updatePayrollStaff,
+    deletePayrollStaff,
+    setOwnerComp,
     setExpenses,
+    addExpenseItem,
+    updateExpenseItem,
+    deleteExpenseItem,
+    setOneTimeExpenses,
     getMonthlySnapshot,
     getAllMonths,
     getAllClientsWithRetainers,
@@ -276,30 +394,145 @@ export default function FinancesPage({ finances }) {
 
       {/* Payroll */}
       <div className={`${surfacePanelClass} mb-4 p-5`}>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold text-white">Payroll</h3>
-            <p className="mt-1 text-xs text-white/45">Total staff payroll for this month</p>
+            <p className="mt-1 text-xs text-white/45">Staff monthly pay and owner compensation</p>
+          </div>
+          <p className="text-base font-bold text-amber-300">{fmt$(snapshot.payroll)}</p>
+        </div>
+
+        {snapshot.legacyPayroll > 0 && !snapshot.payrollStaff.length && (
+          <div className="mt-3 flex items-center justify-between rounded border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+            <div>
+              <p className="text-xs font-medium text-amber-100">Legacy payroll total</p>
+              <p className="text-[11px] text-white/40">Break this into staff rows when ready.</p>
+            </div>
+            <EditableAmount
+              value={snapshot.legacyPayroll}
+              onSave={(amount) => setPayroll(selectedMonth, amount)}
+              className="text-amber-200"
+            />
+          </div>
+        )}
+
+        <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+          <div>
+            <p className="text-xs font-semibold text-white">Owner draw / distributions</p>
+            <p className="mt-0.5 text-[11px] text-white/40">Tracked separately from staff payroll.</p>
           </div>
           <EditableAmount
-            value={snapshot.payroll}
-            onSave={(amount) => setPayroll(selectedMonth, amount)}
-            className="text-base font-bold text-amber-300"
+            value={snapshot.ownerComp}
+            onSave={(amount) => setOwnerComp(selectedMonth, amount)}
+            className="text-amber-200"
+          />
+        </div>
+
+        <div className="mt-4 border-t border-white/10 pt-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold text-white">Staff monthly pay</p>
+              <p className="mt-0.5 text-[11px] text-white/40">Add W-2 employees or recurring 1099 contractor pay.</p>
+            </div>
+            <span className="text-xs font-semibold text-amber-300">
+              {fmt$(snapshot.payrollStaff.reduce((sum, item) => sum + (Number(item.amount) || 0), 0))}
+            </span>
+          </div>
+          <FinanceLineItems
+            items={snapshot.payrollStaff}
+            emptyLabel="No staff pay rows yet."
+            onUpdate={(id, updates) => updatePayrollStaff(selectedMonth, id, updates)}
+            onDelete={(id) => deletePayrollStaff(selectedMonth, id)}
+          />
+          <AddLineItemForm
+            label="Staff member or contractor"
+            amountLabel="Monthly pay"
+            onAdd={(item) => addPayrollStaff(selectedMonth, item)}
           />
         </div>
       </div>
 
       {/* Expenses */}
       <div className={`${surfacePanelClass} mb-4 p-5`}>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold text-white">Expenses</h3>
-            <p className="mt-1 text-xs text-white/45">Operating expenses for this month</p>
+            <p className="mt-1 text-xs text-white/45">Operating expenses and monthly subscriptions</p>
+          </div>
+          <p className="text-base font-bold text-red-300">{fmt$(snapshot.expenses)}</p>
+        </div>
+
+        {snapshot.legacyExpenses > 0 && !snapshot.expenseItems.length && !snapshot.subscriptions.length && (
+          <div className="mt-3 flex items-center justify-between rounded border border-red-500/20 bg-red-500/5 px-3 py-2">
+            <div>
+              <p className="text-xs font-medium text-red-100">Legacy expense total</p>
+              <p className="text-[11px] text-white/40">Break this into expense or subscription rows when ready.</p>
+            </div>
+            <EditableAmount
+              value={snapshot.legacyExpenses}
+              onSave={(amount) => setExpenses(selectedMonth, amount)}
+              className="text-red-200"
+            />
+          </div>
+        )}
+
+        <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+          <div>
+            <p className="text-xs font-semibold text-white">One-time / uncategorized expenses</p>
+            <p className="mt-0.5 text-[11px] text-white/40">Use for quick entries before itemizing.</p>
           </div>
           <EditableAmount
-            value={snapshot.expenses}
-            onSave={(amount) => setExpenses(selectedMonth, amount)}
-            className="text-base font-bold text-red-300"
+            value={snapshot.oneTimeExpenses}
+            onSave={(amount) => setOneTimeExpenses(selectedMonth, amount)}
+            className="text-red-200"
+          />
+        </div>
+
+        <div className="mt-4 border-t border-white/10 pt-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold text-white">Monthly subscriptions</p>
+              <p className="mt-0.5 text-[11px] text-white/40">Software, hosting, scheduling tools, and recurring overhead.</p>
+            </div>
+            <span className="text-xs font-semibold text-red-300">
+              {fmt$(snapshot.subscriptions.reduce((sum, item) => sum + (Number(item.amount) || 0), 0))}
+            </span>
+          </div>
+          <FinanceLineItems
+            items={snapshot.subscriptions}
+            emptyLabel="No monthly subscriptions yet."
+            onUpdate={(id, updates) => updateExpenseItem(selectedMonth, id, updates, 'subscriptions')}
+            onDelete={(id) => deleteExpenseItem(selectedMonth, id, 'subscriptions')}
+          />
+          <AddLineItemForm
+            label="Subscription name"
+            amountLabel="Monthly cost"
+            onAdd={(item) => addExpenseItem(selectedMonth, item, 'subscriptions')}
+          />
+        </div>
+
+        <div className="mt-4 border-t border-white/10 pt-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold text-white">Other operating expenses</p>
+              <p className="mt-0.5 text-[11px] text-white/40">Gear, meals, transportation, ads, professional services, fees.</p>
+            </div>
+            <span className="text-xs font-semibold text-red-300">
+              {fmt$(snapshot.expenseItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0))}
+            </span>
+          </div>
+          <FinanceLineItems
+            items={snapshot.expenseItems}
+            emptyLabel="No itemized expenses yet."
+            showCategory
+            onUpdate={(id, updates) => updateExpenseItem(selectedMonth, id, updates, 'expenses')}
+            onDelete={(id) => deleteExpenseItem(selectedMonth, id, 'expenses')}
+          />
+          <AddLineItemForm
+            label="Expense name"
+            amountLabel="Amount"
+            includeCategory
+            onAdd={(item) => addExpenseItem(selectedMonth, item, 'expenses')}
           />
         </div>
       </div>
