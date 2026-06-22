@@ -3,6 +3,7 @@ import {
   IconBoard,
   IconCalendar,
   IconClients,
+  IconDollar,
   IconFiles,
   IconHome,
   IconIdeas,
@@ -36,6 +37,7 @@ const NAV_SECTIONS_BASE = [
     items: [
       { id: 'clients', label: 'Clients', Icon: IconClients },
       { id: 'team', label: 'Team', Icon: IconTeam },
+      { id: 'finances', label: 'Finances', Icon: IconDollar },
       { id: 'settings', label: 'Settings', Icon: IconSettings },
     ],
   },

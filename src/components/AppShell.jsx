@@ -24,6 +24,7 @@ import { getCalendarPortalClient } from "../utils/calendarShare";
 import { withStoryOccurrence, parseStoryOccurrenceNotes } from "../utils/calendar";
 import { createCard, COLUMNS } from "../constants";
 import { buildSendBackForEditingUpdates } from "../utils/editorTodo";
+import { useFinances } from "../hooks/useFinances";
 import { useAdminTasks } from "../hooks/useAdminTasks";
 import { useEvents } from "../hooks/useEvents";
 import { useMeetings } from "../hooks/useMeetings";
@@ -44,6 +45,7 @@ import HandoffModal from "./HandoffModal";
 import ClientManagementPage from "./ClientManagementPage";
 import ClientFilesWorkspacePage from "./ClientFilesWorkspacePage";
 import TeamManagementPage from "./TeamManagementPage";
+import FinancesPage from "./FinancesPage";
 import PlanPostDateModal from "./PlanPostDateModal";
 import PlanShootDateModal from "./PlanShootDateModal";
 import AddShootDayModal from "./AddShootDayModal";
@@ -109,6 +111,17 @@ export default function AppShell({ onSignOut }) {
     toggleAdminTaskComplete,
     deleteAdminTask,
   } = useAdminTasks();
+  const {
+    replaceFinances,
+    setMonthlyRetainer,
+    setOneOffRevenue,
+    setPayroll,
+    setExpenses,
+    getMonthlySnapshot,
+    getAllMonths,
+    getAllClientsWithRetainers,
+    currentYearMonth,
+  } = useFinances();
   const { events, replaceEvents, addEvent, updateEvent, deleteEvent } = useEvents();
   const { meetings, meetingsSyncLoaded, replaceMeetings, addMeeting, updateMeeting, deleteMeeting } =
     useMeetings();
@@ -1223,6 +1236,10 @@ export default function AppShell({ onSignOut }) {
           clientFilter={clientFilter}
           onClientChange={setClientFilter}
         />
+      )}
+
+      {activeView === "finances" && (
+        <FinancesPage />
       )}
 
       {selectedCard && (

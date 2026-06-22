@@ -194,6 +194,7 @@ export const AM_TODO_ORDER_KEY = 'medici-social-am-todo-order';
 export const ADMIN_TASKS_STORAGE_KEY = 'medici-social-admin-tasks';
 export const EVENTS_STORAGE_KEY = 'medici-social-events';
 export const MEETINGS_STORAGE_KEY = 'medici-social-meetings';
+export const FINANCES_STORAGE_KEY = 'medici-social-finances';
 export const CLIENT_PORTAL_AUTH_STORAGE_KEY = 'medici-client-portal-auth';
 export const CLIENT_PORTAL_PASSWORD_VAULT_KEY = 'medici-client-portal-password-vault';
 
