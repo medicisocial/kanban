@@ -1,10 +1,21 @@
 import { SUPABASE_ENABLED, supabase } from './supabaseClient';
 import { isStaffSessionValid, loadStaffSession } from '../utils/staffAuth';
 
+const AUTH_HEADER_TIMEOUT_MS = 2000;
+
+function withTimeout(promise, fallback = null, timeoutMs = AUTH_HEADER_TIMEOUT_MS) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => {
+      setTimeout(() => resolve(fallback), timeoutMs);
+    }),
+  ]);
+}
+
 async function supabaseJwtHeaders() {
   if (!SUPABASE_ENABLED || !supabase) return null;
   try {
-    const { data } = await supabase.auth.getSession();
+    const { data } = await withTimeout(supabase.auth.getSession(), { data: null });
     const token = data?.session?.access_token;
     if (!token) return null;
     return {

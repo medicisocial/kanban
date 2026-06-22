@@ -19,6 +19,17 @@ const CLIENT_RECORDS_FULL_SELECT =
   'id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,deleted_company_file_ids,updated_at';
 
 const DIRECT_READ_TIMEOUT_MS = 3000;
+const DIRECT_PROFILE_SAVE_TIMEOUT_MS = 8000;
+const API_PROFILE_SAVE_TIMEOUT_MS = 12000;
+
+function withTimeout(promise, timeoutMs, errorMessage) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+    }),
+  ]);
+}
 
 async function fetchClientRecordRowsDirect(orgId, select) {
   if (!supabase) return [];
@@ -62,11 +73,22 @@ export async function fetchClientRecordRows(orgId = getOrgId()) {
 
 async function patchBrandProfileRpc(orgId, brandKey, patch) {
   if (!supabase) return { ok: false, error: 'Supabase client unavailable.' };
-  const { error } = await supabase.rpc('patch_brand_profile', {
-    p_org_id: orgId,
-    p_brand_key: brandKey,
-    p_patch: patch,
-  });
+  let error = null;
+  try {
+    const result = await withTimeout(
+      supabase.rpc('patch_brand_profile', {
+        p_org_id: orgId,
+        p_brand_key: brandKey,
+        p_patch: patch,
+      }),
+      DIRECT_PROFILE_SAVE_TIMEOUT_MS,
+      'Direct Supabase profile save timed out.',
+    );
+    error = result?.error;
+  } catch (err) {
+    console.warn('[client-records] patch_brand_profile timed out:', err.message || err);
+    return { ok: false, error: err.message || 'Direct Supabase profile save timed out.' };
+  }
   if (error) {
     console.warn('[client-records] patch_brand_profile failed:', error.message || error);
     return { ok: false, error: error.message || 'Could not save to Supabase.' };
@@ -95,11 +117,14 @@ async function patchBrandProfileViaApi(orgId, brandKey, patch) {
   let lastError = '';
 
   for (const headers of uniqueHeaders) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_PROFILE_SAVE_TIMEOUT_MS);
     try {
       const response = await fetch('/api/brand-record', {
         method: 'POST',
         headers,
         body: JSON.stringify({ brand: brandKey, orgId, patch }),
+        signal: controller.signal,
       });
       const payload = await response.json().catch(() => ({}));
       if (response.ok) return { ok: true };
@@ -108,7 +133,12 @@ async function patchBrandProfileViaApi(orgId, brandKey, patch) {
         payload.detail ||
         `Could not save brand profile (${response.status}).`;
     } catch (err) {
-      lastError = err?.message || 'Could not reach the brand profile API.';
+      lastError =
+        err?.name === 'AbortError'
+          ? 'Brand profile API timed out.'
+          : err?.message || 'Could not reach the brand profile API.';
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
