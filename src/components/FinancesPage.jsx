@@ -4,6 +4,8 @@ import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader'
 import { IconChevronLeft, IconChevronRight } from './clientPortal/ClientPortalIcons';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { useClientsContext } from '../context/ClientsContext';
+import { isSharedOperationsLogin } from '../utils/staffAuth';
+import { staffHasLeadershipWorkspaceAccess } from '../utils/staffMembers';
 
 /** Format a number as a dollar string. */
 function fmt$(n) {
@@ -84,14 +86,19 @@ export default function FinancesPage({ finances }) {
     currentYearMonth,
   } = finances;
 
-  const { session } = useStaffAuth();
-  const { clients } = useClientsContext();
+  const { session, org } = useStaffAuth();
+  const { clients, teamMembers } = useClientsContext();
 
-  // Determine if user has admin access (Owner or Creative Director)
+  // Shared agency ops login and leadership roles can access financials.
   const isAdmin = useMemo(() => {
-    if (!session?.roles) return false;
-    return session.roles.some((r) => r === 'Owner' || r === 'Creative Director');
-  }, [session]);
+    const orgRole = String(org?.role || '').toLowerCase();
+    return (
+      isSharedOperationsLogin(session) ||
+      staffHasLeadershipWorkspaceAccess(session, teamMembers) ||
+      orgRole === 'owner' ||
+      orgRole === 'admin'
+    );
+  }, [session, teamMembers, org?.role]);
 
   // Month navigation
   const [selectedMonth, setSelectedMonth] = useState(() => currentYearMonth());
