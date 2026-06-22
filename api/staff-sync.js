@@ -35,6 +35,7 @@ const ALLOWED_TABLES = new Set([
   'brands',
   'portal_users',
   'client_records',
+  'finances',
 ]);
 
 function isLikelyJwt(token) {
