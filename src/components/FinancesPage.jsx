@@ -199,7 +199,6 @@ export default function FinancesPage({ finances }) {
     deleteExpenseItem,
     setOneTimeExpenses,
     getMonthlySnapshot,
-    getAllMonths,
     getAllClientsWithRetainers,
     currentYearMonth,
   } = finances;
@@ -221,25 +220,19 @@ export default function FinancesPage({ finances }) {
   // Month navigation
   const [selectedMonth, setSelectedMonth] = useState(() => currentYearMonth());
 
-  const months = useMemo(() => {
-    const all = getAllMonths();
-    if (!all.includes(selectedMonth)) {
-      all.push(selectedMonth);
-    }
-    return all.sort();
-  }, [getAllMonths, selectedMonth]);
-
-  const currentIndex = months.indexOf(selectedMonth);
-  const hasPrev = currentIndex > 0;
-  const hasNext = currentIndex < months.length - 1;
+  const shiftMonth = useCallback((yearMonth, offset) => {
+    const [year, month] = String(yearMonth || currentYearMonth()).split('-').map(Number);
+    const date = new Date(year || new Date().getFullYear(), (month || 1) - 1 + offset, 1);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }, [currentYearMonth]);
 
   const goPrev = useCallback(() => {
-    if (hasPrev) setSelectedMonth(months[currentIndex - 1]);
-  }, [hasPrev, months, currentIndex]);
+    setSelectedMonth((month) => shiftMonth(month, -1));
+  }, [shiftMonth]);
 
   const goNext = useCallback(() => {
-    if (hasNext) setSelectedMonth(months[currentIndex + 1]);
-  }, [hasNext, months, currentIndex]);
+    setSelectedMonth((month) => shiftMonth(month, 1));
+  }, [shiftMonth]);
 
   const snapshot = useMemo(
     () => getMonthlySnapshot(selectedMonth),
@@ -290,8 +283,8 @@ export default function FinancesPage({ finances }) {
         <button
           type="button"
           onClick={goPrev}
-          disabled={!hasPrev}
-          className={`rounded p-1 ${hasPrev ? 'cursor-pointer text-white/70 hover:text-white' : 'text-white/20'}`}
+          className="rounded p-1 text-white/70 hover:text-white"
+          aria-label="Previous month"
         >
           <IconChevronLeft />
         </button>
@@ -299,10 +292,17 @@ export default function FinancesPage({ finances }) {
         <button
           type="button"
           onClick={goNext}
-          disabled={!hasNext}
-          className={`rounded p-1 ${hasNext ? 'cursor-pointer text-white/70 hover:text-white' : 'text-white/20'}`}
+          className="rounded p-1 text-white/70 hover:text-white"
+          aria-label="Next month"
         >
           <IconChevronRight />
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedMonth(currentYearMonth())}
+          className={`${btnSecondaryClass} ml-2 py-1.5 text-[10px]`}
+        >
+          Today
         </button>
       </div>
 
