@@ -20,6 +20,7 @@ export default function CompanyTasks({
   onAddOneOffTask,
   onDeleteOneOffTask,
   onAddAdminTask,
+  onUpdateAdminTask,
   onToggleAdminTaskComplete,
   onDeleteAdminTask,
   onOpenCard,
@@ -159,6 +160,7 @@ export default function CompanyTasks({
           adminTasks={adminTasks}
           clientFilter={clientFilter}
           onAddAdminTask={onAddAdminTask}
+          onUpdateAdminTask={onUpdateAdminTask}
           onToggleAdminTaskComplete={onToggleAdminTaskComplete}
           onDeleteAdminTask={onDeleteAdminTask}
         />

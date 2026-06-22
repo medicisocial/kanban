@@ -8,14 +8,15 @@ import { btnPrimaryClass, btnSecondaryClass } from './clientPortal/clientPortalU
 const inputClass =
   'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30';
 
-export default function AddAdminTaskModal({ onClose, onAdd, defaultAssignee }) {
+export default function AddAdminTaskModal({ onClose, onAdd, onUpdate, defaultAssignee, task }) {
   const { clients, getAllTeamMemberNames } = useClientsContext();
   const adminStaff = getAllTeamMemberNames();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [client, setClient] = useState('');
-  const [dueDate, setDueDate] = useState(toDateKey(new Date()));
-  const [assignedTo, setAssignedTo] = useState(defaultAssignee || adminStaff[0] || '');
+  const isEdit = Boolean(task?.id);
+  const [title, setTitle] = useState(task?.title || '');
+  const [description, setDescription] = useState(task?.description || '');
+  const [client, setClient] = useState(task?.client || '');
+  const [dueDate, setDueDate] = useState(task?.dueDate || toDateKey(new Date()));
+  const [assignedTo, setAssignedTo] = useState(task?.assignedTo || defaultAssignee || adminStaff[0] || '');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -42,13 +43,18 @@ export default function AddAdminTaskModal({ onClose, onAdd, defaultAssignee }) {
       return;
     }
 
-    onAdd({
+    const payload = {
       title: trimmedTitle,
       description: description.trim(),
       client: client.trim(),
       dueDate,
       assignedTo,
-    });
+    };
+    if (isEdit) {
+      onUpdate?.(task.id, payload);
+    } else {
+      onAdd?.(payload);
+    }
     onClose();
   };
 
@@ -57,7 +63,7 @@ export default function AddAdminTaskModal({ onClose, onAdd, defaultAssignee }) {
       className="fixed inset-0 z-[500]"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="add-admin-task-title"
+      aria-labelledby="admin-task-modal-title"
     >
       <button
         type="button"
@@ -74,11 +80,13 @@ export default function AddAdminTaskModal({ onClose, onAdd, defaultAssignee }) {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="shrink-0 border-b border-white/5 px-5 py-4">
-            <h2 id="add-admin-task-title" className="text-lg font-semibold text-white">
-              Add administrative task
+            <h2 id="admin-task-modal-title" className="text-lg font-semibold text-white">
+              {isEdit ? 'Edit administrative task' : 'Add administrative task'}
             </h2>
             <p className="mt-1 text-sm text-gray-400">
-              Billing, client follow-ups, reporting, and other internal work.
+              {isEdit
+                ? 'Update the task details, owner, client, or due date.'
+                : 'Billing, client follow-ups, reporting, and other internal work.'}
             </p>
           </div>
 
@@ -162,7 +170,7 @@ export default function AddAdminTaskModal({ onClose, onAdd, defaultAssignee }) {
               Cancel
             </button>
             <button type="submit" className={`${btnPrimaryClass} flex-1`}>
-              Add task
+              {isEdit ? 'Save changes' : 'Add task'}
             </button>
           </div>
         </form>

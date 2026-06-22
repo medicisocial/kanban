@@ -105,6 +105,7 @@ export default function AppShell({ onSignOut }) {
     adminTasks,
     replaceAdminTasks,
     addAdminTask,
+    updateAdminTask,
     toggleAdminTaskComplete,
     deleteAdminTask,
   } = useAdminTasks();
@@ -1159,6 +1160,7 @@ export default function AppShell({ onSignOut }) {
           onAddOneOffTask={addOneOffProject}
           onDeleteOneOffTask={handleDeleteOneOffProject}
           onAddAdminTask={addAdminTask}
+          onUpdateAdminTask={updateAdminTask}
           onToggleAdminTaskComplete={toggleAdminTaskComplete}
           onDeleteAdminTask={deleteAdminTask}
           onOpenCard={handleCardClick}

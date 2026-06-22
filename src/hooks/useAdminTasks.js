@@ -76,6 +76,22 @@ export function useAdminTasks() {
     return task.id;
   }, []);
 
+  const updateAdminTask = useCallback((id, updates) => {
+    if (!id) return;
+    notifyMutation();
+    setAdminTasks((prev) =>
+      prev.map((task) =>
+        task.id === id
+          ? {
+              ...task,
+              ...updates,
+              updatedAt: Date.now(),
+            }
+          : task,
+      ),
+    );
+  }, []);
+
   const toggleAdminTaskComplete = useCallback((id) => {
     notifyMutation();
     setAdminTasks((prev) =>
@@ -102,6 +118,7 @@ export function useAdminTasks() {
     adminTasks,
     replaceAdminTasks,
     addAdminTask,
+    updateAdminTask,
     toggleAdminTaskComplete,
     deleteAdminTask,
   };

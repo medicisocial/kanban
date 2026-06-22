@@ -16,6 +16,7 @@ export default function AdminTodo({
   adminTasks,
   clientFilter,
   onAddAdminTask,
+  onUpdateAdminTask,
   onToggleAdminTaskComplete,
   onDeleteAdminTask,
 }) {
@@ -25,8 +26,13 @@ export default function AdminTodo({
   const { assigneeFilter, setAssigneeFilter, restrictAssigneeFilter } = useStaffAssigneeFilter();
   const [showCompleted, setShowCompleted] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState(null);
 
   const allTasks = useMemo(() => buildAdminTodoTasks(adminTasks), [adminTasks]);
+  const editingTask = useMemo(
+    () => adminTasks.find((task) => task.id === editingTaskId) || null,
+    [adminTasks, editingTaskId],
+  );
 
   const filteredTasks = useMemo(
     () =>
@@ -164,13 +170,22 @@ export default function AdminTodo({
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => onDeleteAdminTask(task.id)}
-                          className="text-xs text-gray-500 hover:text-red-400"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex shrink-0 items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setEditingTaskId(task.id)}
+                            className="text-xs text-gray-500 hover:text-white"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteAdminTask(task.id)}
+                            className="text-xs text-gray-500 hover:text-red-400"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </TeamTaskCard>
                   );
@@ -185,6 +200,14 @@ export default function AdminTodo({
         <AddAdminTaskModal
           onClose={() => setShowAddModal(false)}
           onAdd={onAddAdminTask}
+        />
+      )}
+
+      {editingTask && (
+        <AddAdminTaskModal
+          task={editingTask}
+          onClose={() => setEditingTaskId(null)}
+          onUpdate={onUpdateAdminTask}
         />
       )}
     </div>
