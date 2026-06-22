@@ -275,8 +275,10 @@ function FinanceLineItems({
   items = [],
   emptyLabel,
   showCategory = false,
+  showRecurring = false,
   onUpdate,
   onDelete,
+  onStopRecurring,
 }) {
   if (!items.length) {
     return <p className="mt-3 text-xs text-white/35">{emptyLabel}</p>;
@@ -300,6 +302,10 @@ function FinanceLineItems({
               placeholder="Category"
               className={financeInputClass}
             />
+          ) : showRecurring ? (
+            <span className={`text-xs ${item.recurring === false ? 'text-amber-200' : 'text-emerald-200'}`}>
+              {item.recurring === false ? 'Stops after this month' : 'Recurring monthly'}
+            </span>
           ) : (
             <span className="hidden text-xs text-white/30 sm:block">{item.category || ''}</span>
           )}
@@ -308,13 +314,24 @@ function FinanceLineItems({
             onSave={(amount) => onUpdate(item.id, { amount })}
             className="justify-self-end text-white"
           />
-          <button
-            type="button"
-            onClick={() => onDelete(item.id)}
-            className="justify-self-start text-xs text-white/35 hover:text-rose-300 sm:justify-self-end"
-          >
-            Remove
-          </button>
+          <div className="flex flex-wrap gap-2 justify-self-start sm:justify-self-end">
+            {showRecurring && item.recurring !== false && (
+              <button
+                type="button"
+                onClick={() => onStopRecurring?.(item.id)}
+                className="text-xs text-white/35 hover:text-amber-200"
+              >
+                Stop recurring
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => onDelete(item.id)}
+              className="text-xs text-white/35 hover:text-rose-300"
+            >
+              Remove
+            </button>
+          </div>
         </div>
       ))}
     </div>
@@ -339,6 +356,7 @@ export default function FinancesPage({ finances }) {
     addExpenseItem,
     updateExpenseItem,
     deleteExpenseItem,
+    stopRecurringSubscription,
     setOneTimeExpenses,
     getMonthlySnapshot,
     getAllClientsWithRetainers,
@@ -717,8 +735,10 @@ export default function FinancesPage({ finances }) {
           <FinanceLineItems
             items={snapshot.subscriptions}
             emptyLabel="No monthly subscriptions yet."
+            showRecurring
             onUpdate={(id, updates) => updateExpenseItem(selectedMonth, id, updates, 'subscriptions')}
             onDelete={(id) => deleteExpenseItem(selectedMonth, id, 'subscriptions')}
+            onStopRecurring={(id) => stopRecurringSubscription(selectedMonth, id)}
           />
           <AddLineItemForm
             label="Subscription name"

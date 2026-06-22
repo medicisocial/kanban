@@ -61,6 +61,10 @@ function previousYearMonth(yearMonth) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
+function compareYearMonth(left, right) {
+  return String(left || '').localeCompare(String(right || ''));
+}
+
 function createRevenueItem(overrides = {}) {
   const item = {
     id: crypto.randomUUID(),
@@ -78,6 +82,16 @@ function createRevenueItem(overrides = {}) {
         : isCreditCardPayment(item.paymentMethod)
           ? calculateQuickBooksCardFee(item.amount)
           : 0,
+  };
+}
+
+function createSubscriptionItem(overrides = {}) {
+  const item = createLineItem(overrides);
+  const recurringId = item.recurringId || item.id;
+  return {
+    ...item,
+    recurringId,
+    recurring: item.recurring !== false,
   };
 }
 
@@ -159,7 +173,7 @@ function normalizeExpensesMonth(value) {
       ? value.expenses.map((item) => createLineItem(item)).filter((item) => item.name || item.amount)
       : [];
     const subscriptions = Array.isArray(value.subscriptions)
-      ? value.subscriptions.map((item) => createLineItem(item)).filter((item) => item.name || item.amount)
+      ? value.subscriptions.map((item) => createSubscriptionItem(item)).filter((item) => item.name || item.amount)
       : [];
     const oneTime = Number(value.oneTime) || 0;
     return {
@@ -206,11 +220,41 @@ function copyRecurringRetainers(previousMonth) {
 
 function copyRecurringSubscriptions(previousMonth) {
   const previous = normalizeExpensesMonth(previousMonth);
-  if (!previous.subscriptions.length) return null;
+  const recurringSubscriptions = previous.subscriptions.filter((item) => item.recurring !== false);
+  if (!recurringSubscriptions.length) return null;
   return {
     expenses: [],
-    subscriptions: previous.subscriptions.map((item) => createLineItem(item)),
+    subscriptions: recurringSubscriptions.map((item) =>
+      createSubscriptionItem({
+        ...item,
+        id: crypto.randomUUID(),
+      }),
+    ),
     oneTime: 0,
+  };
+}
+
+function mergeRecurringSubscriptions(targetMonth, previousMonth) {
+  const target = normalizeExpensesMonth(targetMonth);
+  const copied = copyRecurringSubscriptions(previousMonth);
+  if (!copied) return { month: targetMonth, changed: false };
+
+  const existingRecurringIds = new Set(
+    target.subscriptions.map((item) => item.recurringId || item.id).filter(Boolean),
+  );
+  const missingSubscriptions = copied.subscriptions.filter((item) => {
+    const recurringId = item.recurringId || item.id;
+    return recurringId && !existingRecurringIds.has(recurringId);
+  });
+
+  if (!missingSubscriptions.length) return { month: targetMonth, changed: false };
+  return {
+    month: {
+      expenses: target.expenses,
+      subscriptions: [...target.subscriptions, ...missingSubscriptions],
+      oneTime: target.oneTime,
+    },
+    changed: true,
   };
 }
 
@@ -290,16 +334,17 @@ export function useFinances() {
 
       const expenses = next.find((r) => r.id === 'expenses');
       const expensesData = expenses?.data ? { ...expenses.data } : {};
-      if (!expensesData[yearMonth]) {
-        const copiedExpenses = copyRecurringSubscriptions(expensesData[previousMonth]);
-        if (copiedExpenses) {
-          expensesData[yearMonth] = copiedExpenses;
-          next = [
-            ...next.filter((r) => r.id !== 'expenses'),
-            { id: 'expenses', data: expensesData },
-          ];
-          changed = true;
-        }
+      const recurringSubscriptions = mergeRecurringSubscriptions(
+        expensesData[yearMonth],
+        expensesData[previousMonth],
+      );
+      if (recurringSubscriptions.changed) {
+        expensesData[yearMonth] = recurringSubscriptions.month;
+        next = [
+          ...next.filter((r) => r.id !== 'expenses'),
+          { id: 'expenses', data: expensesData },
+        ];
+        changed = true;
       }
 
       return changed ? next : prev;
@@ -536,11 +581,12 @@ export function useFinances() {
       const data = record?.data ? { ...record.data } : {};
       const month = normalizeExpensesMonth(data[yearMonth]);
       const key = type === 'subscriptions' ? 'subscriptions' : 'expenses';
+      const nextItem = type === 'subscriptions' ? createSubscriptionItem(item) : createLineItem(item);
       data[yearMonth] = {
         expenses: month.expenses,
         subscriptions: month.subscriptions,
         oneTime: month.oneTime,
-        [key]: [...month[key], createLineItem(item)],
+        [key]: [...month[key], nextItem],
       };
       return [...rest, { id: 'expenses', data }];
     });
@@ -559,9 +605,50 @@ export function useFinances() {
         subscriptions: month.subscriptions,
         oneTime: month.oneTime,
         [key]: month[key].map((item) =>
-          item.id === itemId ? createLineItem({ ...item, ...updates }) : item,
+          item.id === itemId
+            ? type === 'subscriptions'
+              ? createSubscriptionItem({ ...item, ...updates })
+              : createLineItem({ ...item, ...updates })
+            : item,
         ),
       };
+      return [...rest, { id: 'expenses', data }];
+    });
+  }, []);
+
+  const stopRecurringSubscription = useCallback((yearMonth, itemId) => {
+    notifyMutation();
+    setFinances((prev) => {
+      const record = prev.find((r) => r.id === 'expenses');
+      const rest = prev.filter((r) => r.id !== 'expenses');
+      const data = record?.data ? { ...record.data } : {};
+      const month = normalizeExpensesMonth(data[yearMonth]);
+      const subscription = month.subscriptions.find((item) => item.id === itemId);
+      if (!subscription) return prev;
+      const recurringId = subscription.recurringId || subscription.id;
+
+      data[yearMonth] = {
+        expenses: month.expenses,
+        subscriptions: month.subscriptions.map((item) =>
+          item.id === itemId ? createSubscriptionItem({ ...item, recurring: false }) : item,
+        ),
+        oneTime: month.oneTime,
+      };
+
+      for (const monthKey of Object.keys(data)) {
+        if (compareYearMonth(monthKey, yearMonth) <= 0) continue;
+        const futureMonth = normalizeExpensesMonth(data[monthKey]);
+        const nextSubscriptions = futureMonth.subscriptions.filter(
+          (item) => (item.recurringId || item.id) !== recurringId,
+        );
+        if (nextSubscriptions.length === futureMonth.subscriptions.length) continue;
+        data[monthKey] = {
+          expenses: futureMonth.expenses,
+          subscriptions: nextSubscriptions,
+          oneTime: futureMonth.oneTime,
+        };
+      }
+
       return [...rest, { id: 'expenses', data }];
     });
   }, []);
@@ -708,6 +795,7 @@ export function useFinances() {
     addExpenseItem,
     updateExpenseItem,
     deleteExpenseItem,
+    stopRecurringSubscription,
     setOneTimeExpenses,
     getMonthlySnapshot,
     getAllMonths,
