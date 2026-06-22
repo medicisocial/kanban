@@ -17,7 +17,13 @@ function currentYearMonth() {
 }
 
 function getFinanceId(category) {
-  return category; // 'revenue' | 'payroll' | 'expenses'
+  return category?.id || category; // 'revenue' | 'payroll' | 'expenses'
+}
+
+const FINANCE_RECORD_IDS = new Set(['revenue', 'payroll', 'expenses']);
+
+function isFinanceRecord(record) {
+  return FINANCE_RECORD_IDS.has(getFinanceId(record));
 }
 
 function loadFinances() {
@@ -229,6 +235,7 @@ export function useFinances() {
     items: finances,
     setItems: setFinances,
     getId: getFinanceId,
+    filterItems: (items) => items.filter(isFinanceRecord),
     loadLocal: loadFinances,
   });
 
