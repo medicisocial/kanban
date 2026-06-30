@@ -275,7 +275,7 @@ export default function EditorTodo({
     [filteredTasks],
   );
 
-  const { editing: editingTasks, inReview: reviewTasks } = useMemo(
+  const { editing: editingTasks, inReview: reviewTasks, finished: finishedTasks } = useMemo(
     () => splitEditorTasksByQueue(orderedTasks),
     [orderedTasks],
   );
@@ -283,6 +283,7 @@ export default function EditorTodo({
   const editCount = editingTasks.length;
   const approveCount = reviewTasks.length;
   const oneOffCount = filteredTasks.filter((t) => t.isOneOffProject && !t.completed).length;
+  const finishedCount = finishedTasks.length;
 
   const itemProps = {
     onOpenCard,
@@ -320,6 +321,11 @@ export default function EditorTodo({
               {oneOffCount > 0 && (
                 <span className="rounded-full border border-white/20 bg-white/5 px-2.5 py-1 text-[#f9f6f2]">
                   {oneOffCount} one-off
+                </span>
+              )}
+              {finishedCount > 0 && (
+                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-emerald-200">
+                  {finishedCount} finished
                 </span>
               )}
             </div>
@@ -372,7 +378,7 @@ export default function EditorTodo({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div className={`grid grid-cols-1 gap-6 ${finishedCount ? 'xl:grid-cols-3' : 'xl:grid-cols-2'}`}>
           <EditorTaskColumn
             title="Needs editing"
             description="Cards in Editing or Not Approved — finish the cut and mark done when ready for review."
@@ -391,6 +397,17 @@ export default function EditorTodo({
             emptyMessage="No videos in review."
             itemProps={itemProps}
           />
+          {finishedCount > 0 && (
+            <EditorTaskColumn
+              title="Finished one-offs"
+              description="Completed one-off projects stay here instead of appearing in Needs editing."
+              count={finishedCount}
+              accentClass="border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+              tasks={finishedTasks}
+              emptyMessage="No completed one-offs."
+              itemProps={itemProps}
+            />
+          )}
         </div>
       )}
 

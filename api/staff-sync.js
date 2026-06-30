@@ -38,6 +38,28 @@ const ALLOWED_TABLES = new Set([
   'finances',
 ]);
 
+function getRecordRevision(record) {
+  const revision = Number(record?.data?.updatedAt || record?.data?.createdAt || 0);
+  return Number.isFinite(revision) ? revision : 0;
+}
+
+async function filterStaleCardUpserts(table, upserts, orgId) {
+  if (table !== 'cards' || !upserts?.length) return upserts || [];
+
+  const existingRows = await fetchSyncRows('cards', orgId);
+  const existingById = new Map((existingRows || []).map((row) => [String(row.id), row]));
+
+  return upserts.filter((row) => {
+    const existing = existingById.get(String(row.id));
+    if (!existing) return true;
+
+    const incomingRevision = getRecordRevision(row);
+    const existingRevision = getRecordRevision(existing);
+    if (!incomingRevision || !existingRevision) return true;
+    return incomingRevision >= existingRevision;
+  });
+}
+
 function isLikelyJwt(token) {
   return typeof token === 'string' && token.split('.').length === 3;
 }
@@ -188,14 +210,15 @@ export default async function handler(req, res) {
     const safeUpserts = await sanitizeAuthCriticalUpserts(table, upserts, resolvedOrgId, {
       credentialPasswordChanges,
     });
+    const currentUpserts = await filterStaleCardUpserts(table, safeUpserts, resolvedOrgId);
 
     if (safeDeleteIds.length) {
       await deleteRecords(table, safeDeleteIds, resolvedOrgId);
     }
-    if (safeUpserts.length) {
+    if (currentUpserts.length) {
       await upsertRecords(
         table,
-        safeUpserts.map((row) => ({ id: row.id, data: row.data })),
+        currentUpserts.map((row) => ({ id: row.id, data: row.data })),
         resolvedOrgId,
       );
     }

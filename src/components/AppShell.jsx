@@ -267,10 +267,7 @@ export default function AppShell({ onSignOut }) {
   const handleMarkScheduled = (cardId) => {
     const card = cards.find((c) => c.id === cardId);
     if (!card || card.columnId === "scheduled") return;
-    updateCard(cardId, {
-      columnId: "scheduled",
-      status: "Scheduled",
-    });
+    moveCard(cardId, "scheduled");
   };
 
   const handleMarkPosted = (cardId, occurrenceDate) => {
@@ -288,7 +285,7 @@ export default function AppShell({ onSignOut }) {
   const handleSendBackForEditing = (cardId, comment = '') => {
     const card = cards.find((c) => c.id === cardId);
     if (!card) return;
-    updateCard(cardId, buildSendBackForEditingUpdates(card, comment));
+    updateCard(cardId, buildSendBackForEditingUpdates(card, comment), { immediateSync: true });
   };
 
   const handleMoveCard = (cardId, targetColumnId) => {

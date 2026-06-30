@@ -461,7 +461,15 @@ function recordRevision(record) {
   return record.updatedAt || record.createdAt || 0;
 }
 
-/** Three-way merge for a single record — unsynced local edits always win. */
+function preferLocalOverRemote(remote, local) {
+  if (!isCloudSourceOfTruth()) return true;
+
+  const localTs = recordRevision(local);
+  const remoteTs = recordRevision(remote);
+  return localTs >= remoteTs;
+}
+
+/** Three-way merge for a single record — cloud mode uses revision timestamps to avoid stale replays. */
 export function mergeRemoteRecordWithLocal({ remote, local, syncedStr }) {
   if (local == null) return remote;
   if (remote == null) return local;
@@ -480,8 +488,10 @@ export function mergeRemoteRecordWithLocal({ remote, local, syncedStr }) {
     return localTs > remoteTs ? local : remote;
   }
 
-  // Local edits not yet reflected in our sync snapshot always win.
-  if (localStr !== syncedStr) return local;
+  // Local edits not yet reflected in our sync snapshot win only when they are
+  // at least as recent as the cloud row. This keeps stale tabs from replaying
+  // older card statuses over newer Supabase data when they wake up/refetch.
+  if (localStr !== syncedStr) return preferLocalOverRemote(remote, local) ? local : remote;
 
   // Local matches the last sync snapshot. Only accept remote if it is clearly newer.
   if (remoteStr !== syncedStr) {

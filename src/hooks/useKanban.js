@@ -6,6 +6,8 @@ import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
+import { pushStaffSyncRecords } from '../lib/staffSyncApi';
+import { reportSyncIssue } from '../lib/workspaceSyncHealth';
 
 const getCardId = (card) => card.id;
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
@@ -150,6 +152,32 @@ export function useKanban() {
   const [cards, setCards] = useState(() =>
     initialSyncCollectionState(loadCards, { table: 'cards', getId: getCardId }),
   );
+  const cardsRef = useRef(cards);
+
+  useEffect(() => {
+    cardsRef.current = cards;
+  }, [cards]);
+
+  const pushCardNow = useCallback((card) => {
+    if (!SUPABASE_ENABLED || !card) return;
+    pushStaffSyncRecords('cards', [card])
+      .then((ok) => {
+        if (!ok) {
+          reportSyncIssue({
+            level: 'warn',
+            table: 'cards',
+            message: 'Card status changed on this device but could not immediately reach the cloud.',
+          });
+        }
+      })
+      .catch((error) => {
+        reportSyncIssue({
+          level: 'error',
+          table: 'cards',
+          message: error?.message || 'Could not immediately save card status to the cloud.',
+        });
+      });
+  }, []);
 
   const reloadFromStorage = useCallback(() => {
     if (SUPABASE_ENABLED) return;
@@ -290,8 +318,9 @@ export function useKanban() {
     return resolvedId;
   }, []);
 
-  const updateCard = useCallback((id, updates, { recordUndo = true } = {}) => {
+  const updateCard = useCallback((id, updates, { recordUndo = true, immediateSync = false } = {}) => {
     notifyMutation({ recordUndo });
+    let persisted = null;
     const applyUpdate = () => {
       setCards((prev) =>
         prev.map((card) => {
@@ -304,7 +333,7 @@ export function useKanban() {
             synced.dueDate !== undefined ? synced.dueDate : card.dueDate,
             { isOneOffProject: isOneOff, contentType: synced.contentType ?? card.contentType },
           );
-          return normalizeCard({
+          persisted = normalizeCard({
             ...card,
             ...synced,
             dueDate: nextDueDate,
@@ -312,12 +341,17 @@ export function useKanban() {
             platform: PLATFORM,
             updatedAt: Date.now(),
           });
+          return persisted;
         }),
       );
     };
     if (recordUndo) applyUpdate();
     else startTransition(applyUpdate);
-  }, []);
+    if (immediateSync) {
+      const fallback = cardsRef.current.find((card) => card.id === id);
+      pushCardNow(persisted || (fallback ? normalizeCard({ ...fallback, ...updates, updatedAt: Date.now() }) : null));
+    }
+  }, [pushCardNow]);
 
   const deleteCard = useCallback((id) => {
     notifyMutation();
@@ -327,13 +361,26 @@ export function useKanban() {
 
   const moveCard = useCallback((cardId, targetColumnId) => {
     notifyMutation();
-    let persisted = null;
     const status = getStatusForColumn(targetColumnId);
+    const current = cardsRef.current.find((card) => card.id === cardId);
+    let persisted = null;
+    if (current && canMoveCardToColumn(current, targetColumnId)) {
+      persisted = normalizeCard({
+        ...current,
+        columnId: targetColumnId,
+        status,
+        dueDate: withColumnDate(targetColumnId, current.dueDate, {
+          isOneOffProject: current.isOneOffProject,
+          contentType: current.contentType,
+        }),
+        updatedAt: Date.now(),
+      });
+    }
     setCards((prev) =>
       prev.map((card) => {
         if (card.id !== cardId) return card;
         if (!canMoveCardToColumn(card, targetColumnId)) return card;
-        persisted = normalizeCard({
+        return normalizeCard({
           ...card,
           columnId: targetColumnId,
           status,
@@ -343,10 +390,10 @@ export function useKanban() {
           }),
           updatedAt: Date.now(),
         });
-        return persisted;
       }),
     );
-  }, []);
+    pushCardNow(persisted);
+  }, [pushCardNow]);
 
   const markAsPosted = useCallback((cardId, occurrenceDate) => {
     notifyMutation();
@@ -375,7 +422,8 @@ export function useKanban() {
         return persisted;
       }),
     );
-  }, []);
+    pushCardNow(persisted);
+  }, [pushCardNow]);
 
   const addCardWithDetails = useCallback((overrides = {}) => {
     notifyMutation();

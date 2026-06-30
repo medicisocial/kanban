@@ -128,6 +128,24 @@ const getId = (record) => record.id;
   delete process.env.VITE_USE_SUPABASE;
 }
 
+// Cloud mode must not let a stale tab replay an older board status over Supabase.
+{
+  process.env.VITE_USE_SUPABASE = 'true';
+  const synced = { id: 'card-1', title: 'Taxi', columnId: 'editing', updatedAt: 100 };
+  const local = { id: 'card-1', title: 'Taxi', columnId: 'editing', updatedAt: 100 };
+  const remote = { id: 'card-1', title: 'Taxi', columnId: 'scheduled', updatedAt: 200 };
+  const merged = mergeRemoteListWithLocalPending({
+    remoteItems: [remote],
+    getId,
+    syncedSnapshot: new Map([['card-1', JSON.stringify(synced)]]),
+    localItems: [local],
+    pendingRemoved: new Set(),
+    pendingLocalCreates: new Set(),
+  });
+  assert(merged[0].columnId === 'scheduled', 'newer cloud card status should beat stale local status');
+  delete process.env.VITE_USE_SUPABASE;
+}
+
 // Map merge should ignore stale local-only keys.
 {
   const merged = mergeRemoteMapWithLocalPending({

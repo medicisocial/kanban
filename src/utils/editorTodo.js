@@ -215,13 +215,15 @@ export function formatEditorDateLabel(dateKey, todayKey = toDateKey(new Date()))
 export function splitEditorTasksByQueue(tasks) {
   const editing = [];
   const inReview = [];
+  const finished = [];
 
   for (const task of tasks) {
-    if (task.kind === 'approve') inReview.push(task);
+    if (task.completed) finished.push(task);
+    else if (task.kind === 'approve') inReview.push(task);
     else editing.push(task);
   }
 
-  return { editing, inReview };
+  return { editing, inReview, finished };
 }
 
 export function filterEditorTasks(tasks, { assignee, client, includeCompleted = true }) {
