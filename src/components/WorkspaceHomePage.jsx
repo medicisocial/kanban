@@ -106,7 +106,11 @@ export default function WorkspaceHomePage({
       { label: 'Editing', value: summary.editingCount },
       { label: 'In review', value: summary.editorInReviewCount || 0 },
     ];
-    if (!isCompanyWideOverview && (summary.editorCompletedCount || 0) > 0) {
+    if (isCompanyWideOverview && (summary.editorCompletedByAssignee?.length || 0) > 0) {
+      for (const entry of summary.editorCompletedByAssignee) {
+        editorDetails.push({ label: entry.name, value: entry.count });
+      }
+    } else if (!isCompanyWideOverview && (summary.editorCompletedCount || 0) > 0) {
       editorDetails.push({ label: 'Edited', value: summary.editorCompletedCount });
     }
     pipelineRoles.push({
@@ -218,7 +222,8 @@ export default function WorkspaceHomePage({
 
       {isCompanyWideOverview &&
         visibleCompanyTaskTabs.includes('editor') &&
-        (summary.editorCompletedByAssignee?.length || 0) > 0 && (
+        (summary.editorCompletedByAssignee?.length || 0) > 0 &&
+        summary.editorCompletedByAssignee.some((entry) => entry.count > 0) && (
           <div className="mx-auto mb-8 max-w-[960px]">
             <PortalTaskSection
               title="Edited videos"
