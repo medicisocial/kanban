@@ -234,3 +234,31 @@ export function filterEditorTasks(tasks, { assignee, client, includeCompleted = 
     return true;
   });
 }
+
+const EDITOR_COMPLETED_COLUMN_IDS = ['approved', 'scheduled'];
+
+export function cardCountsAsEditorCompleted(card) {
+  if (card.contentType === 'Story') return false;
+  if (card.isOneOffProject) return card.columnId === 'finished';
+  if (EDITOR_COMPLETED_COLUMN_IDS.includes(card.columnId)) return true;
+  if (card.postedAt) return true;
+  return false;
+}
+
+function matchesEditorAssignee(card, assignee) {
+  if (!assignee || assignee === 'all') return true;
+  const normalized = assignee.trim().toLowerCase();
+  return (card.assignedTo || '').trim().toLowerCase() === normalized;
+}
+
+export function buildEditorCompletedCount(
+  cards,
+  { clientFilter = 'all', assignee = 'all' } = {},
+) {
+  return cards.filter((card) => {
+    if (!cardCountsAsEditorCompleted(card)) return false;
+    if (!matchesEditorAssignee(card, assignee)) return false;
+    if (!matchesClientFilter(card.client, clientFilter)) return false;
+    return true;
+  }).length;
+}

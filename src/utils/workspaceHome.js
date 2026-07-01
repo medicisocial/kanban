@@ -20,6 +20,7 @@ import {
 } from './accountManagerTodo';
 import {
   buildBoardEditorTasks,
+  buildEditorCompletedCount,
   filterEditorTasks,
   splitEditorTasksByQueue,
 } from './editorTodo';
@@ -122,6 +123,10 @@ function buildPersonalWorkspaceHomeSummary({
     assignee,
     includeCompleted: false,
   });
+  const editorCompletedCount = buildEditorCompletedCount(cards, {
+    clientFilter,
+    assignee,
+  });
 
   const inReviewTasks = filterAccountManagerTasks(
     buildInReviewTasks(cards, clientAccountManagers),
@@ -168,6 +173,7 @@ function buildPersonalWorkspaceHomeSummary({
     toCreateCount,
     editingCount,
     editorInReviewCount,
+    editorCompletedCount,
     pendingIdeasCount: 0,
     shootsTodayCount,
     scheduledThisWeekCount: scheduledThisWeek.length,
@@ -233,6 +239,10 @@ export function buildWorkspaceHomeSummary({
     clientFilter,
     assignee: editorAssignee,
     includeCompleted: false,
+  });
+  const editorCompletedCount = buildEditorCompletedCount(scopedCards, {
+    clientFilter,
+    assignee: editorAssignee,
   });
   const pendingIdeas = scopedIdeas.filter((i) => i.status === 'pending');
   const shootsTodayCount = buildShootsTodayCount(scopedCards, {
@@ -303,6 +313,7 @@ export function buildWorkspaceHomeSummary({
     toCreateCount: toCreate.length,
     editingCount,
     editorInReviewCount,
+    editorCompletedCount,
     pendingIdeasCount: pendingIdeas.length,
     shootsTodayCount,
     scheduledThisWeekCount: scheduledThisWeek.length,
@@ -406,6 +417,15 @@ export function buildMyWorkGreeting(firstName, summary) {
   }
 
   if (activeCount === 0 && summary.shootsTodayCount === 0) {
+    const editedCount = summary.editorCompletedCount || 0;
+    if (editedCount > 0) {
+      return {
+        eyebrow: 'My work',
+        title,
+        description: `You're all caught up for now — nice work. You've edited ${editedCount} video${editedCount === 1 ? '' : 's'} so far.`,
+      };
+    }
+
     return {
       eyebrow: 'My work',
       title,

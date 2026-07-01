@@ -98,13 +98,17 @@ export default function WorkspaceHomePage({
 
   if (visibleCompanyTaskTabs.includes('editor')) {
     const editorTotal = summary.editingCount + (summary.editorInReviewCount || 0);
+    const editorDetails = [
+      { label: 'Editing', value: summary.editingCount },
+      { label: 'In review', value: summary.editorInReviewCount || 0 },
+    ];
+    if ((summary.editorCompletedCount || 0) > 0) {
+      editorDetails.push({ label: 'Edited', value: summary.editorCompletedCount });
+    }
     pipelineRoles.push({
       label: 'Editor',
       count: editorTotal,
-      details: [
-        { label: 'Editing', value: summary.editingCount },
-        { label: 'In review', value: summary.editorInReviewCount || 0 },
-      ],
+      details: editorDetails,
       onClick: () => onNavigate('todo', { tasksRole: 'editor' }),
     });
   }

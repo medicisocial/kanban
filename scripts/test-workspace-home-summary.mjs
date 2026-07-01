@@ -64,6 +64,22 @@ function buildEditorQueueCounts(cards, { assignee = 'all', includeCompleted = fa
   };
 }
 
+function cardCountsAsEditorCompleted(card) {
+  if (card.contentType === 'Story') return false;
+  if (card.isOneOffProject) return card.columnId === 'finished';
+  if (card.columnId === 'approved' || card.columnId === 'scheduled') return true;
+  if (card.postedAt) return true;
+  return false;
+}
+
+function buildEditorCompletedCount(cards, { assignee = 'all' } = {}) {
+  return cards.filter((card) => {
+    if (!cardCountsAsEditorCompleted(card)) return false;
+    if (assignee && assignee !== 'all' && card.assignedTo !== assignee) return false;
+    return true;
+  }).length;
+}
+
 function buildShootsTodayCount(cards) {
   return cards.filter(
     (card) =>
@@ -109,6 +125,44 @@ const cards = [
     contentType: 'Reel',
     assignedTo: 'Jordan',
   },
+  {
+    id: 'approved-jordan',
+    columnId: 'approved',
+    contentType: 'Reel',
+    assignedTo: 'Jordan',
+  },
+  {
+    id: 'approved-sam',
+    columnId: 'approved',
+    contentType: 'Reel',
+    assignedTo: 'Sam',
+  },
+  {
+    id: 'scheduled-jordan',
+    columnId: 'scheduled',
+    contentType: 'Reel',
+    assignedTo: 'Jordan',
+  },
+  {
+    id: 'posted-jordan',
+    columnId: 'approved',
+    contentType: 'Reel',
+    assignedTo: 'Jordan',
+    postedAt: Date.now(),
+  },
+  {
+    id: 'story-approved',
+    columnId: 'approved',
+    contentType: 'Story',
+    assignedTo: 'Jordan',
+  },
+  {
+    id: 'oneoff-finished',
+    columnId: 'finished',
+    contentType: 'Reel',
+    assignedTo: 'Jordan',
+    isOneOffProject: true,
+  },
 ];
 
 assert(buildShootsTodayCount(cards) === 1, 'shoots today counts only To Create cards');
@@ -120,5 +174,11 @@ assert(companyEditor.editorInReviewCount === 1, 'company editor in-review count 
 const personalEditor = buildEditorQueueCounts(cards, { assignee: 'Jordan' });
 assert(personalEditor.editingCount === 2, 'personal editor count respects assignee');
 assert(personalEditor.editorInReviewCount === 1, 'personal in-review count respects assignee');
+
+const companyEdited = buildEditorCompletedCount(cards, { assignee: 'all' });
+assert(companyEdited === 5, 'company edited count includes approved, scheduled, posted, and one-off finished');
+
+const personalEdited = buildEditorCompletedCount(cards, { assignee: 'Jordan' });
+assert(personalEdited === 4, 'personal edited count respects assignee and excludes stories');
 
 console.log('Workspace home summary tests passed.');
