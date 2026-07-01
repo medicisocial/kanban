@@ -308,6 +308,7 @@ export function buildContentReviewDenyUpdates(card, comment, timestamp = Date.no
     columnId: backToEditing ? 'editing' : 'not-approved',
     status: backToEditing ? 'Editing' : 'Not Approved',
     clientComment: trimmed,
+    editorCompletedAt: null,
     notes: `${card.notes || ''}${noteAppend}`.trim(),
   };
 }
@@ -328,6 +329,7 @@ export function applyContentReviewResponses(cards, responses, { updateCard }) {
         columnId: 'approved',
         status: 'Approved',
         clientComment: comment,
+        editorCompletedAt: Date.now(),
       });
       applied += 1;
       continue;

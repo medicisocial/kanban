@@ -711,6 +711,7 @@ export default function AppShell({ onSignOut }) {
       columnId: "approved",
       status: "Approved",
       clientComment: comment || "",
+      editorCompletedAt: Date.now(),
     });
   };
 

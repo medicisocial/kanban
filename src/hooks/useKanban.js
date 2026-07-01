@@ -11,6 +11,7 @@ import { reportSyncIssue } from '../lib/workspaceSyncHealth';
 
 const getCardId = (card) => card.id;
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
+import { buildEditorCompletionStampUpdates } from '../utils/editorTodo';
 import {
   toDateKey,
   parseRecurrenceDays,
@@ -75,6 +76,7 @@ function normalizeCard(card) {
     storyPostedDates: parseStoryPostedDates(card.storyPostedDates),
     accountManager: card.accountManager || '',
     postedAt,
+    editorCompletedAt: card.editorCompletedAt || null,
     clientComment: card.clientComment || '',
     sourceIdeaId: card.sourceIdeaId || null,
     dueDate,
@@ -365,8 +367,10 @@ export function useKanban() {
     const current = cardsRef.current.find((card) => card.id === cardId);
     let persisted = null;
     if (current && canMoveCardToColumn(current, targetColumnId)) {
+      const completionUpdates = buildEditorCompletionStampUpdates(current, targetColumnId);
       persisted = normalizeCard({
         ...current,
+        ...completionUpdates,
         columnId: targetColumnId,
         status,
         dueDate: withColumnDate(targetColumnId, current.dueDate, {
@@ -380,8 +384,10 @@ export function useKanban() {
       prev.map((card) => {
         if (card.id !== cardId) return card;
         if (!canMoveCardToColumn(card, targetColumnId)) return card;
+        const completionUpdates = buildEditorCompletionStampUpdates(card, targetColumnId);
         return normalizeCard({
           ...card,
+          ...completionUpdates,
           columnId: targetColumnId,
           status,
           dueDate: withColumnDate(targetColumnId, card.dueDate, {

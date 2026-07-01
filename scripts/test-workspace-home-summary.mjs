@@ -72,15 +72,39 @@ function cardCountsAsEditorCompleted(card) {
   return false;
 }
 
-function buildEditorCompletedCount(cards, { assignee = 'all' } = {}) {
+function isSameCalendarMonth(timestamp, referenceDate = new Date()) {
+  if (!timestamp) return false;
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return false;
+  return (
+    date.getFullYear() === referenceDate.getFullYear() &&
+    date.getMonth() === referenceDate.getMonth()
+  );
+}
+
+function getEditorCompletedAt(card) {
+  if (card.editorCompletedAt) return card.editorCompletedAt;
+  if (card.postedAt) return card.postedAt;
+  if (cardCountsAsEditorCompleted(card)) {
+    return card.updatedAt || card.createdAt || null;
+  }
+  return null;
+}
+
+function cardCountsAsEditorCompletedThisMonth(card, referenceDate = new Date()) {
+  if (!cardCountsAsEditorCompleted(card)) return false;
+  return isSameCalendarMonth(getEditorCompletedAt(card), referenceDate);
+}
+
+function buildEditorCompletedCount(cards, { assignee = 'all', referenceDate = new Date() } = {}) {
   return cards.filter((card) => {
-    if (!cardCountsAsEditorCompleted(card)) return false;
+    if (!cardCountsAsEditorCompletedThisMonth(card, referenceDate)) return false;
     if (assignee && assignee !== 'all' && card.assignedTo !== assignee) return false;
     return true;
   }).length;
 }
 
-function buildEditorCompletedByAssignee(cards, { editorNames = [] } = {}) {
+function buildEditorCompletedByAssignee(cards, { editorNames = [], referenceDate = new Date() } = {}) {
   const displayNameByKey = new Map();
   const counts = new Map();
 
@@ -95,7 +119,7 @@ function buildEditorCompletedByAssignee(cards, { editorNames = [] } = {}) {
   for (const name of editorNames) registerName(name);
 
   for (const card of cards) {
-    if (!cardCountsAsEditorCompleted(card)) continue;
+    if (!cardCountsAsEditorCompletedThisMonth(card, referenceDate)) continue;
     const assignee = (card.assignedTo || '').trim();
     if (!assignee) continue;
     const key = assignee.toLowerCase();
@@ -125,6 +149,9 @@ function buildShootsTodayCount(cards) {
 }
 
 const today = toDateKey(new Date());
+const now = new Date();
+const thisMonth = Date.now();
+const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 15).getTime();
 
 const cards = [
   {
@@ -164,31 +191,36 @@ const cards = [
     columnId: 'approved',
     contentType: 'Reel',
     assignedTo: 'Jordan',
+    editorCompletedAt: thisMonth,
   },
   {
     id: 'approved-sam',
     columnId: 'approved',
     contentType: 'Reel',
     assignedTo: 'Sam',
+    editorCompletedAt: thisMonth,
   },
   {
     id: 'scheduled-jordan',
     columnId: 'scheduled',
     contentType: 'Reel',
     assignedTo: 'Jordan',
+    editorCompletedAt: thisMonth,
   },
   {
     id: 'posted-jordan',
     columnId: 'approved',
     contentType: 'Reel',
     assignedTo: 'Jordan',
-    postedAt: Date.now(),
+    postedAt: thisMonth,
+    editorCompletedAt: thisMonth,
   },
   {
     id: 'story-approved',
     columnId: 'approved',
     contentType: 'Story',
     assignedTo: 'Jordan',
+    editorCompletedAt: thisMonth,
   },
   {
     id: 'oneoff-finished',
@@ -196,6 +228,14 @@ const cards = [
     contentType: 'Reel',
     assignedTo: 'Jordan',
     isOneOffProject: true,
+    editorCompletedAt: thisMonth,
+  },
+  {
+    id: 'approved-last-month',
+    columnId: 'approved',
+    contentType: 'Reel',
+    assignedTo: 'Jordan',
+    editorCompletedAt: lastMonth,
   },
 ];
 
@@ -210,7 +250,7 @@ assert(personalEditor.editingCount === 2, 'personal editor count respects assign
 assert(personalEditor.editorInReviewCount === 1, 'personal in-review count respects assignee');
 
 const companyEdited = buildEditorCompletedCount(cards, { assignee: 'all' });
-assert(companyEdited === 5, 'company edited count includes approved, scheduled, posted, and one-off finished');
+assert(companyEdited === 5, 'company edited count includes only this month completions');
 
 const personalEdited = buildEditorCompletedCount(cards, { assignee: 'Jordan' });
 assert(personalEdited === 4, 'personal edited count respects assignee and excludes stories');
@@ -219,8 +259,22 @@ const byAssignee = buildEditorCompletedByAssignee(cards, {
   editorNames: ['Jordan', 'Sam', 'Alex'],
 });
 assert(byAssignee.length === 3, 'lists each configured editor');
-assert(byAssignee[0].name === 'Jordan' && byAssignee[0].count === 4, 'Jordan leads edited count');
+assert(byAssignee[0].name === 'Jordan' && byAssignee[0].count === 4, 'Jordan leads edited count this month');
 assert(byAssignee[1].name === 'Sam' && byAssignee[1].count === 1, 'Sam second in edited breakdown');
 assert(byAssignee[2].name === 'Alex' && byAssignee[2].count === 0, 'editors with no edits still listed');
+
+const lastMonthOnly = buildEditorCompletedCount(
+  [
+    {
+      id: 'old',
+      columnId: 'approved',
+      contentType: 'Reel',
+      assignedTo: 'Jordan',
+      editorCompletedAt: lastMonth,
+    },
+  ],
+  { assignee: 'Jordan' },
+);
+assert(lastMonthOnly === 0, 'last month completions are excluded');
 
 console.log('Workspace home summary tests passed.');

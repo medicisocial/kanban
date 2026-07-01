@@ -108,7 +108,9 @@ export default function WorkspaceHomePage({
     ];
     if (isCompanyWideOverview && (summary.editorCompletedByAssignee?.length || 0) > 0) {
       for (const entry of summary.editorCompletedByAssignee) {
-        editorDetails.push({ label: entry.name, value: entry.count });
+        if (entry.count > 0) {
+          editorDetails.push({ label: entry.name, value: entry.count });
+        }
       }
     } else if (!isCompanyWideOverview && (summary.editorCompletedCount || 0) > 0) {
       editorDetails.push({ label: 'Edited', value: summary.editorCompletedCount });
@@ -141,6 +143,10 @@ export default function WorkspaceHomePage({
   }
 
   const showTodayPanel = todayTimeline.items.length > 0;
+  const editedVideosMonthLabel = new Date().toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  });
   const workspaceLooksEmpty =
     !workspaceDataLoading && cards.length === 0 && ideas.length === 0 && meetings.length === 0;
 
@@ -227,7 +233,7 @@ export default function WorkspaceHomePage({
           <div className="mx-auto mb-8 max-w-[960px]">
             <PortalTaskSection
               title="Edited videos"
-              subtitle="Approved and completed work by editor."
+              subtitle={`Approved and completed work in ${editedVideosMonthLabel}.`}
             >
               <ul className="divide-y divide-white/[0.06]">
                 {summary.editorCompletedByAssignee.map((entry) => (

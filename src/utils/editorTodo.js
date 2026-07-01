@@ -32,6 +32,7 @@ export function buildSendBackForEditingUpdates(card, comment = '') {
   const updates = {
     columnId: 'editing',
     status: 'Editing',
+    editorCompletedAt: null,
   };
 
   if (trimmed) {
@@ -245,6 +246,46 @@ export function cardCountsAsEditorCompleted(card) {
   return false;
 }
 
+export function isSameCalendarMonth(timestamp, referenceDate = new Date()) {
+  if (!timestamp) return false;
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return false;
+  return (
+    date.getFullYear() === referenceDate.getFullYear() &&
+    date.getMonth() === referenceDate.getMonth()
+  );
+}
+
+export function getEditorCompletedAt(card) {
+  if (card.editorCompletedAt) return card.editorCompletedAt;
+  if (card.postedAt) return card.postedAt;
+  if (cardCountsAsEditorCompleted(card)) {
+    return card.updatedAt || card.createdAt || null;
+  }
+  return null;
+}
+
+export function cardCountsAsEditorCompletedThisMonth(card, referenceDate = new Date()) {
+  if (!cardCountsAsEditorCompleted(card)) return false;
+  return isSameCalendarMonth(getEditorCompletedAt(card), referenceDate);
+}
+
+export function buildEditorCompletionStampUpdates(card, targetColumnId) {
+  const wasCompleted = cardCountsAsEditorCompleted(card);
+  const willBeCompleted = cardCountsAsEditorCompleted({
+    ...card,
+    columnId: targetColumnId,
+  });
+
+  if (willBeCompleted && !wasCompleted) {
+    return { editorCompletedAt: Date.now() };
+  }
+  if (!willBeCompleted && wasCompleted) {
+    return { editorCompletedAt: null };
+  }
+  return {};
+}
+
 function matchesEditorAssignee(card, assignee) {
   if (!assignee || assignee === 'all') return true;
   const normalized = assignee.trim().toLowerCase();
@@ -253,10 +294,10 @@ function matchesEditorAssignee(card, assignee) {
 
 export function buildEditorCompletedCount(
   cards,
-  { clientFilter = 'all', assignee = 'all' } = {},
+  { clientFilter = 'all', assignee = 'all', referenceDate = new Date() } = {},
 ) {
   return cards.filter((card) => {
-    if (!cardCountsAsEditorCompleted(card)) return false;
+    if (!cardCountsAsEditorCompletedThisMonth(card, referenceDate)) return false;
     if (!matchesEditorAssignee(card, assignee)) return false;
     if (!matchesClientFilter(card.client, clientFilter)) return false;
     return true;
@@ -265,7 +306,7 @@ export function buildEditorCompletedCount(
 
 export function buildEditorCompletedByAssignee(
   cards,
-  { clientFilter = 'all', editorNames = [] } = {},
+  { clientFilter = 'all', editorNames = [], referenceDate = new Date() } = {},
 ) {
   const displayNameByKey = new Map();
   const counts = new Map();
@@ -281,7 +322,7 @@ export function buildEditorCompletedByAssignee(
   for (const name of editorNames) registerName(name);
 
   for (const card of cards) {
-    if (!cardCountsAsEditorCompleted(card)) continue;
+    if (!cardCountsAsEditorCompletedThisMonth(card, referenceDate)) continue;
     if (!matchesClientFilter(card.client, clientFilter)) continue;
     const assignee = (card.assignedTo || '').trim();
     if (!assignee) continue;

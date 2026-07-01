@@ -432,7 +432,7 @@ export function buildMyWorkGreeting(firstName, summary) {
       return {
         eyebrow: 'My work',
         title,
-        description: `You're all caught up for now — nice work. You've edited ${editedCount} video${editedCount === 1 ? '' : 's'} so far.`,
+        description: `You're all caught up for now — nice work. You've edited ${editedCount} video${editedCount === 1 ? '' : 's'} this month.`,
       };
     }
 

@@ -278,6 +278,7 @@ export function createCard(overrides = {}) {
     storyOccurrenceNotes: {},
     storyPostedDates: [],
     postedAt: null,
+    editorCompletedAt: null,
     clientComment: '',
     isOneOffProject: false,
     status: 'To Create',
