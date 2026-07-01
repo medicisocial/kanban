@@ -43,12 +43,27 @@ export function PortalRoleSummary({
         <h3 className="overview-role-summary-title">{label}</h3>
         {details.length > 0 ? (
           <div className="overview-role-summary-details">
-            {details.map((item) => (
-              <span key={item.label} className="overview-role-summary-chip">
-                {item.label}
-                <strong>{item.value}</strong>
-              </span>
-            ))}
+            {details.map((item) =>
+              item.onClick ? (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    item.onClick();
+                  }}
+                  className="overview-role-summary-chip overview-role-summary-chip-interactive"
+                >
+                  {item.label}
+                  <strong>{item.value}</strong>
+                </button>
+              ) : (
+                <span key={item.label} className="overview-role-summary-chip">
+                  {item.label}
+                  <strong>{item.value}</strong>
+                </span>
+              ),
+            )}
           </div>
         ) : (
           <p className="overview-role-summary-empty">All clear</p>

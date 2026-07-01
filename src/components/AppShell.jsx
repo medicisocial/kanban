@@ -1076,6 +1076,7 @@ export default function AppShell({ onSignOut }) {
             handleNavigate('shoot', { shootDate: shootDay.dateKey, shootClient: shootDay.client })
           }
           onOpenNotifications={() => setNotificationsOpen(true)}
+          onOpenCard={handleCardClick}
         />
       )}
 

@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import {
   PortalRoleSummary,
-  PortalTaskSection,
 } from './clientPortal/PortalOverviewPanels';
+import OverviewCompletedContentSection from './OverviewCompletedContentSection';
 import OverviewTodayPanel from './clientPortal/OverviewTodayPanel';
 import { buildWorkspaceHomeSummary, buildMyWorkGreeting } from '../utils/workspaceHome';
 import { buildTodayTimeline } from '../utils/todayTimeline';
@@ -30,12 +31,18 @@ export default function WorkspaceHomePage({
   onOpenMeeting,
   onOpenShoot,
   onOpenNotifications,
+  onOpenCard,
 }) {
-  const { clients, teamMembers } = useClientsContext();
+  const { clients, teamMembers, getClientColor } = useClientsContext();
   const { syncIssue } = useWorkspaceSync();
   const { visibleCompanyTaskTabs } = useStaffWorkspaceScope();
+  const [expandedCompletedEditor, setExpandedCompletedEditor] = useState('');
 
   const isCompanyWideOverview = !myWorkOnly || companyWideView;
+
+  const toggleCompletedEditor = (name) => {
+    setExpandedCompletedEditor((current) => (current === name ? '' : name));
+  };
 
   const summary = buildWorkspaceHomeSummary({
     cards,
@@ -85,6 +92,11 @@ export default function WorkspaceHomePage({
       : `Production at a glance for ${clientFilter}.`);
 
   const showAmQueue = !myWorkOnly || summaryWithToday.showAccountManagerQueue;
+  const completedContentMonthLabel = new Date().toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  });
+  const completedContentSubtitle = `Posts, reels, carousels, and other finished work in ${completedContentMonthLabel}.`;
 
   const pipelineRoles = [];
 
@@ -109,11 +121,19 @@ export default function WorkspaceHomePage({
     if (isCompanyWideOverview && (summary.editorCompletedByAssignee?.length || 0) > 0) {
       for (const entry of summary.editorCompletedByAssignee) {
         if (entry.count > 0) {
-          editorDetails.push({ label: entry.name, value: entry.count });
+          editorDetails.push({
+            label: entry.name,
+            value: entry.count,
+            onClick: () => toggleCompletedEditor(entry.name),
+          });
         }
       }
     } else if (!isCompanyWideOverview && (summary.editorCompletedCount || 0) > 0) {
-      editorDetails.push({ label: 'Edited', value: summary.editorCompletedCount });
+      editorDetails.push({
+        label: 'Completed',
+        value: summary.editorCompletedCount,
+        onClick: () => toggleCompletedEditor(staffName),
+      });
     }
     pipelineRoles.push({
       label: 'Editor',
@@ -143,10 +163,10 @@ export default function WorkspaceHomePage({
   }
 
   const showTodayPanel = todayTimeline.items.length > 0;
-  const editedVideosMonthLabel = new Date().toLocaleDateString('en-US', {
-    month: 'long',
-    year: 'numeric',
-  });
+  const showCompletedContentRoster =
+    isCompanyWideOverview &&
+    visibleCompanyTaskTabs.includes('editor') &&
+    summary.editorCompletedByAssignee?.some((entry) => entry.count > 0);
   const workspaceLooksEmpty =
     !workspaceDataLoading && cards.length === 0 && ideas.length === 0 && meetings.length === 0;
 
@@ -226,31 +246,33 @@ export default function WorkspaceHomePage({
         ))}
       </div>
 
-      {isCompanyWideOverview &&
-        visibleCompanyTaskTabs.includes('editor') &&
-        (summary.editorCompletedByAssignee?.length || 0) > 0 &&
-        summary.editorCompletedByAssignee.some((entry) => entry.count > 0) && (
-          <div className="mx-auto mb-8 max-w-[960px]">
-            <PortalTaskSection
-              title="Edited videos"
-              subtitle={`Approved and completed work in ${editedVideosMonthLabel}.`}
-            >
-              <ul className="divide-y divide-white/[0.06]">
-                {summary.editorCompletedByAssignee.map((entry) => (
-                  <li
-                    key={entry.name}
-                    className="flex items-center justify-between gap-4 px-4 py-3"
-                  >
-                    <span className="text-sm font-medium text-white">{entry.name}</span>
-                    <span className="text-sm font-semibold tabular-nums text-white/78">
-                      {entry.count}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </PortalTaskSection>
-          </div>
-        )}
+      {showCompletedContentRoster && (
+        <OverviewCompletedContentSection
+          title="Completed content"
+          subtitle={completedContentSubtitle}
+          entries={summary.editorCompletedByAssignee}
+          cards={cards}
+          clientFilter={clientFilter}
+          expandedEditorName={expandedCompletedEditor}
+          onToggleEditor={toggleCompletedEditor}
+          onOpenCard={onOpenCard}
+          getClientColor={getClientColor}
+        />
+      )}
+
+      {!isCompanyWideOverview && expandedCompletedEditor && (
+        <OverviewCompletedContentSection
+          title="Completed content"
+          subtitle={completedContentSubtitle}
+          entries={[]}
+          cards={cards}
+          clientFilter={clientFilter}
+          expandedEditorName={expandedCompletedEditor}
+          onToggleEditor={toggleCompletedEditor}
+          onOpenCard={onOpenCard}
+          getClientColor={getClientColor}
+        />
+      )}
 
       {showTodayPanel && (
         <OverviewTodayPanel

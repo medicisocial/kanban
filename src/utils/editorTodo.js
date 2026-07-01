@@ -292,16 +292,32 @@ function matchesEditorAssignee(card, assignee) {
   return (card.assignedTo || '').trim().toLowerCase() === normalized;
 }
 
-export function buildEditorCompletedCount(
+export function getEditorCompletedStatusLabel(card) {
+  if (card.postedAt) return 'Posted';
+  if (card.isOneOffProject && card.columnId === 'finished') return 'Finished';
+  const column = COLUMNS.find((col) => col.id === card.columnId);
+  return column?.title || card.status || 'Completed';
+}
+
+export function buildEditorCompletedCards(
   cards,
   { clientFilter = 'all', assignee = 'all', referenceDate = new Date() } = {},
 ) {
-  return cards.filter((card) => {
-    if (!cardCountsAsEditorCompletedThisMonth(card, referenceDate)) return false;
-    if (!matchesEditorAssignee(card, assignee)) return false;
-    if (!matchesClientFilter(card.client, clientFilter)) return false;
-    return true;
-  }).length;
+  return cards
+    .filter((card) => {
+      if (!cardCountsAsEditorCompletedThisMonth(card, referenceDate)) return false;
+      if (!matchesEditorAssignee(card, assignee)) return false;
+      if (!matchesClientFilter(card.client, clientFilter)) return false;
+      return true;
+    })
+    .sort((a, b) => (getEditorCompletedAt(b) || 0) - (getEditorCompletedAt(a) || 0));
+}
+
+export function buildEditorCompletedCount(
+  cards,
+  options = {},
+) {
+  return buildEditorCompletedCards(cards, options).length;
 }
 
 export function buildEditorCompletedByAssignee(
