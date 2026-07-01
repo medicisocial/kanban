@@ -114,31 +114,13 @@ export default function WorkspaceHomePage({
 
   if (visibleCompanyTaskTabs.includes('editor')) {
     const editorTotal = summary.editingCount + (summary.editorInReviewCount || 0);
-    const editorDetails = [
-      { label: 'Editing', value: summary.editingCount },
-      { label: 'In review', value: summary.editorInReviewCount || 0 },
-    ];
-    if (isCompanyWideOverview && (summary.editorCompletedByAssignee?.length || 0) > 0) {
-      for (const entry of summary.editorCompletedByAssignee) {
-        if (entry.count > 0) {
-          editorDetails.push({
-            label: entry.name,
-            value: entry.count,
-            onClick: () => toggleCompletedEditor(entry.name),
-          });
-        }
-      }
-    } else if (!isCompanyWideOverview && (summary.editorCompletedCount || 0) > 0) {
-      editorDetails.push({
-        label: 'Completed',
-        value: summary.editorCompletedCount,
-        onClick: () => toggleCompletedEditor(staffName),
-      });
-    }
     pipelineRoles.push({
       label: 'Editor',
       count: editorTotal,
-      details: editorDetails,
+      details: [
+        { label: 'Editing', value: summary.editingCount },
+        { label: 'In review', value: summary.editorInReviewCount || 0 },
+      ],
       onClick: () => onNavigate('todo', { tasksRole: 'editor' }),
     });
   }
@@ -167,6 +149,11 @@ export default function WorkspaceHomePage({
     isCompanyWideOverview &&
     visibleCompanyTaskTabs.includes('editor') &&
     summary.editorCompletedByAssignee?.some((entry) => entry.count > 0);
+  const showPersonalCompletedRoster =
+    !isCompanyWideOverview &&
+    visibleCompanyTaskTabs.includes('editor') &&
+    staffName &&
+    (summary.editorCompletedCount || 0) > 0;
   const workspaceLooksEmpty =
     !workspaceDataLoading && cards.length === 0 && ideas.length === 0 && meetings.length === 0;
 
@@ -260,11 +247,11 @@ export default function WorkspaceHomePage({
         />
       )}
 
-      {!isCompanyWideOverview && expandedCompletedEditor && (
+      {showPersonalCompletedRoster && (
         <OverviewCompletedContentSection
           title="Completed content"
           subtitle={completedContentSubtitle}
-          entries={[]}
+          entries={[{ name: staffName, count: summary.editorCompletedCount }]}
           cards={cards}
           clientFilter={clientFilter}
           expandedEditorName={expandedCompletedEditor}
