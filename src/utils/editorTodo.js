@@ -262,3 +262,41 @@ export function buildEditorCompletedCount(
     return true;
   }).length;
 }
+
+export function buildEditorCompletedByAssignee(
+  cards,
+  { clientFilter = 'all', editorNames = [] } = {},
+) {
+  const displayNameByKey = new Map();
+  const counts = new Map();
+
+  const registerName = (name) => {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return;
+    const key = trimmed.toLowerCase();
+    if (!displayNameByKey.has(key)) displayNameByKey.set(key, trimmed);
+    if (!counts.has(key)) counts.set(key, 0);
+  };
+
+  for (const name of editorNames) registerName(name);
+
+  for (const card of cards) {
+    if (!cardCountsAsEditorCompleted(card)) continue;
+    if (!matchesClientFilter(card.client, clientFilter)) continue;
+    const assignee = (card.assignedTo || '').trim();
+    if (!assignee) continue;
+    const key = assignee.toLowerCase();
+    if (!displayNameByKey.has(key)) displayNameByKey.set(key, assignee);
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+
+  return [...displayNameByKey.keys()]
+    .map((key) => ({
+      name: displayNameByKey.get(key),
+      count: counts.get(key) || 0,
+    }))
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.name.localeCompare(b.name);
+    });
+}

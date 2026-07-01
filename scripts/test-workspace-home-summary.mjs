@@ -80,6 +80,40 @@ function buildEditorCompletedCount(cards, { assignee = 'all' } = {}) {
   }).length;
 }
 
+function buildEditorCompletedByAssignee(cards, { editorNames = [] } = {}) {
+  const displayNameByKey = new Map();
+  const counts = new Map();
+
+  const registerName = (name) => {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return;
+    const key = trimmed.toLowerCase();
+    if (!displayNameByKey.has(key)) displayNameByKey.set(key, trimmed);
+    if (!counts.has(key)) counts.set(key, 0);
+  };
+
+  for (const name of editorNames) registerName(name);
+
+  for (const card of cards) {
+    if (!cardCountsAsEditorCompleted(card)) continue;
+    const assignee = (card.assignedTo || '').trim();
+    if (!assignee) continue;
+    const key = assignee.toLowerCase();
+    if (!displayNameByKey.has(key)) displayNameByKey.set(key, assignee);
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+
+  return [...displayNameByKey.keys()]
+    .map((key) => ({
+      name: displayNameByKey.get(key),
+      count: counts.get(key) || 0,
+    }))
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.name.localeCompare(b.name);
+    });
+}
+
 function buildShootsTodayCount(cards) {
   return cards.filter(
     (card) =>
@@ -180,5 +214,13 @@ assert(companyEdited === 5, 'company edited count includes approved, scheduled, 
 
 const personalEdited = buildEditorCompletedCount(cards, { assignee: 'Jordan' });
 assert(personalEdited === 4, 'personal edited count respects assignee and excludes stories');
+
+const byAssignee = buildEditorCompletedByAssignee(cards, {
+  editorNames: ['Jordan', 'Sam', 'Alex'],
+});
+assert(byAssignee.length === 3, 'lists each configured editor');
+assert(byAssignee[0].name === 'Jordan' && byAssignee[0].count === 4, 'Jordan leads edited count');
+assert(byAssignee[1].name === 'Sam' && byAssignee[1].count === 1, 'Sam second in edited breakdown');
+assert(byAssignee[2].name === 'Alex' && byAssignee[2].count === 0, 'editors with no edits still listed');
 
 console.log('Workspace home summary tests passed.');

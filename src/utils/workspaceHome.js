@@ -20,10 +20,12 @@ import {
 } from './accountManagerTodo';
 import {
   buildBoardEditorTasks,
+  buildEditorCompletedByAssignee,
   buildEditorCompletedCount,
   filterEditorTasks,
   splitEditorTasksByQueue,
 } from './editorTodo';
+import { getMemberNamesByRole } from './teamMembers';
 
 function isToday(dateKey) {
   return dateKey === toDateKey(new Date());
@@ -198,6 +200,7 @@ export function buildWorkspaceHomeSummary({
   syncTotal = 0,
   staffName = '',
   clientAccountManagers = {},
+  teamMembers = [],
   myWorkOnly = false,
   companyWideView = false,
   showAccountManagerQueue = true,
@@ -244,6 +247,12 @@ export function buildWorkspaceHomeSummary({
     clientFilter,
     assignee: editorAssignee,
   });
+  const editorCompletedByAssignee = companyMetrics
+    ? buildEditorCompletedByAssignee(scopedCards, {
+        clientFilter,
+        editorNames: getMemberNamesByRole(teamMembers, 'Editor'),
+      })
+    : [];
   const pendingIdeas = scopedIdeas.filter((i) => i.status === 'pending');
   const shootsTodayCount = buildShootsTodayCount(scopedCards, {
     clientFilter,
@@ -314,6 +323,7 @@ export function buildWorkspaceHomeSummary({
     editingCount,
     editorInReviewCount,
     editorCompletedCount,
+    editorCompletedByAssignee,
     pendingIdeasCount: pendingIdeas.length,
     shootsTodayCount,
     scheduledThisWeekCount: scheduledThisWeek.length,

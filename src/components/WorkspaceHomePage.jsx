@@ -1,6 +1,7 @@
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import {
   PortalRoleSummary,
+  PortalTaskSection,
 } from './clientPortal/PortalOverviewPanels';
 import OverviewTodayPanel from './clientPortal/OverviewTodayPanel';
 import { buildWorkspaceHomeSummary, buildMyWorkGreeting } from '../utils/workspaceHome';
@@ -30,9 +31,11 @@ export default function WorkspaceHomePage({
   onOpenShoot,
   onOpenNotifications,
 }) {
-  const { clients } = useClientsContext();
+  const { clients, teamMembers } = useClientsContext();
   const { syncIssue } = useWorkspaceSync();
   const { visibleCompanyTaskTabs } = useStaffWorkspaceScope();
+
+  const isCompanyWideOverview = !myWorkOnly || companyWideView;
 
   const summary = buildWorkspaceHomeSummary({
     cards,
@@ -42,6 +45,7 @@ export default function WorkspaceHomePage({
     syncTotal,
     staffName,
     clientAccountManagers,
+    teamMembers,
     myWorkOnly,
     companyWideView,
     showAccountManagerQueue,
@@ -102,7 +106,7 @@ export default function WorkspaceHomePage({
       { label: 'Editing', value: summary.editingCount },
       { label: 'In review', value: summary.editorInReviewCount || 0 },
     ];
-    if ((summary.editorCompletedCount || 0) > 0) {
+    if (!isCompanyWideOverview && (summary.editorCompletedCount || 0) > 0) {
       editorDetails.push({ label: 'Edited', value: summary.editorCompletedCount });
     }
     pipelineRoles.push({
@@ -211,6 +215,31 @@ export default function WorkspaceHomePage({
           />
         ))}
       </div>
+
+      {isCompanyWideOverview &&
+        visibleCompanyTaskTabs.includes('editor') &&
+        (summary.editorCompletedByAssignee?.length || 0) > 0 && (
+          <div className="mx-auto mb-8 max-w-[960px]">
+            <PortalTaskSection
+              title="Edited videos"
+              subtitle="Approved and completed work by editor."
+            >
+              <ul className="divide-y divide-white/[0.06]">
+                {summary.editorCompletedByAssignee.map((entry) => (
+                  <li
+                    key={entry.name}
+                    className="flex items-center justify-between gap-4 px-4 py-3"
+                  >
+                    <span className="text-sm font-medium text-white">{entry.name}</span>
+                    <span className="text-sm font-semibold tabular-nums text-white/78">
+                      {entry.count}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </PortalTaskSection>
+          </div>
+        )}
 
       {showTodayPanel && (
         <OverviewTodayPanel
