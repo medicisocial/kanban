@@ -1,13 +1,26 @@
 import { SUPABASE_ENABLED } from './supabaseClient';
 import { getOrgId } from './orgSession';
 import { buildStaffApiAuthHeaders } from './staffApiAuth';
+import { guardCardPushBatch } from './cardPushGuard';
+import { broadcastCardPipelineRefresh } from './cardPipelineBroadcast';
 
 /** Server-side Supabase writes when the browser cannot write directly with RLS. */
-export async function pushStaffSync({ table, changed = [], removed = [], orgId = getOrgId() }) {
+export async function pushStaffSync({
+  table,
+  changed = [],
+  removed = [],
+  orgId = getOrgId(),
+  skipCardGuard = false,
+}) {
   if (!changed.length && !removed.length) return true;
 
   const headers = await buildStaffApiAuthHeaders();
   if (!headers) return false;
+
+  let safeChanged = changed;
+  if (table === 'cards' && changed.length && !skipCardGuard) {
+    safeChanged = await guardCardPushBatch(changed, orgId);
+  }
 
   const response = await fetch('/api/staff-sync', {
     method: 'POST',
@@ -15,10 +28,14 @@ export async function pushStaffSync({ table, changed = [], removed = [], orgId =
     body: JSON.stringify({
       table,
       orgId,
-      upserts: changed.map((record) => ({ id: record.id, data: record })),
+      upserts: safeChanged.map((record) => ({ id: record.id, data: record })),
       deleteIds: removed,
     }),
   });
+
+  if (response.ok && table === 'cards' && safeChanged.length) {
+    broadcastCardPipelineRefresh(safeChanged.map((record) => record.id));
+  }
 
   return response.ok;
 }

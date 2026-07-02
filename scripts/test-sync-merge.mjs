@@ -184,6 +184,16 @@ const getId = (record) => record.id;
   assert(merged._allowPipelineRegression === undefined, 'authorization flag must be stripped');
 }
 
+// Stale tab push prep: cloud scheduled beats local editing even with newer updatedAt.
+{
+  const safe = prepareCardPipelineUpsert(
+    { columnId: 'scheduled', status: 'Scheduled', editorCompletedAt: 500, updatedAt: 100 },
+    { id: 'card-1', columnId: 'editing', status: 'Editing', notes: 'stale tab edit', updatedAt: 9999 },
+  );
+  assert(safe.columnId === 'scheduled', 'pre-push cloud merge must keep scheduled stage');
+  assert(safe.notes === 'stale tab edit', 'pre-push cloud merge should still accept field edits');
+}
+
 // Map merge should ignore stale local-only keys.
 {
   const merged = mergeRemoteMapWithLocalPending({

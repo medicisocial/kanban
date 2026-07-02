@@ -118,5 +118,6 @@ export function mergeCardRecords(...records) {
     columnId: stage.columnId,
     status: stage.status ?? latest.status,
     postedAt: stage.postedAt ?? latest.postedAt,
+    editorCompletedAt: stage.editorCompletedAt ?? latest.editorCompletedAt,
   };
 }

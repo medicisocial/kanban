@@ -6,6 +6,8 @@ import { pushStaffSync } from './staffSyncApi';
 import { isCloudSourceOfTruth } from './cloudSourceOfTruth';
 import { reportSyncIssue } from './workspaceSyncHealth';
 import { subscribeWorkspaceRefetch } from '../utils/workspaceReload';
+import { subscribeCardPipelineRefresh } from './cardPipelineBroadcast';
+import { guardCardPushBatch } from './cardPushGuard';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { markRecentlyPushed, wasRecentlyPushed } from './syncEchoGuard';
 import {
@@ -377,7 +379,14 @@ export function useCollectionSync({
     const onFocus = () => {
       if (!active || !loadedRef.current) return;
       const isEmpty = !localCollectionHasRecords(localItemsRef.current);
-      if (!isEmpty && Date.now() - lastFetchAt < FOCUS_REFETCH_MIN_MS) return;
+      const stalePushPending = table === 'cards' && pendingWriteRef.current;
+      if (
+        !isEmpty &&
+        !stalePushPending &&
+        Date.now() - lastFetchAt < FOCUS_REFETCH_MIN_MS
+      ) {
+        return;
+      }
       applyRemote();
     };
 
@@ -390,6 +399,13 @@ export function useCollectionSync({
       if (!active) return;
       applyRemote();
     });
+
+    const unsubscribeCardPipeline = table === 'cards'
+      ? subscribeCardPipelineRefresh(() => {
+          if (!active || !loadedRef.current) return;
+          applyRemote();
+        })
+      : () => {};
 
     applyRemote().then(() => { lastFetchAt = Date.now(); }).catch(() => {});
     const unsubscribe = store.subscribe((payload) => {
@@ -405,6 +421,7 @@ export function useCollectionSync({
       clearTimeout(refetchTimer);
       unsubscribe?.();
       unsubscribeRefetch();
+      unsubscribeCardPipeline();
       window.removeEventListener('focus', onFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -507,7 +524,17 @@ export function useCollectionSync({
             await store.deleteRecords(removed);
           }
         } else {
-          const ok = await pushStaffSync({ table, changed, removed, orgId });
+          let outgoing = changed;
+          if (routeCardsThroughStaffSync && changed.length) {
+            outgoing = await guardCardPushBatch(changed, orgId, { getId });
+          }
+          const ok = await pushStaffSync({
+            table,
+            changed: outgoing,
+            removed,
+            orgId,
+            skipCardGuard: routeCardsThroughStaffSync,
+          });
           if (!ok) {
             pendingWriteRef.current = true;
             reportSyncIssue({
@@ -518,6 +545,12 @@ export function useCollectionSync({
             });
             return;
           }
+          if (routeCardsThroughStaffSync && changed.length) {
+            syncedRef.current = new Map(next);
+            for (const record of outgoing) {
+              syncedRef.current.set(String(getId(record)), JSON.stringify(record));
+            }
+          }
         }
 
         if (!cancelled) {
@@ -527,7 +560,9 @@ export function useCollectionSync({
           }
           savePendingRemoved(orgId, table, pendingRemovedRef.current);
           savePendingCreates(orgId, table, pendingLocalCreatesRef.current);
-          syncedRef.current = next;
+          if (!(routeCardsThroughStaffSync && changed.length)) {
+            syncedRef.current = next;
+          }
           pendingWriteRef.current = false;
           markRecentlyPushed(table, [
             ...changed.map((record) => getId(record)),
