@@ -19,6 +19,24 @@ export function isActiveShootQueueCard(card) {
 }
 
 /**
+ * Apply a vault-idea shoot schedule without regressing cards that already
+ * moved past To Create.
+ */
+export function applyVaultIdeaShootSchedule(card, schedule, { isNew = false } = {}) {
+  if (!schedule?.shootDate) return card;
+  const next = {
+    ...card,
+    shootDate: schedule.shootDate,
+    shootTime: schedule.shootTime ?? card.shootTime ?? '',
+    shootEndTime: schedule.shootEndTime ?? card.shootEndTime ?? '',
+  };
+  if (isNew || card.columnId === 'shoot' || !card.columnId) {
+    next.columnId = 'shoot';
+  }
+  return next;
+}
+
+/**
  * Prevent stale full-record upserts from moving cards backward in the pipeline
  * (e.g. scheduled → shoot) while still accepting other field updates.
  */

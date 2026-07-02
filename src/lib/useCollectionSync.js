@@ -497,7 +497,9 @@ export function useCollectionSync({
       }
 
       try {
-        if (canWrite) {
+        const routeCardsThroughStaffSync = table === 'cards';
+
+        if (canWrite && !routeCardsThroughStaffSync) {
           if (changed.length) {
             await store.upsertRecords(changed.map((r) => ({ id: getId(r), data: r })));
           }
@@ -505,7 +507,7 @@ export function useCollectionSync({
             await store.deleteRecords(removed);
           }
         } else {
-          const ok = await pushStaffSync({ table, changed, removed });
+          const ok = await pushStaffSync({ table, changed, removed, orgId });
           if (!ok) {
             pendingWriteRef.current = true;
             reportSyncIssue({

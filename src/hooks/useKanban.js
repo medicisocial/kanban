@@ -8,6 +8,7 @@ import { useCollectionSync } from '../lib/useCollectionSync';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import { pushStaffSyncRecords } from '../lib/staffSyncApi';
 import { reportSyncIssue } from '../lib/workspaceSyncHealth';
+import { applyVaultIdeaShootSchedule } from '../utils/cardPipelineMerge';
 
 const getCardId = (card) => card.id;
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
@@ -250,21 +251,8 @@ export function useKanban() {
     notifyMutation();
     let resolvedId = idea.boardCardId || `from-idea-${idea.id}`;
 
-    const withSchedule = (card, { isNew = false } = {}) => {
-      if (!schedule?.shootDate) return card;
-      const next = {
-        ...card,
-        shootDate: schedule.shootDate,
-        shootTime: schedule.shootTime ?? card.shootTime ?? '',
-        shootEndTime: schedule.shootEndTime ?? card.shootEndTime ?? '',
-      };
-      // Only brand-new cards belong in To Create. Re-scheduling a vault idea must
-      // not regress cards that already moved to editing / scheduled / finished.
-      if (isNew || card.columnId === 'shoot' || !card.columnId) {
-        next.columnId = 'shoot';
-      }
-      return next;
-    };
+    const withSchedule = (card, { isNew = false } = {}) =>
+      applyVaultIdeaShootSchedule(card, schedule, { isNew });
 
     setCards((prev) => {
       const existing =
