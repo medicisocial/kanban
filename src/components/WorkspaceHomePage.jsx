@@ -96,7 +96,7 @@ export default function WorkspaceHomePage({
     month: 'long',
     year: 'numeric',
   });
-  const completedContentSubtitle = `Posts, reels, carousels, and other finished work in ${completedContentMonthLabel}.`;
+  const completedContentSubtitle = `Posts, reels, and carousels scheduled for ${completedContentMonthLabel}.`;
 
   const pipelineRoles = [];
 

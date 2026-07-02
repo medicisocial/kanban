@@ -124,7 +124,7 @@ export default function OverviewCompletedContentSection({
                 ))}
               </ul>
             ) : (
-              <p className="px-4 py-3 text-sm text-white/45">No completed content this month.</p>
+              <p className="px-4 py-3 text-sm text-white/45">No content scheduled this month.</p>
             )}
           </PortalTaskSection>
         </div>

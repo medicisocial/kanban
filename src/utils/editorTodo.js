@@ -258,6 +258,24 @@ export function isSameCalendarMonth(timestamp, referenceDate = new Date()) {
   );
 }
 
+/** Whether a YYYY-MM-DD post/schedule date falls in the reference month. */
+export function isSameCalendarMonthDateKey(dateKey, referenceDate = new Date()) {
+  if (!dateKey || typeof dateKey !== 'string') return false;
+  const trimmed = dateKey.trim();
+  const match = trimmed.match(/^(\d{4})-(\d{2})-/);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return false;
+  return year === referenceDate.getFullYear() && month === referenceDate.getMonth();
+}
+
+/** Target post date used to bucket completed content on the overview. */
+export function getEditorCompletedScheduleDate(card) {
+  if (card.isOneOffProject) return card.dueDate || card.shootDate || '';
+  return card.dueDate || '';
+}
+
 export function getEditorCompletedAt(card) {
   if (card.editorCompletedAt) return card.editorCompletedAt;
   if (card.postedAt) return card.postedAt;
@@ -269,7 +287,9 @@ export function getEditorCompletedAt(card) {
 
 export function cardCountsAsEditorCompletedThisMonth(card, referenceDate = new Date()) {
   if (!cardCountsAsEditorCompleted(card)) return false;
-  return isSameCalendarMonth(getEditorCompletedAt(card), referenceDate);
+  const scheduleDate = getEditorCompletedScheduleDate(card);
+  if (!scheduleDate) return false;
+  return isSameCalendarMonthDateKey(scheduleDate, referenceDate);
 }
 
 export function buildEditorCompletionStampUpdates(card, targetColumnId) {
@@ -312,7 +332,12 @@ export function buildEditorCompletedCards(
       if (!matchesClientFilter(card.client, clientFilter)) return false;
       return true;
     })
-    .sort((a, b) => (getEditorCompletedAt(b) || 0) - (getEditorCompletedAt(a) || 0));
+    .sort((a, b) => {
+      const dateA = getEditorCompletedScheduleDate(a);
+      const dateB = getEditorCompletedScheduleDate(b);
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
+      return (getEditorCompletedAt(b) || 0) - (getEditorCompletedAt(a) || 0);
+    });
 }
 
 export function buildEditorCompletedCount(
