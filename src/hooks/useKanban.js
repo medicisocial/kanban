@@ -250,15 +250,20 @@ export function useKanban() {
     notifyMutation();
     let resolvedId = idea.boardCardId || `from-idea-${idea.id}`;
 
-    const withSchedule = (card) => {
+    const withSchedule = (card, { isNew = false } = {}) => {
       if (!schedule?.shootDate) return card;
-      return {
+      const next = {
         ...card,
         shootDate: schedule.shootDate,
         shootTime: schedule.shootTime ?? card.shootTime ?? '',
         shootEndTime: schedule.shootEndTime ?? card.shootEndTime ?? '',
-        columnId: 'shoot',
       };
+      // Only brand-new cards belong in To Create. Re-scheduling a vault idea must
+      // not regress cards that already moved to editing / scheduled / finished.
+      if (isNew || card.columnId === 'shoot' || !card.columnId) {
+        next.columnId = 'shoot';
+      }
+      return next;
     };
 
     setCards((prev) => {
@@ -270,10 +275,13 @@ export function useKanban() {
         return prev.map((card) => {
           if (card.id !== resolvedId) return card;
           return normalizeCard(
-            withSchedule({
-              ...card,
-              sourceIdeaId: idea.id,
-            }),
+            withSchedule(
+              {
+                ...card,
+                sourceIdeaId: idea.id,
+              },
+              { isNew: false },
+            ),
           );
         });
       }
@@ -286,7 +294,8 @@ export function useKanban() {
         .join('\n\n');
 
       const persisted = normalizeCard(
-        withSchedule({
+        withSchedule(
+          {
           id: resolvedId,
           client: idea.client,
           contentType: idea.contentType || 'Reel',
@@ -311,7 +320,9 @@ export function useKanban() {
           sourceIdeaId: idea.id,
           columnId: 'shoot',
           createdAt: Date.now(),
-        }),
+        },
+          { isNew: true },
+        ),
       );
 
       return [...prev, persisted];

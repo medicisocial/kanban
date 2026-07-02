@@ -12,6 +12,7 @@ import {
   filterAuthCriticalDeletes,
   sanitizeAuthCriticalUpserts,
 } from './_lib/authCriticalSync.mjs';
+import { mergeCardPipelineFields } from '../src/utils/cardPipelineMerge.js';
 import {
   badRequest,
   forbidden,
@@ -49,7 +50,16 @@ async function filterStaleCardUpserts(table, upserts, orgId) {
   const existingRows = await fetchSyncRows('cards', orgId);
   const existingById = new Map((existingRows || []).map((row) => [String(row.id), row]));
 
-  return upserts.filter((row) => {
+  return upserts
+    .map((row) => {
+      const existing = existingById.get(String(row.id));
+      if (!existing?.data) return row;
+      return {
+        ...row,
+        data: mergeCardPipelineFields(existing.data, row.data),
+      };
+    })
+    .filter((row) => {
     const existing = existingById.get(String(row.id));
     if (!existing) return true;
 

@@ -34,7 +34,9 @@ export function groupCardsByShootDate(cards) {
 }
 
 export function getShootCards(cards) {
-  return cards.filter((c) => c.shootDate && c.contentType !== 'Story');
+  return cards.filter(
+    (c) => c.shootDate && c.contentType !== 'Story' && c.columnId === 'shoot',
+  );
 }
 
 export function getUnscheduledShootCards(cards, client) {

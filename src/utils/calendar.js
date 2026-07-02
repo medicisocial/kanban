@@ -348,6 +348,7 @@ export function groupCardsByDate(cards) {
 /** Cards scheduled to shoot on this calendar day (by shoot date, not plan date). */
 export function isShootSessionCandidate(card, dateKey) {
   if (!card || card.contentType === 'Story' || card.isShootSession) return false;
+  if (card.columnId !== 'shoot') return false;
   return (card.shootDate || '') === dateKey;
 }
 

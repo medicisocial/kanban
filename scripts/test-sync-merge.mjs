@@ -14,6 +14,7 @@ import {
   mergeClientsWorkspaceStateSupabase,
   mergePortalCredentialDataForPush,
 } from '../src/lib/syncHelpers.js';
+import { mergeCardPipelineFields } from '../src/utils/cardPipelineMerge.js';
 import {
   mergePortalCredentialData,
   filterAuthCriticalDeletes,
@@ -144,6 +145,16 @@ const getId = (record) => record.id;
   });
   assert(merged[0].columnId === 'scheduled', 'newer cloud card status should beat stale local status');
   delete process.env.VITE_USE_SUPABASE;
+}
+
+// Scheduled cards must not revert to To Create when a stale save replays shoot column.
+{
+  const merged = mergeCardPipelineFields(
+    { columnId: 'scheduled', status: 'Scheduled', updatedAt: 100 },
+    { columnId: 'shoot', status: 'To Create', title: 'Ara Tox Club', updatedAt: 999 },
+  );
+  assert(merged.columnId === 'scheduled', 'pipeline merge should keep scheduled stage');
+  assert(merged.title === 'Ara Tox Club', 'pipeline merge should still accept other fields');
 }
 
 // Map merge should ignore stale local-only keys.

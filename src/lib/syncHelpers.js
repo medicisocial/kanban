@@ -20,6 +20,7 @@ import {
 } from '../utils/clientsWorkspacePush.js';
 
 import { isCloudSourceOfTruth } from './cloudSourceOfTruth.js';
+import { mergeCardRecords } from '../utils/cardPipelineMerge.js';
 export const FETCH_TIMEOUT_MS = 12000;
 
 function normalizeBrandUsers(entry) {
@@ -469,6 +470,15 @@ function preferLocalOverRemote(remote, local) {
   return localTs >= remoteTs;
 }
 
+function finalizeMergedRecord(...candidates) {
+  const defined = candidates.filter(Boolean);
+  if (!defined.length) return null;
+  if (!defined.some((record) => record?.columnId)) {
+    return defined[defined.length - 1];
+  }
+  return mergeCardRecords(...defined);
+}
+
 /** Three-way merge for a single record — cloud mode uses revision timestamps to avoid stale replays. */
 export function mergeRemoteRecordWithLocal({ remote, local, syncedStr }) {
   if (local == null) return remote;
@@ -478,38 +488,40 @@ export function mergeRemoteRecordWithLocal({ remote, local, syncedStr }) {
   const remoteStr = JSON.stringify(remote);
   if (localStr === remoteStr) return remote;
 
-  if (syncedStr === undefined) {
-    // No sync baseline for this session (e.g. first load on a new device).
-    // We cannot tell if local is a genuine unsynced edit or stale cache from a
-    // previous login. Use timestamps to decide: prefer whichever was updated
-    // more recently; cloud wins on a tie so a fresh device always shows current data.
-    const remoteTs = recordRevision(remote);
-    const localTs = recordRevision(local);
-    return localTs > remoteTs ? local : remote;
-  }
-
-  // Local edits not yet reflected in our sync snapshot win only when they are
-  // at least as recent as the cloud row. This keeps stale tabs from replaying
-  // older card statuses over newer Supabase data when they wake up/refetch.
-  if (localStr !== syncedStr) return preferLocalOverRemote(remote, local) ? local : remote;
-
-  // Local matches the last sync snapshot. Only accept remote if it is clearly newer.
-  if (remoteStr !== syncedStr) {
-    let syncedRecord = null;
+  let syncedRecord = null;
+  if (syncedStr !== undefined) {
     try {
       syncedRecord = JSON.parse(syncedStr);
     } catch {
       syncedRecord = null;
     }
+  }
 
+  if (syncedStr === undefined) {
+    const remoteTs = recordRevision(remote);
+    const localTs = recordRevision(local);
+    const chosen = localTs > remoteTs ? local : remote;
+    return finalizeMergedRecord(remote, local, chosen);
+  }
+
+  // Local edits not yet reflected in our sync snapshot win only when they are
+  // at least as recent as the cloud row. This keeps stale tabs from replaying
+  // older card statuses over newer Supabase data when they wake up/refetch.
+  if (localStr !== syncedStr) {
+    const chosen = preferLocalOverRemote(remote, local) ? local : remote;
+    return finalizeMergedRecord(syncedRecord, remote, local, chosen);
+  }
+
+  // Local matches the last sync snapshot. Only accept remote if it is clearly newer.
+  if (remoteStr !== syncedStr) {
     const remoteTs = recordRevision(remote);
     const localTs = recordRevision(local);
     const syncedTs = recordRevision(syncedRecord);
-    if (remoteTs > syncedTs && remoteTs > localTs) return remote;
-    return local;
+    const chosen = remoteTs > syncedTs && remoteTs > localTs ? remote : local;
+    return finalizeMergedRecord(syncedRecord, remote, local, chosen);
   }
 
-  return local;
+  return finalizeMergedRecord(syncedRecord, remote, local);
 }
 
 /** Keep unsynced local edits when a realtime pull returns stale cloud data. */
