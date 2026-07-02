@@ -323,6 +323,9 @@ export function useMapSync({ table, map, setMap, loadLocal, enabled = true }) {
       for (const key of prev.keys()) {
         if (!next.has(key)) rawRemoved.push(key);
       }
+      for (const id of loadPendingRemoved(orgId, table)) {
+        pendingRemovedRef.current.add(String(id));
+      }
       const removed = filterProtectedSyncRemovals(table, rawRemoved, pendingRemovedRef.current);
       if (rawRemoved.length > removed.length) {
         console.warn(

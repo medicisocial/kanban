@@ -194,6 +194,26 @@ const getId = (record) => record.id;
   assert(safe.notes === 'stale tab edit', 'pre-push cloud merge should still accept field edits');
 }
 
+// A write that omits sourceIdeaId must not sever the card→idea link.
+{
+  const merged = prepareCardPipelineUpsert(
+    { columnId: 'editing', status: 'Editing', sourceIdeaId: 'idea-1', updatedAt: 100 },
+    { columnId: 'editing', status: 'Editing', notes: 'edit', updatedAt: 200 },
+  );
+  assert(merged.sourceIdeaId === 'idea-1', 'upsert missing sourceIdeaId must keep stored link');
+  assert(merged.notes === 'edit', 'idea-link merge should still accept field edits');
+}
+
+// Authorized regressions keep the idea link too.
+{
+  const merged = prepareCardPipelineUpsert(
+    { columnId: 'scheduled', status: 'Scheduled', sourceIdeaId: 'idea-2', updatedAt: 100 },
+    { columnId: 'editing', status: 'Editing', _allowPipelineRegression: true, updatedAt: 200 },
+  );
+  assert(merged.columnId === 'editing', 'authorized regression should still apply');
+  assert(merged.sourceIdeaId === 'idea-2', 'authorized regression must keep idea link');
+}
+
 // Map merge should ignore stale local-only keys.
 {
   const merged = mergeRemoteMapWithLocalPending({
@@ -219,13 +239,24 @@ const getId = (record) => record.id;
   assert(removed[0] === 'explicit-delete', 'tombstoned id should pass through');
 }
 
+// Card deletes must be explicitly tombstoned — stale-tab diff deletes are blocked.
 {
   const removed = filterProtectedSyncRemovals(
     'cards',
     ['card-1', 'card-2'],
+    new Set(['card-2']),
+  );
+  assert(removed.length === 1, 'untombstoned card deletes should be blocked');
+  assert(removed[0] === 'card-2', 'explicitly deleted card should pass through');
+}
+
+{
+  const removed = filterProtectedSyncRemovals(
+    'meetings',
+    ['m-1', 'm-2'],
     new Set(),
   );
-  assert(removed.length === 2, 'non-auth tables should allow all removals');
+  assert(removed.length === 2, 'unprotected tables should allow all removals');
 }
 
 // Tombstoned rows must not hydrate from local cache when pending-remove storage is set.

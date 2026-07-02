@@ -46,15 +46,24 @@ export const AUTH_CRITICAL_SYNC_TABLES = new Set([
   'team_members',
 ]);
 
+/**
+ * Tables where deletes must be explicitly tombstoned (via delete actions) before
+ * they may sync to the cloud. Blocks diff-derived phantom deletes from stale tabs.
+ */
+export const TOMBSTONE_ONLY_DELETE_TABLES = new Set([
+  ...AUTH_CRITICAL_SYNC_TABLES,
+  'cards',
+]);
+
 export function localCollectionHasRecords(local) {
   if (Array.isArray(local)) return local.length > 0;
   if (local && typeof local === 'object') return Object.keys(local).length > 0;
   return Boolean(local);
 }
 
-/** Only push deletes that were explicitly requested (tombstoned) for auth tables. */
+/** Only push deletes that were explicitly requested (tombstoned) for protected tables. */
 export function filterProtectedSyncRemovals(table, removed, pendingRemoved) {
-  if (!AUTH_CRITICAL_SYNC_TABLES.has(table)) return removed;
+  if (!TOMBSTONE_ONLY_DELETE_TABLES.has(table)) return removed;
   return removed.filter((id) => pendingRemoved.has(String(id)));
 }
 

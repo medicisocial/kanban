@@ -459,6 +459,11 @@ export function useCollectionSync({
       for (const id of prev.keys()) {
         if (!next.has(id)) rawRemoved.push(id);
       }
+      // Reload tombstones from storage: delete actions write there synchronously,
+      // and this ref may predate them. Only explicitly tombstoned ids may delete.
+      for (const id of loadPendingRemoved(orgId, table)) {
+        pendingRemovedRef.current.add(String(id));
+      }
       const removed = filterProtectedSyncRemovals(table, rawRemoved, pendingRemovedRef.current);
       if (rawRemoved.length > removed.length) {
         console.warn(

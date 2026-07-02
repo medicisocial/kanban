@@ -40,9 +40,19 @@ export function stripPipelineInternalFields(record) {
 export function prepareCardPipelineUpsert(stored, incoming) {
   if (!incoming) return incoming || stored;
   if (incoming[PIPELINE_REGRESSION_AUTH_KEY]) {
-    return stripPipelineInternalFields(incoming);
+    return preserveCardIdeaLink(stored, stripPipelineInternalFields(incoming));
   }
   return mergeCardPipelineFields(stored, stripPipelineInternalFields(incoming));
+}
+
+/**
+ * Never let a write blank the card→idea link. Losing sourceIdeaId makes the
+ * linked bank idea reappear in the vault even though its card is mid-pipeline.
+ */
+export function preserveCardIdeaLink(stored, incoming) {
+  if (!stored || !incoming) return incoming;
+  if (incoming.sourceIdeaId || !stored.sourceIdeaId) return incoming;
+  return { ...incoming, sourceIdeaId: stored.sourceIdeaId };
 }
 
 /** Cards still waiting to be created / shot on set. */
@@ -78,16 +88,16 @@ export function mergeCardPipelineFields(stored, incoming) {
   const storedRank = getCardPipelineRank(stored.columnId);
   const incomingRank = getCardPipelineRank(incoming.columnId);
   if (storedRank < 0 || incomingRank < 0 || incomingRank >= storedRank) {
-    return incoming;
+    return preserveCardIdeaLink(stored, incoming);
   }
 
-  return {
+  return preserveCardIdeaLink(stored, {
     ...incoming,
     columnId: stored.columnId,
     status: stored.status ?? incoming.status,
     postedAt: stored.postedAt ?? incoming.postedAt,
     editorCompletedAt: stored.editorCompletedAt ?? incoming.editorCompletedAt,
-  };
+  });
 }
 
 /** Keep the furthest-along pipeline stage when reconciling conflicting card copies. */
@@ -112,12 +122,18 @@ export function mergeCardRecords(...records) {
     return recordTs >= bestTs ? record : best;
   }, defined[0]);
 
-  if (!stage) return latest;
+  const sourceIdeaId =
+    latest.sourceIdeaId ||
+    defined.find((record) => record.sourceIdeaId)?.sourceIdeaId ||
+    latest.sourceIdeaId;
+
+  if (!stage) return sourceIdeaId ? { ...latest, sourceIdeaId } : latest;
   return {
     ...latest,
     columnId: stage.columnId,
     status: stage.status ?? latest.status,
     postedAt: stage.postedAt ?? latest.postedAt,
     editorCompletedAt: stage.editorCompletedAt ?? latest.editorCompletedAt,
+    ...(sourceIdeaId ? { sourceIdeaId } : {}),
   };
 }
