@@ -16,7 +16,7 @@ export async function seedRecordsToCloud({ table, orgId, store, rows }) {
   }
 
   try {
-    if (canWrite && store) {
+    if (canWrite && store && table !== 'cards') {
       await store.upsertRecords(rows);
       return true;
     }

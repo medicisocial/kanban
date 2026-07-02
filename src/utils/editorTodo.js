@@ -1,4 +1,5 @@
 import { COLUMNS } from '../constants';
+import { PIPELINE_REGRESSION_AUTH_KEY } from './cardPipelineMerge';
 import { toDateKey } from './calendar';
 import { matchesClientFilter } from './clients';
 
@@ -33,6 +34,7 @@ export function buildSendBackForEditingUpdates(card, comment = '') {
     columnId: 'editing',
     status: 'Editing',
     editorCompletedAt: null,
+    [PIPELINE_REGRESSION_AUTH_KEY]: true,
   };
 
   if (trimmed) {

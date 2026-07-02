@@ -4,6 +4,7 @@ import {
   getCardPipelineRank,
   isActiveShootQueueCard,
   mergeCardPipelineFields,
+  prepareCardPipelineUpsert,
 } from '../src/utils/cardPipelineMerge.js';
 
 function assert(condition, message) {
@@ -159,6 +160,14 @@ async function fetchLiveCards(orgId = 'medici') {
     { columnId: 'shoot', status: 'To Create', title: 'Burn It', updatedAt: 999 },
   );
   assert(merged.columnId === 'scheduled', 'pipeline merge must keep scheduled over stale shoot writes');
+}
+
+{
+  const merged = prepareCardPipelineUpsert(
+    { columnId: 'scheduled', status: 'Scheduled', updatedAt: 200 },
+    { columnId: 'editing', status: 'Editing', title: 'Taxi', updatedAt: 999 },
+  );
+  assert(merged.columnId === 'scheduled', 'pipeline merge must keep scheduled over stale editing writes');
 }
 
 {

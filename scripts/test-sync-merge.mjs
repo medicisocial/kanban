@@ -14,7 +14,7 @@ import {
   mergeClientsWorkspaceStateSupabase,
   mergePortalCredentialDataForPush,
 } from '../src/lib/syncHelpers.js';
-import { mergeCardPipelineFields } from '../src/utils/cardPipelineMerge.js';
+import { mergeCardPipelineFields, prepareCardPipelineUpsert } from '../src/utils/cardPipelineMerge.js';
 import {
   mergePortalCredentialData,
   filterAuthCriticalDeletes,
@@ -155,6 +155,33 @@ const getId = (record) => record.id;
   );
   assert(merged.columnId === 'scheduled', 'pipeline merge should keep scheduled stage');
   assert(merged.title === 'Ara Tox Club', 'pipeline merge should still accept other fields');
+}
+
+// Scheduled cards must not revert to editing without explicit authorization.
+{
+  const merged = prepareCardPipelineUpsert(
+    { columnId: 'scheduled', status: 'Scheduled', editorCompletedAt: 500, updatedAt: 200 },
+    { columnId: 'editing', status: 'Editing', title: 'Taxi', updatedAt: 999 },
+  );
+  assert(merged.columnId === 'scheduled', 'stale editing write must not regress scheduled cards');
+  assert(merged.title === 'Taxi', 'stale editing write should still merge content fields');
+  assert(merged.editorCompletedAt === 500, 'blocked regression must preserve editorCompletedAt');
+}
+
+// Explicit send-back may move a card backward when authorized.
+{
+  const merged = prepareCardPipelineUpsert(
+    { columnId: 'scheduled', status: 'Scheduled', updatedAt: 200 },
+    {
+      columnId: 'editing',
+      status: 'Editing',
+      editorCompletedAt: null,
+      _allowPipelineRegression: true,
+      updatedAt: 300,
+    },
+  );
+  assert(merged.columnId === 'editing', 'authorized regression should move card back to editing');
+  assert(merged._allowPipelineRegression === undefined, 'authorization flag must be stripped');
 }
 
 // Map merge should ignore stale local-only keys.

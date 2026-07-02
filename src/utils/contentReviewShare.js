@@ -1,5 +1,6 @@
 import { clientMatchesBrand } from './clients';
 import { isCloudSourceOfTruth } from '../lib/cloudSourceOfTruth';
+import { PIPELINE_REGRESSION_AUTH_KEY } from './cardPipelineMerge';
 import { shouldUsePortalResponseQueue, queueStorageKey } from './portalResponseQueue';
 import { encodeSharePayload, decodeSharePayload, decodeShareQueryParam } from './sharePayload';
 
@@ -309,6 +310,7 @@ export function buildContentReviewDenyUpdates(card, comment, timestamp = Date.no
     status: backToEditing ? 'Editing' : 'Not Approved',
     clientComment: trimmed,
     editorCompletedAt: null,
+    ...(backToEditing ? { [PIPELINE_REGRESSION_AUTH_KEY]: true } : {}),
     notes: `${card.notes || ''}${noteAppend}`.trim(),
   };
 }

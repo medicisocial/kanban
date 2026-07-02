@@ -13,6 +13,38 @@ export function getCardPipelineRank(columnId) {
   return CARD_PIPELINE_RANK[columnId] ?? -1;
 }
 
+/** Ephemeral flag — only present on writes that intentionally move a card backward. */
+export const PIPELINE_REGRESSION_AUTH_KEY = '_allowPipelineRegression';
+
+export function isPipelineRegression(fromColumnId, toColumnId) {
+  const fromRank = getCardPipelineRank(fromColumnId);
+  const toRank = getCardPipelineRank(toColumnId);
+  return fromRank >= 0 && toRank >= 0 && toRank < fromRank;
+}
+
+export function withPipelineRegressionAuthorization(card, updates = {}) {
+  const nextColumnId = updates.columnId ?? card?.columnId;
+  if (!isPipelineRegression(card?.columnId, nextColumnId)) return updates;
+  return { ...updates, [PIPELINE_REGRESSION_AUTH_KEY]: true };
+}
+
+export function stripPipelineInternalFields(record) {
+  if (!record || typeof record !== 'object') return record;
+  if (!record[PIPELINE_REGRESSION_AUTH_KEY]) return record;
+  const next = { ...record };
+  delete next[PIPELINE_REGRESSION_AUTH_KEY];
+  return next;
+}
+
+/** Server-side card upsert prep: honor explicit regression, otherwise keep advanced stage. */
+export function prepareCardPipelineUpsert(stored, incoming) {
+  if (!incoming) return incoming || stored;
+  if (incoming[PIPELINE_REGRESSION_AUTH_KEY]) {
+    return stripPipelineInternalFields(incoming);
+  }
+  return mergeCardPipelineFields(stored, stripPipelineInternalFields(incoming));
+}
+
 /** Cards still waiting to be created / shot on set. */
 export function isActiveShootQueueCard(card) {
   return Boolean(card && card.columnId === 'shoot');
@@ -54,6 +86,7 @@ export function mergeCardPipelineFields(stored, incoming) {
     columnId: stored.columnId,
     status: stored.status ?? incoming.status,
     postedAt: stored.postedAt ?? incoming.postedAt,
+    editorCompletedAt: stored.editorCompletedAt ?? incoming.editorCompletedAt,
   };
 }
 

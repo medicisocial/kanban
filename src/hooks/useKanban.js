@@ -8,7 +8,7 @@ import { useCollectionSync } from '../lib/useCollectionSync';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import { pushStaffSyncRecords } from '../lib/staffSyncApi';
 import { reportSyncIssue } from '../lib/workspaceSyncHealth';
-import { applyVaultIdeaShootSchedule } from '../utils/cardPipelineMerge';
+import { applyVaultIdeaShootSchedule, withPipelineRegressionAuthorization } from '../utils/cardPipelineMerge';
 
 const getCardId = (card) => card.id;
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
@@ -327,16 +327,17 @@ export function useKanban() {
         prev.map((card) => {
           if (card.id !== id) return card;
           const synced = syncOneOffScheduleFields(updates, card);
-          const nextColumnId = synced.columnId ?? card.columnId;
-          const isOneOff = synced.isOneOffProject ?? isOneOffProjectCard({ ...card, ...synced });
+          const authorized = withPipelineRegressionAuthorization(card, synced);
+          const nextColumnId = authorized.columnId ?? card.columnId;
+          const isOneOff = authorized.isOneOffProject ?? isOneOffProjectCard({ ...card, ...authorized });
           const nextDueDate = withColumnDate(
             nextColumnId,
-            synced.dueDate !== undefined ? synced.dueDate : card.dueDate,
-            { isOneOffProject: isOneOff, contentType: synced.contentType ?? card.contentType },
+            authorized.dueDate !== undefined ? authorized.dueDate : card.dueDate,
+            { isOneOffProject: isOneOff, contentType: authorized.contentType ?? card.contentType },
           );
           persisted = normalizeCard({
             ...card,
-            ...synced,
+            ...authorized,
             dueDate: nextDueDate,
             isOneOffProject: isOneOff,
             platform: PLATFORM,
@@ -350,7 +351,16 @@ export function useKanban() {
     else startTransition(applyUpdate);
     if (immediateSync) {
       const fallback = cardsRef.current.find((card) => card.id === id);
-      pushCardNow(persisted || (fallback ? normalizeCard({ ...fallback, ...updates, updatedAt: Date.now() }) : null));
+      pushCardNow(
+        persisted ||
+          (fallback
+            ? normalizeCard({
+                ...fallback,
+                ...withPipelineRegressionAuthorization(fallback, updates),
+                updatedAt: Date.now(),
+              })
+            : null),
+      );
     }
   }, [pushCardNow]);
 
@@ -367,9 +377,13 @@ export function useKanban() {
     let persisted = null;
     if (current && canMoveCardToColumn(current, targetColumnId)) {
       const completionUpdates = buildEditorCompletionStampUpdates(current, targetColumnId);
+      const regressionAuth = withPipelineRegressionAuthorization(current, {
+        columnId: targetColumnId,
+      });
       persisted = normalizeCard({
         ...current,
         ...completionUpdates,
+        ...regressionAuth,
         columnId: targetColumnId,
         status,
         dueDate: withColumnDate(targetColumnId, current.dueDate, {
@@ -384,9 +398,13 @@ export function useKanban() {
         if (card.id !== cardId) return card;
         if (!canMoveCardToColumn(card, targetColumnId)) return card;
         const completionUpdates = buildEditorCompletionStampUpdates(card, targetColumnId);
+        const regressionAuth = withPipelineRegressionAuthorization(card, {
+          columnId: targetColumnId,
+        });
         return normalizeCard({
           ...card,
           ...completionUpdates,
+          ...regressionAuth,
           columnId: targetColumnId,
           status,
           dueDate: withColumnDate(targetColumnId, card.dueDate, {

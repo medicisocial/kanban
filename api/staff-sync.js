@@ -12,7 +12,7 @@ import {
   filterAuthCriticalDeletes,
   sanitizeAuthCriticalUpserts,
 } from './_lib/authCriticalSync.mjs';
-import { mergeCardPipelineFields } from '../src/utils/cardPipelineMerge.js';
+import { prepareCardPipelineUpsert } from '../src/utils/cardPipelineMerge.js';
 import {
   badRequest,
   forbidden,
@@ -56,7 +56,7 @@ async function filterStaleCardUpserts(table, upserts, orgId) {
       if (!existing?.data) return row;
       return {
         ...row,
-        data: mergeCardPipelineFields(existing.data, row.data),
+        data: prepareCardPipelineUpsert(existing.data, row.data),
       };
     })
     .filter((row) => {
