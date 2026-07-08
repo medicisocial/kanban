@@ -8,6 +8,7 @@ import {
   shiftYearMonth,
   formatYearMonthLabel,
   buildClientDeliverableSummary,
+  groupCardsByClientForMonth,
 } from "../utils/deliverables";
 import { contentTypeLabelProps } from "../utils/contentTypeColors";
 import ClientPortalSectionHeader from "./clientPortal/ClientPortalSectionHeader";
@@ -18,11 +19,12 @@ import AddCalendarPostModal from "./AddCalendarPostModal";
 const columnTitleById = Object.fromEntries(COLUMNS.map((col) => [col.id, col.title]));
 
 /** Click-to-edit integer target — mirrors FinancesPage's EditableAmount, but for whole-number counts. */
-function EditableTarget({ value, onSave }) {
+function EditableTarget({ value, onSave, loading }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
   const handleStartEdit = () => {
+    if (loading) return;
     setDraft(String(value || ""));
     setEditing(true);
   };
@@ -49,6 +51,13 @@ function EditableTarget({ value, onSave }) {
         className="w-16 rounded border border-white/20 bg-black/40 px-2 py-1 text-right text-sm text-white outline-none focus:border-[#810100]"
       />
     );
+  }
+
+  // While full profiles are still loading, a target of 0 is ambiguous (not yet
+  // known vs. genuinely unset) — show a neutral placeholder instead of
+  // "Set target" so it doesn't look like a save was lost.
+  if (loading && !(value > 0)) {
+    return <span className="px-2 py-1 text-right text-sm text-white/30">…</span>;
   }
 
   return (
@@ -93,6 +102,7 @@ function TypeBreakdownChips({ byType }) {
 
 function ClientDeliverableRow({
   summary,
+  targetLoading,
   onSaveTarget,
   expanded,
   onToggleExpand,
@@ -129,7 +139,7 @@ function ClientDeliverableRow({
             {planned}
           </span>
           <span className="text-white/30">/</span>
-          <EditableTarget value={target} onSave={(next) => onSaveTarget(client, next)} />
+          <EditableTarget value={target} loading={targetLoading} onSave={(next) => onSaveTarget(client, next)} />
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -231,12 +241,17 @@ export default function DeliverablesPage({
     return brands.filter((client) => matchesClientFilter(client, clientFilter));
   }, [clients, clientFilter]);
 
+  const groupedCards = useMemo(
+    () => groupCardsByClientForMonth(cards, selectedMonth),
+    [cards, selectedMonth],
+  );
+
   const summaries = useMemo(
     () =>
       clientList.map((client) =>
-        buildClientDeliverableSummary(cards, client, selectedMonth, getClientDeliverableTarget(client)),
+        buildClientDeliverableSummary(groupedCards, client, getClientDeliverableTarget(client)),
       ),
-    [clientList, cards, selectedMonth, getClientDeliverableTarget],
+    [clientList, groupedCards, getClientDeliverableTarget],
   );
 
   const addModalDefaultDate = useMemo(() => {
@@ -305,11 +320,7 @@ export default function DeliverablesPage({
         </div>
       )}
 
-      {!clientProfilesReady ? (
-        <div className={`${surfacePanelClass} p-6 text-center`}>
-          <p className="text-sm text-white/45">Loading client targets…</p>
-        </div>
-      ) : clientList.length === 0 ? (
+      {clientList.length === 0 ? (
         <div className={`${surfacePanelClass} p-6 text-center`}>
           <p className="text-sm text-white/45">No clients to show.</p>
         </div>
@@ -319,6 +330,7 @@ export default function DeliverablesPage({
             <ClientDeliverableRow
               key={summary.client}
               summary={summary}
+              targetLoading={!clientProfilesReady}
               onSaveTarget={setClientDeliverableTarget}
               expanded={expandedClient === summary.client}
               onToggleExpand={() =>

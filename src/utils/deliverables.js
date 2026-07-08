@@ -1,5 +1,5 @@
 import { SCHEDULED_POST_CONTENT_TYPES } from '../constants';
-import { clientMatchesBrand } from './clients';
+import { clientBrandNameKey, clientMatchesBrand } from './clients';
 import { isSameCalendarMonthDateKey } from './editorTodo';
 
 /** Current month as "YYYY-MM". */
@@ -52,13 +52,51 @@ export function getStoryCardsForClientMonth(cards, client, yearMonth) {
   );
 }
 
-export function buildClientDeliverableSummary(cards, client, yearMonth, target) {
-  const planned = getPlannedCardsForClientMonth(cards, client, yearMonth);
+/**
+ * Single pass over all cards, bucketed by normalized client key — used so the
+ * Deliverables page doesn't re-scan the entire card list once per client
+ * (was O(clients × cards) × 2, now O(cards) + O(clients)).
+ */
+export function groupCardsByClientForMonth(cards, yearMonth) {
+  const referenceDate = yearMonthToReferenceDate(yearMonth);
+  const planned = new Map();
+  const stories = new Map();
+  for (const card of cards || []) {
+    if (!card || !card.client) continue;
+    const key = clientBrandNameKey(card.client);
+    if (!key) continue;
+
+    if (
+      SCHEDULED_POST_CONTENT_TYPES.includes(card.contentType) &&
+      isSameCalendarMonthDateKey(card.dueDate, referenceDate)
+    ) {
+      if (!planned.has(key)) planned.set(key, []);
+      planned.get(key).push(card);
+    }
+
+    if (
+      card.contentType === 'Story' &&
+      (isSameCalendarMonthDateKey(card.dueDate, referenceDate) ||
+        isSameCalendarMonthDateKey(card.shootDate, referenceDate))
+    ) {
+      if (!stories.has(key)) stories.set(key, []);
+      stories.get(key).push(card);
+    }
+  }
+  return { planned, stories };
+}
+
+export function buildClientDeliverableSummary(grouped, client, target) {
+  const key = clientBrandNameKey(client);
+  const planned = grouped?.planned?.get(key) || [];
+  const storyCards = grouped?.stories?.get(key) || [];
   const byType = {};
   for (const type of SCHEDULED_POST_CONTENT_TYPES) {
-    byType[type] = planned.filter((card) => card.contentType === type).length;
+    byType[type] = 0;
   }
-  const storyCards = getStoryCardsForClientMonth(cards, client, yearMonth);
+  for (const card of planned) {
+    if (byType[card.contentType] !== undefined) byType[card.contentType] += 1;
+  }
   const plannedCount = planned.length;
   const targetCount = Math.max(0, Number(target) || 0);
   return {
