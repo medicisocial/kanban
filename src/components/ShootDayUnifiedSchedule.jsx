@@ -74,43 +74,6 @@ function ShootDayScheduleRow({
       style={contentTypeCardStyle(typeStyle)}
     >
       <div className="flex flex-wrap items-start gap-3 px-3 py-3 sm:gap-4 sm:px-4">
-        <div className="w-36 shrink-0">
-          {handedOff ? (
-            <p className="text-sm font-semibold text-white">
-              {card.shootTime ? formatTimeInput(card.shootTime) : "—"}
-              {card.shootEndTime && (
-                <span className="font-normal text-gray-500"> – {formatTimeInput(card.shootEndTime)}</span>
-              )}
-            </p>
-          ) : (
-            <div className="flex items-center gap-1">
-              <DebouncedTimeInput
-                {...SAVE_ON_BLUR}
-                resetKey={card.id}
-                value={card.shootTime || ""}
-                onCommit={commitShootTime}
-                disabled={rowReadOnly}
-                min={timeMin}
-                max={timeMax}
-                placeholder="Start"
-                inputClassName={`${inputClass} px-1.5`}
-              />
-              <span className="shrink-0 text-xs text-gray-600">–</span>
-              <DebouncedTimeInput
-                {...SAVE_ON_BLUR}
-                resetKey={card.id}
-                value={card.shootEndTime || ""}
-                onCommit={(value) => commitPatch({ shootEndTime: value })}
-                disabled={rowReadOnly}
-                min={card.shootTime || timeMin}
-                max={timeMax}
-                placeholder="End"
-                inputClassName={`${inputClass} px-1.5`}
-              />
-            </div>
-          )}
-        </div>
-
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p {...contentTypeLabelProps(typeStyle, "text-[10px] font-semibold uppercase")}>
@@ -207,6 +170,44 @@ function ShootDayScheduleRow({
             </button>
           )}
         </div>
+      </div>
+
+      <div className="border-t border-white/5 px-3 py-2 sm:px-4">
+        {handedOff ? (
+          <p className="text-xs text-gray-400">
+            {card.shootTime ? formatTimeInput(card.shootTime) : "—"}
+            {card.shootEndTime && ` – ${formatTimeInput(card.shootEndTime)}`}
+          </p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">Time</span>
+            <DebouncedTimeInput
+              {...SAVE_ON_BLUR}
+              resetKey={card.id}
+              value={card.shootTime || ""}
+              onCommit={commitShootTime}
+              disabled={rowReadOnly}
+              min={timeMin}
+              max={timeMax}
+              placeholder="Start"
+              className="w-36"
+              inputClassName={inputClass}
+            />
+            <span className="shrink-0 text-gray-600">–</span>
+            <DebouncedTimeInput
+              {...SAVE_ON_BLUR}
+              resetKey={card.id}
+              value={card.shootEndTime || ""}
+              onCommit={(value) => commitPatch({ shootEndTime: value })}
+              disabled={rowReadOnly}
+              min={card.shootTime || timeMin}
+              max={timeMax}
+              placeholder="End"
+              className="w-36"
+              inputClassName={inputClass}
+            />
+          </div>
+        )}
       </div>
 
       {detailsOpen && (
