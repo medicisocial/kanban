@@ -8,8 +8,10 @@ import {
   parseTimeToMinutes,
   sortCardsByShootTime,
   isShootSlotComplete,
+  isHandedOffFromShoot,
   resolveShootDayTime,
   resolveShootDayEndTime,
+  formatTimeInput,
 } from "../utils/shootDay";
 import { canReturnCardToVault } from "../utils/videoIdeas";
 import { CardLinks } from "./clientPortal/ReferenceVideoLink";
@@ -45,8 +47,10 @@ function ShootDayScheduleRow({
   const contentCreators = getMemberNamesForRole("Content Creator");
   const typeStyle = getContentTypeStyle(card.contentType);
   const linkCard = useMemo(() => resolveCardLinks(card, ideas), [card, ideas]);
+  const handedOff = isHandedOffFromShoot(card);
+  const rowReadOnly = readOnly || handedOff;
   const slotComplete = isShootSlotComplete(card, dateKey);
-  const showHandoff = Boolean(onHandoff && card.columnId === "shoot" && slotComplete);
+  const showHandoff = Boolean(onHandoff && !handedOff && card.columnId === "shoot" && slotComplete);
 
   const commitPatch = (patch) => onUpdate?.(card.id, patch, { recordUndo: false });
 
@@ -67,50 +71,70 @@ function ShootDayScheduleRow({
   return (
     <div
       className={`rounded-lg border border-white/8 transition ${
-        slotComplete ? "opacity-90" : ""
+        handedOff ? "opacity-80" : slotComplete ? "opacity-90" : ""
       }`}
       style={contentTypeCardStyle(typeStyle)}
     >
       <div className="flex flex-wrap items-start gap-3 px-3 py-3 sm:gap-4 sm:px-4">
         <div className="w-28 shrink-0 space-y-1.5">
-          <label className="block">
-            <span className="mb-0.5 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
-              Start
-            </span>
-            <DebouncedTimeInput
-              {...SAVE_ON_BLUR}
-              resetKey={card.id}
-              value={card.shootTime || ""}
-              onCommit={commitShootTime}
-              disabled={readOnly}
-              min={timeMin}
-              max={timeMax}
-              placeholder="Start"
-              inputClassName={inputClass}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-0.5 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
-              End
-            </span>
-            <DebouncedTimeInput
-              {...SAVE_ON_BLUR}
-              resetKey={card.id}
-              value={card.shootEndTime || ""}
-              onCommit={(value) => commitPatch({ shootEndTime: value })}
-              disabled={readOnly}
-              min={card.shootTime || timeMin}
-              max={timeMax}
-              placeholder="End"
-              inputClassName={inputClass}
-            />
-          </label>
+          {handedOff ? (
+            <>
+              <p className="text-sm font-semibold text-white">
+                {card.shootTime ? formatTimeInput(card.shootTime) : "—"}
+              </p>
+              <p className="text-xs text-gray-500">
+                {card.shootEndTime ? `→ ${formatTimeInput(card.shootEndTime)}` : ""}
+              </p>
+            </>
+          ) : (
+            <>
+              <label className="block">
+                <span className="mb-0.5 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
+                  Start
+                </span>
+                <DebouncedTimeInput
+                  {...SAVE_ON_BLUR}
+                  resetKey={card.id}
+                  value={card.shootTime || ""}
+                  onCommit={commitShootTime}
+                  disabled={rowReadOnly}
+                  min={timeMin}
+                  max={timeMax}
+                  placeholder="Start"
+                  inputClassName={inputClass}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-0.5 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
+                  End
+                </span>
+                <DebouncedTimeInput
+                  {...SAVE_ON_BLUR}
+                  resetKey={card.id}
+                  value={card.shootEndTime || ""}
+                  onCommit={(value) => commitPatch({ shootEndTime: value })}
+                  disabled={rowReadOnly}
+                  min={card.shootTime || timeMin}
+                  max={timeMax}
+                  placeholder="End"
+                  inputClassName={inputClass}
+                />
+              </label>
+            </>
+          )}
         </div>
 
         <div className="min-w-0 flex-1">
-          <p {...contentTypeLabelProps(typeStyle, "text-[10px] font-semibold uppercase")}>
-            {card.contentType}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p {...contentTypeLabelProps(typeStyle, "text-[10px] font-semibold uppercase")}>
+              {card.contentType}
+            </p>
+            {handedOff && (
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-gray-300">
+                {card.status || "Handed off"}
+              </span>
+            )}
+          </div>
           {onCardClick ? (
             <button
               type="button"
@@ -139,7 +163,7 @@ function ShootDayScheduleRow({
               {card.shootScript ? "Script" : "Write script"}
             </button>
           )}
-          {onReturnToVault && canReturnCardToVault(card) && !readOnly && (
+          {onReturnToVault && canReturnCardToVault(card) && !rowReadOnly && (
             <button
               type="button"
               onClick={() => onReturnToVault(card)}
@@ -157,7 +181,7 @@ function ShootDayScheduleRow({
               Hand off
             </button>
           )}
-          {onRemove && !readOnly && (
+          {onRemove && !rowReadOnly && (
             <button
               type="button"
               onClick={() => onRemove(card)}
@@ -169,7 +193,7 @@ function ShootDayScheduleRow({
         </div>
       </div>
 
-      {!readOnly && (
+      {!rowReadOnly && (
         <details className="group border-t border-white/5 px-3 pb-3 sm:px-4">
           <summary className="cursor-pointer list-none py-2 text-[10px] font-medium uppercase tracking-wider text-gray-500 marker:content-none [&::-webkit-details-marker]:hidden">
             <span className="group-open:hidden">+ Planning details</span>
@@ -185,7 +209,7 @@ function ShootDayScheduleRow({
                 resetKey={card.id}
                 value={card.shootModels || ""}
                 onCommit={(value) => commitPatch({ shootModels: value })}
-                disabled={readOnly}
+                disabled={rowReadOnly}
                 placeholder="Add model name, press Enter"
               />
             </label>
@@ -196,7 +220,7 @@ function ShootDayScheduleRow({
               <select
                 value={card.contentCreator || ""}
                 onChange={(e) => commitPatch({ contentCreator: e.target.value })}
-                disabled={readOnly || contentCreators.length === 0}
+                disabled={rowReadOnly || contentCreators.length === 0}
                 className={inputClass}
               >
                 <option value="">Unassigned</option>
@@ -216,7 +240,7 @@ function ShootDayScheduleRow({
                 resetKey={card.id}
                 value={card.shootNeeds || ""}
                 onCommit={(value) => commitPatch({ shootNeeds: value })}
-                disabled={readOnly}
+                disabled={rowReadOnly}
                 placeholder="Ring light, product samples..."
                 className={inputClass}
               />

@@ -4,9 +4,11 @@ import {
   getDefaultShootDate,
   getCardsForShootDate,
   groupShootDayClients,
-  groupCardsByShootDate,
-  getShootCards,
   getPlanClientsForDate,
+  filterShootDayCardsForDate,
+  isPastShootDay,
+  isHandedOffFromShoot,
+  isShootDayContentCard,
   addDays,
   addMonths,
   toDateKey,
@@ -71,17 +73,24 @@ export default function ShootDay({
   }, [plans, clientFilter]);
 
   const visibleShootCards = useMemo(
-    () => filterCards(getShootCards(cards), { client: clientFilter }),
+    () => filterCards(cards, { client: clientFilter }).filter(isShootDayContentCard),
     [cards, clientFilter],
   );
 
-  const shootsByDate = useMemo(
-    () => groupCardsByShootDate(visibleShootCards),
-    [visibleShootCards],
-  );
+  const shootsByDate = useMemo(() => {
+    const map = {};
+    const todayKey = toDateKey(new Date());
+    for (const card of visibleShootCards) {
+      if (!card.shootDate) continue;
+      if (isPastShootDay(card.shootDate, todayKey) && !isHandedOffFromShoot(card)) continue;
+      if (!map[card.shootDate]) map[card.shootDate] = [];
+      map[card.shootDate].push(card);
+    }
+    return map;
+  }, [visibleShootCards]);
 
   const shootCards = useMemo(
-    () => getCardsForShootDate(visibleShootCards, dateKey),
+    () => filterShootDayCardsForDate(getCardsForShootDate(visibleShootCards, dateKey), dateKey),
     [visibleShootCards, dateKey],
   );
 

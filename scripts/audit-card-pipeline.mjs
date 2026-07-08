@@ -74,11 +74,11 @@ function findFinishedCardsInCreateQueue(cards) {
   });
 }
 
-function findFinishedCardsOnShootDay(cards) {
+function findInappropriateShootDayCards(cards) {
   return cards.filter((card) => {
+    if (!card.shootDate || card.contentType === 'Story') return false;
     const rank = getCardPipelineRank(card.columnId);
-    if (rank <= CARD_PIPELINE_RANK.shoot || !card.shootDate) return false;
-    return getShootCards([card]).length > 0 || isShootSessionCandidate(card, card.shootDate);
+    return rank >= CARD_PIPELINE_RANK.scheduled;
   });
 }
 
@@ -105,9 +105,9 @@ function auditCardCollection(cards) {
     );
   }
 
-  for (const card of findFinishedCardsOnShootDay(cards)) {
+  for (const card of findInappropriateShootDayCards(cards)) {
     issues.push(
-      `${card.client} · ${card.title}: column "${card.columnId}" would still appear on shoot day for ${card.shootDate}`,
+      `${card.client} · ${card.title}: column "${card.columnId}" should not appear on shoot day for ${card.shootDate}`,
     );
   }
 
@@ -184,9 +184,35 @@ async function fetchLiveCards(orgId = 'medici') {
     { id: '1', client: 'Ara Med Spa', title: 'Ara Tox Club', columnId: 'scheduled', status: 'Scheduled', shootDate: '2026-06-18' },
   ];
   assert(findFinishedCardsInCreateQueue(sample).length === 0, 'scheduled cards must not qualify for To Create queue');
-  assert(findFinishedCardsOnShootDay(sample).length === 0, 'scheduled cards must not appear on shoot day views');
+  assert(findInappropriateShootDayCards(sample).length === 1, 'scheduled cards must not appear on shoot day views');
   assert(getShootCards(sample).length === 0, 'getShootCards must exclude scheduled cards');
   assert(!isActiveShootQueueCard(sample[0]), 'scheduled cards are not active shoot queue cards');
+}
+
+{
+  const handedOff = [
+    { id: '2', client: 'Ara Med Spa', title: 'Spring Reel', columnId: 'editing', status: 'Editing', shootDate: '2026-06-18' },
+  ];
+  assert(findInappropriateShootDayCards(handedOff).length === 0, 'handed-off editing cards may keep shoot day history');
+}
+
+{
+  const pastDate = '2026-01-01';
+  const todayKey = '2026-06-01';
+  const roster = [
+    { id: 'a', columnId: 'shoot', shootDate: pastDate, contentType: 'Reel' },
+    { id: 'b', columnId: 'editing', shootDate: pastDate, contentType: 'Reel' },
+    { id: 'c', columnId: 'editing', shootDate: '2026-01-02', contentType: 'Reel' },
+  ];
+  const filtered = roster.filter((card) => {
+    if (!card.shootDate || card.contentType === 'Story') return false;
+    const rank = getCardPipelineRank(card.columnId);
+    if (rank < 0 || rank > CARD_PIPELINE_RANK.approved) return false;
+    if (card.shootDate !== pastDate) return false;
+    if (pastDate >= todayKey) return true;
+    return card.columnId !== 'shoot';
+  });
+  assert(filtered.length === 1 && filtered[0].id === 'b', 'past shoot days keep only handed-off content for that date');
 }
 
 const liveCards = await fetchLiveCards();

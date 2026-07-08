@@ -8,7 +8,7 @@ import {
 import { getMeetingVideoLink } from './meetingLinks';
 import { cardIsAssignedToStaff } from './staffMembers';
 import {
-  getShootCards,
+  getShootDayContentCards,
   getCardsForShootDate,
   groupShootDayClients,
   getShootDayTitle,
@@ -46,7 +46,7 @@ function buildTodayShootItems({
   personalScope = false,
   includePlanOnlyDays = true,
 }) {
-  let shootCards = getShootCards(cards);
+  let shootCards = getShootDayContentCards(cards);
   if (clientFilter !== 'all') {
     shootCards = shootCards.filter((card) => clientMatchesBrand(card.client, clientFilter));
   }

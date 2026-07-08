@@ -1,6 +1,7 @@
 import { DEFAULT_SHOOT_DURATIONS, needsShootSchedule } from "../constants";
 import { compareClientNames } from "./clients";
 import { toDateKey, addDays, addMonths, parseDateKey, isToday } from "./calendar";
+import { CARD_PIPELINE_RANK, getCardPipelineRank } from "./cardPipelineMerge";
 
 export function getDefaultShootDate() {
   return new Date();
@@ -37,6 +38,37 @@ export function getShootCards(cards) {
   return cards.filter(
     (c) => c.shootDate && c.contentType !== 'Story' && c.columnId === 'shoot',
   );
+}
+
+/** Cards that belong on a shoot day roster — includes handed-off content still in production. */
+export function isShootDayContentCard(card) {
+  if (!card?.shootDate || card.contentType === 'Story') return false;
+  const rank = getCardPipelineRank(card.columnId);
+  if (rank < 0) return false;
+  return rank <= CARD_PIPELINE_RANK.approved;
+}
+
+export function getShootDayContentCards(cards) {
+  return cards.filter(isShootDayContentCard);
+}
+
+export function isHandedOffFromShoot(card) {
+  return Boolean(card && card.columnId && card.columnId !== 'shoot' && isShootDayContentCard(card));
+}
+
+export function isPastShootDay(dateKey, todayKey = toDateKey(new Date())) {
+  return Boolean(dateKey && dateKey < todayKey);
+}
+
+/** On past shoot days, only handed-off content counts as shoot history. */
+export function isCompletedShootDayCard(card, dateKey, todayKey = toDateKey(new Date())) {
+  if (!isShootDayContentCard(card) || card.shootDate !== dateKey) return false;
+  if (!isPastShootDay(dateKey, todayKey)) return true;
+  return isHandedOffFromShoot(card);
+}
+
+export function filterShootDayCardsForDate(cards, dateKey, todayKey = toDateKey(new Date())) {
+  return cards.filter((card) => isCompletedShootDayCard(card, dateKey, todayKey));
 }
 
 export function getUnscheduledShootCards(cards, client) {
