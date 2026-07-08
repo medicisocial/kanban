@@ -521,6 +521,8 @@ export default function AppShell({ onSignOut }) {
             shootDate,
             shootTime: existing?.shootTime || shootTime || "",
             shootEndTime: existing?.shootEndTime || shootEndTime || "",
+            columnId: "shoot",
+            status: existing?.columnId === "shoot" ? existing.status : "To Create",
           });
           rosterIds.push(id);
         }

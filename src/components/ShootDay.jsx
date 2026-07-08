@@ -7,7 +7,10 @@ import {
   getPlanClientsForDate,
   filterShootDayCardsForDate,
   shouldCountOnShootCalendar,
-  isShootDayContentCard,
+  deriveLegacyShootRosterIds,
+  isHandedOffFromShoot,
+  isPastShootDay,
+  appendShootRosterIds,
   addDays,
   addMonths,
   toDateKey,
@@ -80,7 +83,7 @@ export default function ShootDay({
     const map = {};
     const todayKey = toDateKey(new Date());
     for (const card of visibleShootCards) {
-      if (!shouldCountOnShootCalendar(card, getPlan, todayKey)) continue;
+      if (!shouldCountOnShootCalendar(card, getPlan, visibleShootCards, todayKey)) continue;
       if (!map[card.shootDate]) map[card.shootDate] = [];
       map[card.shootDate].push(card);
     }
@@ -91,6 +94,35 @@ export default function ShootDay({
     () => filterShootDayCardsForDate(getCardsForShootDate(visibleShootCards, dateKey), dateKey, getPlan),
     [visibleShootCards, dateKey, getPlan],
   );
+
+  // Persist legacy roster from pre-rosterCardIds shoots so reloads stay in sync.
+  useEffect(() => {
+    if (!onUpdatePlan || viewMode !== 'day') return;
+    const cardsOnDay = getCardsForShootDate(visibleShootCards, dateKey);
+    const todayKey = toDateKey(new Date());
+    const planClients = getPlanClientsForDate(visiblePlans, dateKey, clients);
+    const clientSet = new Set([...cardsOnDay.map((card) => card.client), ...planClients]);
+
+    for (const client of clientSet) {
+      const plan = getPlan(client, dateKey);
+      if (Array.isArray(plan?.rosterCardIds) && plan.rosterCardIds.length > 0) continue;
+
+      const clientCards = cardsOnDay.filter((card) => card.client === client);
+      let rosterCardIds = deriveLegacyShootRosterIds(clientCards);
+      if (isPastShootDay(dateKey, todayKey)) {
+        const handedOff = clientCards.filter(isHandedOffFromShoot).map((card) => card.id);
+        rosterCardIds = appendShootRosterIds(rosterCardIds, handedOff);
+      }
+      if (rosterCardIds.length === 0) continue;
+
+      onUpdatePlan(
+        client,
+        dateKey,
+        { rosterCardIds, manual: plan?.manual || true },
+        { recordUndo: false },
+      );
+    }
+  }, [viewMode, dateKey, visibleShootCards, visiblePlans, clients, getPlan, onUpdatePlan]);
 
   const clientGroups = useMemo(
     () => groupShootDayClients(shootCards, dateKey, getPlan, visiblePlans, clients),
