@@ -12,6 +12,7 @@ import {
   resolveShootDayTime,
   resolveShootDayEndTime,
   formatTimeInput,
+  splitList,
 } from "../utils/shootDay";
 import { canReturnCardToVault } from "../utils/videoIdeas";
 import { CardLinks } from "./clientPortal/ReferenceVideoLink";
@@ -193,34 +194,72 @@ function ShootDayScheduleRow({
         </div>
       </div>
 
-      {!rowReadOnly && (
-        <details className="group border-t border-white/5 px-3 pb-3 sm:px-4">
-          <summary className="cursor-pointer list-none py-2 text-[10px] font-medium uppercase tracking-wider text-gray-500 marker:content-none [&::-webkit-details-marker]:hidden">
-            <span className="group-open:hidden">+ Planning details</span>
-            <span className="hidden group-open:inline">− Planning details</span>
-          </summary>
-          <div className="grid gap-3 pt-1 sm:grid-cols-2">
-            <label className="block sm:col-span-2">
-              <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
-                Models / talent
-              </span>
-              <DebouncedModelTagInput
+      <div className="border-t border-white/5 px-3 py-3 sm:px-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block sm:col-span-2">
+            <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
+              Models / talent
+            </span>
+            {rowReadOnly ? (
+              splitList(card.shootModels).length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {splitList(card.shootModels).map((name) => (
+                    <span
+                      key={name}
+                      className="rounded-full bg-black/20 px-2 py-0.5 text-xs text-gray-300"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-600">—</p>
+              )
+            ) : (
+              <>
+                <DebouncedModelTagInput
+                  {...SAVE_ON_BLUR}
+                  resetKey={card.id}
+                  value={card.shootModels || ""}
+                  onCommit={(value) => commitPatch({ shootModels: value })}
+                  disabled={rowReadOnly}
+                  placeholder="Add model name, press Enter"
+                />
+                <p className="mt-1 text-[10px] text-gray-600">
+                  Call times for each model appear in the summary below.
+                </p>
+              </>
+            )}
+          </label>
+
+          <label className="block sm:col-span-2">
+            <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
+              Props & equipment
+            </span>
+            {rowReadOnly ? (
+              <p className="text-sm text-gray-400">{card.shootNeeds?.trim() || "—"}</p>
+            ) : (
+              <DebouncedField
                 {...SAVE_ON_BLUR}
                 resetKey={card.id}
-                value={card.shootModels || ""}
-                onCommit={(value) => commitPatch({ shootModels: value })}
+                value={card.shootNeeds || ""}
+                onCommit={(value) => commitPatch({ shootNeeds: value })}
                 disabled={rowReadOnly}
-                placeholder="Add model name, press Enter"
+                placeholder="Ring light, product samples, gym bag..."
+                className={inputClass}
               />
-            </label>
-            <label className="block">
+            )}
+          </label>
+
+          {!rowReadOnly && contentCreators.length > 0 && (
+            <label className="block sm:col-span-2">
               <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
                 Content creator
               </span>
               <select
                 value={card.contentCreator || ""}
                 onChange={(e) => commitPatch({ contentCreator: e.target.value })}
-                disabled={rowReadOnly || contentCreators.length === 0}
+                disabled={rowReadOnly}
                 className={inputClass}
               >
                 <option value="">Unassigned</option>
@@ -231,23 +270,9 @@ function ShootDayScheduleRow({
                 ))}
               </select>
             </label>
-            <label className="block">
-              <span className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-gray-500">
-                Props & needs
-              </span>
-              <DebouncedField
-                {...SAVE_ON_BLUR}
-                resetKey={card.id}
-                value={card.shootNeeds || ""}
-                onCommit={(value) => commitPatch({ shootNeeds: value })}
-                disabled={rowReadOnly}
-                placeholder="Ring light, product samples..."
-                className={inputClass}
-              />
-            </label>
-          </div>
-        </details>
-      )}
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -212,20 +212,32 @@ function ClientShootSection({
         />
 
         {allNeeds.length > 0 && (
-          <SummaryList title="Equipment & needs" items={allNeeds} color={color} />
+          <SummaryList title="All equipment & needs" items={allNeeds} color={color} />
         )}
 
-        {modelSchedules.length > 0 && (
+        {clientCards.length > 0 && (
           <div>
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+            <h4 className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
               Model call times
             </h4>
-            <ModelScheduleSummary
-              schedules={modelSchedules}
-              title="Who needs to be there when"
-              titleClassName="text-xs font-semibold uppercase tracking-wider"
-              titleStyle={{ color }}
-            />
+            <p className="mb-3 text-xs text-gray-500">
+              Based on models added to each content item above and their shoot times.
+            </p>
+            {modelSchedules.length > 0 ? (
+              <ModelScheduleSummary
+                schedules={modelSchedules}
+                title="Who needs to be there when"
+                titleClassName="text-xs font-semibold uppercase tracking-wider"
+                titleStyle={{ color }}
+              />
+            ) : (
+              <div className="rounded-lg border border-dashed border-white/10 px-4 py-6 text-center">
+                <p className="text-sm text-gray-400">No models added yet.</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Add models to each schedule item — their call times will appear here automatically.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
