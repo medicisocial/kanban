@@ -61,6 +61,7 @@ import {
 } from "../utils/workspaceViewUrl";
 import { resolveStaffMemberAvatar, resolveStaffDisplayName, staffHasAccountManagerQueueAccess } from "../utils/staffMembers";
 import { isSharedOperationsLogin } from "../utils/staffAuth";
+import { appendShootRosterIds, removeShootRosterId } from "../utils/shootDay";
 import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
 import { buildWorkspaceHomeSummary, buildNavBadgeCounts } from "../utils/workspaceHome";
 import { useStaffWorkspaceScope } from "../hooks/useStaffWorkspaceScope";
@@ -91,6 +92,32 @@ export default function AppShell({ onSignOut }) {
     addOneOffProject,
   } = useKanban();
   const { plans, replacePlans, getPlan, updatePlan, ensurePlan, deletePlan } = useShootPlans();
+
+  const addCardsToShootRoster = useCallback(
+    (client, shootDate, cardIds) => {
+      const ids = [...cardIds].filter(Boolean);
+      if (!client || !shootDate || !ids.length) return;
+      const plan = getPlan(client, shootDate);
+      updatePlan(client, shootDate, {
+        manual: true,
+        rosterCardIds: appendShootRosterIds(plan.rosterCardIds, ids),
+      });
+    },
+    [getPlan, updatePlan],
+  );
+
+  const removeCardFromShootRoster = useCallback(
+    (client, shootDate, cardId) => {
+      if (!client || !shootDate || !cardId) return;
+      const plan = getPlan(client, shootDate);
+      if (!Array.isArray(plan.rosterCardIds) || !plan.rosterCardIds.includes(cardId)) return;
+      updatePlan(client, shootDate, {
+        rosterCardIds: removeShootRosterId(plan.rosterCardIds, cardId),
+      });
+    },
+    [getPlan, updatePlan],
+  );
+
   const {
     ideas,
     ideasSyncLoaded,
@@ -376,6 +403,7 @@ export default function AppShell({ onSignOut }) {
     try {
       ensurePlan(data.client, data.shootDate);
       id = addShootItem(data);
+      addCardsToShootRoster(data.client, data.shootDate, [id]);
     } finally {
       endBatch();
     }
@@ -455,6 +483,9 @@ export default function AppShell({ onSignOut }) {
       beginBatch();
       try {
         deleteCard(card.id);
+        if (card.shootDate) {
+          removeCardFromShootRoster(card.client, card.shootDate, card.id);
+        }
         if (idea) {
           updateIdea(idea.id, { boardCardId: null, status: "approved" });
         } else {
@@ -475,7 +506,7 @@ export default function AppShell({ onSignOut }) {
         endBatch();
       }
     },
-    [ideas, addIdea, deleteCard, updateIdea, selectedCard?.id],
+    [ideas, addIdea, deleteCard, updateIdea, selectedCard?.id, removeCardFromShootRoster],
   );
 
   const handleAssignToShoot = useCallback(
@@ -483,6 +514,7 @@ export default function AppShell({ onSignOut }) {
       beginBatch();
       try {
         ensurePlan(client, shootDate);
+        const rosterIds = [];
         for (const id of cardIds) {
           const existing = cards.find((entry) => entry.id === id);
           updateCard(id, {
@@ -490,17 +522,25 @@ export default function AppShell({ onSignOut }) {
             shootTime: existing?.shootTime || shootTime || "",
             shootEndTime: existing?.shootEndTime || shootEndTime || "",
           });
+          rosterIds.push(id);
         }
         for (const ideaId of ideaIds) {
           const idea = ideas.find((entry) => entry.id === ideaId);
           if (!idea) continue;
-          scheduleVaultIdeaOnShoot(idea, { client, shootDate, shootTime, shootEndTime });
+          const boardCardId = scheduleVaultIdeaOnShoot(idea, {
+            client,
+            shootDate,
+            shootTime,
+            shootEndTime,
+          });
+          if (boardCardId) rosterIds.push(boardCardId);
         }
+        addCardsToShootRoster(client, shootDate, rosterIds);
       } finally {
         endBatch();
       }
     },
-    [cards, ideas, ensurePlan, scheduleVaultIdeaOnShoot, updateCard],
+    [cards, ideas, ensurePlan, scheduleVaultIdeaOnShoot, updateCard, addCardsToShootRoster],
   );
 
   const vaultIdeas = useMemo(
@@ -527,6 +567,9 @@ export default function AppShell({ onSignOut }) {
       clears.dueTime = '';
     }
     updateCard(card.id, clears);
+    if (card.shootDate) {
+      removeCardFromShootRoster(card.client, card.shootDate, card.id);
+    }
     setSelectedCard((prev) =>
       prev?.id === card.id ? { ...prev, ...clears } : prev,
     );
@@ -597,6 +640,7 @@ export default function AppShell({ onSignOut }) {
             sessionModels: oldPlan.sessionModels || "",
             sessionNeeds: oldPlan.sessionNeeds || "",
             notes: oldPlan.notes || "",
+            rosterCardIds: oldPlan.rosterCardIds || [],
             manual: true,
           });
           deletePlan(client, fromDateKey);

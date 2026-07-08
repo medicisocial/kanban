@@ -7,7 +7,6 @@ import {
   getDefaultShootEndTime,
   parseTimeToMinutes,
   sortCardsByShootTime,
-  isShootSlotComplete,
   isHandedOffFromShoot,
   resolveShootDayTime,
   resolveShootDayEndTime,
@@ -50,8 +49,7 @@ function ShootDayScheduleRow({
   const linkCard = useMemo(() => resolveCardLinks(card, ideas), [card, ideas]);
   const handedOff = isHandedOffFromShoot(card);
   const rowReadOnly = readOnly || handedOff;
-  const slotComplete = isShootSlotComplete(card, dateKey);
-  const showHandoff = Boolean(onHandoff && !handedOff && card.columnId === "shoot" && slotComplete);
+  const showMarkCompleted = Boolean(onHandoff && !handedOff && card.columnId === "shoot");
 
   const commitPatch = (patch) => onUpdate?.(card.id, patch, { recordUndo: false });
 
@@ -71,9 +69,7 @@ function ShootDayScheduleRow({
 
   return (
     <div
-      className={`rounded-lg border border-white/8 transition ${
-        handedOff ? "opacity-80" : slotComplete ? "opacity-90" : ""
-      }`}
+      className={`rounded-lg border border-white/8 transition ${handedOff ? "opacity-80" : ""}`}
       style={contentTypeCardStyle(typeStyle)}
     >
       <div className="flex flex-wrap items-start gap-3 px-3 py-3 sm:gap-4 sm:px-4">
@@ -173,13 +169,13 @@ function ShootDayScheduleRow({
               Return to bank
             </button>
           )}
-          {showHandoff && (
+          {showMarkCompleted && (
             <button
               type="button"
               onClick={() => onHandoff(card)}
               className="rounded-lg bg-[#810100] px-2.5 py-1 text-xs font-medium text-white transition hover:bg-[#a00000]"
             >
-              Hand off
+              Mark completed
             </button>
           )}
           {onRemove && !rowReadOnly && (

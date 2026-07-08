@@ -60,15 +60,62 @@ export function isPastShootDay(dateKey, todayKey = toDateKey(new Date())) {
   return Boolean(dateKey && dateKey < todayKey);
 }
 
-/** On past shoot days, only handed-off content counts as shoot history. */
-export function isCompletedShootDayCard(card, dateKey, todayKey = toDateKey(new Date())) {
-  if (!isShootDayContentCard(card) || card.shootDate !== dateKey) return false;
-  if (!isPastShootDay(dateKey, todayKey)) return true;
-  return isHandedOffFromShoot(card);
+export function appendShootRosterIds(existing, cardIds = []) {
+  const roster = Array.isArray(existing) ? [...existing] : [];
+  for (const id of cardIds) {
+    if (id && !roster.includes(id)) roster.push(id);
+  }
+  return roster;
 }
 
-export function filterShootDayCardsForDate(cards, dateKey, todayKey = toDateKey(new Date())) {
-  return cards.filter((card) => isCompletedShootDayCard(card, dateKey, todayKey));
+export function removeShootRosterId(existing, cardId) {
+  if (!Array.isArray(existing) || !cardId) return Array.isArray(existing) ? existing : [];
+  return existing.filter((id) => id !== cardId);
+}
+
+export function isOnShootRoster(card, plan, dateKey, todayKey = toDateKey(new Date())) {
+  const roster = Array.isArray(plan?.rosterCardIds) ? plan.rosterCardIds : null;
+  if (roster && roster.length > 0) {
+    return roster.includes(card.id);
+  }
+  // Legacy plans without a roster: only keep past handed-off history.
+  if (
+    isPastShootDay(dateKey, todayKey) &&
+    isHandedOffFromShoot(card) &&
+    card.shootDate === dateKey
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** On past shoot days, only handed-off roster content counts as shoot history. */
+export function shouldAppearOnShootDayRoster(card, dateKey, plan, todayKey = toDateKey(new Date())) {
+  if (!isShootDayContentCard(card) || card.shootDate !== dateKey) return false;
+  if (!isOnShootRoster(card, plan, dateKey, todayKey)) return false;
+  if (isPastShootDay(dateKey, todayKey)) return isHandedOffFromShoot(card);
+  return card.columnId === 'shoot';
+}
+
+/** @deprecated Use shouldAppearOnShootDayRoster */
+export function isCompletedShootDayCard(card, dateKey, todayKey = toDateKey(new Date()), plan = null) {
+  return shouldAppearOnShootDayRoster(card, dateKey, plan, todayKey);
+}
+
+export function filterShootDayCardsForDate(cards, dateKey, getPlan, todayKey = toDateKey(new Date())) {
+  return cards.filter((card) =>
+    shouldAppearOnShootDayRoster(card, dateKey, getPlan?.(card.client, dateKey), todayKey),
+  );
+}
+
+export function shouldCountOnShootCalendar(card, getPlan, todayKey = toDateKey(new Date())) {
+  if (!card?.shootDate || !isShootDayContentCard(card)) return false;
+  return shouldAppearOnShootDayRoster(
+    card,
+    card.shootDate,
+    getPlan?.(card.client, card.shootDate),
+    todayKey,
+  );
 }
 
 export function getUnscheduledShootCards(cards, client) {

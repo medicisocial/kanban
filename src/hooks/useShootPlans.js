@@ -31,6 +31,7 @@ function createPlan(client, dateKey) {
     sessionModels: "",
     sessionNeeds: "",
     notes: "",
+    rosterCardIds: [],
     updatedAt: Date.now(),
   };
 }

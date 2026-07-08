@@ -203,7 +203,7 @@ async function fetchLiveCards(orgId = 'medici') {
     const rank = getCardPipelineRank(card.columnId);
     if (rank < 0 || rank > CARD_PIPELINE_RANK.approved) return false;
     if (card.shootDate !== pastDate) return false;
-    if (pastDate >= todayKey) return true;
+    if (pastDate >= todayKey) return card.columnId === 'shoot';
     return card.columnId !== 'shoot';
   });
   assert(filtered.length === 1 && filtered[0].id === 'b', 'past shoot days keep only handed-off content for that date');
