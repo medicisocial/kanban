@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useClientsContext } from "../context/ClientsContext";
 import { INTERNAL_TEAM_CLIENT, SCHEDULED_POST_CONTENT_TYPES, COLUMNS, getContentTypeStyle } from "../constants";
 import { getClientPortalBrands, matchesClientFilter } from "../utils/clients";
+import { toDateKey } from "../utils/calendar";
 import {
   currentYearMonth,
   shiftYearMonth,
@@ -12,6 +13,7 @@ import { contentTypeLabelProps } from "../utils/contentTypeColors";
 import ClientPortalSectionHeader from "./clientPortal/ClientPortalSectionHeader";
 import { IconChevronLeft, IconChevronRight } from "./clientPortal/ClientPortalIcons";
 import { btnSecondaryClass, surfacePanelClass } from "./clientPortal/clientPortalUi";
+import AddCalendarPostModal from "./AddCalendarPostModal";
 
 const columnTitleById = Object.fromEntries(COLUMNS.map((col) => [col.id, col.title]));
 
@@ -89,7 +91,15 @@ function TypeBreakdownChips({ byType }) {
   );
 }
 
-function ClientDeliverableRow({ summary, onSaveTarget, expanded, onToggleExpand, onAddIdeas }) {
+function ClientDeliverableRow({
+  summary,
+  onSaveTarget,
+  expanded,
+  onToggleExpand,
+  onAddIdeas,
+  onOpenCard,
+  onAddCard,
+}) {
   const { client, target, planned, byType, storyCount, remaining, onTrack, cards } = summary;
 
   return (
@@ -122,7 +132,7 @@ function ClientDeliverableRow({ summary, onSaveTarget, expanded, onToggleExpand,
           <EditableTarget value={target} onSave={(next) => onSaveTarget(client, next)} />
         </div>
 
-        <div className="shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
           {target === 0 ? (
             <span className="rounded-full bg-white/5 px-2.5 py-1 text-[10px] font-medium text-gray-500">
               No target set
@@ -138,6 +148,16 @@ function ClientDeliverableRow({ summary, onSaveTarget, expanded, onToggleExpand,
               className="rounded-full bg-[#810100]/20 px-2.5 py-1 text-[10px] font-semibold text-[#fca5a5] transition hover:bg-[#810100]/30"
             >
               {remaining} more idea{remaining === 1 ? "" : "s"} needed
+            </button>
+          )}
+          {onAddCard && (
+            <button
+              type="button"
+              onClick={() => onAddCard(client)}
+              className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/70 transition hover:border-white/25 hover:text-white"
+              title={`Add a card for ${client}`}
+            >
+              + Add
             </button>
           )}
         </div>
@@ -164,18 +184,21 @@ function ClientDeliverableRow({ summary, onSaveTarget, expanded, onToggleExpand,
                 .map((card) => {
                   const style = getContentTypeStyle(card.contentType);
                   return (
-                    <li
-                      key={card.id}
-                      className="flex flex-wrap items-center gap-2 rounded-lg bg-black/20 px-3 py-2 text-xs"
-                    >
-                      <span {...contentTypeLabelProps(style, "font-semibold uppercase text-[10px]")}>
-                        {card.contentType}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-gray-200">{card.title || "Untitled"}</span>
-                      <span className="shrink-0 text-gray-500">{card.dueDate || "No date"}</span>
-                      <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-gray-400">
-                        {columnTitleById[card.columnId] || card.columnId}
-                      </span>
+                    <li key={card.id}>
+                      <button
+                        type="button"
+                        onClick={() => onOpenCard?.(card)}
+                        className="flex w-full flex-wrap items-center gap-2 rounded-lg bg-black/20 px-3 py-2 text-left text-xs transition hover:bg-black/35"
+                      >
+                        <span {...contentTypeLabelProps(style, "font-semibold uppercase text-[10px]")}>
+                          {card.contentType}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-gray-200">{card.title || "Untitled"}</span>
+                        <span className="shrink-0 text-gray-500">{card.dueDate || "No date"}</span>
+                        <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-gray-400">
+                          {columnTitleById[card.columnId] || card.columnId}
+                        </span>
+                      </button>
                     </li>
                   );
                 })}
@@ -187,10 +210,17 @@ function ClientDeliverableRow({ summary, onSaveTarget, expanded, onToggleExpand,
   );
 }
 
-export default function DeliverablesPage({ cards = [], clientFilter = "all", onSelectClientIdeas }) {
+export default function DeliverablesPage({
+  cards = [],
+  clientFilter = "all",
+  onSelectClientIdeas,
+  onOpenCard,
+  onAddCard,
+}) {
   const { clients, getClientDeliverableTarget, setClientDeliverableTarget } = useClientsContext();
   const [selectedMonth, setSelectedMonth] = useState(() => currentYearMonth());
   const [expandedClient, setExpandedClient] = useState(null);
+  const [addingForClient, setAddingForClient] = useState(null);
 
   const goPrev = useCallback(() => setSelectedMonth((m) => shiftYearMonth(m, -1)), []);
   const goNext = useCallback(() => setSelectedMonth((m) => shiftYearMonth(m, 1)), []);
@@ -208,6 +238,12 @@ export default function DeliverablesPage({ cards = [], clientFilter = "all", onS
       ),
     [clientList, cards, selectedMonth, getClientDeliverableTarget],
   );
+
+  const addModalDefaultDate = useMemo(() => {
+    if (selectedMonth === currentYearMonth()) return toDateKey(new Date());
+    const [year, month] = selectedMonth.split("-").map(Number);
+    return toDateKey(new Date(year, (month || 1) - 1, 1));
+  }, [selectedMonth]);
 
   const totals = useMemo(() => {
     return summaries.reduce(
@@ -285,9 +321,23 @@ export default function DeliverablesPage({ cards = [], clientFilter = "all", onS
                 setExpandedClient((prev) => (prev === summary.client ? null : summary.client))
               }
               onAddIdeas={onSelectClientIdeas}
+              onOpenCard={onOpenCard}
+              onAddCard={onAddCard ? (client) => setAddingForClient(client) : null}
             />
           ))}
         </div>
+      )}
+
+      {addingForClient && (
+        <AddCalendarPostModal
+          defaultDate={addModalDefaultDate}
+          defaultClient={addingForClient}
+          onClose={() => setAddingForClient(null)}
+          onAdd={(data) => {
+            onAddCard?.(data);
+            setAddingForClient(null);
+          }}
+        />
       )}
     </section>
   );

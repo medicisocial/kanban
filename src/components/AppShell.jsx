@@ -292,6 +292,12 @@ export default function AppShell({ onSignOut }) {
     setActiveView("calendars");
   };
 
+  // Same as handleAddCalendarPost, but stays on the current page (e.g. Deliverables) instead of jumping to Calendars.
+  const handleAddDeliverableCard = (data) => {
+    const id = addCalendarPost(data);
+    setSelectedCard(createCard({ ...data, id, columnId: "editing", status: "Editing" }));
+  };
+
   const handleMarkScheduled = (cardId) => {
     const card = cards.find((c) => c.id === cardId);
     if (!card || card.columnId === "scheduled") return;
@@ -1284,6 +1290,8 @@ export default function AppShell({ onSignOut }) {
         <DeliverablesPage
           cards={cards}
           clientFilter={clientFilter}
+          onOpenCard={handleCardClick}
+          onAddCard={handleAddDeliverableCard}
           onSelectClientIdeas={(client) => {
             setClientFilter(client);
             handleNavigate("ideas");
@@ -1305,6 +1313,7 @@ export default function AppShell({ onSignOut }) {
           onAddCardsToShoot={openAddCardsToShoot}
           onOpenCard={handleCardClick}
           onReturnToVault={handleReturnCardToVault}
+          onMoveCard={handleMoveCard}
         />
       )}
 

@@ -16,6 +16,9 @@ function isEmptyBrandField(field, value) {
   ) {
     return String(value || '').trim() === '';
   }
+  if (field === 'deliverableTarget') {
+    return !(Number(value) > 0);
+  }
   return false;
 }
 
@@ -85,6 +88,7 @@ export function brandProfilePatchFromWorkspaceBrand(client, workspace = {}) {
     photoGalleryLink: resolveClientMapValue(client, workspace.photoGalleryLinks) || '',
     businessType: resolveClientMapValue(client, workspace.businessTypes) || '',
     accountManager: resolveClientMapValue(client, workspace.accountManagers) || '',
+    deliverableTarget: Number(resolveClientMapValue(client, workspace.deliverableTargets)) || 0,
   };
 }
 
@@ -107,6 +111,7 @@ export function mergeClientRecordRowsIntoWorkspace(workspace = {}, rows = []) {
     applyRemoteBrandField(next, 'photoGalleryLink', 'photoGalleryLinks', client, row.photo_gallery_link || '');
     applyRemoteBrandField(next, 'businessType', 'businessTypes', client, row.business_type || '');
     applyRemoteBrandField(next, 'accountManager', 'accountManagers', client, row.account_manager || '');
+    applyRemoteBrandField(next, 'deliverableTarget', 'deliverableTargets', client, Number(row.deliverable_target) || 0);
   }
   return next;
 }

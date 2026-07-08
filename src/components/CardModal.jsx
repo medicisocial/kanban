@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  COLUMNS,
   CONTENT_TYPES,
   PLATFORM,
   PLATFORM_ICON,
@@ -49,6 +50,7 @@ function CardModal({
   onAddCardsToShoot,
   onOpenCard,
   onReturnToVault,
+  onMoveCard,
 }) {
   const overlayRef = useRef(null);
   const mouseDownOnOverlayRef = useRef(false);
@@ -348,9 +350,23 @@ function CardModal({
       >
         <div className="flex shrink-0 items-start justify-between border-b border-white/5 px-5 py-4">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-              {card.status}
-            </p>
+            {onMoveCard ? (
+              <select
+                value={displayCard.columnId}
+                onChange={(e) => onMoveCard(card.id, e.target.value)}
+                className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wider text-gray-300 outline-none transition hover:border-white/20 focus:border-[#810100]/50"
+              >
+                {COLUMNS.map((col) => (
+                  <option key={col.id} value={col.id}>
+                    {col.title}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
+                {card.status}
+              </p>
+            )}
             <h2 className="mt-1 text-lg font-semibold text-white">
               {isOneOff ? 'Edit one-off project' : 'Edit Card'}
             </h2>

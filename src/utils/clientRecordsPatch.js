@@ -16,6 +16,9 @@ export function patchToRecordColumns(patch = {}) {
   }
   if (patch.businessType !== undefined) columns.business_type = patch.businessType || '';
   if (patch.accountManager !== undefined) columns.account_manager = patch.accountManager || '';
+  if (patch.deliverableTarget !== undefined) {
+    columns.deliverable_target = Math.max(0, Math.round(Number(patch.deliverableTarget) || 0));
+  }
   if (patch.deletedCompanyFileIds !== undefined) {
     columns.deleted_company_file_ids = patch.deletedCompanyFileIds || [];
   }

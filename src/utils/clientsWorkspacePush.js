@@ -21,6 +21,7 @@ export const CLIENTS_BLOB_DEPRECATED_BRAND_KEYS = [
   'ideas',
   'notes',
   '_passwordResetTokens',
+  'deliverableTargets',
 ];
 
 export function slimClientsWorkspaceForCloudPush(workspace = {}) {

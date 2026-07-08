@@ -1,0 +1,132 @@
+-- Per-client monthly deliverable target, normalized onto client_records so it
+-- survives cloud sync (the legacy `clients` blob only carries org-level keys
+-- once VITE_USE_SUPABASE=true — see 022_strip_clients_blob_brand_fields.sql).
+
+alter table public.client_records
+  add column if not exists deliverable_target integer not null default 0;
+
+create or replace function public.patch_brand_profile(
+  p_org_id text,
+  p_brand_key text,
+  p_patch jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_brand_key text := lower(trim(p_brand_key));
+  v_merged_deleted jsonb;
+begin
+  if v_brand_key = '' then
+    raise exception 'brand key required';
+  end if;
+
+  if auth.role() = 'authenticated' then
+    if p_org_id is null
+      or trim(p_org_id) = ''
+      or not (p_org_id in (select public.user_org_ids()))
+    then
+      raise exception 'not authorized for organization';
+    end if;
+  end if;
+
+  if p_patch ? 'appendDeletedCompanyFileIds' then
+    select coalesce(jsonb_agg(distinct elem), '[]'::jsonb)
+    into v_merged_deleted
+    from (
+      select jsonb_array_elements_text(
+        coalesce(
+          (select cr.deleted_company_file_ids
+           from public.client_records cr
+           where cr.org_id = p_org_id and cr.brand_key = v_brand_key),
+          '[]'::jsonb
+        )
+      ) as elem
+      union
+      select jsonb_array_elements_text(coalesce(p_patch->'appendDeletedCompanyFileIds', '[]'::jsonb))
+    ) merged;
+  end if;
+
+  insert into public.client_records (
+    org_id, brand_key, display_name,
+    client_color, logo, contacts, social_logins, company_files, special_menus,
+    photo_gallery_link, business_type, account_manager, deliverable_target,
+    deleted_company_file_ids, data, updated_at
+  )
+  values (
+    p_org_id,
+    v_brand_key,
+    coalesce(nullif(trim(p_patch->>'displayName'), ''), v_brand_key),
+    coalesce(p_patch->>'clientColor', ''),
+    coalesce(p_patch->'clientLogo', '{}'::jsonb),
+    coalesce(p_patch->'contacts', '[]'::jsonb),
+    coalesce(p_patch->'socialLogins', '{}'::jsonb),
+    coalesce(p_patch->'companyFiles', '[]'::jsonb),
+    coalesce(p_patch->'specialMenus', '[]'::jsonb),
+    coalesce(p_patch->>'photoGalleryLink', ''),
+    coalesce(p_patch->>'businessType', ''),
+    coalesce(p_patch->>'accountManager', ''),
+    coalesce((p_patch->>'deliverableTarget')::integer, 0),
+    coalesce(v_merged_deleted, coalesce(p_patch->'deletedCompanyFileIds', '[]'::jsonb)),
+    '{}'::jsonb,
+    now()
+  )
+  on conflict (org_id, brand_key) do update
+    set
+      display_name = coalesce(nullif(excluded.display_name, ''), client_records.display_name),
+      client_color = case when p_patch ? 'clientColor' then excluded.client_color else client_records.client_color end,
+      logo = case when p_patch ? 'clientLogo' then excluded.logo else client_records.logo end,
+      contacts = case when p_patch ? 'contacts' then excluded.contacts else client_records.contacts end,
+      social_logins = case when p_patch ? 'socialLogins' then excluded.social_logins else client_records.social_logins end,
+      company_files = case when p_patch ? 'companyFiles' then excluded.company_files else client_records.company_files end,
+      special_menus = case when p_patch ? 'specialMenus' then excluded.special_menus else client_records.special_menus end,
+      photo_gallery_link = case when p_patch ? 'photoGalleryLink' then excluded.photo_gallery_link else client_records.photo_gallery_link end,
+      business_type = case when p_patch ? 'businessType' then excluded.business_type else client_records.business_type end,
+      account_manager = case when p_patch ? 'accountManager' then excluded.account_manager else client_records.account_manager end,
+      deliverable_target = case when p_patch ? 'deliverableTarget' then excluded.deliverable_target else client_records.deliverable_target end,
+      deleted_company_file_ids = case
+        when p_patch ? 'appendDeletedCompanyFileIds' then v_merged_deleted
+        when p_patch ? 'deletedCompanyFileIds' then excluded.deleted_company_file_ids
+        else client_records.deleted_company_file_ids
+      end,
+      updated_at = now();
+end;
+$$;
+
+revoke all on function public.patch_brand_profile(text, text, jsonb) from public, anon;
+grant execute on function public.patch_brand_profile(text, text, jsonb) to authenticated, service_role;
+
+-- Keep get_brand_profile in sync so any future direct callers see the target too.
+create or replace function public.get_brand_profile(p_org_id text, p_brand_key text)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select jsonb_build_object(
+    'brandKey',    b.brand_key,
+    'brandId',     b.id::text,
+    'displayName', b.display_name,
+    'clientColor', nullif(trim(cr.client_color), ''),
+    'clientLogo',  cr.logo,
+    'contacts',    coalesce(cr.contacts, '[]'::jsonb),
+    'socialLogins', coalesce(cr.social_logins, '{}'::jsonb),
+    'companyFiles', coalesce(cr.company_files, '[]'::jsonb),
+    'specialMenus', coalesce(cr.special_menus, '[]'::jsonb),
+    'photoGalleryLink', nullif(trim(cr.photo_gallery_link), ''),
+    'businessType', cr.business_type,
+    'accountManager', cr.account_manager,
+    'deliverableTarget', coalesce(cr.deliverable_target, 0)
+  )
+  from public.brands b
+  left join public.client_records cr
+    on cr.org_id = b.org_id and cr.brand_key = b.brand_key
+  where b.org_id = p_org_id
+    and b.brand_key = lower(trim(p_brand_key));
+$$;
+
+revoke all on function public.get_brand_profile(text, text) from public;
+grant execute on function public.get_brand_profile(text, text) to service_role, authenticated, anon;
