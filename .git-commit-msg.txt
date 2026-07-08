@@ -1,0 +1,7 @@
+Fix deliverable_target missing from staff-sync client_records reads
+
+The staff-sync GET fallback (and the repair-tool client_records fetch)
+had their own hardcoded column lists for client_records that predated
+deliverable_target, so a page reload that fell back to /api/staff-sync
+(e.g. after the 3s direct-read timeout) would silently drop the target
+back to 0 even though it was saved correctly in the database.
