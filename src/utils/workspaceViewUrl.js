@@ -5,8 +5,10 @@ const WORKSPACE_VIEWS = new Set([
   'shoot',
   'todo',
   'calendars',
+  'deliverables',
   'clients',
   'team',
+  'finances',
   'settings',
   'client-files',
 ]);

@@ -88,6 +88,15 @@ function normalizeClientColorsMap(colors = {}) {
   return normalized;
 }
 
+function normalizeDeliverableTargetsMap(targets = {}) {
+  const normalized = {};
+  for (const [client, value] of Object.entries(targets)) {
+    const num = Math.max(0, Math.round(Number(value) || 0));
+    if (num > 0) normalized[client] = num;
+  }
+  return normalized;
+}
+
 function normalizeClientsState(data, { includeDefaults = true } = {}) {
   const source = data && typeof data === 'object' ? data : {};
   const now = Date.now();
@@ -131,6 +140,7 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
     companyFiles: stripSuppressed(source.companyFiles || {}),
     specialMenus: stripSuppressed(source.specialMenus || {}),
     photoGalleryLinks: stripSuppressed(source.photoGalleryLinks || {}),
+    deliverableTargets: stripSuppressed(normalizeDeliverableTargetsMap(source.deliverableTargets || {})),
     portalPasswordVault: isCloudSourceOfTruth()
       ? {}
       : stripSuppressed(
@@ -456,6 +466,7 @@ export function useClients() {
         companyFiles: stripBrand(current.companyFiles),
         specialMenus: stripBrand(current.specialMenus),
         photoGalleryLinks: stripBrand(current.photoGalleryLinks),
+        deliverableTargets: stripBrand(current.deliverableTargets),
         portalPasswordVault: stripBrand(current.portalPasswordVault),
       },
       { includeDefaults },
@@ -581,6 +592,22 @@ export function useClients() {
     (client) => resolveClientMapValue(client, state.photoGalleryLinks) || '',
     [state.photoGalleryLinks],
   );
+
+  const getClientDeliverableTarget = useCallback(
+    (client) => Number(resolveClientMapValue(client, state.deliverableTargets)) || 0,
+    [state.deliverableTargets],
+  );
+
+  const setClientDeliverableTarget = useCallback(async (client, target) => {
+    if (!client) return { ok: false, error: 'Missing client.' };
+    const num = Math.max(0, Math.round(Number(target) || 0));
+    return applyClientsWorkspaceUpdate((prev) => {
+      const nextTargets = { ...(prev.deliverableTargets || {}) };
+      if (num > 0) nextTargets[client] = num;
+      else delete nextTargets[client];
+      return { ...prev, deliverableTargets: nextTargets };
+    }, { syncClients: [client] });
+  }, [applyClientsWorkspaceUpdate]);
 
   const getPortalPasswordForUser = useCallback(
     (client, userId) => readVaultPassword(client, userId),
@@ -841,6 +868,8 @@ export function useClients() {
     getClientSpecialMenus,
     setClientSpecialMenus,
     getClientPhotoGalleryLink,
+    getClientDeliverableTarget,
+    setClientDeliverableTarget,
     portalPasswordVault: state.portalPasswordVault,
     getPortalPasswordForUser,
     syncPortalPasswordVault,

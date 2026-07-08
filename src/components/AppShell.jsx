@@ -46,6 +46,7 @@ import ClientManagementPage from "./ClientManagementPage";
 import ClientFilesWorkspacePage from "./ClientFilesWorkspacePage";
 import TeamManagementPage from "./TeamManagementPage";
 import FinancesPage from "./FinancesPage";
+import DeliverablesPage from "./DeliverablesPage";
 import PlanPostDateModal from "./PlanPostDateModal";
 import PlanShootDateModal from "./PlanShootDateModal";
 import AddShootDayModal from "./AddShootDayModal";
@@ -1277,6 +1278,17 @@ export default function AppShell({ onSignOut }) {
 
       {activeView === "finances" && (
         <FinancesPage finances={financesController} />
+      )}
+
+      {activeView === "deliverables" && (
+        <DeliverablesPage
+          cards={cards}
+          clientFilter={clientFilter}
+          onSelectClientIdeas={(client) => {
+            setClientFilter(client);
+            handleNavigate("ideas");
+          }}
+        />
       )}
 
       {selectedCard && (

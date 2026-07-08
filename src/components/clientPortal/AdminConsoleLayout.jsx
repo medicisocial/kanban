@@ -9,6 +9,7 @@ import {
   IconIdeas,
   IconSettings,
   IconShoots,
+  IconTarget,
   IconTasks,
   IconTeam,
 } from './ClientPortalIcons';
@@ -30,7 +31,10 @@ const NAV_SECTIONS_BASE = [
   },
   {
     label: 'Planning',
-    items: [{ id: 'calendars', label: 'Calendars', Icon: IconCalendar }],
+    items: [
+      { id: 'calendars', label: 'Calendars', Icon: IconCalendar },
+      { id: 'deliverables', label: 'Deliverables', Icon: IconTarget },
+    ],
   },
   {
     label: 'Admin',
