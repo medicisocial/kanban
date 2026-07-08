@@ -20,6 +20,11 @@ export function useClientRecordsFromSupabase({ setWorkspaceState, orgId }) {
   setWorkspaceStateRef.current = setWorkspaceState;
 
   const [recordsLoaded, setRecordsLoaded] = useState(!SUPABASE_ENABLED);
+  // Separate from recordsLoaded: list rows (fast, for sidebar/filters) land first and
+  // don't carry profile fields like deliverableTarget — full-profile-dependent UI
+  // (e.g. Deliverables page) should wait for this so it never flashes a stale "0"
+  // that looks like a save didn't stick.
+  const [fullRecordsLoaded, setFullRecordsLoaded] = useState(!SUPABASE_ENABLED);
   const loadGenerationRef = useRef(0);
   const loadedOrgRef = useRef(null);
   const pullingRef = useRef(false);
@@ -45,7 +50,13 @@ export function useClientRecordsFromSupabase({ setWorkspaceState, orgId }) {
           })
           .catch((err) => {
             console.warn('[client_records] full profile load failed:', err?.message || err);
+          })
+          .finally(() => {
+            setFullRecordsLoaded(true);
           });
+      } else if (includeFull) {
+        // No rows to fetch profiles for — nothing to wait on.
+        setFullRecordsLoaded(true);
       }
 
       return listRows;
@@ -57,6 +68,7 @@ export function useClientRecordsFromSupabase({ setWorkspaceState, orgId }) {
   useEffect(() => {
     if (!SUPABASE_ENABLED) {
       setRecordsLoaded(true);
+      setFullRecordsLoaded(true);
       return undefined;
     }
 
@@ -66,9 +78,16 @@ export function useClientRecordsFromSupabase({ setWorkspaceState, orgId }) {
 
     if (loadedOrgRef.current !== activeOrgId) {
       setRecordsLoaded(false);
+      setFullRecordsLoaded(false);
     }
 
     let cancelled = false;
+
+    // Independent safety timeout so a hung full-profile fetch can't leave
+    // profile-dependent UI (e.g. Deliverables targets) stuck loading forever.
+    const fullLoadFailsafe = setTimeout(() => {
+      if (!cancelled && loadGenerationRef.current === generation) setFullRecordsLoaded(true);
+    }, PULL_TIMEOUT_MS);
 
     void (async () => {
       try {
@@ -97,9 +116,10 @@ export function useClientRecordsFromSupabase({ setWorkspaceState, orgId }) {
 
     return () => {
       cancelled = true;
+      clearTimeout(fullLoadFailsafe);
       unsubscribe();
     };
   }, [orgId, pullFromSupabase]);
 
-  return { recordsLoaded };
+  return { recordsLoaded, fullRecordsLoaded };
 }

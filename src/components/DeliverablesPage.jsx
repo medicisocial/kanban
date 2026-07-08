@@ -217,7 +217,7 @@ export default function DeliverablesPage({
   onOpenCard,
   onAddCard,
 }) {
-  const { clients, getClientDeliverableTarget, setClientDeliverableTarget } = useClientsContext();
+  const { clients, getClientDeliverableTarget, setClientDeliverableTarget, clientProfilesReady } = useClientsContext();
   const [selectedMonth, setSelectedMonth] = useState(() => currentYearMonth());
   const [expandedClient, setExpandedClient] = useState(null);
   const [addingForClient, setAddingForClient] = useState(null);
@@ -305,7 +305,11 @@ export default function DeliverablesPage({
         </div>
       )}
 
-      {clientList.length === 0 ? (
+      {!clientProfilesReady ? (
+        <div className={`${surfacePanelClass} p-6 text-center`}>
+          <p className="text-sm text-white/45">Loading client targets…</p>
+        </div>
+      ) : clientList.length === 0 ? (
         <div className={`${surfacePanelClass} p-6 text-center`}>
           <p className="text-sm text-white/45">No clients to show.</p>
         </div>

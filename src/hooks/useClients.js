@@ -280,7 +280,7 @@ export function useClients() {
     });
   }, [includeDefaults]);
 
-  const { recordsLoaded } = useClientRecordsFromSupabase({
+  const { recordsLoaded, fullRecordsLoaded } = useClientRecordsFromSupabase({
     setWorkspaceState: setWorkspaceStateFromSupabase,
     orgId,
   });
@@ -880,5 +880,9 @@ export function useClients() {
     addCustomColor,
     removeCustomColor,
     clientsReady,
+    // True once full client_records profiles (deliverable targets, contacts, etc.)
+    // have loaded — not just the fast name/color list. Use this to avoid flashing
+    // stale/empty profile fields (e.g. Deliverables targets) before they hydrate.
+    clientProfilesReady: !SUPABASE_ENABLED || (isCloudSourceOfTruth() ? fullRecordsLoaded : true),
   };
 }
