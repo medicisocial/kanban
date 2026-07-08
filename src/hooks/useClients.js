@@ -555,7 +555,7 @@ export function useClients() {
   const saveClientProfile = useCallback(async (client, patch = {}) => {
     if (!client) return { ok: false, error: 'Missing client.' };
 
-    const { color, businessType, logo, photoGalleryLink } = patch;
+    const { color, businessType, logo, photoGalleryLink, deliverableTarget } = patch;
     const storedLogo =
       logo === undefined ? undefined : logo ? await persistClientLogoToStorage(client, logo) : null;
     return applyClientsWorkspaceUpdate((prev) => {
@@ -583,6 +583,13 @@ export function useClients() {
           ...(prev.photoGalleryLinks || {}),
           [client]: photoGalleryLink || '',
         };
+      }
+      if (deliverableTarget !== undefined) {
+        const num = Math.max(0, Math.round(Number(deliverableTarget) || 0));
+        const nextTargets = { ...(prev.deliverableTargets || {}) };
+        if (num > 0) nextTargets[client] = num;
+        else delete nextTargets[client];
+        next.deliverableTargets = nextTargets;
       }
       return next;
     }, { syncClients: [client] });
