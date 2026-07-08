@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef, startTransition } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, startTransition, lazy, Suspense } from "react";
 import { SUPABASE_ENABLED } from "../lib/supabaseClient";
 import { useKanban } from "../hooks/useKanban";
 import { useVideoIdeas, applyClientResponses } from "../hooks/useVideoIdeas";
@@ -28,25 +28,28 @@ import { useFinances } from "../hooks/useFinances";
 import { useAdminTasks } from "../hooks/useAdminTasks";
 import { useEvents } from "../hooks/useEvents";
 import { useMeetings } from "../hooks/useMeetings";
-import CompanyTasks from "./CompanyTasks";
 import AdminConsoleLayout from "./clientPortal/AdminConsoleLayout";
-import KanbanBoard from "./KanbanBoard";
-import UnifiedCalendarsPage from "./UnifiedCalendarsPage";
-import ShootDay from "./ShootDay";
-import VideoIdeas from "./VideoIdeas";
 import WorkspaceHomePage from "./WorkspaceHomePage";
-import WorkspaceSettingsPage from "./WorkspaceSettingsPage";
-import ClientReviewPortal from "./ClientReviewPortal";
-import ClientContentReviewPortal from "./ClientContentReviewPortal";
-import ClientCalendarPortal from "./ClientCalendarPortal";
-import ClientShootDayPortal from "./ClientShootDayPortal";
 import WorkspaceNotificationsPanel from "./WorkspaceNotificationsPanel";
 import HandoffModal from "./HandoffModal";
-import ClientManagementPage from "./ClientManagementPage";
-import ClientFilesWorkspacePage from "./ClientFilesWorkspacePage";
-import TeamManagementPage from "./TeamManagementPage";
-import FinancesPage from "./FinancesPage";
-import DeliverablesPage from "./DeliverablesPage";
+// Secondary views are code-split: each is only fetched when the staff member
+// actually navigates there, instead of bloating the initial bundle every
+// session has to download before the app becomes interactive.
+const CompanyTasks = lazy(() => import("./CompanyTasks"));
+const KanbanBoard = lazy(() => import("./KanbanBoard"));
+const UnifiedCalendarsPage = lazy(() => import("./UnifiedCalendarsPage"));
+const ShootDay = lazy(() => import("./ShootDay"));
+const VideoIdeas = lazy(() => import("./VideoIdeas"));
+const WorkspaceSettingsPage = lazy(() => import("./WorkspaceSettingsPage"));
+const ClientReviewPortal = lazy(() => import("./ClientReviewPortal"));
+const ClientContentReviewPortal = lazy(() => import("./ClientContentReviewPortal"));
+const ClientCalendarPortal = lazy(() => import("./ClientCalendarPortal"));
+const ClientShootDayPortal = lazy(() => import("./ClientShootDayPortal"));
+const ClientManagementPage = lazy(() => import("./ClientManagementPage"));
+const ClientFilesWorkspacePage = lazy(() => import("./ClientFilesWorkspacePage"));
+const TeamManagementPage = lazy(() => import("./TeamManagementPage"));
+const FinancesPage = lazy(() => import("./FinancesPage"));
+const DeliverablesPage = lazy(() => import("./DeliverablesPage"));
 import PlanPostDateModal from "./PlanPostDateModal";
 import PlanShootDateModal from "./PlanShootDateModal";
 import AddShootDayModal from "./AddShootDayModal";
@@ -72,6 +75,14 @@ import {
   findIdeaForCard,
   getVaultIdeas,
 } from "../utils/videoIdeas";
+
+function PageLoadingFallback() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center">
+      <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>Loading…</p>
+    </div>
+  );
+}
 
 export default function AppShell({ onSignOut }) {
   const importData = parseImportParam();
@@ -1019,50 +1030,58 @@ export default function AppShell({ onSignOut }) {
   if (shootPortal) {
     const plan = getPlan(shootPortal.client, shootPortal.dateKey);
     return (
-      <ClientShootDayPortal
-        client={shootPortal.client}
-        dateKey={shootPortal.dateKey}
-        cards={cards}
-        plan={plan}
-        onUpdateCard={updateCard}
-        onUpdatePlan={(updates, options) => updatePlan(shootPortal.client, shootPortal.dateKey, updates, options)}
-      />
+      <Suspense fallback={<PageLoadingFallback />}>
+        <ClientShootDayPortal
+          client={shootPortal.client}
+          dateKey={shootPortal.dateKey}
+          cards={cards}
+          plan={plan}
+          onUpdateCard={updateCard}
+          onUpdatePlan={(updates, options) => updatePlan(shootPortal.client, shootPortal.dateKey, updates, options)}
+        />
+      </Suspense>
     );
   }
 
   if (calendarPortalClient) {
     return (
-      <ClientCalendarPortal
-        client={calendarPortalClient}
-        cards={cards}
-      />
+      <Suspense fallback={<PageLoadingFallback />}>
+        <ClientCalendarPortal
+          client={calendarPortalClient}
+          cards={cards}
+        />
+      </Suspense>
     );
   }
 
   if (contentReviewClient) {
     return (
-      <ClientContentReviewPortal
-        client={contentReviewClient}
-        cards={cards}
-        onApprove={handleContentReviewApprove}
-        onDeny={handleContentReviewDeny}
-      />
+      <Suspense fallback={<PageLoadingFallback />}>
+        <ClientContentReviewPortal
+          client={contentReviewClient}
+          cards={cards}
+          onApprove={handleContentReviewApprove}
+          onDeny={handleContentReviewDeny}
+        />
+      </Suspense>
     );
   }
 
   if (portalClient) {
     return (
-      <ClientReviewPortal
-        client={portalClient}
-        ideas={ideas}
-        onAddIdea={addIdea}
-        onAddIdeaToBank={addIdeaToBank}
-        onApprove={(id, comment, idea) => handlePortalApprove(id, comment, idea)}
-        onDecline={(id, comment, idea) => {
-          const snap = idea || ideas.find((i) => i.id === id);
-          handlePortalDecline(id, comment, snap);
-        }}
-      />
+      <Suspense fallback={<PageLoadingFallback />}>
+        <ClientReviewPortal
+          client={portalClient}
+          ideas={ideas}
+          onAddIdea={addIdea}
+          onAddIdeaToBank={addIdeaToBank}
+          onApprove={(id, comment, idea) => handlePortalApprove(id, comment, idea)}
+          onDecline={(id, comment, idea) => {
+            const snap = idea || ideas.find((i) => i.id === id);
+            handlePortalDecline(id, comment, snap);
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -1105,6 +1124,7 @@ export default function AppShell({ onSignOut }) {
       canUndo={canUndo}
       onUndo={undo}
     >
+      <Suspense fallback={<PageLoadingFallback />}>
       {activeView === "home" && (
         <WorkspaceHomePage
           cards={cards}
@@ -1298,6 +1318,7 @@ export default function AppShell({ onSignOut }) {
           }}
         />
       )}
+      </Suspense>
 
       {selectedCard && (
         <CardModal
