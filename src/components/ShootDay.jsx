@@ -41,6 +41,7 @@ export default function ShootDay({
   focusRequest,
   onMoveClientShootDay,
   onNavigate,
+  onHandoff,
 }) {
   const { clients } = useClientsContext();
   const [focusDate, setFocusDate] = useState(() => getDefaultShootDate());
@@ -248,6 +249,7 @@ export default function ShootDay({
               onReturnToVault={onReturnToVault}
               onRemoveClientShoot={onRemoveClientShoot}
               onMoveClientShootDay={onMoveClientShootDay}
+              onHandoff={onHandoff}
             />
           ) : (
             <ShootDayMonthView

@@ -216,22 +216,6 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="block sm:col-span-2">
-        <span className="mb-1 block text-xs font-medium text-gray-400">Shoot name</span>
-        <DebouncedField
-          {...SAVE_ON_BLUR}
-          resetKey={planKey}
-          value={plan?.title || ""}
-          onCommit={(value) => commitPatch({ title: value, manual: true })}
-          disabled={readOnly}
-          placeholder={`e.g. ${plan?.client || "Client"} spring campaign`}
-          className={inputClassWide}
-        />
-        <p className="mt-1 text-[10px] text-gray-500">
-          Appears on the Overview timeline and shoot day header.
-        </p>
-      </label>
-
-      <label className="block sm:col-span-2">
         <span className="mb-1 block text-xs font-medium text-gray-400">Location</span>
         <DebouncedField
           {...SAVE_ON_BLUR}
@@ -281,21 +265,6 @@ export function ShootDaySessionFields({ plan, onUpdatePlan, readOnly = false }) 
             />
           </label>
         </div>
-      </div>
-
-      <div className="sm:col-span-2 rounded-lg border border-white/10 bg-white/[0.02] p-3">
-        <p className="mb-1 text-xs font-semibold text-gray-300">Full-session models</p>
-        <p className="mb-3 text-[10px] text-gray-500">
-          Models needed for the entire shoot window (not tied to a specific piece of content).
-        </p>
-        <DebouncedModelTagInput
-          {...SAVE_ON_BLUR}
-          resetKey={planKey}
-          value={plan?.sessionModels || ""}
-          onCommit={(value) => commitPatch({ sessionModels: value })}
-          disabled={readOnly}
-          placeholder="Add model name, press Enter"
-        />
       </div>
     </div>
   );

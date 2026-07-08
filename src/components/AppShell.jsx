@@ -1200,6 +1200,7 @@ export default function AppShell({ onSignOut }) {
           onRemoveFromSchedule={handleRemoveFromShootSchedule}
           onReturnToVault={handleReturnCardToVault}
           onRemoveClientShoot={handleRemoveClientShoot}
+          onHandoff={handleHandoffRequest}
           embedded
         />
       )}

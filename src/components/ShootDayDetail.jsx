@@ -2,19 +2,14 @@ import { useMemo, useState } from "react";
 import { useClientsContext } from "../context/ClientsContext";
 import {
   formatShootDayLabel,
-  buildShootTimeline,
   aggregateModelsWithSlots,
   aggregateNeeds,
   getShootDayTitle,
-  resolveShootDayTime,
-  resolveShootDayEndTime,
 } from "../utils/shootDay";
-import ShootDayItem from "./ShootDayItem";
-import ShootDayTimeline from "./ShootDayTimeline";
-import ShootDayPlanningRow, { ShootDaySessionFields, ShootDaySessionExtras } from "./ShootDayPlanningRow";
+import ShootDayUnifiedSchedule from "./ShootDayUnifiedSchedule";
+import { ShootDaySessionFields, ShootDaySessionExtras } from "./ShootDayPlanningRow";
 import ShootDaySharePanel from "./ShootDaySharePanel";
 import ShootDayPrintButton from "./ShootDayPrintButton";
-import ShootScriptModal from "./ShootScriptModal";
 import ModelScheduleSummary from "./ModelScheduleSummary";
 
 export default function ShootDayDetail({
@@ -23,8 +18,6 @@ export default function ShootDayDetail({
   clientGroups,
   shootCount,
   hasShootDay,
-  cards,
-  ideas = [],
   onCardClick,
   onUpdateCard,
   onAddShootDay,
@@ -37,6 +30,8 @@ export default function ShootDayDetail({
   onReturnToVault,
   onRemoveClientShoot,
   onMoveClientShootDay,
+  onHandoff,
+  ideas = [],
 }) {
   return (
     <>
@@ -85,7 +80,6 @@ export default function ShootDayDetail({
               ideas={ideas}
               onCardClick={onCardClick}
               onUpdateCard={onUpdateCard}
-              onAddShootItem={onAddShootItem}
               onAddShootItemForClient={onAddShootItemForClient}
               onAddCardsToShoot={onAddCardsToShoot}
               plan={getPlan(client, dateKey)}
@@ -94,6 +88,7 @@ export default function ShootDayDetail({
               onReturnToVault={onReturnToVault}
               onRemoveClientShoot={() => onRemoveClientShoot(client, dateKey, clientCards)}
               onMoveShootDay={onMoveClientShootDay}
+              onHandoff={onHandoff}
             />
           ))}
         </div>
@@ -109,7 +104,6 @@ function ClientShootSection({
   ideas = [],
   onCardClick,
   onUpdateCard,
-  onAddShootItem,
   onAddShootItemForClient,
   onAddCardsToShoot,
   plan,
@@ -118,11 +112,11 @@ function ClientShootSection({
   onReturnToVault,
   onRemoveClientShoot,
   onMoveShootDay,
+  onHandoff,
 }) {
   const { getClientColor } = useClientsContext();
-  const [scriptCard, setScriptCard] = useState(null);
+  const [extrasOpen, setExtrasOpen] = useState(false);
   const color = getClientColor(client);
-  const timeline = useMemo(() => buildShootTimeline(clientCards), [clientCards]);
   const modelSchedules = useMemo(
     () => aggregateModelsWithSlots(clientCards, plan.sessionModels, plan),
     [clientCards, plan],
@@ -133,9 +127,7 @@ function ClientShootSection({
   );
 
   return (
-    <section
-      className="overflow-hidden rounded-xl border border-white/5 bg-[#111111]"
-    >
+    <section className="overflow-hidden rounded-xl border border-white/5 bg-[#111111]">
       <header className="border-b border-white/5 px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -144,10 +136,8 @@ function ClientShootSection({
             </h3>
             <p className="text-xs text-gray-500">
               <span style={{ color }}>{client}</span>
-              {' · '}
+              {" · "}
               {clientCards.length} item{clientCards.length === 1 ? "" : "s"}
-              {timeline.length > 0 &&
-                ` · ${timeline.length} timed slot${timeline.length === 1 ? "" : "s"}`}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -184,7 +174,7 @@ function ClientShootSection({
         </div>
       </header>
 
-      <div className="space-y-8 p-4 sm:p-5">
+      <div className="space-y-6 p-4 sm:p-5">
         <div>
           <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
             Session details
@@ -206,166 +196,55 @@ function ClientShootSection({
           <ShootDaySessionFields plan={plan} onUpdatePlan={onUpdatePlan} />
         </div>
 
-        <div>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-              Content schedule
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  onAddCardsToShoot?.(client, dateKey, {
-                    shootTime: resolveShootDayTime(plan, clientCards),
-                    shootEndTime: resolveShootDayEndTime(plan, clientCards),
-                  })
-                }
-                className="rounded-lg border border-white/10 px-2.5 py-1 text-xs text-gray-300 hover:bg-white/5"
-              >
-                + From board
-              </button>
-              <button
-                type="button"
-                onClick={() => onAddShootItemForClient(client)}
-                className="rounded-lg border border-[#810100]/30 bg-[#810100]/10 px-2.5 py-1 text-xs font-medium text-[#fca5a5] hover:bg-[#810100]/20"
-              >
-                + New item
-              </button>
-            </div>
-          </div>
-          {clientCards.length > 1 && (
-            <p className="mb-3 text-xs text-gray-500">
-              {clientCards.length} items on this shoot — add more reels or posts with the buttons above.
-            </p>
-          )}
-          {clientCards.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-white/10 px-4 py-8 text-center">
-              <p className="text-sm text-gray-500">No content scheduled yet.</p>
-              <p className="mt-1 text-xs text-gray-600">
-                Add multiple reels or posts to this shoot day.
-              </p>
-              <div className="mt-3 flex flex-wrap justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    onAddCardsToShoot?.(client, dateKey, {
-                      shootTime: resolveShootDayTime(plan, clientCards),
-                      shootEndTime: resolveShootDayEndTime(plan, clientCards),
-                    })
-                  }
-                  className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-white/5"
-                >
-                  Add from board / bank
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onAddShootItemForClient(client)}
-                  className="rounded-lg bg-[#810100]/20 px-3 py-1.5 text-xs font-medium text-[#fca5a5] hover:bg-[#810100]/30"
-                >
-                  Create new item
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {clientCards.map((card) => (
-                <ShootDayPlanningRow
-                  key={card.id}
-                  card={card}
-                  ideas={ideas}
-                  onUpdate={onUpdateCard}
-                  onRemove={onRemoveFromSchedule}
-                  onReturnToVault={onReturnToVault}
-                  onCardClick={onCardClick}
-                  shootWindow={plan}
-                  onOpenScript={setScriptCard}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        <ShootDayUnifiedSchedule
+          cards={clientCards}
+          ideas={ideas}
+          client={client}
+          dateKey={dateKey}
+          plan={plan}
+          onUpdateCard={onUpdateCard}
+          onCardClick={onCardClick}
+          onRemoveFromSchedule={onRemoveFromSchedule}
+          onReturnToVault={onReturnToVault}
+          onHandoff={onHandoff}
+          onAddCardsToShoot={onAddCardsToShoot}
+          onAddShootItemForClient={onAddShootItemForClient}
+        />
 
-        {clientCards.length > 0 && (
-        <div>
-          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
-            Timeline
-          </h4>
-          <ShootDayTimeline
-            entries={timeline}
-            plan={plan}
-            allCards={clientCards}
-            ideas={ideas}
-            client={client}
-            dateKey={dateKey}
-            onUpdateCard={onUpdateCard}
-            onCardClick={onCardClick}
-            onReturnToVault={onReturnToVault}
-          />
-        </div>
+        {allNeeds.length > 0 && (
+          <SummaryList title="Equipment & needs" items={allNeeds} color={color} />
         )}
 
-        {(modelSchedules.length > 0 || allNeeds.length > 0) && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {allNeeds.length > 0 && (
-              <SummaryList title="Equipment & needs" items={allNeeds} color={color} />
-            )}
-          </div>
-        )}
-
-        {clientCards.length > 0 && (
+        {modelSchedules.length > 0 && (
           <div>
-            <h4 className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
+            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
               Model call times
             </h4>
-            <p className="mb-3 text-xs text-gray-500">
-              Based on models added to each content item and full-session models above.
-            </p>
-            {modelSchedules.length > 0 ? (
-              <ModelScheduleSummary
-                schedules={modelSchedules}
-                title="Who needs to be there when"
-                titleClassName="text-xs font-semibold uppercase tracking-wider"
-                titleStyle={{ color }}
-              />
-            ) : (
-              <div className="rounded-lg border border-dashed border-white/10 px-4 py-8 text-center">
-                <p className="text-sm text-gray-400">No models added yet.</p>
-                <p className="mt-1 text-xs text-gray-500">
-                  Add models to each content item — their call times will appear here automatically.
-                </p>
-              </div>
-            )}
+            <ModelScheduleSummary
+              schedules={modelSchedules}
+              title="Who needs to be there when"
+              titleClassName="text-xs font-semibold uppercase tracking-wider"
+              titleStyle={{ color }}
+            />
           </div>
         )}
 
         <div>
-          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
-            Session extras
-          </h4>
-          <ShootDaySessionExtras plan={plan} onUpdatePlan={onUpdatePlan} />
+          <button
+            type="button"
+            onClick={() => setExtrasOpen((open) => !open)}
+            className="flex w-full items-center justify-between rounded-lg border border-white/8 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 transition hover:bg-white/[0.02]"
+          >
+            <span>Notes & gear</span>
+            <span className="text-gray-600">{extrasOpen ? "−" : "+"}</span>
+          </button>
+          {extrasOpen && (
+            <div className="mt-3">
+              <ShootDaySessionExtras plan={plan} onUpdatePlan={onUpdatePlan} />
+            </div>
+          )}
         </div>
-
-        {clientCards.length > 0 && (
-        <div>
-          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
-            Quick view
-          </h4>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {clientCards.map((card) => (
-              <ShootDayItem key={card.id} card={card} onClick={onCardClick} />
-            ))}
-          </div>
-        </div>
-        )}
       </div>
-
-      {scriptCard && (
-        <ShootScriptModal
-          card={scriptCard}
-          onClose={() => setScriptCard(null)}
-          onSave={onUpdateCard}
-        />
-      )}
     </section>
   );
 }

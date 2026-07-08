@@ -175,6 +175,19 @@ export function getDefaultShootEndTime(shootTime, contentType) {
   return minutesToTimeInput(startMinutes + getDefaultDuration(contentType));
 }
 
+/** True when a shoot slot's end time has passed (or the shoot day is in the past). */
+export function isShootSlotComplete(card, dateKey, now = new Date()) {
+  if (!card || !dateKey) return false;
+  const todayKey = toDateKey(now);
+  if (dateKey < todayKey) return true;
+  if (dateKey > todayKey) return false;
+
+  const slot = resolveShootSlot(card);
+  if (!slot) return false;
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  return nowMinutes >= slot.endMinutes;
+}
+
 function resolveShootSlot(card) {
   const startMinutes = parseTimeToMinutes(card.shootTime);
   if (startMinutes == null) return null;
