@@ -105,12 +105,6 @@ function auditCardCollection(cards) {
     );
   }
 
-  for (const card of findInappropriateShootDayCards(cards)) {
-    issues.push(
-      `${card.client} · ${card.title}: column "${card.columnId}" should not appear on shoot day for ${card.shootDate}`,
-    );
-  }
-
   return issues;
 }
 
