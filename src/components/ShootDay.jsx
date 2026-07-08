@@ -11,6 +11,7 @@ import {
   isHandedOffFromShoot,
   isPastShootDay,
   appendShootRosterIds,
+  isShootDayContentCard,
   addDays,
   addMonths,
   toDateKey,
