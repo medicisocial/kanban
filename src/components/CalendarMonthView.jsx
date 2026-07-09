@@ -18,6 +18,7 @@ export default function CalendarMonthView({
   selectedDateKey = '',
   onRemoveFromCalendar,
   onMoveCalendarPost,
+  onChangeCardStage,
   overviewLabel = "overview",
   hideClient = false,
   clientPortal = false,
@@ -144,6 +145,7 @@ export default function CalendarMonthView({
                         }}
                         onRemove={onRemoveFromCalendar}
                         onMove={onMoveCalendarPost}
+                        onChangeStage={onChangeCardStage}
                         compact
                         hideClient={hideClient}
                         clientPortal={clientPortal}

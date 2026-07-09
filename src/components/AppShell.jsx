@@ -1215,6 +1215,7 @@ export default function AppShell({ onSignOut }) {
           onAddCalendarPost={handleAddCalendarPost}
           onRemoveFromCalendar={handleRemoveFromCalendar}
           onMoveCalendarPost={handleMoveCalendarPost}
+          onChangeCardStage={handleMoveCard}
           onAddEvent={addEvent}
           onUpdateEvent={updateEvent}
           onDeleteEvent={deleteEvent}

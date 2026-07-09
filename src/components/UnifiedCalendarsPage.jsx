@@ -21,6 +21,7 @@ export default function UnifiedCalendarsPage({
   onAddCalendarPost,
   onRemoveFromCalendar,
   onMoveCalendarPost,
+  onChangeCardStage,
   onAddEvent,
   onUpdateEvent,
   onDeleteEvent,
@@ -90,6 +91,7 @@ export default function UnifiedCalendarsPage({
           onAddCalendarPost={onAddCalendarPost}
           onRemoveFromCalendar={onRemoveFromCalendar}
           onMoveCalendarPost={onMoveCalendarPost}
+          onChangeCardStage={onChangeCardStage}
           embedded
         />
       )}

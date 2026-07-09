@@ -28,6 +28,7 @@ export default function Calendar({
   onAddCalendarPost,
   onRemoveFromCalendar,
   onMoveCalendarPost,
+  onChangeCardStage,
   embedded = false,
 }) {
   const [focusDate, setFocusDate] = useState(() => getDefaultCalendarDate());
@@ -174,6 +175,7 @@ export default function Calendar({
               onCardClick={handleCalendarClick}
               onRemoveFromCalendar={onRemoveFromCalendar}
               onMoveCalendarPost={onMoveCalendarPost}
+              onChangeCardStage={onChangeCardStage}
               overviewLabel={overviewLabel}
             />
           ) : (
@@ -183,6 +185,7 @@ export default function Calendar({
               onCardClick={handleCalendarClick}
               onRemoveFromCalendar={onRemoveFromCalendar}
               onMoveCalendarPost={onMoveCalendarPost}
+              onChangeCardStage={onChangeCardStage}
               overviewLabel={overviewLabel}
             />
           )}

@@ -11,6 +11,7 @@ export default function CalendarEvent({
   onClick,
   onRemove,
   onMove,
+  onChangeStage,
   compact = false,
   hideClient = false,
   fullTitle = false,
@@ -115,6 +116,32 @@ export default function CalendarEvent({
       ? `↻ ${scheduleSummary || 'recurring'}`
       : scheduleSummary || '';
 
+  // Inline stage picker: lets staff move a card through the pipeline right from
+  // the calendar chip, without opening the full card modal. Skipped once a card
+  // is computed as "Posted" (date-derived, not a real columnId) since there's
+  // no matching option to reflect that state.
+  const stageBadgeNode =
+    onChangeStage && !clientPortal && card.id && showBoardStatus && !isPosted ? (
+      <select
+        value={card.columnId}
+        onClick={(ev) => ev.stopPropagation()}
+        onChange={(ev) => {
+          ev.stopPropagation();
+          onChangeStage(card.id, ev.target.value);
+        }}
+        title="Change pipeline stage"
+        className={`max-w-[52%] shrink-0 cursor-pointer truncate rounded border-0 bg-transparent px-0 py-0 font-semibold outline-none ${
+          relaxed ? 'text-xs' : 'text-[11px]'
+        } ${statusClass}`}
+      >
+        {COLUMNS.map((col) => (
+          <option key={col.id} value={col.id} className="text-black">
+            {col.title}
+          </option>
+        ))}
+      </select>
+    ) : null;
+
   return (
     <div className="relative min-w-0">
       {onRemove && (
@@ -135,6 +162,7 @@ export default function CalendarEvent({
         timeLabel={timeLabel}
         badgeLabel={showBoardStatus ? boardStatus : ''}
         badgeClassName={`font-semibold ${statusClass}`}
+        badgeNode={stageBadgeNode}
         typeLabel={card.contentType}
         typeLabelProps={typeLabelPresentation}
         title={card.title}

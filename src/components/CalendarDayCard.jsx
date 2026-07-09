@@ -16,6 +16,7 @@ export default function CalendarDayCard({
   timeLabel,
   badgeLabel,
   badgeClassName = 'text-[9px] font-semibold text-gray-300',
+  badgeNode = null,
   typeLabel,
   typeLabelProps,
   typePill,
@@ -106,15 +107,15 @@ export default function CalendarDayCard({
     </div>
   );
 
-  const categoryRow = (dense || relaxed) && (badgeLabel || hasTypeLabel) && (
+  const categoryRow = (dense || relaxed) && (badgeLabel || badgeNode || hasTypeLabel) && (
     <div className="mb-0.5 flex min-w-0 items-center gap-x-1.5 overflow-hidden">
-      {badgeLabel && (
+      {badgeNode || (badgeLabel && (
         <span
           className={`${metaBadgeClass} font-semibold ${relaxed ? 'text-xs' : 'text-[11px]'} ${badgeClassName}`.trim()}
         >
           {badgeLabel}
         </span>
-      )}
+      ))}
       {typeLabelEl}
     </div>
   );
