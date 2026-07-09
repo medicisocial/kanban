@@ -81,10 +81,17 @@ export function deriveLegacyShootRosterIds(clientCardsOnDate) {
 
 export function getEffectiveShootRoster(plan, clientCardsOnDate, dateKey, todayKey = toDateKey(new Date())) {
   const roster = Array.isArray(plan?.rosterCardIds) ? plan.rosterCardIds : [];
-  if (roster.length > 0) return roster;
-
   const legacyActive = deriveLegacyShootRosterIds(clientCardsOnDate);
-  if (legacyActive.length > 0) return legacyActive;
+
+  if (roster.length > 0 || legacyActive.length > 0) {
+    // Union, not "roster wins": cards can land on a shoot day (columnId "shoot"
+    // + matching shootDate) through flows that never touch rosterCardIds — e.g.
+    // setting a shoot date from the card modal — so an explicit roster must not
+    // hide them. Cards are only ever dropped from rosterCardIds alongside their
+    // shootDate being cleared (see removeCardFromShootRoster call sites), so this
+    // union can't resurrect something the user intentionally removed.
+    return Array.from(new Set([...roster, ...legacyActive]));
+  }
 
   if (isPastShootDay(dateKey, todayKey)) {
     return clientCardsOnDate.filter(isHandedOffFromShoot).map((card) => card.id);

@@ -1362,6 +1362,7 @@ export default function AppShell({ onSignOut }) {
               updateCard(cardId, updates);
               if (updates.shootDate) {
                 ensurePlan(shootDateCard.client, updates.shootDate);
+                addCardsToShootRoster(shootDateCard.client, updates.shootDate, [cardId]);
               }
             } finally {
               endBatch();
