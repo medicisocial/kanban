@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { useStaffAuth } from '../context/StaffAuthContext';
-import { INTERNAL_TEAM_CLIENT } from '../constants';
 import { BUSINESS_TYPES } from '../utils/eventFormSchemas';
-import { getClientPortalBrands } from '../utils/clients';
+import { sortClientNamesAlphabetically } from '../utils/clients';
 import { syncClientPortalCredentialsToCloud } from '../utils/clientPortalAdmin';
 import { getOrgId } from '../lib/orgSession';
 import { registerPortalCredentialBrand } from '../lib/syncHelpers';
@@ -71,7 +70,8 @@ export default function ClientManagementPage({
     setClientSpecialMenus,
   } = useClientsContext();
   const { session } = useStaffAuth();
-  const profileClients = getClientPortalBrands(clients, INTERNAL_TEAM_CLIENT);
+  // Include Medici Social so the agency can manage its own brand profile like any client.
+  const profileClients = sortClientNamesAlphabetically(clients);
 
   const [selectedClient, setSelectedClient] = useState(profileClients[0] || '');
   const [activeTab, setActiveTab] = useState(initialTab);

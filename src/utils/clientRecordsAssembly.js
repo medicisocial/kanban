@@ -1,4 +1,28 @@
-import { clientBrandNameKey, formatClientDisplayName, resolveClientMapValue } from './clients.js';
+import { clientBrandNameKey, formatClientDisplayName, resolveClientMapValue, clientNamesConflict } from './clients.js';
+
+const AGENCY_BRAND_NAME = 'Medici Social';
+const AGENCY_BRAND_COLOR = '#810100';
+const LEGACY_AGENCY_ORG_ID = 'medici';
+
+/**
+ * Medici Social is both the agency and a content brand. Cloud mode builds the
+ * client list from client_records only — if that row is missing, the brand
+ * disappears from filters/deliverables even though it exists in `brands`.
+ */
+export function ensureAgencyBrandInWorkspace(workspace = {}, orgId = '') {
+  if (orgId !== LEGACY_AGENCY_ORG_ID) return workspace;
+  const names = Array.isArray(workspace.names) ? workspace.names : [];
+  if (names.some((name) => clientNamesConflict(name, AGENCY_BRAND_NAME))) {
+    return workspace;
+  }
+  const next = { ...workspace, names: [...names, AGENCY_BRAND_NAME] };
+  const colors = { ...(next.colors || {}) };
+  if (!Object.keys(colors).some((key) => clientNamesConflict(key, AGENCY_BRAND_NAME))) {
+    colors[AGENCY_BRAND_NAME] = AGENCY_BRAND_COLOR;
+    next.colors = colors;
+  }
+  return next;
+}
 
 function isEmptyBrandField(field, value) {
   if (value === null || value === undefined) return true;

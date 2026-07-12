@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useClientsContext } from "../context/ClientsContext";
-import { INTERNAL_TEAM_CLIENT, SCHEDULED_POST_CONTENT_TYPES, COLUMNS, getContentTypeStyle } from "../constants";
-import { getClientPortalBrands, matchesClientFilter } from "../utils/clients";
+import { SCHEDULED_POST_CONTENT_TYPES, COLUMNS, getContentTypeStyle } from "../constants";
+import { matchesClientFilter, sortClientNamesAlphabetically } from "../utils/clients";
 import { toDateKey } from "../utils/calendar";
 import {
   currentYearMonth,
@@ -237,8 +237,10 @@ export default function DeliverablesPage({
   const goToday = useCallback(() => setSelectedMonth(currentYearMonth()), []);
 
   const clientList = useMemo(() => {
-    const brands = getClientPortalBrands(clients, INTERNAL_TEAM_CLIENT);
-    return brands.filter((client) => matchesClientFilter(client, clientFilter));
+    // Include Medici Social — the agency also produces its own content/deliverables.
+    return sortClientNamesAlphabetically(clients).filter((client) =>
+      matchesClientFilter(client, clientFilter),
+    );
   }, [clients, clientFilter]);
 
   const groupedCards = useMemo(

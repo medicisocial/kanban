@@ -2,6 +2,7 @@ import {
   brandProfilePatchFromWorkspaceBrand,
   diffBrandProfilePatches,
   mergeClientRecordRowsIntoWorkspace,
+  ensureAgencyBrandInWorkspace,
 } from '../src/utils/clientRecordsAssembly.js';
 import { slimClientsWorkspaceForCloudPush } from '../src/utils/clientsWorkspacePush.js';
 
@@ -115,6 +116,15 @@ const aliasedPatch = brandProfilePatchFromWorkspaceBrand('Plume', {
 });
 if (aliasedPatch.contacts?.[0]?.name !== 'Aliased Owner') {
   throw new Error('brandProfilePatchFromWorkspaceBrand should resolve brand-key aliases');
+}
+
+const withAgency = ensureAgencyBrandInWorkspace({ names: ['Plume'] }, 'medici');
+if (!withAgency.names.includes('Medici Social')) {
+  throw new Error('ensureAgencyBrandInWorkspace should add Medici Social for medici org');
+}
+const otherOrg = ensureAgencyBrandInWorkspace({ names: ['Plume'] }, 'other-agency');
+if (otherOrg.names.includes('Medici Social')) {
+  throw new Error('ensureAgencyBrandInWorkspace should not add Medici Social for other orgs');
 }
 
 console.log('Client records assembly tests passed.');

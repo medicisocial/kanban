@@ -7,6 +7,7 @@ import {
   CLIENTS_STORAGE_KEY,
   CLIENT_COLOR_PALETTE,
   CLIENT_PORTAL_PASSWORD_VAULT_KEY,
+  INTERNAL_TEAM_CLIENT,
 } from '../constants';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import { normalizeContentTypeColors } from '../utils/contentTypeColors';
@@ -426,6 +427,9 @@ export function useClients() {
     if (!trimmed) return { ok: false, error: 'Missing client.' };
     if (isInternalClientName(trimmed)) {
       return { ok: false, error: 'That client is reserved and cannot be removed.' };
+    }
+    if (clientNamesConflict(trimmed, INTERNAL_TEAM_CLIENT)) {
+      return { ok: false, error: 'Medici Social cannot be removed — it is the agency brand.' };
     }
     if (includeDefaults && DEFAULT_CLIENTS.some((client) => clientNamesConflict(client, trimmed))) {
       return { ok: false, error: 'Built-in demo clients cannot be removed.' };

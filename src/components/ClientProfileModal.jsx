@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
-import { INTERNAL_TEAM_CLIENT } from '../constants';
 import { BUSINESS_TYPES } from '../utils/eventFormSchemas';
-import { getClientPortalBrands } from '../utils/clients';
+import { sortClientNamesAlphabetically } from '../utils/clients';
 import { readClientProfileImage } from '../utils/clientImage';
 import { normalizeLink } from '../utils/links';
 import ClientAvatar from './ClientAvatar';
@@ -18,7 +17,7 @@ export default function ClientProfileModal({ onClose }) {
     getClientPhotoGalleryLink,
     saveClientProfile,
   } = useClientsContext();
-  const profileClients = getClientPortalBrands(clients, INTERNAL_TEAM_CLIENT);
+  const profileClients = sortClientNamesAlphabetically(clients);
   const [selectedClient, setSelectedClient] = useState(profileClients[0] || '');
   const [color, setColor] = useState('');
   const [businessType, setBusinessType] = useState('');

@@ -6,7 +6,7 @@ import {
   loadClientRecordsFull,
   subscribeClientRecords,
 } from '../lib/clientRecordsStore.js';
-import { mergeClientRecordRowsIntoWorkspace } from '../utils/clientRecordsCloud.js';
+import { mergeClientRecordRowsIntoWorkspace, ensureAgencyBrandInWorkspace } from '../utils/clientRecordsCloud.js';
 import { hydrateBrandFileTombstonesFromRows } from '../utils/brandFileTombstones.js';
 
 const PULL_TIMEOUT_MS = 12000;
@@ -29,24 +29,29 @@ export function useClientRecordsFromSupabase({ setWorkspaceState, orgId }) {
   const loadedOrgRef = useRef(null);
   const pullingRef = useRef(false);
 
-  const applyRows = useCallback((rows) => {
-    if (!Array.isArray(rows) || !rows.length) return;
-    hydrateBrandFileTombstonesFromRows(rows);
-    setWorkspaceStateRef.current((prev) => mergeClientRecordRowsIntoWorkspace(prev, rows));
+  const applyRows = useCallback((rows, activeOrgId = orgId) => {
+    if (Array.isArray(rows) && rows.length) {
+      hydrateBrandFileTombstonesFromRows(rows);
+      setWorkspaceStateRef.current((prev) =>
+        ensureAgencyBrandInWorkspace(mergeClientRecordRowsIntoWorkspace(prev, rows), activeOrgId),
+      );
+    } else {
+      setWorkspaceStateRef.current((prev) => ensureAgencyBrandInWorkspace(prev, activeOrgId));
+    }
     setRecordsLoaded(true);
-  }, []);
+  }, [orgId]);
 
   const pullFromSupabase = useCallback(async (activeOrgId, { includeFull = true } = {}) => {
     if (pullingRef.current) return [];
     pullingRef.current = true;
     try {
       const listRows = await loadClientRecords(activeOrgId);
-      applyRows(listRows);
+      applyRows(listRows, activeOrgId);
 
       if (includeFull && listRows.length) {
         void loadClientRecordsFull(activeOrgId)
           .then((fullRows) => {
-            if (fullRows.length) applyRows(fullRows);
+            if (fullRows.length) applyRows(fullRows, activeOrgId);
           })
           .catch((err) => {
             console.warn('[client_records] full profile load failed:', err?.message || err);

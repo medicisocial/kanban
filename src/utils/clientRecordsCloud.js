@@ -9,6 +9,7 @@ export {
   brandProfilePatchFromWorkspaceBrand,
   diffBrandProfilePatches,
   mergeClientRecordRowsIntoWorkspace,
+  ensureAgencyBrandInWorkspace,
 } from './clientRecordsAssembly.js';
 
 /** Slim select for fast filter/sidebar — skips heavy jsonb profile fields. */
