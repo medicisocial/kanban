@@ -361,7 +361,7 @@ export function getCardEditorPoints(card) {
 
 export function buildEditorCompletedByAssignee(
   cards,
-  { clientFilter = 'all', editorNames = [], referenceDate = new Date() } = {},
+  { clientFilter = 'all', editorNames = [], referenceDate = new Date(), rates = {} } = {},
 ) {
   const displayNameByKey = new Map();
   const counts = new Map();
@@ -369,6 +369,16 @@ export function buildEditorCompletedByAssignee(
   const carouselsByKey = new Map();
   const staticsByKey = new Map();
   const payByKey = new Map();
+
+  const reelRate = Number(rates.reelPointRate);
+  const carouselRate = Number(rates.carouselRate);
+  const staticRate = Number(rates.staticPostRate);
+  const resolvedReelRate =
+    Number.isFinite(reelRate) && reelRate >= 0 ? reelRate : EDITOR_POINT_PAY_RATE;
+  const resolvedCarouselRate =
+    Number.isFinite(carouselRate) && carouselRate >= 0 ? carouselRate : CAROUSEL_PAY_RATE;
+  const resolvedStaticRate =
+    Number.isFinite(staticRate) && staticRate >= 0 ? staticRate : STATIC_POST_PAY_RATE;
 
   const registerName = (name) => {
     const trimmed = (name || '').trim();
@@ -404,7 +414,11 @@ export function buildEditorCompletedByAssignee(
       staticsByKey.set(key, (staticsByKey.get(key) || 0) + 1);
     }
 
-    const pay = getCardEditorPay(card);
+    const pay = getCardEditorPay(card, {
+      reelPointRate: resolvedReelRate,
+      carouselRate: resolvedCarouselRate,
+      staticPostRate: resolvedStaticRate,
+    });
     if (pay) {
       payByKey.set(key, (payByKey.get(key) || 0) + pay);
     }
@@ -422,9 +436,9 @@ export function buildEditorCompletedByAssignee(
         points,
         carousels,
         statics,
-        carouselPay: carousels * CAROUSEL_PAY_RATE,
-        staticPay: statics * STATIC_POST_PAY_RATE,
-        reelPay: points * EDITOR_POINT_PAY_RATE,
+        carouselPay: carousels * resolvedCarouselRate,
+        staticPay: statics * resolvedStaticRate,
+        reelPay: points * resolvedReelRate,
         pay,
       };
     })
@@ -439,12 +453,13 @@ export function buildEditorCompletedByAssignee(
 /** Completed deliverable pay this month by assignee (reels + carousels + statics). */
 export function buildEditorReelPointsByAssignee(
   cards,
-  { clientFilter = 'all', editorNames = [], referenceDate = new Date() } = {},
+  { clientFilter = 'all', editorNames = [], referenceDate = new Date(), rates = {} } = {},
 ) {
   return buildEditorCompletedByAssignee(cards, {
     clientFilter,
     editorNames,
     referenceDate,
+    rates,
   }).map(({ name, points, carousels, statics, carouselPay, staticPay, reelPay, pay }) => ({
     name,
     points,

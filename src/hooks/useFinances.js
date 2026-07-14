@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FINANCES_STORAGE_KEY } from '../constants';
+import { normalizePayRates, DEFAULT_PAY_RATES } from '../constants/clientPlans';
 import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
@@ -20,7 +21,7 @@ function getFinanceId(category) {
   return category?.id || category; // 'revenue' | 'payroll' | 'expenses'
 }
 
-const FINANCE_RECORD_IDS = new Set(['revenue', 'payroll', 'expenses']);
+const FINANCE_RECORD_IDS = new Set(['revenue', 'payroll', 'expenses', 'pay_rates']);
 
 function isFinanceRecord(record) {
   return FINANCE_RECORD_IDS.has(getFinanceId(record));
@@ -689,6 +690,19 @@ export function useFinances() {
     });
   }, [resolvePayrollMonth]);
 
+  const getPayRates = useCallback(() => {
+    const record = finances.find((r) => r.id === 'pay_rates');
+    return normalizePayRates(record?.data || DEFAULT_PAY_RATES);
+  }, [finances]);
+
+  const setPayRates = useCallback((nextRates) => {
+    notifyMutation();
+    setFinances((prev) => {
+      const rest = prev.filter((r) => r.id !== 'pay_rates');
+      return [...rest, { id: 'pay_rates', data: normalizePayRates(nextRates) }];
+    });
+  }, []);
+
   /** Set expenses for a month. */
   const setExpenses = useCallback((yearMonth, amount) => {
     notifyMutation();
@@ -963,6 +977,8 @@ export function useFinances() {
     updatePayrollStaff,
     deletePayrollStaff,
     setOwnerComp,
+    getPayRates,
+    setPayRates,
     setExpenses,
     addExpenseItem,
     updateExpenseItem,

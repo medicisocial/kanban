@@ -1,5 +1,4 @@
 import {
-  FEED_POST_CONTENT_TYPES,
   SCHEDULED_POST_CONTENT_TYPES,
   normalizeEditorPoints,
   normalizeReelPointsTarget,
@@ -115,13 +114,15 @@ export function buildClientDeliverableSummary(grouped, client, targets = {}) {
     if (byType[card.contentType] !== undefined) byType[card.contentType] += 1;
     if (card.contentType === 'Reel') {
       reelPointsPlanned += normalizeEditorPoints(card.editorPoints);
-    } else if (FEED_POST_CONTENT_TYPES.includes(card.contentType)) {
+    } else if (card.contentType === 'Carousel') {
       feedPlanned += 1;
+    } else if (card.contentType === 'Static Post') {
+      feedPlanned += 0.5;
     }
   }
 
   const reelPointsTarget = normalizeReelPointsTarget(targets.reelPointsTarget);
-  const carouselStaticTarget = Math.max(0, Math.round(Number(targets.carouselStaticTarget) || 0));
+  const carouselStaticTarget = normalizeReelPointsTarget(targets.carouselStaticTarget);
 
   const reelRemaining = Math.max(0, reelPointsTarget - reelPointsPlanned);
   const feedRemaining = Math.max(0, carouselStaticTarget - feedPlanned);

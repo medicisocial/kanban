@@ -24,6 +24,9 @@ export const CLIENTS_BLOB_DEPRECATED_BRAND_KEYS = [
   'deliverableTargets',
   'reelPointsTargets',
   'carouselStaticTargets',
+  'planIds',
+  'shootDaysPerMonth',
+  'shootHoursPerDay',
 ];
 
 export function slimClientsWorkspaceForCloudPush(workspace = {}) {

@@ -93,13 +93,19 @@ export function normalizeEditorPoints(value) {
 }
 
 /** Payroll dollars for one completed card (0 if not a paid content type). */
-export function getCardEditorPay(card) {
+export function getCardEditorPay(card, rates = {}) {
   if (!card) return 0;
+  const reelRate = Number(rates.reelPointRate);
+  const carouselRate = Number(rates.carouselRate);
+  const staticRate = Number(rates.staticPostRate);
+  const reel = Number.isFinite(reelRate) && reelRate >= 0 ? reelRate : EDITOR_POINT_PAY_RATE;
+  const carousel = Number.isFinite(carouselRate) && carouselRate >= 0 ? carouselRate : CAROUSEL_PAY_RATE;
+  const staticPost = Number.isFinite(staticRate) && staticRate >= 0 ? staticRate : STATIC_POST_PAY_RATE;
   if (card.contentType === 'Reel') {
-    return normalizeEditorPoints(card.editorPoints) * EDITOR_POINT_PAY_RATE;
+    return normalizeEditorPoints(card.editorPoints) * reel;
   }
-  if (card.contentType === 'Carousel') return CAROUSEL_PAY_RATE;
-  if (card.contentType === 'Static Post') return STATIC_POST_PAY_RATE;
+  if (card.contentType === 'Carousel') return carousel;
+  if (card.contentType === 'Static Post') return staticPost;
   return 0;
 }
 

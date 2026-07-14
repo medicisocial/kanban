@@ -10,6 +10,7 @@ import {
   INTERNAL_TEAM_CLIENT,
   normalizeReelPointsTarget,
 } from '../constants';
+import { normalizeClientPlanId } from '../constants/clientPlans.js';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import { normalizeContentTypeColors } from '../utils/contentTypeColors';
 import { normalizeCustomColorPalette, normalizeHexColor } from '../utils/colorHex';
@@ -111,8 +112,36 @@ function normalizeReelPointsTargetsMap(targets = {}) {
 function normalizeCarouselStaticTargetsMap(targets = {}) {
   const normalized = {};
   for (const [client, value] of Object.entries(targets)) {
+    const num = normalizeReelPointsTarget(value);
+    if (num > 0) normalized[client] = num;
+  }
+  return normalized;
+}
+
+function normalizePlanIdsMap(planIds = {}) {
+  const normalized = {};
+  for (const [client, value] of Object.entries(planIds)) {
+    const id = normalizeClientPlanId(value);
+    if (id) normalized[client] = id;
+  }
+  return normalized;
+}
+
+function normalizeShootDaysPerMonthMap(days = {}) {
+  const normalized = {};
+  for (const [client, value] of Object.entries(days)) {
     const num = Math.max(0, Math.round(Number(value) || 0));
     if (num > 0) normalized[client] = num;
+  }
+  return normalized;
+}
+
+function normalizeShootHoursPerDayMap(hours = {}) {
+  const normalized = {};
+  for (const [client, value] of Object.entries(hours)) {
+    const num = Number(value);
+    const rounded = Number.isFinite(num) && num >= 0 ? Math.round(num * 2) / 2 : 0;
+    if (rounded > 0) normalized[client] = rounded;
   }
   return normalized;
 }
@@ -163,6 +192,9 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
     deliverableTargets: stripSuppressed(normalizeDeliverableTargetsMap(source.deliverableTargets || {})),
     reelPointsTargets: stripSuppressed(normalizeReelPointsTargetsMap(source.reelPointsTargets || {})),
     carouselStaticTargets: stripSuppressed(normalizeCarouselStaticTargetsMap(source.carouselStaticTargets || {})),
+    planIds: stripSuppressed(normalizePlanIdsMap(source.planIds || {})),
+    shootDaysPerMonth: stripSuppressed(normalizeShootDaysPerMonthMap(source.shootDaysPerMonth || {})),
+    shootHoursPerDay: stripSuppressed(normalizeShootHoursPerDayMap(source.shootHoursPerDay || {})),
     portalPasswordVault: isCloudSourceOfTruth()
       ? {}
       : stripSuppressed(
@@ -494,6 +526,9 @@ export function useClients() {
         deliverableTargets: stripBrand(current.deliverableTargets),
         reelPointsTargets: stripBrand(current.reelPointsTargets),
         carouselStaticTargets: stripBrand(current.carouselStaticTargets),
+        planIds: stripBrand(current.planIds),
+        shootDaysPerMonth: stripBrand(current.shootDaysPerMonth),
+        shootHoursPerDay: stripBrand(current.shootHoursPerDay),
         portalPasswordVault: stripBrand(current.portalPasswordVault),
       },
       { includeDefaults },
@@ -582,7 +617,18 @@ export function useClients() {
   const saveClientProfile = useCallback(async (client, patch = {}) => {
     if (!client) return { ok: false, error: 'Missing client.' };
 
-    const { color, businessType, logo, photoGalleryLink, deliverableTarget, reelPointsTarget, carouselStaticTarget } = patch;
+    const {
+      color,
+      businessType,
+      logo,
+      photoGalleryLink,
+      deliverableTarget,
+      reelPointsTarget,
+      carouselStaticTarget,
+      planId,
+      shootDaysPerMonth,
+      shootHoursPerDay,
+    } = patch;
     const storedLogo =
       logo === undefined ? undefined : logo ? await persistClientLogoToStorage(client, logo) : null;
     return applyClientsWorkspaceUpdate((prev) => {
@@ -626,11 +672,32 @@ export function useClients() {
         next.reelPointsTargets = nextTargets;
       }
       if (carouselStaticTarget !== undefined) {
-        const num = Math.max(0, Math.round(Number(carouselStaticTarget) || 0));
+        const num = normalizeReelPointsTarget(carouselStaticTarget);
         const nextTargets = { ...(prev.carouselStaticTargets || {}) };
         if (num > 0) nextTargets[client] = num;
         else delete nextTargets[client];
         next.carouselStaticTargets = nextTargets;
+      }
+      if (planId !== undefined) {
+        next.planIds = {
+          ...(prev.planIds || {}),
+          [client]: normalizeClientPlanId(planId),
+        };
+      }
+      if (shootDaysPerMonth !== undefined) {
+        const num = Math.max(0, Math.round(Number(shootDaysPerMonth) || 0));
+        const nextDays = { ...(prev.shootDaysPerMonth || {}) };
+        if (num > 0) nextDays[client] = num;
+        else delete nextDays[client];
+        next.shootDaysPerMonth = nextDays;
+      }
+      if (shootHoursPerDay !== undefined) {
+        const n = Number(shootHoursPerDay);
+        const num = Number.isFinite(n) && n >= 0 ? Math.round(n * 2) / 2 : 0;
+        const nextHours = { ...(prev.shootHoursPerDay || {}) };
+        if (num > 0) nextHours[client] = num;
+        else delete nextHours[client];
+        next.shootHoursPerDay = nextHours;
       }
       return next;
     }, { syncClients: [client] });
@@ -674,13 +741,13 @@ export function useClients() {
   }, [applyClientsWorkspaceUpdate]);
 
   const getClientCarouselStaticTarget = useCallback(
-    (client) => Math.max(0, Math.round(Number(resolveClientMapValue(client, state.carouselStaticTargets)) || 0)),
+    (client) => normalizeReelPointsTarget(resolveClientMapValue(client, state.carouselStaticTargets)),
     [state.carouselStaticTargets],
   );
 
   const setClientCarouselStaticTarget = useCallback(async (client, target) => {
     if (!client) return { ok: false, error: 'Missing client.' };
-    const num = Math.max(0, Math.round(Number(target) || 0));
+    const num = normalizeReelPointsTarget(target);
     return applyClientsWorkspaceUpdate((prev) => {
       const nextTargets = { ...(prev.carouselStaticTargets || {}) };
       if (num > 0) nextTargets[client] = num;
@@ -688,6 +755,24 @@ export function useClients() {
       return { ...prev, carouselStaticTargets: nextTargets };
     }, { syncClients: [client] });
   }, [applyClientsWorkspaceUpdate]);
+
+  const getClientPlanId = useCallback(
+    (client) => normalizeClientPlanId(resolveClientMapValue(client, state.planIds)),
+    [state.planIds],
+  );
+
+  const getClientShootDaysPerMonth = useCallback(
+    (client) => Math.max(0, Math.round(Number(resolveClientMapValue(client, state.shootDaysPerMonth)) || 0)),
+    [state.shootDaysPerMonth],
+  );
+
+  const getClientShootHoursPerDay = useCallback(
+    (client) => {
+      const n = Number(resolveClientMapValue(client, state.shootHoursPerDay));
+      return Number.isFinite(n) && n >= 0 ? Math.round(n * 2) / 2 : 0;
+    },
+    [state.shootHoursPerDay],
+  );
 
   const getPortalPasswordForUser = useCallback(
     (client, userId) => readVaultPassword(client, userId),
@@ -954,6 +1039,9 @@ export function useClients() {
     setClientReelPointsTarget,
     getClientCarouselStaticTarget,
     setClientCarouselStaticTarget,
+    getClientPlanId,
+    getClientShootDaysPerMonth,
+    getClientShootHoursPerDay,
     portalPasswordVault: state.portalPasswordVault,
     getPortalPasswordForUser,
     syncPortalPasswordVault,

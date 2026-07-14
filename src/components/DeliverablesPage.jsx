@@ -179,15 +179,17 @@ function ClientDeliverableRow({
           <div className="flex items-center gap-1.5" title="Carousels + static posts">
             <span className="text-[10px] uppercase tracking-wider text-white/35">Carousels/statics</span>
             <span className={summary.feedOnTrack && carouselStaticTarget > 0 ? "text-emerald-300" : "text-white/70"}>
-              {feedPlanned}
+              {formatPoints(feedPlanned)}
             </span>
             <span className="text-white/30">/</span>
             <EditableTarget
               value={carouselStaticTarget}
               loading={targetLoading}
+              step={0.5}
               emptyLabel="Set"
               onSave={(next) => onSaveFeedTarget(client, next)}
             />
+            <span className="text-[10px] text-white/30">pts</span>
           </div>
         </div>
 

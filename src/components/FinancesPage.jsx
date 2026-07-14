@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { CAROUSEL_PAY_RATE, EDITOR_POINT_PAY_RATE, STATIC_POST_PAY_RATE } from '../constants';
-import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import { DEFAULT_PAY_RATES, normalizePayRates } from '../constants/clientPlans';
+import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import { IconChevronLeft, IconChevronRight } from './clientPortal/ClientPortalIcons';
 import { useStaffAuth } from '../context/StaffAuthContext';
@@ -102,8 +102,11 @@ function createExtraField() {
   return { id: crypto.randomUUID(), label: '', amount: 0 };
 }
 
-function PayrollPersonRow({ person, onUpdate, onRemove }) {
+function PayrollPersonRow({ person, rates, onUpdate, onRemove }) {
   const fields = Array.isArray(person.extraFields) ? person.extraFields : [];
+  const reelRate = rates?.reelPointRate ?? DEFAULT_PAY_RATES.reelPointRate;
+  const carouselRate = rates?.carouselRate ?? DEFAULT_PAY_RATES.carouselRate;
+  const staticRate = rates?.staticPostRate ?? DEFAULT_PAY_RATES.staticPostRate;
 
   const setFields = (nextFields) => {
     onUpdate({ extraFields: nextFields });
@@ -141,16 +144,16 @@ function PayrollPersonRow({ person, onUpdate, onRemove }) {
       {person.kind === 'team' && (
         <div className="mt-3 space-y-1 text-xs text-white/55">
           <p>
-            Reels: {person.points || 0} pts · {fmt$(person.reelPay ?? (person.points || 0) * EDITOR_POINT_PAY_RATE)}
-            <span className="text-white/35"> (${EDITOR_POINT_PAY_RATE}/pt)</span>
+            Reels: {person.points || 0} pts · {fmt$(person.reelPay ?? (person.points || 0) * reelRate)}
+            <span className="text-white/35"> (${reelRate}/pt)</span>
           </p>
           <p>
             Carousels: {person.carousels || 0} · {fmt$(person.carouselPay || 0)}
-            <span className="text-white/35"> (${CAROUSEL_PAY_RATE} each)</span>
+            <span className="text-white/35"> (${carouselRate} each)</span>
           </p>
           <p>
             Statics: {person.statics || 0} · {fmt$(person.staticPay || 0)}
-            <span className="text-white/35"> (${STATIC_POST_PAY_RATE} each)</span>
+            <span className="text-white/35"> (${staticRate} each)</span>
           </p>
         </div>
       )}
@@ -192,6 +195,25 @@ function PayrollPersonRow({ person, onUpdate, onRemove }) {
         Add field
       </button>
     </div>
+  );
+}
+
+function RateField({ label, hint, value, onChange }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.18em] text-white/45">
+        {label}
+      </span>
+      <input
+        type="number"
+        min="0"
+        step="1"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={financeInputClass}
+      />
+      {hint ? <p className="mt-1 text-[10px] text-white/35">{hint}</p> : null}
+    </label>
   );
 }
 
@@ -286,6 +308,8 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     deletePayrollStaff,
     setOwnerComp,
     getMonthlySnapshot,
+    getPayRates,
+    setPayRates,
     currentYearMonth,
   } = finances;
 
@@ -304,8 +328,19 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
   }, [session, teamMembers, org?.role]);
 
   const [selectedMonth, setSelectedMonth] = useState(() => currentYearMonth());
+  const [payrollTab, setPayrollTab] = useState('pay');
   const [saveStatus, setSaveStatus] = useState('idle');
   const [saveMessage, setSaveMessage] = useState('');
+  const [ratesDraft, setRatesDraft] = useState(() => normalizePayRates(DEFAULT_PAY_RATES));
+
+  const payRates = useMemo(
+    () => getPayRates?.() || normalizePayRates(DEFAULT_PAY_RATES),
+    [getPayRates],
+  );
+
+  useEffect(() => {
+    setRatesDraft(payRates);
+  }, [payRates]);
 
   // Carry prior-month roster into the viewed month when it has no staff yet.
   useEffect(() => {
@@ -358,9 +393,30 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     }
   }, [saveFinancesNow]);
 
+  const handleSaveRates = useCallback(async () => {
+    setPayRates?.(normalizePayRates(ratesDraft));
+    setSaveStatus('saving');
+    setSaveMessage('');
+    try {
+      await saveFinancesNow();
+      setSaveStatus('saved');
+      setSaveMessage('Rates saved.');
+    } catch (error) {
+      setSaveStatus('error');
+      setSaveMessage(error?.message || 'Could not save rates.');
+    }
+  }, [ratesDraft, saveFinancesNow, setPayRates]);
+
+  const updateRateDraft = useCallback((key, value) => {
+    setRatesDraft((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
   const pointsMaps = useMemo(() => {
     const referenceDate = yearMonthToDate(selectedMonth);
-    const roster = buildEditorReelPointsByAssignee(cards || [], { referenceDate });
+    const roster = buildEditorReelPointsByAssignee(cards || [], {
+      referenceDate,
+      rates: payRates,
+    });
     const pointsByName = {};
     const pointsPayByName = {};
     const carouselsByName = {};
@@ -388,7 +444,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
       staticPayByName,
       reelPayByName,
     };
-  }, [cards, selectedMonth]);
+  }, [cards, selectedMonth, payRates]);
 
   const snapshot = useMemo(
     () => getMonthlySnapshot(selectedMonth, pointsMaps),
@@ -431,9 +487,119 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     <section>
       <ClientPortalSectionHeader
         title="Payroll"
-        description="Monthly staff pay from reel points, custom fields, and owner draw."
+        description="Monthly staff pay from completed work, custom fields, and owner draw."
       />
 
+      <div className={`${glassSegmentClass} mb-6 inline-flex gap-1 p-1`}>
+        <button
+          type="button"
+          onClick={() => setPayrollTab('pay')}
+          className={`rounded px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.14em] transition ${
+            payrollTab === 'pay' ? 'bg-white/15 text-white' : 'text-white/45 hover:text-white/75'
+          }`}
+        >
+          Pay
+        </button>
+        <button
+          type="button"
+          onClick={() => setPayrollTab('rates')}
+          className={`rounded px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.14em] transition ${
+            payrollTab === 'rates' ? 'bg-white/15 text-white' : 'text-white/45 hover:text-white/75'
+          }`}
+        >
+          Rates
+        </button>
+      </div>
+
+      {payrollTab === 'rates' ? (
+        <div className={`${surfacePanelClass} mb-4 max-w-3xl space-y-6 p-5`}>
+          <div>
+            <h3 className="text-sm font-semibold text-white">Editor pay rates</h3>
+            <p className="mt-1 text-xs text-white/45">
+              These rates drive team payroll for completed reels, carousels, and statics.
+            </p>
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <RateField
+                label="Reel point ($/pt)"
+                value={ratesDraft.reelPointRate}
+                onChange={(v) => updateRateDraft('reelPointRate', v)}
+              />
+              <RateField
+                label="Carousel ($/each)"
+                value={ratesDraft.carouselRate}
+                onChange={(v) => updateRateDraft('carouselRate', v)}
+              />
+              <RateField
+                label="Static post ($/each)"
+                value={ratesDraft.staticPostRate}
+                onChange={(v) => updateRateDraft('staticPostRate', v)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-white">Videographer</h3>
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <RateField
+                label="Hourly rate"
+                value={ratesDraft.videographerHourly}
+                onChange={(v) => updateRateDraft('videographerHourly', v)}
+                hint="Stored for reference — not auto-payroll yet."
+              />
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-white">Account manager</h3>
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <RateField
+                label="Base ($/client/mo)"
+                value={ratesDraft.accountManagerBase}
+                onChange={(v) => updateRateDraft('accountManagerBase', v)}
+              />
+              <RateField
+                label="Per reel point"
+                value={ratesDraft.accountManagerPerReelPoint}
+                onChange={(v) => updateRateDraft('accountManagerPerReelPoint', v)}
+              />
+              <RateField
+                label="Per carousel"
+                value={ratesDraft.accountManagerPerCarousel}
+                onChange={(v) => updateRateDraft('accountManagerPerCarousel', v)}
+              />
+              <RateField
+                label="Per static"
+                value={ratesDraft.accountManagerPerStatic}
+                onChange={(v) => updateRateDraft('accountManagerPerStatic', v)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-white">Ads</h3>
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <RateField
+                label="Meta ads specialist ($/client/mo)"
+                value={ratesDraft.metaAdsSpecialistFlat}
+                onChange={(v) => updateRateDraft('metaAdsSpecialistFlat', v)}
+                hint="Stored for reference — apply on Pro plans later."
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
+            <button type="button" onClick={handleSaveRates} className={btnPrimaryClass}>
+              {saveStatus === 'saving' ? 'Saving…' : 'Save rates'}
+            </button>
+            {saveMessage && (
+              <p className={`text-xs ${saveStatus === 'error' ? 'text-rose-300' : 'text-emerald-300'}`}>
+                {saveMessage}
+              </p>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
       <div className="mb-6 flex items-center gap-3">
         <button
           type="button"
@@ -473,8 +639,8 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
           <div>
             <h3 className="text-sm font-semibold text-white">People</h3>
             <p className="mt-1 text-xs text-white/45">
-              Team members earn reels (${EDITOR_POINT_PAY_RATE}/pt), carousels (${CAROUSEL_PAY_RATE}), and
-              statics (${STATIC_POST_PAY_RATE}). Add custom fields for bonuses or other pay. Custom people use
+              Team members earn reels (${payRates.reelPointRate}/pt), carousels (${payRates.carouselRate}), and
+              statics (${payRates.staticPostRate}). Add custom fields for bonuses or other pay. Custom people use
               fields only.
             </p>
           </div>
@@ -510,6 +676,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
               <PayrollPersonRow
                 key={person.id}
                 person={person}
+                rates={payRates}
                 onUpdate={(updates) => updatePayrollStaff(selectedMonth, person.id, updates)}
                 onRemove={() => deletePayrollStaff(selectedMonth, person.id)}
               />
@@ -565,6 +732,8 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
           {saveStatus === 'saving' ? 'Saving...' : 'Save payroll'}
         </button>
       </div>
+        </>
+      )}
     </section>
   );
 }

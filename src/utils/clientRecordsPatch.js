@@ -24,7 +24,18 @@ export function patchToRecordColumns(patch = {}) {
     columns.reel_points_target = Number.isFinite(n) && n > 0 ? Math.round(n * 2) / 2 : 0;
   }
   if (patch.carouselStaticTarget !== undefined) {
-    columns.carousel_static_target = Math.max(0, Math.round(Number(patch.carouselStaticTarget) || 0));
+    const n = Number(patch.carouselStaticTarget);
+    columns.carousel_static_target = Number.isFinite(n) && n > 0 ? Math.round(n * 2) / 2 : 0;
+  }
+  if (patch.planId !== undefined) {
+    columns.plan_id = String(patch.planId || '').trim().toLowerCase() || 'custom';
+  }
+  if (patch.shootDaysPerMonth !== undefined) {
+    columns.shoot_days_per_month = Math.max(0, Math.round(Number(patch.shootDaysPerMonth) || 0));
+  }
+  if (patch.shootHoursPerDay !== undefined) {
+    const n = Number(patch.shootHoursPerDay);
+    columns.shoot_hours_per_day = Number.isFinite(n) && n >= 0 ? Math.round(n * 2) / 2 : 0;
   }
   if (patch.deletedCompanyFileIds !== undefined) {
     columns.deleted_company_file_ids = patch.deletedCompanyFileIds || [];

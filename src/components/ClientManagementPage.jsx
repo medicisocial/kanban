@@ -31,9 +31,11 @@ import ContentReviewSharePanel from './ContentReviewSharePanel';
 import ClientPortalHealthChecklist from './ClientPortalHealthChecklist';
 import { btnPrimaryClass, btnSecondaryClass, selectClass, glassSegmentClass, glassInsetClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 import { normalizeReelPointsTarget } from '../constants';
+import { CLIENT_PLAN_OPTIONS, applyClientPlanDefaults, normalizeClientPlanId } from '../constants/clientPlans';
 
 const TABS = [
   { id: 'profile', label: 'Profile' },
+  { id: 'plan', label: 'Plan' },
   { id: 'files', label: 'Brand assets' },
   { id: 'contacts', label: 'Contacts' },
   { id: 'social', label: 'Social logins' },
@@ -59,6 +61,9 @@ export default function ClientManagementPage({
     getClientPhotoGalleryLink,
     getClientReelPointsTarget,
     getClientCarouselStaticTarget,
+    getClientPlanId,
+    getClientShootDaysPerMonth,
+    getClientShootHoursPerDay,
     saveClientProfile,
     getClientUsers,
     setClientPortalUsers,
@@ -82,12 +87,18 @@ export default function ClientManagementPage({
   const [photoGalleryLink, setPhotoGalleryLink] = useState('');
   const [reelPointsTarget, setReelPointsTarget] = useState('');
   const [carouselStaticTarget, setCarouselStaticTarget] = useState('');
+  const [planId, setPlanId] = useState('custom');
+  const [shootDaysPerMonth, setShootDaysPerMonth] = useState('');
+  const [shootHoursPerDay, setShootHoursPerDay] = useState('');
   const [previewSrc, setPreviewSrc] = useState(null);
   const [logoCrop, setLogoCrop] = useState(DEFAULT_LOGO_CROP);
   const [pendingLogo, setPendingLogo] = useState(undefined);
   const [profileError, setProfileError] = useState('');
   const [profileMessage, setProfileMessage] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [planError, setPlanError] = useState('');
+  const [planMessage, setPlanMessage] = useState('');
+  const [savingPlan, setSavingPlan] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removingClient, setRemovingClient] = useState(false);
@@ -123,6 +134,9 @@ export default function ClientManagementPage({
     setPhotoGalleryLink(getClientPhotoGalleryLink(selectedClient));
     setReelPointsTarget(String(getClientReelPointsTarget(selectedClient) || ''));
     setCarouselStaticTarget(String(getClientCarouselStaticTarget(selectedClient) || ''));
+    setPlanId(getClientPlanId(selectedClient) || 'custom');
+    setShootDaysPerMonth(String(getClientShootDaysPerMonth(selectedClient) || ''));
+    setShootHoursPerDay(String(getClientShootHoursPerDay(selectedClient) || ''));
     const normalized = normalizeClientLogo(getClientLogo(selectedClient));
     setPreviewSrc(normalized?.src || null);
     setLogoCrop({
@@ -133,6 +147,8 @@ export default function ClientManagementPage({
     setPendingLogo(undefined);
     setProfileError('');
     setProfileMessage('');
+    setPlanError('');
+    setPlanMessage('');
     // Only reload the form when switching clients — not on background sync updates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClient]);
@@ -184,8 +200,6 @@ export default function ClientManagementPage({
         color,
         businessType,
         photoGalleryLink,
-        reelPointsTarget: normalizeReelPointsTarget(reelPointsTarget),
-        carouselStaticTarget: Math.max(0, Math.round(Number(carouselStaticTarget) || 0)),
         logo: logoToSave,
       });
       if (result?.ok === false) {
@@ -212,15 +226,56 @@ export default function ClientManagementPage({
     }
   };
 
+  const handlePlanChange = (nextPlanId) => {
+    const id = normalizeClientPlanId(nextPlanId);
+    setPlanId(id);
+    if (id === 'custom') return;
+    const defaults = applyClientPlanDefaults(id);
+    setReelPointsTarget(String(defaults.reelPointsTarget || ''));
+    setCarouselStaticTarget(String(defaults.carouselStaticTarget || ''));
+    setShootDaysPerMonth(String(defaults.shootDaysPerMonth || ''));
+    setShootHoursPerDay(String(defaults.shootHoursPerDay || ''));
+  };
+
+  const handleSavePlan = async () => {
+    if (!selectedClient) return;
+    setSavingPlan(true);
+    setPlanError('');
+    setPlanMessage('');
+    try {
+      const result = await saveClientProfile(selectedClient, {
+        planId: normalizeClientPlanId(planId),
+        reelPointsTarget: normalizeReelPointsTarget(reelPointsTarget),
+        carouselStaticTarget: normalizeReelPointsTarget(carouselStaticTarget),
+        shootDaysPerMonth: Math.max(0, Math.round(Number(shootDaysPerMonth) || 0)),
+        shootHoursPerDay: Math.max(0, Number(shootHoursPerDay) || 0),
+      });
+      if (result?.ok === false) {
+        setPlanError(result.error || 'Could not save plan.');
+        return;
+      }
+      setPlanMessage('Plan saved.');
+      setTimeout(() => setPlanMessage(''), 4000);
+    } catch (err) {
+      setPlanError(err.message || 'Could not save plan.');
+    } finally {
+      setSavingPlan(false);
+    }
+  };
+
   const hasProfileChanges =
     pendingLogo !== undefined ||
     (selectedClient && color !== getClientColor(selectedClient)) ||
     (selectedClient && businessType !== getClientBusinessType(selectedClient)) ||
-    (selectedClient && photoGalleryLink !== getClientPhotoGalleryLink(selectedClient)) ||
-    (selectedClient &&
-      normalizeReelPointsTarget(reelPointsTarget) !== getClientReelPointsTarget(selectedClient)) ||
-    (selectedClient &&
-      Math.max(0, Math.round(Number(carouselStaticTarget) || 0)) !== getClientCarouselStaticTarget(selectedClient));
+    (selectedClient && photoGalleryLink !== getClientPhotoGalleryLink(selectedClient));
+
+  const hasPlanChanges =
+    selectedClient &&
+    (normalizeClientPlanId(planId) !== getClientPlanId(selectedClient) ||
+      normalizeReelPointsTarget(reelPointsTarget) !== getClientReelPointsTarget(selectedClient) ||
+      normalizeReelPointsTarget(carouselStaticTarget) !== getClientCarouselStaticTarget(selectedClient) ||
+      Math.max(0, Math.round(Number(shootDaysPerMonth) || 0)) !== getClientShootDaysPerMonth(selectedClient) ||
+      Math.max(0, Number(shootHoursPerDay) || 0) !== getClientShootHoursPerDay(selectedClient));
 
   const handleAddClient = async (name, clientColor, logo) => {
     const result = await addClient(name, clientColor, logo);
@@ -462,42 +517,6 @@ export default function ClientManagementPage({
                 )}
               </label>
 
-              <label className="block">
-                <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
-                  Monthly reel points
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={reelPointsTarget}
-                  onChange={(e) => setReelPointsTarget(e.target.value)}
-                  placeholder="e.g. 4.5"
-                  className="w-32 border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
-                />
-                <p className="mt-1.5 text-[10px] text-white/35">
-                  Reel point quota per month for this client — half-point steps allowed.
-                </p>
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
-                  Monthly carousels / static posts
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={carouselStaticTarget}
-                  onChange={(e) => setCarouselStaticTarget(e.target.value)}
-                  placeholder="e.g. 4"
-                  className="w-32 border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
-                />
-                <p className="mt-1.5 text-[10px] text-white/35">
-                  Carousel and static post count expected per month.
-                </p>
-              </label>
-
               <ClientBrandColorField
                 value={color}
                 onChange={setColor}
@@ -528,6 +547,123 @@ export default function ClientManagementPage({
                   Removes {selectedClient} from the pipeline, calendars, and client filters.
                 </p>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'plan' && (
+            <div key={`plan-${selectedClient}`} className="portal-content-fade max-w-xl space-y-5">
+              <label className="block">
+                <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                  Package
+                </span>
+                <select
+                  value={planId}
+                  onChange={(e) => handlePlanChange(e.target.value)}
+                  className={selectClass}
+                >
+                  {CLIENT_PLAN_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1.5 text-[10px] text-white/35">
+                  Choosing a named plan fills deliverables and shoot schedule. You can still edit fields afterward, or pick Custom.
+                </p>
+              </label>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                    Monthly reel points
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={reelPointsTarget}
+                    onChange={(e) => {
+                      setReelPointsTarget(e.target.value);
+                      setPlanId('custom');
+                    }}
+                    placeholder="e.g. 4"
+                    className="w-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                    Carousel / static points
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={carouselStaticTarget}
+                    onChange={(e) => {
+                      setCarouselStaticTarget(e.target.value);
+                      setPlanId('custom');
+                    }}
+                    placeholder="e.g. 3"
+                    className="w-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
+                  />
+                  <p className="mt-1.5 text-[10px] text-white/35">
+                    Carousel = 1 pt · Static post = ½ pt toward this budget.
+                  </p>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                    Shoot days / month
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={shootDaysPerMonth}
+                    onChange={(e) => {
+                      setShootDaysPerMonth(e.target.value);
+                      setPlanId('custom');
+                    }}
+                    placeholder="e.g. 2"
+                    className="w-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                    Hours per shoot day
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={shootHoursPerDay}
+                    onChange={(e) => {
+                      setShootHoursPerDay(e.target.value);
+                      setPlanId('custom');
+                    }}
+                    placeholder="e.g. 2"
+                    className="w-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
+                  />
+                </label>
+              </div>
+
+              <p className="text-[10px] text-white/35">
+                Deliverables tracks these quotas. Team pay from completed work is on Payroll.
+              </p>
+
+              {planError && <p className="text-sm text-rose-300">{planError}</p>}
+              {planMessage && <p className="text-sm text-emerald-300">{planMessage}</p>}
+
+              <button
+                type="button"
+                onClick={handleSavePlan}
+                disabled={!hasPlanChanges || savingPlan}
+                className={`${btnPrimaryClass} disabled:opacity-40`}
+              >
+                {savingPlan ? 'Saving…' : 'Save plan'}
+              </button>
             </div>
           )}
 

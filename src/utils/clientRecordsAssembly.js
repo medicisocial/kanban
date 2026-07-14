@@ -40,8 +40,18 @@ function isEmptyBrandField(field, value) {
   ) {
     return String(value || '').trim() === '';
   }
-  if (field === 'deliverableTarget' || field === 'reelPointsTarget' || field === 'carouselStaticTarget') {
+  if (
+    field === 'deliverableTarget' ||
+    field === 'reelPointsTarget' ||
+    field === 'carouselStaticTarget' ||
+    field === 'shootDaysPerMonth' ||
+    field === 'shootHoursPerDay'
+  ) {
     return !(Number(value) > 0);
+  }
+  if (field === 'planId') {
+    const id = String(value || '').trim().toLowerCase();
+    return !id || id === 'custom';
   }
   return false;
 }
@@ -115,6 +125,9 @@ export function brandProfilePatchFromWorkspaceBrand(client, workspace = {}) {
     deliverableTarget: Number(resolveClientMapValue(client, workspace.deliverableTargets)) || 0,
     reelPointsTarget: Number(resolveClientMapValue(client, workspace.reelPointsTargets)) || 0,
     carouselStaticTarget: Number(resolveClientMapValue(client, workspace.carouselStaticTargets)) || 0,
+    planId: String(resolveClientMapValue(client, workspace.planIds) || '').trim().toLowerCase() || 'custom',
+    shootDaysPerMonth: Number(resolveClientMapValue(client, workspace.shootDaysPerMonth)) || 0,
+    shootHoursPerDay: Number(resolveClientMapValue(client, workspace.shootHoursPerDay)) || 0,
   };
 }
 
@@ -140,6 +153,30 @@ export function mergeClientRecordRowsIntoWorkspace(workspace = {}, rows = []) {
     applyRemoteBrandField(next, 'deliverableTarget', 'deliverableTargets', client, Number(row.deliverable_target) || 0);
     applyRemoteBrandField(next, 'reelPointsTarget', 'reelPointsTargets', client, Number(row.reel_points_target) || 0);
     applyRemoteBrandField(next, 'carouselStaticTarget', 'carouselStaticTargets', client, Number(row.carousel_static_target) || 0);
+    applyRemoteBrandField(
+      next,
+      'planId',
+      'planIds',
+      client,
+      String(row.plan_id || '').trim().toLowerCase() || 'custom',
+    );
+    applyRemoteBrandField(
+      next,
+      'shootDaysPerMonth',
+      'shootDaysPerMonth',
+      client,
+      Math.max(0, Math.round(Number(row.shoot_days_per_month) || 0)),
+    );
+    {
+      const n = Number(row.shoot_hours_per_day);
+      applyRemoteBrandField(
+        next,
+        'shootHoursPerDay',
+        'shootHoursPerDay',
+        client,
+        Number.isFinite(n) && n >= 0 ? Math.round(n * 2) / 2 : 0,
+      );
+    }
   }
   return next;
 }
