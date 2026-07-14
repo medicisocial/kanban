@@ -150,7 +150,11 @@ function normalizeOneOffProjects(monthRevenue) {
 function createPayrollExtraField(overrides = {}) {
   return {
     id: overrides.id || crypto.randomUUID(),
-    label: String(overrides.label || '').trim() || 'Pay',
+    // Preserve empty / in-progress labels — do not coerce blank back to "Pay"
+    // on every keystroke (that made the word "Pay" keep reappearing while editing).
+    label: Object.prototype.hasOwnProperty.call(overrides, 'label')
+      ? String(overrides.label ?? '')
+      : 'Pay',
     amount: Number(overrides.amount) || 0,
   };
 }
