@@ -1310,6 +1310,7 @@ export default function AppShell({ onSignOut }) {
           finances={financesController}
           cards={cards}
           teamMembers={teamMembers}
+          onOpenCard={handleCardClick}
         />
       )}
 

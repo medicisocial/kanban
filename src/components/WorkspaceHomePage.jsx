@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { CAROUSEL_PAY_RATE, EDITOR_POINT_PAY_RATE, STATIC_POST_PAY_RATE } from '../constants';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import {
   PortalRoleSummary,
 } from './clientPortal/PortalOverviewPanels';
-import OverviewCompletedContentSection from './OverviewCompletedContentSection';
 import OverviewTodayPanel from './clientPortal/OverviewTodayPanel';
 import { buildWorkspaceHomeSummary, buildMyWorkGreeting } from '../utils/workspaceHome';
 import { buildTodayTimeline } from '../utils/todayTimeline';
@@ -32,18 +30,10 @@ export default function WorkspaceHomePage({
   onOpenMeeting,
   onOpenShoot,
   onOpenNotifications,
-  onOpenCard,
 }) {
-  const { clients, teamMembers, getClientColor } = useClientsContext();
+  const { clients, teamMembers } = useClientsContext();
   const { syncIssue } = useWorkspaceSync();
   const { visibleCompanyTaskTabs } = useStaffWorkspaceScope();
-  const [expandedCompletedEditor, setExpandedCompletedEditor] = useState('');
-
-  const isCompanyWideOverview = !myWorkOnly || companyWideView;
-
-  const toggleCompletedEditor = (name) => {
-    setExpandedCompletedEditor((current) => (current === name ? '' : name));
-  };
 
   const summary = buildWorkspaceHomeSummary({
     cards,
@@ -93,11 +83,6 @@ export default function WorkspaceHomePage({
       : `Production at a glance for ${clientFilter}.`);
 
   const showAmQueue = !myWorkOnly || summaryWithToday.showAccountManagerQueue;
-  const completedContentMonthLabel = new Date().toLocaleDateString('en-US', {
-    month: 'long',
-    year: 'numeric',
-  });
-  const completedContentSubtitle = `Reels ($${EDITOR_POINT_PAY_RATE}/pt), carousels ($${CAROUSEL_PAY_RATE}), and statics ($${STATIC_POST_PAY_RATE}) scheduled for ${completedContentMonthLabel}.`;
 
   const pipelineRoles = [];
 
@@ -146,17 +131,6 @@ export default function WorkspaceHomePage({
   }
 
   const showTodayPanel = todayTimeline.items.length > 0;
-  const showCompletedContentRoster =
-    isCompanyWideOverview &&
-    visibleCompanyTaskTabs.includes('editor') &&
-    summary.editorCompletedByAssignee?.some(
-      (entry) => (entry.count || 0) > 0 || (entry.points || 0) > 0,
-    );
-  const showPersonalCompletedRoster =
-    !isCompanyWideOverview &&
-    visibleCompanyTaskTabs.includes('editor') &&
-    staffName &&
-    ((summary.editorCompletedCount || 0) > 0 || (summary.editorCompletedPoints || 0) > 0);
   const workspaceLooksEmpty =
     !workspaceDataLoading && cards.length === 0 && ideas.length === 0 && meetings.length === 0;
 
@@ -235,41 +209,6 @@ export default function WorkspaceHomePage({
           />
         ))}
       </div>
-
-      {showCompletedContentRoster && (
-        <OverviewCompletedContentSection
-          title="Completed content"
-          subtitle={completedContentSubtitle}
-          entries={summary.editorCompletedByAssignee}
-          cards={cards}
-          clientFilter={clientFilter}
-          expandedEditorName={expandedCompletedEditor}
-          onToggleEditor={toggleCompletedEditor}
-          onOpenCard={onOpenCard}
-          getClientColor={getClientColor}
-        />
-      )}
-
-      {showPersonalCompletedRoster && (
-        <OverviewCompletedContentSection
-          title="Completed content"
-          subtitle={completedContentSubtitle}
-          entries={[
-            {
-              name: staffName,
-              count: summary.editorCompletedCount,
-              points: summary.editorCompletedPoints || 0,
-              pay: summary.editorCompletedPay || 0,
-            },
-          ]}
-          cards={cards}
-          clientFilter={clientFilter}
-          expandedEditorName={expandedCompletedEditor}
-          onToggleEditor={toggleCompletedEditor}
-          onOpenCard={onOpenCard}
-          getClientColor={getClientColor}
-        />
-      )}
 
       {showTodayPanel && (
         <OverviewTodayPanel

@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { DEFAULT_PAY_RATES, normalizePayRates } from '../constants/clientPlans';
+import { getCardEditorPay, getContentTypeStyle, normalizeEditorPoints } from '../constants';
 import {
   btnPrimaryClass,
   btnSecondaryClass,
@@ -13,9 +14,10 @@ import { useStaffAuth } from '../context/StaffAuthContext';
 import { useClientsContext } from '../context/ClientsContext';
 import { isSharedOperationsLogin } from '../utils/staffAuth';
 import { staffHasLeadershipWorkspaceAccess } from '../utils/staffMembers';
-import { buildEditorReelPointsByAssignee } from '../utils/editorTodo';
+import { buildEditorReelPointsByAssignee, buildEditorCompletedCards, getEditorCompletedStatusLabel } from '../utils/editorTodo';
 import { buildPlanBasedPayByAssignee, buildFullQuotaEditorPay, projectPayrollAtFullDelivery } from '../utils/planBasedPay';
 import { sortClientNamesAlphabetically } from '../utils/clients';
+import { contentTypeLabelProps } from '../utils/contentTypeColors';
 import {
   RETAINER_STATUS_OPTIONS,
   normalizeRetainerStatus,
@@ -262,13 +264,21 @@ function fieldsFingerprint(list) {
   );
 }
 
-function PayrollPersonRow({ person, rates, onUpdate, onRemove }) {
-  const [open, setOpen] = useState(false);
+function PayrollPersonRow({
+  person,
+  rates,
+  onUpdate,
+  onRemove,
+  forceOpen = false,
+  hideHeader = false,
+}) {
+  const [open, setOpen] = useState(forceOpen);
   const persistedFields = Array.isArray(person.extraFields) ? person.extraFields : [];
   const [fields, setFields] = useState(persistedFields);
   const labelFocusIdRef = useRef(null);
   const persistedFp = fieldsFingerprint(persistedFields);
   const lines = person.kind === 'team' ? payBreakdownLines(person, rates) : [];
+  const isOpen = forceOpen || open;
 
   // Keep local drafts while typing; only sync from store when not editing a label.
   useEffect(() => {
@@ -305,6 +315,58 @@ function PayrollPersonRow({ person, rates, onUpdate, onRemove }) {
     persistFields(fields.filter((field) => field.id !== fieldId));
   };
 
+  const extrasEditor = (
+    <div className="space-y-2">
+      {fields.map((field) => (
+        <div
+          key={field.id}
+          className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_7rem_auto] sm:items-center"
+        >
+          <input
+            type="text"
+            value={field.label}
+            onFocus={() => {
+              labelFocusIdRef.current = field.id;
+            }}
+            onChange={(event) => updateFieldLocal(field.id, { label: event.target.value })}
+            onBlur={(event) => {
+              labelFocusIdRef.current = null;
+              commitField(field.id, { label: event.target.value });
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.currentTarget.blur();
+            }}
+            placeholder="Label (bonus, mileage…)"
+            className={financeInputClass}
+          />
+          <EditableAmount
+            value={field.amount}
+            onSave={(amount) => commitField(field.id, { amount })}
+            className="justify-self-end text-white"
+          />
+          <button
+            type="button"
+            onClick={() => removeField(field.id)}
+            className="justify-self-start text-[10px] text-white/35 hover:text-rose-300 sm:justify-self-end"
+          >
+            Delete
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => persistFields([...fields, createExtraField()])}
+        className={`${btnSecondaryClass} py-1.5 text-[10px]`}
+      >
+        Add field
+      </button>
+    </div>
+  );
+
+  if (hideHeader) {
+    return extrasEditor;
+  }
+
   return (
     <div className="rounded-lg border border-white/10 bg-black/25">
       <div className="flex items-center gap-3 px-3 py-2.5">
@@ -313,7 +375,7 @@ function PayrollPersonRow({ person, rates, onUpdate, onRemove }) {
           onClick={() => setOpen((v) => !v)}
           className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
-          <span className="w-3 text-[10px] text-white/35">{open ? '▾' : '▸'}</span>
+          <span className="w-3 text-[10px] text-white/35">{isOpen ? '▾' : '▸'}</span>
           <span className="min-w-0">
             <span className="block truncate text-sm font-medium text-white">{person.name}</span>
             <span className="block text-[10px] text-white/35">
@@ -335,7 +397,7 @@ function PayrollPersonRow({ person, rates, onUpdate, onRemove }) {
         </button>
       </div>
 
-      {open && (
+      {isOpen && (
         <div className="space-y-3 border-t border-white/10 px-3 py-3">
           {lines.length > 0 && (
             <ul className="space-y-1 text-xs text-white/55">
@@ -350,56 +412,177 @@ function PayrollPersonRow({ person, rates, onUpdate, onRemove }) {
               ))}
             </ul>
           )}
-
-          <div className="space-y-2">
-            {fields.map((field) => (
-              <div
-                key={field.id}
-                className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_7rem_auto] sm:items-center"
-              >
-                <input
-                  type="text"
-                  value={field.label}
-                  onFocus={() => {
-                    labelFocusIdRef.current = field.id;
-                  }}
-                  onChange={(event) =>
-                    updateFieldLocal(field.id, { label: event.target.value })
-                  }
-                  onBlur={(event) => {
-                    labelFocusIdRef.current = null;
-                    commitField(field.id, { label: event.target.value });
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') event.currentTarget.blur();
-                  }}
-                  placeholder="Label (bonus, mileage…)"
-                  className={financeInputClass}
-                />
-                <EditableAmount
-                  value={field.amount}
-                  onSave={(amount) => commitField(field.id, { amount })}
-                  className="justify-self-end text-white"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeField(field.id)}
-                  className="justify-self-start text-[10px] text-white/35 hover:text-rose-300 sm:justify-self-end"
-                >
-                  Delete
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => persistFields([...fields, createExtraField()])}
-              className={`${btnSecondaryClass} py-1.5 text-[10px]`}
-            >
-              Add field
-            </button>
-          </div>
+          {extrasEditor}
         </div>
       )}
+    </div>
+  );
+}
+
+function firstNameLabel(name) {
+  const trimmed = String(name || '').trim();
+  if (!trimmed) return 'Person';
+  return trimmed.split(/\s+/)[0] || trimmed;
+}
+
+function PersonCompletedWork({ cards, personName, monthDate, rates, onOpenCard, getClientColor }) {
+  const completed = useMemo(
+    () =>
+      buildEditorCompletedCards(cards || [], {
+        assignee: personName,
+        referenceDate: monthDate,
+      }),
+    [cards, personName, monthDate],
+  );
+
+  if (completed.length === 0) {
+    return (
+      <p className="py-4 text-center text-xs text-white/35">
+        No completed deliverables assigned this month.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-white/5">
+      {completed.map((card) => {
+        const style = getContentTypeStyle(card.contentType);
+        const pay = getCardEditorPay(card, rates);
+        const pts =
+          card.contentType === 'Reel' ? normalizeEditorPoints(card.editorPoints) : null;
+        const clientColor = getClientColor?.(card.client) || undefined;
+        return (
+          <li key={card.id}>
+            <button
+              type="button"
+              onClick={() => onOpenCard?.(card)}
+              className="flex w-full items-center gap-2.5 py-2.5 text-left text-xs transition hover:bg-white/[0.03]"
+            >
+              <span
+                {...contentTypeLabelProps(
+                  style,
+                  'w-[4.5rem] shrink-0 text-[10px] font-semibold uppercase',
+                )}
+              >
+                {card.contentType}
+              </span>
+              {pts != null ? (
+                <span className="w-8 shrink-0 tabular-nums text-white/40">
+                  {pts === 0.5 ? '½' : '1'}
+                </span>
+              ) : (
+                <span className="w-8 shrink-0" />
+              )}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-white/85">{card.title || 'Untitled'}</span>
+                <span
+                  className="mt-0.5 block truncate text-[10px] text-white/40"
+                  style={clientColor ? { color: clientColor } : undefined}
+                >
+                  {card.client}
+                  {card.dueDate ? ` · ${card.dueDate}` : ''}
+                  {` · ${getEditorCompletedStatusLabel(card)}`}
+                </span>
+              </span>
+              <span className="shrink-0 tabular-nums text-amber-200/90">{fmt$(pay)}</span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function PersonPayDetail({
+  person,
+  rates,
+  monthDate,
+  cards,
+  onUpdate,
+  onRemove,
+  onOpenCard,
+  getClientColor,
+}) {
+  const lines = person.kind === 'team' ? payBreakdownLines(person, rates) : [];
+  const fields = Array.isArray(person.extraFields) ? person.extraFields : [];
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-base font-semibold text-white">{person.name}</h3>
+          <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-white/35">
+            {person.kind === 'team' ? 'Team' : 'Custom'} · this month
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-white/35">Total pay</p>
+          <p className="text-xl font-semibold tabular-nums text-amber-300">
+            {fmt$(person.personTotal)}
+          </p>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="mt-1 text-[10px] text-white/30 hover:text-rose-300"
+          >
+            Remove from roster
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h4 className="mb-2 text-[10px] font-medium uppercase tracking-[0.16em] text-white/40">
+          Pay breakdown
+        </h4>
+        {lines.length === 0 && fields.length === 0 ? (
+          <p className="text-xs text-white/35">No pay lines yet for this month.</p>
+        ) : (
+          <ul className="space-y-1.5 text-xs text-white/70">
+            {lines.map((line) => (
+              <li key={line.label} className="flex items-center justify-between gap-3">
+                <span>
+                  {line.label}
+                  {line.hint ? <span className="text-white/30"> · {line.hint}</span> : null}
+                </span>
+                <span className="tabular-nums text-white/90">{fmt$(line.amount)}</span>
+              </li>
+            ))}
+            {fields.map((field) => (
+              <li key={field.id} className="flex items-center justify-between gap-3">
+                <span>{field.label?.trim() || 'Extra'}</span>
+                <span className="tabular-nums text-white/90">{fmt$(field.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div>
+        <h4 className="mb-2 text-[10px] font-medium uppercase tracking-[0.16em] text-white/40">
+          Extra fields
+        </h4>
+        <PayrollPersonRow
+          person={person}
+          rates={rates}
+          onUpdate={onUpdate}
+          onRemove={onRemove}
+          hideHeader
+        />
+      </div>
+
+      <div>
+        <h4 className="mb-2 text-[10px] font-medium uppercase tracking-[0.16em] text-white/40">
+          Completed work
+        </h4>
+        <PersonCompletedWork
+          cards={cards}
+          personName={person.name}
+          monthDate={monthDate}
+          rates={rates}
+          onOpenCard={onOpenCard}
+          getClientColor={getClientColor}
+        />
+      </div>
     </div>
   );
 }
@@ -510,7 +693,12 @@ function SaveBar({ saveStatus, saveMessage, onSave, label = 'Save' }) {
   );
 }
 
-export default function FinancesPage({ finances, cards = [], teamMembers: teamMembersProp }) {
+export default function FinancesPage({
+  finances,
+  cards = [],
+  teamMembers: teamMembersProp,
+  onOpenCard,
+}) {
   const {
     saveFinancesNow,
     ensureRecurringMonth,
@@ -549,6 +737,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     getClientShootDaysPerMonth,
     getClientShootHoursPerDay,
     getClientMonthlyPackageAmount,
+    getClientColor,
   } = useClientsContext();
   const teamMembers = teamMembersProp || contextTeamMembers || [];
 
@@ -564,6 +753,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
 
   const [selectedMonth, setSelectedMonth] = useState(() => currentYearMonth());
   const [activeTab, setActiveTab] = useState('pay');
+  const [payPersonId, setPayPersonId] = useState('');
   const [saveStatus, setSaveStatus] = useState('idle');
   const [saveMessage, setSaveMessage] = useState('');
   const [ratesDraft, setRatesDraft] = useState(() => normalizePayRates(DEFAULT_PAY_RATES));
@@ -849,6 +1039,25 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     return ids;
   }, [snapshot.payrollStaff]);
 
+  const payPeople = snapshot.payrollStaff || [];
+
+  useEffect(() => {
+    if (!payPeople.length) {
+      setPayPersonId('');
+      return;
+    }
+    if (!payPeople.some((person) => person.id === payPersonId)) {
+      setPayPersonId(payPeople[0].id);
+    }
+  }, [payPeople, payPersonId]);
+
+  const selectedPayPerson = useMemo(
+    () => payPeople.find((person) => person.id === payPersonId) || null,
+    [payPeople, payPersonId],
+  );
+
+  const payMonthDate = useMemo(() => yearMonthToDate(selectedMonth), [selectedMonth]);
+
   const planAssigneeKey = planPayMaps.assigneeKeys.slice().sort().join('|');
 
   useEffect(() => {
@@ -1027,13 +1236,33 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
             <SummaryCard label="Total payroll" value={snapshot.payroll} tone="warn" />
           </div>
 
-          <div className={`${surfacePanelClass} p-4 sm:p-5`}>
-            <div className="mb-4 flex items-baseline justify-between gap-3">
-              <h3 className="text-sm font-semibold text-white">People</h3>
-              <span className="text-xs text-white/40">{(snapshot.payrollStaff || []).length} on roster</span>
+          {payPeople.length > 0 && (
+            <div className={`${glassSegmentClass} mb-4 flex flex-wrap gap-1 p-1`}>
+              {payPeople.map((person) => {
+                const active = person.id === payPersonId;
+                return (
+                  <button
+                    key={person.id}
+                    type="button"
+                    onClick={() => setPayPersonId(person.id)}
+                    className={`rounded px-3 py-1.5 text-xs font-medium transition ${
+                      active
+                        ? 'bg-white/15 text-white'
+                        : 'text-white/45 hover:bg-white/5 hover:text-white/80'
+                    }`}
+                  >
+                    {firstNameLabel(person.name)}
+                    <span className="ml-1.5 tabular-nums text-[10px] text-white/35">
+                      {fmt$(person.personTotal)}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
+          )}
 
-            {snapshot.legacyPayroll > 0 && !(snapshot.payrollStaff || []).length && (
+          <div className={`${surfacePanelClass} p-4 sm:p-5`}>
+            {snapshot.legacyPayroll > 0 && payPeople.length === 0 && (
               <div className="mb-3 flex items-center justify-between rounded border border-amber-500/20 bg-amber-500/5 px-3 py-2">
                 <p className="text-xs text-amber-100">Legacy payroll total</p>
                 <EditableAmount
@@ -1044,25 +1273,31 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
               </div>
             )}
 
-            <div className="space-y-2">
-              {(snapshot.payrollStaff || []).length === 0 ? (
-                <p className="py-6 text-center text-xs text-white/35">
-                  No one on payroll this month yet.
-                </p>
-              ) : (
-                (snapshot.payrollStaff || []).map((person) => (
-                  <PayrollPersonRow
-                    key={person.id}
-                    person={person}
-                    rates={payRates}
-                    onUpdate={(updates) => updatePayrollStaff(selectedMonth, person.id, updates)}
-                    onRemove={() => deletePayrollStaff(selectedMonth, person.id)}
-                  />
-                ))
-              )}
-            </div>
+            {payPeople.length === 0 ? (
+              <p className="py-6 text-center text-xs text-white/35">
+                No one on payroll this month yet.
+              </p>
+            ) : selectedPayPerson ? (
+              <PersonPayDetail
+                person={selectedPayPerson}
+                rates={payRates}
+                monthDate={payMonthDate}
+                cards={payrollCards}
+                onUpdate={(updates) =>
+                  updatePayrollStaff(selectedMonth, selectedPayPerson.id, updates)
+                }
+                onRemove={() => {
+                  deletePayrollStaff(selectedMonth, selectedPayPerson.id);
+                }}
+                onOpenCard={onOpenCard}
+                getClientColor={getClientColor}
+              />
+            ) : null}
 
-            <div className="mt-4 border-t border-white/10 pt-4">
+            <div className="mt-6 border-t border-white/10 pt-4">
+              <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.16em] text-white/40">
+                Roster
+              </p>
               <AddPeopleBar
                 teamMembers={teamMembers}
                 existingIds={existingTeamIds}
