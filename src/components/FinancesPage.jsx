@@ -15,7 +15,7 @@ import { useClientsContext } from '../context/ClientsContext';
 import { isSharedOperationsLogin } from '../utils/staffAuth';
 import { staffHasLeadershipWorkspaceAccess } from '../utils/staffMembers';
 import { buildEditorReelPointsByAssignee, buildEditorCompletedCards, getEditorCompletedStatusLabel } from '../utils/editorTodo';
-import { buildPlanBasedPayByAssignee, buildFullQuotaEditorPay, projectPayrollAtFullDelivery } from '../utils/planBasedPay';
+import { buildPlanBasedPayByAssignee } from '../utils/planBasedPay';
 import { sortClientNamesAlphabetically } from '../utils/clients';
 import { contentTypeLabelProps } from '../utils/contentTypeColors';
 import {
@@ -425,6 +425,44 @@ function firstNameLabel(name) {
   return trimmed.split(/\s+/)[0] || trimmed;
 }
 
+const EXTRAS_TAB_ID = 'extras';
+
+/** Non-content payroll people grouped under the Extras Pay tab. */
+const AGENCY_OPS_ROLES = [
+  {
+    match: (name) => {
+      const key = String(name || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+      return key === 'charles' || key.startsWith('charles ');
+    },
+    displayName: 'Charles Snider',
+    roleHint: 'Runs ads',
+  },
+  {
+    match: (name) => {
+      const key = String(name || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+      return key === 'michael' || key.startsWith('michael ');
+    },
+    displayName: 'Michael Labao',
+    roleHint: 'Accounting',
+  },
+];
+
+function resolveAgencyOpsRole(name) {
+  return AGENCY_OPS_ROLES.find((entry) => entry.match(name)) || null;
+}
+
+function isExtrasPerson(person) {
+  return Boolean(resolveAgencyOpsRole(person?.name));
+}
+
 function PersonCompletedWork({ cards, personName, monthDate, rates, onOpenCard, getClientColor }) {
   const completed = useMemo(
     () =>
@@ -502,22 +540,31 @@ function PersonPayDetail({
   onRemove,
   onOpenCard,
   getClientColor,
+  compact = false,
+  showCompletedWork = true,
 }) {
   const lines = person.kind === 'team' ? payBreakdownLines(person, rates) : [];
   const fields = Array.isArray(person.extraFields) ? person.extraFields : [];
+  const roleHint =
+    resolveAgencyOpsRole(person.name)?.roleHint ||
+    (person.kind === 'team' ? 'Team' : 'Custom');
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold text-white">{person.name}</h3>
+          <h3 className={`${compact ? 'text-sm' : 'text-base'} font-semibold text-white`}>
+            {person.name}
+          </h3>
           <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-white/35">
-            {person.kind === 'team' ? 'Team' : 'Custom'} · this month
+            {roleHint} · this month
           </p>
         </div>
         <div className="text-right">
           <p className="text-[10px] uppercase tracking-[0.14em] text-white/35">Total pay</p>
-          <p className="text-xl font-semibold tabular-nums text-amber-300">
+          <p
+            className={`${compact ? 'text-lg' : 'text-xl'} font-semibold tabular-nums text-amber-300`}
+          >
             {fmt$(person.personTotal)}
           </p>
           <button
@@ -530,32 +577,34 @@ function PersonPayDetail({
         </div>
       </div>
 
-      <div>
-        <h4 className="mb-2 text-[10px] font-medium uppercase tracking-[0.16em] text-white/40">
-          Pay breakdown
-        </h4>
-        {lines.length === 0 && fields.length === 0 ? (
-          <p className="text-xs text-white/35">No pay lines yet for this month.</p>
-        ) : (
-          <ul className="space-y-1.5 text-xs text-white/70">
-            {lines.map((line) => (
-              <li key={line.label} className="flex items-center justify-between gap-3">
-                <span>
-                  {line.label}
-                  {line.hint ? <span className="text-white/30"> · {line.hint}</span> : null}
-                </span>
-                <span className="tabular-nums text-white/90">{fmt$(line.amount)}</span>
-              </li>
-            ))}
-            {fields.map((field) => (
-              <li key={field.id} className="flex items-center justify-between gap-3">
-                <span>{field.label?.trim() || 'Extra'}</span>
-                <span className="tabular-nums text-white/90">{fmt$(field.amount)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {!compact && (
+        <div>
+          <h4 className="mb-2 text-[10px] font-medium uppercase tracking-[0.16em] text-white/40">
+            Pay breakdown
+          </h4>
+          {lines.length === 0 && fields.length === 0 ? (
+            <p className="text-xs text-white/35">No pay lines yet for this month.</p>
+          ) : (
+            <ul className="space-y-1.5 text-xs text-white/70">
+              {lines.map((line) => (
+                <li key={line.label} className="flex items-center justify-between gap-3">
+                  <span>
+                    {line.label}
+                    {line.hint ? <span className="text-white/30"> · {line.hint}</span> : null}
+                  </span>
+                  <span className="tabular-nums text-white/90">{fmt$(line.amount)}</span>
+                </li>
+              ))}
+              {fields.map((field) => (
+                <li key={field.id} className="flex items-center justify-between gap-3">
+                  <span>{field.label?.trim() || 'Extra'}</span>
+                  <span className="tabular-nums text-white/90">{fmt$(field.amount)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div>
         <h4 className="mb-2 text-[10px] font-medium uppercase tracking-[0.16em] text-white/40">
@@ -570,18 +619,59 @@ function PersonPayDetail({
         />
       </div>
 
-      <div>
-        <h4 className="mb-2 text-[10px] font-medium uppercase tracking-[0.16em] text-white/40">
-          Completed work
-        </h4>
-        <PersonCompletedWork
-          cards={cards}
-          personName={person.name}
-          monthDate={monthDate}
-          rates={rates}
-          onOpenCard={onOpenCard}
-          getClientColor={getClientColor}
-        />
+      {showCompletedWork ? (
+        <div>
+          <h4 className="mb-2 text-[10px] font-medium uppercase tracking-[0.16em] text-white/40">
+            Completed work
+          </h4>
+          <PersonCompletedWork
+            cards={cards}
+            personName={person.name}
+            monthDate={monthDate}
+            rates={rates}
+            onOpenCard={onOpenCard}
+            getClientColor={getClientColor}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ExtrasPayPanel({ people, rates, onUpdate, onRemove }) {
+  const total = people.reduce((sum, person) => sum + (Number(person.personTotal) || 0), 0);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-base font-semibold text-white">Extras</h3>
+          <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-white/35">
+            Ads, accounting, and other non-content pay · this month
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-white/35">Total</p>
+          <p className="text-xl font-semibold tabular-nums text-amber-300">{fmt$(total)}</p>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {people.map((person) => (
+          <div
+            key={person.id}
+            className="border-t border-white/10 pt-5 first:border-t-0 first:pt-0"
+          >
+            <PersonPayDetail
+              person={person}
+              rates={rates}
+              onUpdate={(updates) => onUpdate(person.id, updates)}
+              onRemove={() => onRemove(person.id)}
+              compact
+              showCompletedWork={false}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -984,53 +1074,6 @@ export default function FinancesPage({
     [getMonthlySnapshot, selectedMonth, pointsMaps],
   );
 
-  const actualEditorPay = useMemo(
-    () =>
-      (snapshot.payrollStaff || []).reduce(
-        (sum, person) => sum + (Number(person.pointsPay) || 0),
-        0,
-      ),
-    [snapshot.payrollStaff],
-  );
-
-  const fullQuotaEditorPay = useMemo(() => {
-    const { total } = buildFullQuotaEditorPay({
-      clients: activePayrollClients,
-      getClientReelPointsTarget,
-      getClientCarouselStaticTarget,
-      getClientCarouselTarget,
-      getClientStaticTarget,
-      rates: payRates,
-    });
-    return total;
-  }, [
-    activePayrollClients,
-    getClientReelPointsTarget,
-    getClientCarouselStaticTarget,
-    getClientCarouselTarget,
-    getClientStaticTarget,
-    payRates,
-  ]);
-
-  /** Revenue uses payroll as if all plan deliverables are done; Pay tab still uses actuals. */
-  const projectedPayroll = useMemo(
-    () =>
-      projectPayrollAtFullDelivery({
-        currentPayroll: snapshot.payroll,
-        actualEditorPay,
-        fullQuotaEditorPay,
-      }),
-    [snapshot.payroll, actualEditorPay, fullQuotaEditorPay],
-  );
-
-  const projectedNetProfit = useMemo(
-    () =>
-      (Number(snapshot.totalRevenue) || 0) -
-      projectedPayroll -
-      (Number(snapshot.totalExpenses) || 0),
-    [snapshot.totalRevenue, snapshot.totalExpenses, projectedPayroll],
-  );
-
   const existingTeamIds = useMemo(() => {
     const ids = new Set();
     for (const person of snapshot.payrollStaff || []) {
@@ -1041,19 +1084,47 @@ export default function FinancesPage({
 
   const payPeople = snapshot.payrollStaff || [];
 
+  const contentPayPeople = useMemo(
+    () =>
+      [...payPeople]
+        .filter((person) => !isExtrasPerson(person))
+        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))),
+    [payPeople],
+  );
+
+  const extrasPayPeople = useMemo(() => {
+    return [...payPeople]
+      .filter((person) => isExtrasPerson(person))
+      .sort((a, b) => {
+        const ai = AGENCY_OPS_ROLES.findIndex((role) => role.match(a.name));
+        const bi = AGENCY_OPS_ROLES.findIndex((role) => role.match(b.name));
+        return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+      });
+  }, [payPeople]);
+
+  const extrasTotal = useMemo(
+    () => extrasPayPeople.reduce((sum, person) => sum + (Number(person.personTotal) || 0), 0),
+    [extrasPayPeople],
+  );
+
   useEffect(() => {
-    if (!payPeople.length) {
+    const validIds = new Set(contentPayPeople.map((person) => person.id));
+    if (extrasPayPeople.length > 0) validIds.add(EXTRAS_TAB_ID);
+    if (!validIds.size) {
       setPayPersonId('');
       return;
     }
-    if (!payPeople.some((person) => person.id === payPersonId)) {
-      setPayPersonId(payPeople[0].id);
+    if (!validIds.has(payPersonId)) {
+      setPayPersonId(contentPayPeople[0]?.id || EXTRAS_TAB_ID);
     }
-  }, [payPeople, payPersonId]);
+  }, [contentPayPeople, extrasPayPeople, payPersonId]);
 
   const selectedPayPerson = useMemo(
-    () => payPeople.find((person) => person.id === payPersonId) || null,
-    [payPeople, payPersonId],
+    () =>
+      payPersonId === EXTRAS_TAB_ID
+        ? null
+        : contentPayPeople.find((person) => person.id === payPersonId) || null,
+    [contentPayPeople, payPersonId],
   );
 
   const payMonthDate = useMemo(() => yearMonthToDate(selectedMonth), [selectedMonth]);
@@ -1080,6 +1151,22 @@ export default function FinancesPage({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addPayrollStaff, planAssigneeKey, selectedMonth, teamMembers]);
+
+  // Keep Charles and Michael on the monthly roster under Extras.
+  useEffect(() => {
+    const staff = snapshot.payrollStaff || [];
+    for (const role of AGENCY_OPS_ROLES) {
+      const exists = staff.some((person) => role.match(person.name));
+      if (exists) continue;
+      addPayrollStaff(selectedMonth, {
+        name: role.displayName,
+        kind: 'custom',
+        teamMemberId: null,
+        extraFields: [{ id: crypto.randomUUID(), label: 'Pay', amount: 0 }],
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addPayrollStaff, selectedMonth, snapshot.payrollStaff]);
 
   const monthLabel = useMemo(() => {
     const [y, m] = selectedMonth.split('-');
@@ -1236,15 +1323,16 @@ export default function FinancesPage({
             <SummaryCard label="Total payroll" value={snapshot.payroll} tone="warn" />
           </div>
 
-          {payPeople.length > 0 && (
+          {(contentPayPeople.length > 0 || extrasPayPeople.length > 0) && (
             <div className={`${glassSegmentClass} mb-4 flex flex-wrap gap-1 p-1`}>
-              {payPeople.map((person) => {
+              {contentPayPeople.map((person) => {
                 const active = person.id === payPersonId;
                 return (
                   <button
                     key={person.id}
                     type="button"
                     onClick={() => setPayPersonId(person.id)}
+                    title={person.name}
                     className={`rounded px-3 py-1.5 text-xs font-medium transition ${
                       active
                         ? 'bg-white/15 text-white'
@@ -1258,6 +1346,23 @@ export default function FinancesPage({
                   </button>
                 );
               })}
+              {extrasPayPeople.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setPayPersonId(EXTRAS_TAB_ID)}
+                  title={extrasPayPeople.map((person) => person.name).join(', ')}
+                  className={`rounded px-3 py-1.5 text-xs font-medium transition ${
+                    payPersonId === EXTRAS_TAB_ID
+                      ? 'bg-white/15 text-white'
+                      : 'text-white/45 hover:bg-white/5 hover:text-white/80'
+                  }`}
+                >
+                  Extras
+                  <span className="ml-1.5 tabular-nums text-[10px] text-white/35">
+                    {fmt$(extrasTotal)}
+                  </span>
+                </button>
+              )}
             </div>
           )}
 
@@ -1277,6 +1382,17 @@ export default function FinancesPage({
               <p className="py-6 text-center text-xs text-white/35">
                 No one on payroll this month yet.
               </p>
+            ) : payPersonId === EXTRAS_TAB_ID && extrasPayPeople.length > 0 ? (
+              <ExtrasPayPanel
+                people={extrasPayPeople}
+                rates={payRates}
+                onUpdate={(staffId, updates) =>
+                  updatePayrollStaff(selectedMonth, staffId, updates)
+                }
+                onRemove={(staffId) => {
+                  deletePayrollStaff(selectedMonth, staffId);
+                }}
+              />
             ) : selectedPayPerson ? (
               <PersonPayDetail
                 person={selectedPayPerson}
@@ -1320,16 +1436,7 @@ export default function FinancesPage({
         <>
           <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <SummaryCard label="Revenue" value={snapshot.totalRevenue} tone="good" />
-            <SummaryCard
-              label="Payroll"
-              value={snapshot.payroll}
-              tone="warn"
-              hint={
-                projectedPayroll > (Number(snapshot.payroll) || 0)
-                  ? `This month so far · ${fmt$(projectedPayroll)} if all plan deliverables finish`
-                  : 'This month'
-              }
-            />
+            <SummaryCard label="Payroll" value={snapshot.payroll} tone="warn" />
             <SummaryCard
               label="Expenses"
               value={snapshot.totalExpenses}
@@ -1344,11 +1451,6 @@ export default function FinancesPage({
               label="Net profit"
               value={snapshot.netProfit}
               tone={snapshot.netProfit >= 0 ? 'good' : 'bad'}
-              hint={
-                projectedNetProfit !== snapshot.netProfit
-                  ? `${fmt$(projectedNetProfit)} if all plan deliverables finish`
-                  : undefined
-              }
             />
           </div>
 
@@ -1670,9 +1772,8 @@ export default function FinancesPage({
                 </button>
               </form>
               <p className="mt-2 text-[10px] text-white/30">
-                Profit = this month&apos;s revenue − payroll (earned so far) − expenses. Pay is based
-                on who completed what in {monthLabel}; the payroll card also shows the full-plan
-                estimate if every deliverable finishes.
+                Profit = this month&apos;s revenue − payroll − expenses. Pay is based on who
+                completed what in {monthLabel}.
               </p>
             </div>
           </div>

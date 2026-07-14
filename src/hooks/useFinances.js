@@ -695,19 +695,24 @@ export function useFinances() {
       const month = resolvePayrollMonth(data, yearMonth);
       const nextStaff = createPayrollStaff(staff);
       if (!nextStaff.name) return prev;
-      // Avoid duplicate team members in the same month.
-      if (nextStaff.kind === 'team') {
-        const nameKey = nextStaff.name.toLowerCase();
-        const dup = month.staff.some(
-          (item) =>
-            item.kind === 'team' &&
-            ((nextStaff.teamMemberId && item.teamMemberId === nextStaff.teamMemberId) ||
-              String(item.name || '')
-                .trim()
-                .toLowerCase() === nameKey),
+      // Avoid duplicate names in the same month (team or custom).
+      const nameKey = nextStaff.name.toLowerCase();
+      const dup = month.staff.some((item) => {
+        if (
+          nextStaff.kind === 'team' &&
+          item.kind === 'team' &&
+          nextStaff.teamMemberId &&
+          item.teamMemberId === nextStaff.teamMemberId
+        ) {
+          return true;
+        }
+        return (
+          String(item.name || '')
+            .trim()
+            .toLowerCase() === nameKey
         );
-        if (dup) return prev;
-      }
+      });
+      if (dup) return prev;
       data[yearMonth] = writePayrollMonth({
         staff: [...month.staff, nextStaff],
         ownerComp: month.ownerComp,
