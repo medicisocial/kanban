@@ -36,7 +36,9 @@ function isEmptyBrandField(field, value) {
     field === 'clientColor' ||
     field === 'photoGalleryLink' ||
     field === 'businessType' ||
-    field === 'accountManager'
+    field === 'accountManager' ||
+    field === 'videographer' ||
+    field === 'photographer'
   ) {
     return String(value || '').trim() === '';
   }
@@ -44,6 +46,8 @@ function isEmptyBrandField(field, value) {
     field === 'deliverableTarget' ||
     field === 'reelPointsTarget' ||
     field === 'carouselStaticTarget' ||
+    field === 'carouselTarget' ||
+    field === 'staticTarget' ||
     field === 'shootDaysPerMonth' ||
     field === 'shootHoursPerDay'
   ) {
@@ -122,9 +126,13 @@ export function brandProfilePatchFromWorkspaceBrand(client, workspace = {}) {
     photoGalleryLink: resolveClientMapValue(client, workspace.photoGalleryLinks) || '',
     businessType: resolveClientMapValue(client, workspace.businessTypes) || '',
     accountManager: resolveClientMapValue(client, workspace.accountManagers) || '',
+    videographer: resolveClientMapValue(client, workspace.videographers) || '',
+    photographer: resolveClientMapValue(client, workspace.photographers) || '',
     deliverableTarget: Number(resolveClientMapValue(client, workspace.deliverableTargets)) || 0,
     reelPointsTarget: Number(resolveClientMapValue(client, workspace.reelPointsTargets)) || 0,
     carouselStaticTarget: Number(resolveClientMapValue(client, workspace.carouselStaticTargets)) || 0,
+    carouselTarget: Number(resolveClientMapValue(client, workspace.carouselTargets)) || 0,
+    staticTarget: Number(resolveClientMapValue(client, workspace.staticTargets)) || 0,
     planId: String(resolveClientMapValue(client, workspace.planIds) || '').trim().toLowerCase() || 'custom',
     shootDaysPerMonth: Number(resolveClientMapValue(client, workspace.shootDaysPerMonth)) || 0,
     shootHoursPerDay: Number(resolveClientMapValue(client, workspace.shootHoursPerDay)) || 0,
@@ -150,9 +158,13 @@ export function mergeClientRecordRowsIntoWorkspace(workspace = {}, rows = []) {
     applyRemoteBrandField(next, 'photoGalleryLink', 'photoGalleryLinks', client, row.photo_gallery_link || '');
     applyRemoteBrandField(next, 'businessType', 'businessTypes', client, row.business_type || '');
     applyRemoteBrandField(next, 'accountManager', 'accountManagers', client, row.account_manager || '');
+    applyRemoteBrandField(next, 'videographer', 'videographers', client, row.videographer || '');
+    applyRemoteBrandField(next, 'photographer', 'photographers', client, row.photographer || '');
     applyRemoteBrandField(next, 'deliverableTarget', 'deliverableTargets', client, Number(row.deliverable_target) || 0);
     applyRemoteBrandField(next, 'reelPointsTarget', 'reelPointsTargets', client, Number(row.reel_points_target) || 0);
     applyRemoteBrandField(next, 'carouselStaticTarget', 'carouselStaticTargets', client, Number(row.carousel_static_target) || 0);
+    applyRemoteBrandField(next, 'carouselTarget', 'carouselTargets', client, Number(row.carousel_target) || 0);
+    applyRemoteBrandField(next, 'staticTarget', 'staticTargets', client, Number(row.static_target) || 0);
     applyRemoteBrandField(
       next,
       'planId',

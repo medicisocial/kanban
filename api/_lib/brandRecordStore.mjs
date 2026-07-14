@@ -132,7 +132,7 @@ export async function fetchClientRecordRows(orgIdOverride) {
   if (!url || !key) return [];
 
   const endpoint =
-    `${url}/rest/v1/client_records?select=id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,deliverable_target,reel_points_target,carousel_static_target,plan_id,shoot_days_per_month,shoot_hours_per_day,deleted_company_file_ids,updated_at&org_id=eq.${encodeURIComponent(orgId)}`;
+    `${url}/rest/v1/client_records?select=id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,videographer,photographer,deliverable_target,reel_points_target,carousel_static_target,carousel_target,static_target,plan_id,shoot_days_per_month,shoot_hours_per_day,deleted_company_file_ids,updated_at&org_id=eq.${encodeURIComponent(orgId)}`;
   const response = await fetchWithTimeout(endpoint, {
     headers: { apikey: key, Authorization: `Bearer ${key}` },
   });
@@ -156,6 +156,15 @@ export function brandProfilePatchFromWorkspaceBrand(client, workspace = {}) {
     photoGalleryLink: workspace.photoGalleryLinks?.[client] || '',
     businessType: workspace.businessTypes?.[client] || '',
     accountManager: workspace.accountManagers?.[client] || '',
+    videographer: workspace.videographers?.[client] || '',
+    photographer: workspace.photographers?.[client] || '',
+    reelPointsTarget: Number(workspace.reelPointsTargets?.[client]) || 0,
+    carouselStaticTarget: Number(workspace.carouselStaticTargets?.[client]) || 0,
+    carouselTarget: Number(workspace.carouselTargets?.[client]) || 0,
+    staticTarget: Number(workspace.staticTargets?.[client]) || 0,
+    planId: String(workspace.planIds?.[client] || '').trim().toLowerCase() || 'custom',
+    shootDaysPerMonth: Number(workspace.shootDaysPerMonth?.[client]) || 0,
+    shootHoursPerDay: Number(workspace.shootHoursPerDay?.[client]) || 0,
   };
 }
 
@@ -193,6 +202,54 @@ export function mergeClientRecordRowsIntoWorkspace(workspace = {}, rows = []) {
     }
     if (row.account_manager) {
       next.accountManagers = { ...(next.accountManagers || {}), [client]: row.account_manager };
+    }
+    if (row.videographer) {
+      next.videographers = { ...(next.videographers || {}), [client]: row.videographer };
+    }
+    if (row.photographer) {
+      next.photographers = { ...(next.photographers || {}), [client]: row.photographer };
+    }
+    if (Number(row.reel_points_target) > 0) {
+      next.reelPointsTargets = {
+        ...(next.reelPointsTargets || {}),
+        [client]: Number(row.reel_points_target),
+      };
+    }
+    if (Number(row.carousel_target) > 0) {
+      next.carouselTargets = {
+        ...(next.carouselTargets || {}),
+        [client]: Number(row.carousel_target),
+      };
+    }
+    if (Number(row.static_target) > 0) {
+      next.staticTargets = {
+        ...(next.staticTargets || {}),
+        [client]: Number(row.static_target),
+      };
+    }
+    if (Number(row.carousel_static_target) > 0) {
+      next.carouselStaticTargets = {
+        ...(next.carouselStaticTargets || {}),
+        [client]: Number(row.carousel_static_target),
+      };
+    }
+    if (row.plan_id) {
+      next.planIds = {
+        ...(next.planIds || {}),
+        [client]: String(row.plan_id).trim().toLowerCase() || 'custom',
+      };
+    }
+    if (Number(row.shoot_days_per_month) > 0) {
+      next.shootDaysPerMonth = {
+        ...(next.shootDaysPerMonth || {}),
+        [client]: Number(row.shoot_days_per_month),
+      };
+    }
+    if (Number(row.shoot_hours_per_day) > 0) {
+      next.shootHoursPerDay = {
+        ...(next.shootHoursPerDay || {}),
+        [client]: Number(row.shoot_hours_per_day),
+      };
     }
   }
   return next;

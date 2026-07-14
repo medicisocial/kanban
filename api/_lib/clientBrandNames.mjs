@@ -137,6 +137,10 @@ export async function upsertClientRecordOnServer(orgId, displayName, { color, lo
       special_menus: [],
       photo_gallery_link: '',
       account_manager: '',
+      videographer: '',
+      photographer: '',
+      carousel_target: 0,
+      static_target: 0,
       data: {},
     }),
   });

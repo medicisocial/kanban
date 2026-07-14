@@ -654,6 +654,8 @@ const CLIENTS_WORKSPACE_KEYS = [
   'colors',
   'logos',
   'accountManagers',
+  'videographers',
+  'photographers',
   'businessTypes',
   'contacts',
   'socialLogins',
@@ -668,6 +670,8 @@ const CLIENTS_WORKSPACE_KEYS = [
 const CLIENTS_SCALAR_MAP_KEYS = new Set([
   'colors',
   'accountManagers',
+  'videographers',
+  'photographers',
   'businessTypes',
   'contentTypeColors',
   'customColorPalette',

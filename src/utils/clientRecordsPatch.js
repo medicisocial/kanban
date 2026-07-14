@@ -16,6 +16,8 @@ export function patchToRecordColumns(patch = {}) {
   }
   if (patch.businessType !== undefined) columns.business_type = patch.businessType || '';
   if (patch.accountManager !== undefined) columns.account_manager = patch.accountManager || '';
+  if (patch.videographer !== undefined) columns.videographer = patch.videographer || '';
+  if (patch.photographer !== undefined) columns.photographer = patch.photographer || '';
   if (patch.deliverableTarget !== undefined) {
     columns.deliverable_target = Math.max(0, Math.round(Number(patch.deliverableTarget) || 0));
   }
@@ -23,7 +25,17 @@ export function patchToRecordColumns(patch = {}) {
     const n = Number(patch.reelPointsTarget);
     columns.reel_points_target = Number.isFinite(n) && n > 0 ? Math.round(n * 2) / 2 : 0;
   }
-  if (patch.carouselStaticTarget !== undefined) {
+  if (patch.carouselTarget !== undefined) {
+    columns.carousel_target = Math.max(0, Math.round(Number(patch.carouselTarget) || 0));
+  }
+  if (patch.staticTarget !== undefined) {
+    columns.static_target = Math.max(0, Math.round(Number(patch.staticTarget) || 0));
+  }
+  if (patch.carouselTarget !== undefined && patch.staticTarget !== undefined) {
+    const carousels = Math.max(0, Math.round(Number(patch.carouselTarget) || 0));
+    const statics = Math.max(0, Math.round(Number(patch.staticTarget) || 0));
+    columns.carousel_static_target = Math.round((carousels + statics * 0.5) * 2) / 2;
+  } else if (patch.carouselStaticTarget !== undefined) {
     const n = Number(patch.carouselStaticTarget);
     columns.carousel_static_target = Number.isFinite(n) && n > 0 ? Math.round(n * 2) / 2 : 0;
   }

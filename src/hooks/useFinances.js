@@ -195,9 +195,11 @@ function payrollStaffExtraTotal(staff = []) {
   return staff.reduce((sum, item) => sum + sumExtraFields(item.extraFields), 0);
 }
 
-function personPayrollTotal(person, pointsPay = 0) {
+function personPayrollTotal(person, pointsPay = 0, planPay = 0) {
   const extras = sumExtraFields(person?.extraFields);
-  return (person?.kind === 'team' ? Number(pointsPay) || 0 : 0) + extras;
+  const teamPay =
+    person?.kind === 'team' ? (Number(pointsPay) || 0) + (Number(planPay) || 0) : 0;
+  return teamPay + extras;
 }
 
 function normalizePayrollMonth(value) {
@@ -619,12 +621,17 @@ export function useFinances() {
       const nextStaff = createPayrollStaff(staff);
       if (!nextStaff.name) return prev;
       // Avoid duplicate team members in the same month.
-      if (
-        nextStaff.kind === 'team' &&
-        nextStaff.teamMemberId &&
-        month.staff.some((item) => item.kind === 'team' && item.teamMemberId === nextStaff.teamMemberId)
-      ) {
-        return prev;
+      if (nextStaff.kind === 'team') {
+        const nameKey = nextStaff.name.toLowerCase();
+        const dup = month.staff.some(
+          (item) =>
+            item.kind === 'team' &&
+            ((nextStaff.teamMemberId && item.teamMemberId === nextStaff.teamMemberId) ||
+              String(item.name || '')
+                .trim()
+                .toLowerCase() === nameKey),
+        );
+        if (dup) return prev;
       }
       data[yearMonth] = writePayrollMonth({
         staff: [...month.staff, nextStaff],
@@ -864,6 +871,10 @@ export function useFinances() {
       const carouselPayByName = options.carouselPayByName || {};
       const staticPayByName = options.staticPayByName || {};
       const reelPayByName = options.reelPayByName || {};
+      const planPayByName = options.planPayByName || {};
+      const amPayByName = options.amPayByName || {};
+      const videographerPayByName = options.videographerPayByName || {};
+      const photographerPayByName = options.photographerPayByName || {};
       const payrollStaff = payrollMonth.staff.map((person) => {
         const nameKey = String(person.name || '').trim().toLowerCase();
         const points = Number(pointsByName[nameKey]) || 0;
@@ -872,10 +883,15 @@ export function useFinances() {
         const reelPay = Number(reelPayByName[nameKey]) || 0;
         const carouselPay = Number(carouselPayByName[nameKey]) || 0;
         const staticPay = Number(staticPayByName[nameKey]) || 0;
+        const amPay = Number(amPayByName[nameKey]) || 0;
+        const videographerPay = Number(videographerPayByName[nameKey]) || 0;
+        const photographerPay = Number(photographerPayByName[nameKey]) || 0;
+        const planPay =
+          person.kind === 'team' ? Number(planPayByName[nameKey]) || 0 : 0;
         const pointsPay =
           person.kind === 'team' ? Number(pointsPayByName[nameKey]) || 0 : 0;
         const extraTotal = sumExtraFields(person.extraFields);
-        const personTotal = personPayrollTotal(person, pointsPay);
+        const personTotal = personPayrollTotal(person, pointsPay, planPay);
         return {
           ...person,
           points,
@@ -884,6 +900,10 @@ export function useFinances() {
           reelPay,
           carouselPay,
           staticPay,
+          amPay,
+          videographerPay,
+          photographerPay,
+          planPay,
           pointsPay,
           extraTotal,
           personTotal,

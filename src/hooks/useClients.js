@@ -10,7 +10,11 @@ import {
   INTERNAL_TEAM_CLIENT,
   normalizeReelPointsTarget,
 } from '../constants';
-import { normalizeClientPlanId } from '../constants/clientPlans.js';
+import {
+  normalizeClientPlanId,
+  carouselStaticPointsFromCounts,
+  normalizeFeedCount,
+} from '../constants/clientPlans.js';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import { normalizeContentTypeColors } from '../utils/contentTypeColors';
 import { normalizeCustomColorPalette, normalizeHexColor } from '../utils/colorHex';
@@ -118,6 +122,15 @@ function normalizeCarouselStaticTargetsMap(targets = {}) {
   return normalized;
 }
 
+function normalizeFeedCountsMap(targets = {}) {
+  const normalized = {};
+  for (const [client, value] of Object.entries(targets)) {
+    const num = normalizeFeedCount(value);
+    if (num > 0) normalized[client] = num;
+  }
+  return normalized;
+}
+
 function normalizePlanIdsMap(planIds = {}) {
   const normalized = {};
   for (const [client, value] of Object.entries(planIds)) {
@@ -180,6 +193,8 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
       ...DEFAULT_CLIENT_ACCOUNT_MANAGERS,
       ...(source.accountManagers || {}),
     }),
+    videographers: stripSuppressed({ ...(source.videographers || {}) }),
+    photographers: stripSuppressed({ ...(source.photographers || {}) }),
     businessTypes: stripSuppressed(normalizeBusinessTypesMap({
       ...DEFAULT_CLIENT_BUSINESS_TYPES,
       ...(source.businessTypes || {}),
@@ -192,6 +207,8 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
     deliverableTargets: stripSuppressed(normalizeDeliverableTargetsMap(source.deliverableTargets || {})),
     reelPointsTargets: stripSuppressed(normalizeReelPointsTargetsMap(source.reelPointsTargets || {})),
     carouselStaticTargets: stripSuppressed(normalizeCarouselStaticTargetsMap(source.carouselStaticTargets || {})),
+    carouselTargets: stripSuppressed(normalizeFeedCountsMap(source.carouselTargets || {})),
+    staticTargets: stripSuppressed(normalizeFeedCountsMap(source.staticTargets || {})),
     planIds: stripSuppressed(normalizePlanIdsMap(source.planIds || {})),
     shootDaysPerMonth: stripSuppressed(normalizeShootDaysPerMonthMap(source.shootDaysPerMonth || {})),
     shootHoursPerDay: stripSuppressed(normalizeShootHoursPerDayMap(source.shootHoursPerDay || {})),
@@ -452,6 +469,8 @@ export function useClients() {
         colors: { ...prev.colors, [trimmed]: nextColor },
         logos: storedLogo ? { ...prev.logos, [trimmed]: storedLogo } : { ...prev.logos },
         accountManagers: { ...prev.accountManagers },
+        videographers: { ...(prev.videographers || {}) },
+        photographers: { ...(prev.photographers || {}) },
         businessTypes: nextBusinessTypes,
         contacts: { ...(prev.contacts || {}) },
         socialLogins: { ...(prev.socialLogins || {}) },
@@ -517,6 +536,8 @@ export function useClients() {
         colors: stripBrand(current.colors),
         logos: stripBrand(current.logos),
         accountManagers: stripBrand(current.accountManagers),
+        videographers: stripBrand(current.videographers),
+        photographers: stripBrand(current.photographers),
         businessTypes: stripBrand(current.businessTypes),
         contacts: stripBrand(current.contacts),
         socialLogins: stripBrand(current.socialLogins),
@@ -526,6 +547,8 @@ export function useClients() {
         deliverableTargets: stripBrand(current.deliverableTargets),
         reelPointsTargets: stripBrand(current.reelPointsTargets),
         carouselStaticTargets: stripBrand(current.carouselStaticTargets),
+        carouselTargets: stripBrand(current.carouselTargets),
+        staticTargets: stripBrand(current.staticTargets),
         planIds: stripBrand(current.planIds),
         shootDaysPerMonth: stripBrand(current.shootDaysPerMonth),
         shootHoursPerDay: stripBrand(current.shootHoursPerDay),
@@ -580,6 +603,38 @@ export function useClients() {
     }), { syncClients: [client] });
   }, [applyClientsWorkspaceUpdate]);
 
+  const getClientVideographer = useCallback(
+    (client) => resolveClientMapValue(client, state.videographers) || '',
+    [state.videographers],
+  );
+
+  const setClientVideographer = useCallback(async (client, videographer) => {
+    if (!client) return { ok: false, error: 'Missing client.' };
+    return applyClientsWorkspaceUpdate((prev) => ({
+      ...prev,
+      videographers: {
+        ...(prev.videographers || {}),
+        [client]: videographer || '',
+      },
+    }), { syncClients: [client] });
+  }, [applyClientsWorkspaceUpdate]);
+
+  const getClientPhotographer = useCallback(
+    (client) => resolveClientMapValue(client, state.photographers) || '',
+    [state.photographers],
+  );
+
+  const setClientPhotographer = useCallback(async (client, photographer) => {
+    if (!client) return { ok: false, error: 'Missing client.' };
+    return applyClientsWorkspaceUpdate((prev) => ({
+      ...prev,
+      photographers: {
+        ...(prev.photographers || {}),
+        [client]: photographer || '',
+      },
+    }), { syncClients: [client] });
+  }, [applyClientsWorkspaceUpdate]);
+
   const setClientColor = useCallback(async (client, color) => {
     const hex = normalizeHexColor(color);
     if (!client || !hex) return { ok: false, error: 'Missing client or color.' };
@@ -625,6 +680,11 @@ export function useClients() {
       deliverableTarget,
       reelPointsTarget,
       carouselStaticTarget,
+      carouselTarget,
+      staticTarget,
+      accountManager,
+      videographer,
+      photographer,
       planId,
       shootDaysPerMonth,
       shootHoursPerDay,
@@ -671,7 +731,47 @@ export function useClients() {
         else delete nextTargets[client];
         next.reelPointsTargets = nextTargets;
       }
-      if (carouselStaticTarget !== undefined) {
+      if (accountManager !== undefined) {
+        next.accountManagers = {
+          ...(prev.accountManagers || {}),
+          [client]: accountManager || '',
+        };
+      }
+      if (videographer !== undefined) {
+        next.videographers = {
+          ...(prev.videographers || {}),
+          [client]: videographer || '',
+        };
+      }
+      if (photographer !== undefined) {
+        next.photographers = {
+          ...(prev.photographers || {}),
+          [client]: photographer || '',
+        };
+      }
+      if (carouselTarget !== undefined || staticTarget !== undefined) {
+        const nextCarousels = { ...(prev.carouselTargets || {}) };
+        const nextStatics = { ...(prev.staticTargets || {}) };
+        const carousels =
+          carouselTarget !== undefined
+            ? normalizeFeedCount(carouselTarget)
+            : normalizeFeedCount(resolveClientMapValue(client, prev.carouselTargets));
+        const statics =
+          staticTarget !== undefined
+            ? normalizeFeedCount(staticTarget)
+            : normalizeFeedCount(resolveClientMapValue(client, prev.staticTargets));
+        if (carousels > 0) nextCarousels[client] = carousels;
+        else delete nextCarousels[client];
+        if (statics > 0) nextStatics[client] = statics;
+        else delete nextStatics[client];
+        next.carouselTargets = nextCarousels;
+        next.staticTargets = nextStatics;
+        const feed = carouselStaticPointsFromCounts(carousels, statics);
+        const nextFeed = { ...(prev.carouselStaticTargets || {}) };
+        if (feed > 0) nextFeed[client] = feed;
+        else delete nextFeed[client];
+        next.carouselStaticTargets = nextFeed;
+      } else if (carouselStaticTarget !== undefined) {
         const num = normalizeReelPointsTarget(carouselStaticTarget);
         const nextTargets = { ...(prev.carouselStaticTargets || {}) };
         if (num > 0) nextTargets[client] = num;
@@ -740,9 +840,26 @@ export function useClients() {
     }, { syncClients: [client] });
   }, [applyClientsWorkspaceUpdate]);
 
+  const getClientCarouselTarget = useCallback(
+    (client) => normalizeFeedCount(resolveClientMapValue(client, state.carouselTargets)),
+    [state.carouselTargets],
+  );
+
+  const getClientStaticTarget = useCallback(
+    (client) => normalizeFeedCount(resolveClientMapValue(client, state.staticTargets)),
+    [state.staticTargets],
+  );
+
   const getClientCarouselStaticTarget = useCallback(
-    (client) => normalizeReelPointsTarget(resolveClientMapValue(client, state.carouselStaticTargets)),
-    [state.carouselStaticTargets],
+    (client) => {
+      const carousels = normalizeFeedCount(resolveClientMapValue(client, state.carouselTargets));
+      const statics = normalizeFeedCount(resolveClientMapValue(client, state.staticTargets));
+      if (carousels > 0 || statics > 0) {
+        return carouselStaticPointsFromCounts(carousels, statics);
+      }
+      return normalizeReelPointsTarget(resolveClientMapValue(client, state.carouselStaticTargets));
+    },
+    [state.carouselTargets, state.staticTargets, state.carouselStaticTargets],
   );
 
   const setClientCarouselStaticTarget = useCallback(async (client, target) => {
@@ -1011,6 +1128,8 @@ export function useClients() {
     clientColors: state.colors,
     clientLogos: state.logos,
     clientAccountManagers: state.accountManagers,
+    clientVideographers: state.videographers,
+    clientPhotographers: state.photographers,
     clientBusinessTypes: state.businessTypes,
     defaultClient: state.names[0] || DEFAULT_CLIENTS[0],
     addClient,
@@ -1018,8 +1137,12 @@ export function useClients() {
     getClientColor,
     getClientLogo,
     getClientAccountManager,
+    getClientVideographer,
+    getClientPhotographer,
     getClientBusinessType,
     setClientAccountManager,
+    setClientVideographer,
+    setClientPhotographer,
     setClientColor,
     setClientLogo,
     setClientBusinessType,
@@ -1037,6 +1160,8 @@ export function useClients() {
     setClientDeliverableTarget,
     getClientReelPointsTarget,
     setClientReelPointsTarget,
+    getClientCarouselTarget,
+    getClientStaticTarget,
     getClientCarouselStaticTarget,
     setClientCarouselStaticTarget,
     getClientPlanId,

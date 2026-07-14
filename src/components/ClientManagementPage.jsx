@@ -31,7 +31,13 @@ import ContentReviewSharePanel from './ContentReviewSharePanel';
 import ClientPortalHealthChecklist from './ClientPortalHealthChecklist';
 import { btnPrimaryClass, btnSecondaryClass, selectClass, glassSegmentClass, glassInsetClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 import { normalizeReelPointsTarget } from '../constants';
-import { CLIENT_PLAN_OPTIONS, applyClientPlanDefaults, normalizeClientPlanId } from '../constants/clientPlans';
+import {
+  CLIENT_PLAN_OPTIONS,
+  applyClientPlanDefaults,
+  normalizeClientPlanId,
+  normalizeFeedCount,
+  carouselStaticPointsFromCounts,
+} from '../constants/clientPlans';
 
 const TABS = [
   { id: 'profile', label: 'Profile' },
@@ -60,10 +66,16 @@ export default function ClientManagementPage({
     getClientBusinessType,
     getClientPhotoGalleryLink,
     getClientReelPointsTarget,
+    getClientCarouselTarget,
+    getClientStaticTarget,
     getClientCarouselStaticTarget,
+    getClientAccountManager,
+    getClientVideographer,
+    getClientPhotographer,
     getClientPlanId,
     getClientShootDaysPerMonth,
     getClientShootHoursPerDay,
+    getMemberNamesForRole,
     saveClientProfile,
     getClientUsers,
     setClientPortalUsers,
@@ -86,10 +98,17 @@ export default function ClientManagementPage({
   const [businessType, setBusinessType] = useState('');
   const [photoGalleryLink, setPhotoGalleryLink] = useState('');
   const [reelPointsTarget, setReelPointsTarget] = useState('');
-  const [carouselStaticTarget, setCarouselStaticTarget] = useState('');
+  const [carouselTarget, setCarouselTarget] = useState('');
+  const [staticTarget, setStaticTarget] = useState('');
+  const [accountManager, setAccountManager] = useState('');
+  const [videographer, setVideographer] = useState('');
+  const [photographer, setPhotographer] = useState('');
   const [planId, setPlanId] = useState('custom');
   const [shootDaysPerMonth, setShootDaysPerMonth] = useState('');
   const [shootHoursPerDay, setShootHoursPerDay] = useState('');
+  const accountManagers = getMemberNamesForRole?.('Account Manager') || [];
+  const videographers = getMemberNamesForRole?.('Content Creator') || [];
+  const photographers = getMemberNamesForRole?.('Photographer') || [];
   const [previewSrc, setPreviewSrc] = useState(null);
   const [logoCrop, setLogoCrop] = useState(DEFAULT_LOGO_CROP);
   const [pendingLogo, setPendingLogo] = useState(undefined);
@@ -133,7 +152,11 @@ export default function ClientManagementPage({
     setBusinessType(getClientBusinessType(selectedClient));
     setPhotoGalleryLink(getClientPhotoGalleryLink(selectedClient));
     setReelPointsTarget(String(getClientReelPointsTarget(selectedClient) || ''));
-    setCarouselStaticTarget(String(getClientCarouselStaticTarget(selectedClient) || ''));
+    setCarouselTarget(String(getClientCarouselTarget(selectedClient) || ''));
+    setStaticTarget(String(getClientStaticTarget(selectedClient) || ''));
+    setAccountManager(getClientAccountManager(selectedClient) || '');
+    setVideographer(getClientVideographer(selectedClient) || '');
+    setPhotographer(getClientPhotographer(selectedClient) || '');
     setPlanId(getClientPlanId(selectedClient) || 'custom');
     setShootDaysPerMonth(String(getClientShootDaysPerMonth(selectedClient) || ''));
     setShootHoursPerDay(String(getClientShootHoursPerDay(selectedClient) || ''));
@@ -232,7 +255,8 @@ export default function ClientManagementPage({
     if (id === 'custom') return;
     const defaults = applyClientPlanDefaults(id);
     setReelPointsTarget(String(defaults.reelPointsTarget || ''));
-    setCarouselStaticTarget(String(defaults.carouselStaticTarget || ''));
+    setCarouselTarget(String(defaults.carouselTarget || ''));
+    setStaticTarget(String(defaults.staticTarget || ''));
     setShootDaysPerMonth(String(defaults.shootDaysPerMonth || ''));
     setShootHoursPerDay(String(defaults.shootHoursPerDay || ''));
   };
@@ -246,7 +270,11 @@ export default function ClientManagementPage({
       const result = await saveClientProfile(selectedClient, {
         planId: normalizeClientPlanId(planId),
         reelPointsTarget: normalizeReelPointsTarget(reelPointsTarget),
-        carouselStaticTarget: normalizeReelPointsTarget(carouselStaticTarget),
+        carouselTarget: normalizeFeedCount(carouselTarget),
+        staticTarget: normalizeFeedCount(staticTarget),
+        accountManager: accountManager || '',
+        videographer: videographer || '',
+        photographer: photographer || '',
         shootDaysPerMonth: Math.max(0, Math.round(Number(shootDaysPerMonth) || 0)),
         shootHoursPerDay: Math.max(0, Number(shootHoursPerDay) || 0),
       });
@@ -273,7 +301,11 @@ export default function ClientManagementPage({
     selectedClient &&
     (normalizeClientPlanId(planId) !== getClientPlanId(selectedClient) ||
       normalizeReelPointsTarget(reelPointsTarget) !== getClientReelPointsTarget(selectedClient) ||
-      normalizeReelPointsTarget(carouselStaticTarget) !== getClientCarouselStaticTarget(selectedClient) ||
+      normalizeFeedCount(carouselTarget) !== getClientCarouselTarget(selectedClient) ||
+      normalizeFeedCount(staticTarget) !== getClientStaticTarget(selectedClient) ||
+      (accountManager || '') !== (getClientAccountManager(selectedClient) || '') ||
+      (videographer || '') !== (getClientVideographer(selectedClient) || '') ||
+      (photographer || '') !== (getClientPhotographer(selectedClient) || '') ||
       Math.max(0, Math.round(Number(shootDaysPerMonth) || 0)) !== getClientShootDaysPerMonth(selectedClient) ||
       Math.max(0, Number(shootHoursPerDay) || 0) !== getClientShootHoursPerDay(selectedClient));
 
@@ -572,7 +604,61 @@ export default function ClientManagementPage({
                 </p>
               </label>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <label className="block">
+                  <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                    Account manager
+                  </span>
+                  <select
+                    value={accountManager}
+                    onChange={(e) => setAccountManager(e.target.value)}
+                    className={selectClass}
+                  >
+                    <option value="">Unassigned</option>
+                    {accountManagers.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                    Videographer
+                  </span>
+                  <select
+                    value={videographer}
+                    onChange={(e) => setVideographer(e.target.value)}
+                    className={selectClass}
+                  >
+                    <option value="">Unassigned</option>
+                    {videographers.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                    Photographer
+                  </span>
+                  <select
+                    value={photographer}
+                    onChange={(e) => setPhotographer(e.target.value)}
+                    className={selectClass}
+                  >
+                    <option value="">Unassigned</option>
+                    {photographers.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <label className="block">
                   <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
                     Monthly reel points
@@ -592,25 +678,44 @@ export default function ClientManagementPage({
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
-                    Carousel / static points
+                    Carousels
                   </span>
                   <input
                     type="number"
                     min="0"
-                    step="0.5"
-                    value={carouselStaticTarget}
+                    step="1"
+                    value={carouselTarget}
                     onChange={(e) => {
-                      setCarouselStaticTarget(e.target.value);
+                      setCarouselTarget(e.target.value);
                       setPlanId('custom');
                     }}
-                    placeholder="e.g. 3"
+                    placeholder="e.g. 2"
                     className="w-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
                   />
-                  <p className="mt-1.5 text-[10px] text-white/35">
-                    Carousel = 1 pt · Static post = ½ pt toward this budget.
-                  </p>
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                    Statics
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={staticTarget}
+                    onChange={(e) => {
+                      setStaticTarget(e.target.value);
+                      setPlanId('custom');
+                    }}
+                    placeholder="e.g. 2"
+                    className="w-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
+                  />
                 </label>
               </div>
+              <p className="text-[10px] text-white/35">
+                Deliverables feed budget:{' '}
+                {carouselStaticPointsFromCounts(carouselTarget, staticTarget)} pts (carousel = 1 ·
+                static = ½).
+              </p>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block">
@@ -650,7 +755,8 @@ export default function ClientManagementPage({
               </div>
 
               <p className="text-[10px] text-white/35">
-                Deliverables tracks these quotas. Team pay from completed work is on Payroll.
+                Assigned AM / videographer / photographer earn plan pay on Payroll. Editors still earn from
+                completed cards.
               </p>
 
               {planError && <p className="text-sm text-rose-300">{planError}</p>}

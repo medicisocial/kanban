@@ -58,7 +58,12 @@ function CardModal({
   const mouseDownOnOverlayRef = useRef(false);
   const pendingTabRef = useRef(null);
   const [activeTab, setActiveTab] = useState('details');
-  const { clients, getClientAccountManager, getMemberNamesForRole } = useClientsContext();
+  const {
+    clients,
+    getClientAccountManager,
+    getClientVideographer,
+    getMemberNamesForRole,
+  } = useClientsContext();
   const editors = getMemberNamesForRole('Editor');
   const contentCreators = getMemberNamesForRole('Content Creator');
   const calendarClientNote = getCalendarClientNote(card);
@@ -298,6 +303,7 @@ function CardModal({
       queueUpdate({
         client: value,
         accountManager: getClientAccountManager(value) || displayCard.accountManager || '',
+        contentCreator: getClientVideographer?.(value) || displayCard.contentCreator || '',
       });
       return;
     }

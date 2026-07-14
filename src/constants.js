@@ -185,7 +185,12 @@ export const ACCOUNT_MANAGERS = [DEFAULT_ACCOUNT_MANAGER];
 /** @deprecated Use team members from context / storage */
 export const COMPANY_STAFF = [DEFAULT_EDITOR, DEFAULT_ACCOUNT_MANAGER];
 
-export const TEAM_OPERATIONAL_ROLES = ['Account Manager', 'Editor', 'Content Creator'];
+export const TEAM_OPERATIONAL_ROLES = [
+  'Account Manager',
+  'Editor',
+  'Content Creator',
+  'Photographer',
+];
 export const TEAM_LEADERSHIP_ROLES = ['Owner', 'Creative Director'];
 export const TEAM_ROLES = [...TEAM_LEADERSHIP_ROLES, ...TEAM_OPERATIONAL_ROLES];
 
@@ -201,7 +206,9 @@ export const TEAM_ROLE_DESCRIPTIONS = {
   'Account Manager': 'Client assignments and account manager task queues.',
   Editor: 'Post-production — receives raw assets after the content creator hands off.',
   'Content Creator':
-    'Creates content — reels, carousels, photos, and videos — on To Create cards and shoot days.',
+    'Videography on shoots — assigned as the client videographer and on To Create / shoot cards.',
+  Photographer:
+    'Photography on shoots — assigned as the client photographer for plan-based hourly pay.',
 };
 
 export const DEFAULT_TEAM_MEMBERS = [

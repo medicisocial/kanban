@@ -8,6 +8,7 @@ import { useClientsContext } from '../context/ClientsContext';
 import { isSharedOperationsLogin } from '../utils/staffAuth';
 import { staffHasLeadershipWorkspaceAccess } from '../utils/staffMembers';
 import { buildEditorReelPointsByAssignee } from '../utils/editorTodo';
+import { buildPlanBasedPayByAssignee } from '../utils/planBasedPay';
 
 /** Format a number as a dollar string. */
 function fmt$(n) {
@@ -143,6 +144,21 @@ function PayrollPersonRow({ person, rates, onUpdate, onRemove }) {
 
       {person.kind === 'team' && (
         <div className="mt-3 space-y-1 text-xs text-white/55">
+          {(person.amPay || 0) > 0 && (
+            <p>
+              Account manager (plans): {fmt$(person.amPay || 0)}
+            </p>
+          )}
+          {(person.videographerPay || 0) > 0 && (
+            <p>
+              Videographer (shoots): {fmt$(person.videographerPay || 0)}
+            </p>
+          )}
+          {(person.photographerPay || 0) > 0 && (
+            <p>
+              Photographer (shoots): {fmt$(person.photographerPay || 0)}
+            </p>
+          )}
           <p>
             Reels: {person.points || 0} pts · {fmt$(person.reelPay ?? (person.points || 0) * reelRate)}
             <span className="text-white/35"> (${reelRate}/pt)</span>
@@ -314,7 +330,18 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
   } = finances;
 
   const { session, org } = useStaffAuth();
-  const { teamMembers: contextTeamMembers } = useClientsContext();
+  const {
+    teamMembers: contextTeamMembers,
+    clients = [],
+    getClientAccountManager,
+    getClientVideographer,
+    getClientPhotographer,
+    getClientReelPointsTarget,
+    getClientCarouselTarget,
+    getClientStaticTarget,
+    getClientShootDaysPerMonth,
+    getClientShootHoursPerDay,
+  } = useClientsContext();
   const teamMembers = teamMembersProp || contextTeamMembers || [];
 
   const isAdmin = useMemo(() => {
@@ -411,6 +438,49 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     setRatesDraft((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  const planPayMaps = useMemo(() => {
+    const { byName } = buildPlanBasedPayByAssignee({
+      clients,
+      getClientAccountManager,
+      getClientVideographer,
+      getClientPhotographer,
+      getClientReelPointsTarget,
+      getClientCarouselTarget,
+      getClientStaticTarget,
+      getClientShootDaysPerMonth,
+      getClientShootHoursPerDay,
+      rates: payRates,
+    });
+    const planPayByName = {};
+    const amPayByName = {};
+    const videographerPayByName = {};
+    const photographerPayByName = {};
+    for (const [key, entry] of Object.entries(byName)) {
+      planPayByName[key] = entry.planPay || 0;
+      amPayByName[key] = entry.amPay || 0;
+      videographerPayByName[key] = entry.videographerPay || 0;
+      photographerPayByName[key] = entry.photographerPay || 0;
+    }
+    return {
+      planPayByName,
+      amPayByName,
+      videographerPayByName,
+      photographerPayByName,
+      assigneeKeys: Object.keys(byName),
+    };
+  }, [
+    clients,
+    getClientAccountManager,
+    getClientVideographer,
+    getClientPhotographer,
+    getClientReelPointsTarget,
+    getClientCarouselTarget,
+    getClientStaticTarget,
+    getClientShootDaysPerMonth,
+    getClientShootHoursPerDay,
+    payRates,
+  ]);
+
   const pointsMaps = useMemo(() => {
     const referenceDate = yearMonthToDate(selectedMonth);
     const roster = buildEditorReelPointsByAssignee(cards || [], {
@@ -443,8 +513,9 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
       carouselPayByName,
       staticPayByName,
       reelPayByName,
+      ...planPayMaps,
     };
-  }, [cards, selectedMonth, payRates]);
+  }, [cards, selectedMonth, payRates, planPayMaps]);
 
   const snapshot = useMemo(
     () => getMonthlySnapshot(selectedMonth, pointsMaps),
@@ -460,6 +531,31 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     }
     return ids;
   }, [snapshot.payrollStaff]);
+
+  const planAssigneeKey = planPayMaps.assigneeKeys.slice().sort().join('|');
+
+  // Auto-include team members assigned as AM / videographer / photographer on any client.
+  useEffect(() => {
+    if (!planAssigneeKey) return;
+    const needed = new Set(planAssigneeKey.split('|').filter(Boolean));
+    const onRoster = new Set(
+      (snapshot.payrollStaff || []).map((person) => String(person.name || '').trim().toLowerCase()),
+    );
+    for (const member of teamMembers || []) {
+      const name = String(member?.name || '').trim();
+      const key = name.toLowerCase();
+      if (!name || !needed.has(key) || onRoster.has(key)) continue;
+      addPayrollStaff(selectedMonth, {
+        name,
+        kind: 'team',
+        teamMemberId: member.id || null,
+        extraFields: [],
+      });
+      onRoster.add(key);
+    }
+    // Intentionally omit snapshot.payrollStaff from deps — duplicate guard in addPayrollStaff is enough.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addPayrollStaff, planAssigneeKey, selectedMonth, teamMembers]);
 
   const monthLabel = useMemo(() => {
     const [y, m] = selectedMonth.split('-');
@@ -538,19 +634,30 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-white">Videographer</h3>
+            <h3 className="text-sm font-semibold text-white">Shoot roles (hourly)</h3>
+            <p className="mt-1 text-xs text-white/45">
+              Paid from each client&apos;s plan shoot days × hours/day for the assigned videographer and
+              photographer.
+            </p>
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <RateField
-                label="Hourly rate"
+                label="Videographer ($/hr)"
                 value={ratesDraft.videographerHourly}
                 onChange={(v) => updateRateDraft('videographerHourly', v)}
-                hint="Stored for reference — not auto-payroll yet."
+              />
+              <RateField
+                label="Photographer ($/hr)"
+                value={ratesDraft.photographerHourly}
+                onChange={(v) => updateRateDraft('photographerHourly', v)}
               />
             </div>
           </div>
 
           <div>
             <h3 className="text-sm font-semibold text-white">Account manager</h3>
+            <p className="mt-1 text-xs text-white/45">
+              Paid from each assigned client&apos;s plan quotas (base + reel/carousel/static).
+            </p>
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <RateField
                 label="Base ($/client/mo)"
@@ -639,9 +746,9 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
           <div>
             <h3 className="text-sm font-semibold text-white">People</h3>
             <p className="mt-1 text-xs text-white/45">
-              Team members earn reels (${payRates.reelPointRate}/pt), carousels (${payRates.carouselRate}), and
-              statics (${payRates.staticPostRate}). Add custom fields for bonuses or other pay. Custom people use
-              fields only.
+              Team pay includes plan roles (AM / videographer / photographer) plus editor points on completed
+              cards (${payRates.reelPointRate}/pt, carousel ${payRates.carouselRate}, static $
+              {payRates.staticPostRate}). Custom people use fields only.
             </p>
           </div>
           <p className="text-base font-bold text-amber-300">

@@ -209,7 +209,7 @@ export default function TeamMemberDetailCard({
                 ))}
               </div>
               <p className="mt-2 text-[10px] text-white/35">
-                Owner and Creative Director include Account Manager, Editor, and Content Creator.
+                Owner and Creative Director include Account Manager, Editor, Content Creator, and Photographer.
               </p>
             </div>
 
