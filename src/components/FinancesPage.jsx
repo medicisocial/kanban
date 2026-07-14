@@ -917,7 +917,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
               </div>
               <div className="max-h-[22rem] overflow-y-auto">
                 <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-[#141414]/
+                  <thead className="sticky top-0 bg-[#141414]">
                     <tr className="text-left text-[10px] uppercase tracking-[0.14em] text-white/35">
                       <th className="pb-2 font-medium">Client</th>
                       <th className="pb-2 text-right font-medium">Monthly</th>
