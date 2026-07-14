@@ -56,6 +56,23 @@ function calculateQuickBooksCardFee(amount) {
   return value > 0 ? (value * 0.029) + 0.25 : 0;
 }
 
+/** Per-month retainer billing status. Paused/canceled are excluded from revenue + payroll. */
+export const RETAINER_STATUS_OPTIONS = [
+  { id: 'active', label: 'Active' },
+  { id: 'paused', label: 'Paused' },
+  { id: 'canceled', label: 'Canceled' },
+];
+
+export function normalizeRetainerStatus(value) {
+  const status = String(value || '').trim().toLowerCase();
+  if (status === 'paused' || status === 'canceled') return status;
+  return 'active';
+}
+
+export function isRetainerActiveStatus(value) {
+  return normalizeRetainerStatus(value) === 'active';
+}
+
 function previousYearMonth(yearMonth) {
   const [year, month] = String(yearMonth || currentYearMonth()).split('-').map(Number);
   const date = new Date(year || new Date().getFullYear(), (month || 1) - 2, 1);
@@ -117,18 +134,37 @@ function getRetainerEntries(monthRevenue) {
 }
 
 function calculateRetainerTotal(monthRevenue) {
-  return getRetainerEntries(monthRevenue).reduce((sum, [, value]) => sum + (Number(value) || 0), 0);
+  return getRetainerEntries(monthRevenue).reduce((sum, [client, value]) => {
+    if (!isRetainerActiveStatus(monthRevenue?.retainersMeta?.[client]?.status)) return sum;
+    return sum + (Number(value) || 0);
+  }, 0);
 }
 
 function normalizeRetainerMeta(monthRevenue, client) {
   const meta = monthRevenue?.retainersMeta?.[client];
   const amount = Number(monthRevenue?.[client]) || 0;
-  return createRevenueItem({
-    name: client,
-    amount,
-    paymentMethod: meta?.paymentMethod || 'ach',
-    qbFee: meta?.qbFee,
-  });
+  return {
+    ...createRevenueItem({
+      name: client,
+      amount,
+      paymentMethod: meta?.paymentMethod || 'ach',
+      qbFee: meta?.qbFee,
+      id: meta?.id,
+    }),
+    status: normalizeRetainerStatus(meta?.status),
+  };
+}
+
+function createRetainerMeta(client, amount, overrides = {}) {
+  const { status, ...rest } = overrides;
+  return {
+    ...createRevenueItem({
+      ...rest,
+      name: client,
+      amount: Number(amount) || 0,
+    }),
+    status: normalizeRetainerStatus(status),
+  };
 }
 
 function normalizeOneOffProjects(monthRevenue) {
@@ -287,22 +323,27 @@ function copyRecurringRetainers(previousMonth) {
   if (!previousMonth || typeof previousMonth !== 'object') return null;
   const retainers = Object.fromEntries(getRetainerEntries(previousMonth));
   if (!Object.keys(retainers).length) return null;
+  const nextRetainers = {};
   const retainersMeta = {};
   for (const [client, amount] of Object.entries(retainers)) {
     const previousMeta = previousMonth.retainersMeta?.[client] || {};
-    retainersMeta[client] = createRevenueItem({
+    // Canceled clients drop off; paused stay paused for the new month until resumed.
+    const status = normalizeRetainerStatus(previousMeta.status);
+    if (status === 'canceled') continue;
+    nextRetainers[client] = Number(amount) || 0;
+    retainersMeta[client] = createRetainerMeta(client, nextRetainers[client], {
       ...previousMeta,
-      name: client,
-      amount,
+      status,
       qbFee: undefined,
     });
   }
+  if (!Object.keys(nextRetainers).length) return null;
   return {
-    ...retainers,
+    ...nextRetainers,
     retainersMeta,
     oneOff: 0,
     oneOffProjects: [],
-    retainerTotal: calculateRetainerTotal(retainers),
+    retainerTotal: calculateRetainerTotal({ ...nextRetainers, retainersMeta }),
   };
 }
 
@@ -482,10 +523,8 @@ export function useFinances() {
       const prevMeta = month.retainersMeta?.[client] || {};
       month.retainersMeta = {
         ...(month.retainersMeta || {}),
-        [client]: createRevenueItem({
+        [client]: createRetainerMeta(client, month[client], {
           ...prevMeta,
-          name: client,
-          amount: month[client],
           qbFee: undefined,
         }),
       };
@@ -505,14 +544,39 @@ export function useFinances() {
       const amount = Number(month[client]) || 0;
       month.retainersMeta = {
         ...(month.retainersMeta || {}),
-        [client]: createRevenueItem({
+        [client]: createRetainerMeta(client, amount, {
           ...(month.retainersMeta?.[client] || {}),
-          name: client,
-          amount,
           paymentMethod,
           qbFee: undefined,
         }),
       };
+      month.retainerTotal = calculateRetainerTotal(month);
+      data[yearMonth] = month;
+      return [...rest, { id: 'revenue', data }];
+    });
+  }, []);
+
+  const setRetainerStatus = useCallback((client, yearMonth, status) => {
+    notifyMutation();
+    setFinances((prev) => {
+      const revenue = prev.find((r) => r.id === 'revenue');
+      const rest = prev.filter((r) => r.id !== 'revenue');
+      const data = revenue?.data ? { ...revenue.data } : {};
+      const month = { ...(data[yearMonth] || {}) };
+      const amount = Number(month[client]) || 0;
+      month.retainersMeta = {
+        ...(month.retainersMeta || {}),
+        [client]: createRetainerMeta(client, amount, {
+          ...(month.retainersMeta?.[client] || {}),
+          status,
+          qbFee: undefined,
+        }),
+      };
+      // Ensure the retainer row exists even when amount was never seeded.
+      if (!Object.prototype.hasOwnProperty.call(month, client)) {
+        month[client] = amount;
+      }
+      month.retainerTotal = calculateRetainerTotal(month);
       data[yearMonth] = month;
       return [...rest, { id: 'revenue', data }];
     });
@@ -860,6 +924,7 @@ export function useFinances() {
         ]),
       );
       const retainerQbFees = Object.values(retainerPayments)
+        .filter((item) => isRetainerActiveStatus(item.status))
         .reduce((sum, item) => sum + (Number(item.qbFee) || 0), 0);
       const oneOffQbFees = oneOffProjects.reduce((sum, item) => sum + (Number(item.qbFee) || 0), 0);
       const qbFees = retainerQbFees + oneOffQbFees;
@@ -993,6 +1058,7 @@ export function useFinances() {
     ensureRecurringMonth,
     setMonthlyRetainer,
     setRetainerPaymentMethod,
+    setRetainerStatus,
     setOneOffRevenue,
     addOneOffProject,
     updateOneOffProject,

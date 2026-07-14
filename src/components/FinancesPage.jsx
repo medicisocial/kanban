@@ -16,6 +16,11 @@ import { staffHasLeadershipWorkspaceAccess } from '../utils/staffMembers';
 import { buildEditorReelPointsByAssignee } from '../utils/editorTodo';
 import { buildPlanBasedPayByAssignee, buildFullQuotaEditorPay, projectPayrollAtFullDelivery } from '../utils/planBasedPay';
 import { sortClientNamesAlphabetically } from '../utils/clients';
+import {
+  RETAINER_STATUS_OPTIONS,
+  normalizeRetainerStatus,
+  isRetainerActiveStatus,
+} from '../hooks/useFinances';
 
 function fmt$(n) {
   const num = Number(n) || 0;
@@ -101,6 +106,23 @@ function PaymentMethodSelect({ value, onChange }) {
     >
       <option value="ach">ACH / bank</option>
       <option value="cc">Credit card</option>
+    </select>
+  );
+}
+
+function RetainerStatusSelect({ value, onChange }) {
+  return (
+    <select
+      value={normalizeRetainerStatus(value)}
+      onChange={(event) => onChange(event.target.value)}
+      className={`${financeInputClass} w-auto min-w-[7.5rem]`}
+      title="Retainer status for this month"
+    >
+      {RETAINER_STATUS_OPTIONS.map((option) => (
+        <option key={option.id} value={option.id}>
+          {option.label}
+        </option>
+      ))}
     </select>
   );
 }
@@ -447,6 +469,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     setOwnerComp,
     setMonthlyRetainer,
     setRetainerPaymentMethod,
+    setRetainerStatus,
     addOneOffProject,
     updateOneOffProject,
     deleteOneOffProject,
@@ -509,17 +532,70 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     ensureRecurringMonth(selectedMonth);
   }, [ensureRecurringMonth, selectedMonth]);
 
-  // Seed empty retainers from each client's stored monthly package amount.
+  const monthRetainers = useMemo(
+    () => getMonthlySnapshot(selectedMonth)?.retainers || {},
+    [getMonthlySnapshot, selectedMonth],
+  );
+
+  const monthRetainerPayments = useMemo(
+    () => getMonthlySnapshot(selectedMonth)?.retainerPayments || {},
+    [getMonthlySnapshot, selectedMonth],
+  );
+
+  const previousMonthRetainerPayments = useMemo(() => {
+    const [year, month] = String(selectedMonth || '').split('-').map(Number);
+    const date = new Date(year || new Date().getFullYear(), (month || 1) - 2, 1);
+    const prev = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    return getMonthlySnapshot(prev)?.retainerPayments || {};
+  }, [getMonthlySnapshot, selectedMonth]);
+
+  /** Clients billed this month (Active + retainer > $0). Paused/canceled are out of payroll. */
+  const activePayrollClients = useMemo(
+    () =>
+      (clients || []).filter((client) => {
+        const status = normalizeRetainerStatus(monthRetainerPayments[client]?.status);
+        if (!isRetainerActiveStatus(status)) return false;
+        return (Number(monthRetainers[client]) || 0) > 0;
+      }),
+    [clients, monthRetainers, monthRetainerPayments],
+  );
+
+  const activePayrollClientKeys = useMemo(() => {
+    const keys = new Set();
+    for (const client of activePayrollClients) {
+      keys.add(String(client).trim().toLowerCase());
+    }
+    return keys;
+  }, [activePayrollClients]);
+
+  const payrollCards = useMemo(
+    () =>
+      (cards || []).filter((card) => {
+        const key = String(card?.client || '').trim().toLowerCase();
+        return key && activePayrollClientKeys.has(key);
+      }),
+    [cards, activePayrollClientKeys],
+  );
+
+  // Seed missing retainers from each client's stored monthly package amount.
+  // Never overwrite an existing row, and never revive a canceled client.
   useEffect(() => {
     for (const client of clients || []) {
       const packageAmount = getClientMonthlyPackageAmount?.(client) || 0;
       if (!(packageAmount > 0)) continue;
-      const existing = Number(snapshot.retainers?.[client]) || 0;
-      if (existing > 0) continue;
+      if (Object.prototype.hasOwnProperty.call(monthRetainers || {}, client)) continue;
+      const priorStatus = normalizeRetainerStatus(previousMonthRetainerPayments[client]?.status);
+      if (priorStatus === 'canceled') continue;
       setMonthlyRetainer(client, selectedMonth, packageAmount);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clients, getClientMonthlyPackageAmount, selectedMonth, setMonthlyRetainer]);
+  }, [
+    clients,
+    getClientMonthlyPackageAmount,
+    monthRetainers,
+    previousMonthRetainerPayments,
+    selectedMonth,
+    setMonthlyRetainer,
+  ]);
 
   const shiftMonth = useCallback(
     (yearMonth, offset) => {
@@ -587,7 +663,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
 
   const planPayMaps = useMemo(() => {
     const { byName } = buildPlanBasedPayByAssignee({
-      clients,
+      clients: activePayrollClients,
       getClientAccountManager,
       getClientVideographer,
       getClientPhotographer,
@@ -615,7 +691,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
       assigneeKeys: Object.keys(byName),
     };
   }, [
-    clients,
+    activePayrollClients,
     getClientAccountManager,
     getClientVideographer,
     getClientPhotographer,
@@ -628,7 +704,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
 
   const pointsMaps = useMemo(() => {
     const referenceDate = yearMonthToDate(selectedMonth);
-    const roster = buildEditorReelPointsByAssignee(cards || [], {
+    const roster = buildEditorReelPointsByAssignee(payrollCards, {
       referenceDate,
       rates: payRates,
     });
@@ -660,7 +736,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
       reelPayByName,
       ...planPayMaps,
     };
-  }, [cards, selectedMonth, payRates, planPayMaps]);
+  }, [payrollCards, selectedMonth, payRates, planPayMaps]);
 
   const snapshot = useMemo(
     () => getMonthlySnapshot(selectedMonth, pointsMaps),
@@ -678,7 +754,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
 
   const fullQuotaEditorPay = useMemo(() => {
     const { total } = buildFullQuotaEditorPay({
-      clients,
+      clients: activePayrollClients,
       getClientReelPointsTarget,
       getClientCarouselStaticTarget,
       getClientCarouselTarget,
@@ -687,7 +763,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     });
     return total;
   }, [
-    clients,
+    activePayrollClients,
     getClientReelPointsTarget,
     getClientCarouselStaticTarget,
     getClientCarouselTarget,
@@ -1004,7 +1080,8 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                 <div>
                   <h3 className="text-sm font-semibold text-white">Client retainers</h3>
                   <p className="mt-0.5 text-[10px] text-white/35">
-                    Credit card adds a 2.9% + $0.25 QB fee to expenses.
+                    Credit card adds a 2.9% + $0.25 QB fee. Pause for this month, or cancel to drop
+                    the client from payroll and future month copy.
                   </p>
                 </div>
                 <span className="text-xs tabular-nums text-emerald-300/90">
@@ -1016,6 +1093,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                   <thead className="sticky top-0 bg-[#141414]">
                     <tr className="text-left text-[10px] uppercase tracking-[0.14em] text-white/35">
                       <th className="pb-2 font-medium">Client</th>
+                      <th className="pb-2 font-medium">Status</th>
                       <th className="pb-2 font-medium">Pay</th>
                       <th className="pb-2 text-right font-medium">Monthly</th>
                       <th className="pb-2 text-right font-medium">QB fee</th>
@@ -1025,9 +1103,33 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                     {retainerClients.map((client) => {
                       const payment = snapshot.retainerPayments?.[client] || {};
                       const retainerAmount = Number(snapshot.retainers?.[client]) || 0;
+                      const status = normalizeRetainerStatus(payment.status);
+                      const inactive = !isRetainerActiveStatus(status);
                       return (
                         <tr key={client} className="border-t border-white/5">
-                          <td className="py-2 pr-3 text-white/80">{client}</td>
+                          <td className="py-2 pr-3">
+                            <span className={inactive ? 'text-white/40' : 'text-white/80'}>
+                              {client}
+                            </span>
+                            {status === 'paused' ? (
+                              <span className="mt-0.5 block text-[10px] text-amber-200/70">
+                                Paused — out of revenue &amp; payroll this month
+                              </span>
+                            ) : null}
+                            {status === 'canceled' ? (
+                              <span className="mt-0.5 block text-[10px] text-rose-200/70">
+                                Canceled — won&apos;t copy to next month
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="py-2 pr-3">
+                            <RetainerStatusSelect
+                              value={status}
+                              onChange={(nextStatus) =>
+                                setRetainerStatus(client, selectedMonth, nextStatus)
+                              }
+                            />
+                          </td>
                           <td className="py-2 pr-3">
                             <PaymentMethodSelect
                               value={payment.paymentMethod}
@@ -1040,18 +1142,18 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                             <EditableAmount
                               value={retainerAmount}
                               onSave={(amount) => setMonthlyRetainer(client, selectedMonth, amount)}
-                              className="text-white"
+                              className={inactive ? 'text-white/45' : 'text-white'}
                             />
                           </td>
                           <td className="py-2 text-right tabular-nums text-rose-200/90">
-                            {fmt$(payment.qbFee || 0)}
+                            {inactive ? fmt$(0) : fmt$(payment.qbFee || 0)}
                           </td>
                         </tr>
                       );
                     })}
                     {retainerClients.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="py-6 text-center text-white/35">
+                        <td colSpan={5} className="py-6 text-center text-white/35">
                           No clients yet.
                         </td>
                       </tr>
