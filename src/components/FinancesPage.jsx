@@ -199,22 +199,38 @@ function SummaryCard({ label, value, tone = 'default', hint }) {
   );
 }
 
-function RateField({ label, hint, value, onChange }) {
+function RateRow({ label, unit, value, onChange }) {
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.16em] text-white/45">
-        {label}
+    <label className="flex items-center gap-3 py-2.5">
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm text-white/85">{label}</span>
+        {unit ? <span className="mt-0.5 block text-[11px] text-white/35">{unit}</span> : null}
       </span>
-      <input
-        type="number"
-        min="0"
-        step="1"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={financeInputClass}
-      />
-      {hint ? <p className="mt-1 text-[10px] text-white/35">{hint}</p> : null}
+      <span className="relative shrink-0">
+        <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-white/35">
+          $
+        </span>
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className={`${financeInputClass} w-[6.5rem] pl-5 text-right tabular-nums`}
+        />
+      </span>
     </label>
+  );
+}
+
+function RateSection({ title, children }) {
+  return (
+    <section>
+      <h3 className="mb-1 text-[10px] font-medium uppercase tracking-[0.16em] text-white/40">
+        {title}
+      </h3>
+      <div className="divide-y divide-white/10 border-t border-white/10">{children}</div>
+    </section>
   );
 }
 
@@ -1236,76 +1252,79 @@ export default function FinancesPage({
       )}
 
       {activeTab === 'rates' && (
-        <div className={`${surfacePanelClass} max-w-3xl space-y-6 p-5`}>
+        <div className={`${surfacePanelClass} max-w-xl space-y-8 p-5 sm:p-6`}>
           <div>
-            <h3 className="text-sm font-semibold text-white">Editor</h3>
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <RateField
-                label="Reel ($/pt)"
-                value={ratesDraft.reelPointRate}
-                onChange={(v) => updateRateDraft('reelPointRate', v)}
-              />
-              <RateField
-                label="Carousel"
-                value={ratesDraft.carouselRate}
-                onChange={(v) => updateRateDraft('carouselRate', v)}
-              />
-              <RateField
-                label="Static"
-                value={ratesDraft.staticPostRate}
-                onChange={(v) => updateRateDraft('staticPostRate', v)}
-              />
-            </div>
+            <h3 className="text-sm font-semibold text-white">Pay rates</h3>
+            <p className="mt-1 text-xs text-white/40">
+              Used for monthly payroll calculations across editors, shoots, and AMs.
+            </p>
           </div>
 
-          <div>
-            <h3 className="text-sm font-semibold text-white">Shoot roles</h3>
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <RateField
-                label="Videographer ($/hr)"
-                value={ratesDraft.videographerHourly}
-                onChange={(v) => updateRateDraft('videographerHourly', v)}
-              />
-              <RateField
-                label="Photographer ($/hr)"
-                value={ratesDraft.photographerHourly}
-                onChange={(v) => updateRateDraft('photographerHourly', v)}
-              />
-            </div>
-          </div>
+          <RateSection title="Editor">
+            <RateRow
+              label="Reel"
+              unit="Per point"
+              value={ratesDraft.reelPointRate}
+              onChange={(v) => updateRateDraft('reelPointRate', v)}
+            />
+            <RateRow
+              label="Carousel"
+              unit="Per piece"
+              value={ratesDraft.carouselRate}
+              onChange={(v) => updateRateDraft('carouselRate', v)}
+            />
+            <RateRow
+              label="Static"
+              unit="Per piece"
+              value={ratesDraft.staticPostRate}
+              onChange={(v) => updateRateDraft('staticPostRate', v)}
+            />
+          </RateSection>
 
-          <div>
-            <h3 className="text-sm font-semibold text-white">Account manager</h3>
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <RateField
-                label="Base / client"
-                value={ratesDraft.accountManagerBase}
-                onChange={(v) => updateRateDraft('accountManagerBase', v)}
-              />
-              <RateField
-                label="Per reel pt"
-                value={ratesDraft.accountManagerPerReelPoint}
-                onChange={(v) => updateRateDraft('accountManagerPerReelPoint', v)}
-              />
-              <RateField
-                label="Per feed pt"
-                value={ratesDraft.accountManagerPerCarousel}
-                onChange={(v) => updateRateDraft('accountManagerPerCarousel', v)}
-              />
-            </div>
-          </div>
+          <RateSection title="Shoot">
+            <RateRow
+              label="Videographer"
+              unit="Hourly"
+              value={ratesDraft.videographerHourly}
+              onChange={(v) => updateRateDraft('videographerHourly', v)}
+            />
+            <RateRow
+              label="Photographer"
+              unit="Hourly"
+              value={ratesDraft.photographerHourly}
+              onChange={(v) => updateRateDraft('photographerHourly', v)}
+            />
+          </RateSection>
 
-          <div>
-            <h3 className="text-sm font-semibold text-white">Ads</h3>
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <RateField
-                label="Meta specialist / client"
-                value={ratesDraft.metaAdsSpecialistFlat}
-                onChange={(v) => updateRateDraft('metaAdsSpecialistFlat', v)}
-                hint="Stored for reference."
-              />
-            </div>
-          </div>
+          <RateSection title="Account manager">
+            <RateRow
+              label="Base"
+              unit="Per client / month"
+              value={ratesDraft.accountManagerBase}
+              onChange={(v) => updateRateDraft('accountManagerBase', v)}
+            />
+            <RateRow
+              label="Reel"
+              unit="Per point"
+              value={ratesDraft.accountManagerPerReelPoint}
+              onChange={(v) => updateRateDraft('accountManagerPerReelPoint', v)}
+            />
+            <RateRow
+              label="Feed"
+              unit="Per carousel / feed point"
+              value={ratesDraft.accountManagerPerCarousel}
+              onChange={(v) => updateRateDraft('accountManagerPerCarousel', v)}
+            />
+          </RateSection>
+
+          <RateSection title="Extras">
+            <RateRow
+              label="Meta ads"
+              unit="Per client / month"
+              value={ratesDraft.metaAdsSpecialistFlat}
+              onChange={(v) => updateRateDraft('metaAdsSpecialistFlat', v)}
+            />
+          </RateSection>
 
           <SaveBar
             saveStatus={saveStatus}
