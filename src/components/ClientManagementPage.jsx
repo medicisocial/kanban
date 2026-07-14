@@ -68,7 +68,6 @@ export default function ClientManagementPage({
     getClientReelPointsTarget,
     getClientCarouselTarget,
     getClientStaticTarget,
-    getClientCarouselStaticTarget,
     getClientAccountManager,
     getClientVideographer,
     getClientPhotographer,
