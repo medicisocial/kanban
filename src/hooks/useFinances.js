@@ -231,30 +231,10 @@ function payrollStaffExtraTotal(staff = []) {
   return staff.reduce((sum, item) => sum + sumExtraFields(item.extraFields), 0);
 }
 
-/** Jonathan earns from completed work / plan roles only — no flat base pay. */
-function isJonathanPayrollName(name) {
-  const key = String(name || '')
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-  return key === 'jonathan' || key.startsWith('jonathan ');
-}
-
-function sanitizePayrollStaff(staff = []) {
-  const cleaned = [];
-  for (const item of staff) {
-    const person = createPayrollStaff(item);
-    if (isJonathanPayrollName(person.name)) {
-      // Drop custom-only Jonathan rows that exist solely for flat base pay.
-      if (person.kind !== 'team') continue;
-      cleaned.push({ ...person, extraFields: [] });
-      continue;
-    }
-    if (!person.name && person.extraFields.length === 0) continue;
-    cleaned.push(person);
-  }
-  return cleaned;
+function normalizePayrollStaffList(staff = []) {
+  return (staff || [])
+    .map((item) => createPayrollStaff(item))
+    .filter((item) => item.name || item.extraFields.length > 0);
 }
 
 function personPayrollTotal(person, pointsPay = 0, planPay = 0) {
@@ -266,7 +246,7 @@ function personPayrollTotal(person, pointsPay = 0, planPay = 0) {
 
 function normalizePayrollMonth(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
-    const staff = sanitizePayrollStaff(Array.isArray(value.staff) ? value.staff : []);
+    const staff = normalizePayrollStaffList(Array.isArray(value.staff) ? value.staff : []);
     // Owner draw removed from payroll — ignore stored ownerComp.
     const legacyTotal = Number(value.legacyTotal) || 0;
     return {
@@ -287,7 +267,7 @@ function normalizePayrollMonth(value) {
 
 function writePayrollMonth(month) {
   const payload = {
-    staff: sanitizePayrollStaff(month.staff || []),
+    staff: normalizePayrollStaffList(month.staff || []),
     ownerComp: 0,
   };
   if (month.legacyTotal) {
@@ -304,11 +284,9 @@ function copyPayrollRoster(previousMonth) {
       createPayrollStaff({
         ...item,
         id: crypto.randomUUID(),
-        extraFields: isJonathanPayrollName(item.name)
-          ? []
-          : item.extraFields.map((field) =>
-              createPayrollExtraField({ ...field, id: crypto.randomUUID() }),
-            ),
+        extraFields: item.extraFields.map((field) =>
+          createPayrollExtraField({ ...field, id: crypto.randomUUID() }),
+        ),
       }),
     ),
     ownerComp: 0,
@@ -514,21 +492,14 @@ export function useFinances() {
           ];
           changed = true;
         }
-      } else {
-        // Persist sanitization: clear owner draw + Jonathan flat base on open.
-        const sanitized = writePayrollMonth(existingPayroll);
-        const rawStaff = Array.isArray(rawPayroll.staff) ? rawPayroll.staff : [];
-        const needsRewrite =
-          (Number(rawPayroll.ownerComp) || 0) !== 0 ||
-          JSON.stringify(sanitized.staff) !== JSON.stringify(rawStaff);
-        if (needsRewrite) {
-          payrollData[yearMonth] = sanitized;
-          next = [
-            ...next.filter((r) => r.id !== 'payroll'),
-            { id: 'payroll', data: payrollData },
-          ];
-          changed = true;
-        }
+      } else if ((Number(rawPayroll.ownerComp) || 0) !== 0) {
+        // Persist clearing of owner draw only — do not rewrite staff extras.
+        payrollData[yearMonth] = writePayrollMonth(existingPayroll);
+        next = [
+          ...next.filter((r) => r.id !== 'payroll'),
+          { id: 'payroll', data: payrollData },
+        ];
+        changed = true;
       }
 
       return changed ? next : prev;
