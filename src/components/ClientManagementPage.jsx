@@ -35,8 +35,6 @@ import {
   CLIENT_PLAN_OPTIONS,
   applyClientPlanDefaults,
   normalizeClientPlanId,
-  normalizeFeedCount,
-  carouselStaticPointsFromCounts,
 } from '../constants/clientPlans';
 
 const TABS = [
@@ -66,8 +64,7 @@ export default function ClientManagementPage({
     getClientBusinessType,
     getClientPhotoGalleryLink,
     getClientReelPointsTarget,
-    getClientCarouselTarget,
-    getClientStaticTarget,
+    getClientCarouselStaticTarget,
     getClientAccountManager,
     getClientVideographer,
     getClientPhotographer,
@@ -97,8 +94,7 @@ export default function ClientManagementPage({
   const [businessType, setBusinessType] = useState('');
   const [photoGalleryLink, setPhotoGalleryLink] = useState('');
   const [reelPointsTarget, setReelPointsTarget] = useState('');
-  const [carouselTarget, setCarouselTarget] = useState('');
-  const [staticTarget, setStaticTarget] = useState('');
+  const [carouselStaticTarget, setCarouselStaticTarget] = useState('');
   const [accountManager, setAccountManager] = useState('');
   const [videographer, setVideographer] = useState('');
   const [photographer, setPhotographer] = useState('');
@@ -150,8 +146,7 @@ export default function ClientManagementPage({
     setBusinessType(getClientBusinessType(selectedClient));
     setPhotoGalleryLink(getClientPhotoGalleryLink(selectedClient));
     setReelPointsTarget(String(getClientReelPointsTarget(selectedClient) || ''));
-    setCarouselTarget(String(getClientCarouselTarget(selectedClient) || ''));
-    setStaticTarget(String(getClientStaticTarget(selectedClient) || ''));
+    setCarouselStaticTarget(String(getClientCarouselStaticTarget(selectedClient) || ''));
     setAccountManager(getClientAccountManager(selectedClient) || '');
     setVideographer(getClientVideographer(selectedClient) || '');
     setPhotographer(getClientPhotographer(selectedClient) || '');
@@ -253,8 +248,7 @@ export default function ClientManagementPage({
     if (id === 'custom') return;
     const defaults = applyClientPlanDefaults(id);
     setReelPointsTarget(String(defaults.reelPointsTarget || ''));
-    setCarouselTarget(String(defaults.carouselTarget || ''));
-    setStaticTarget(String(defaults.staticTarget || ''));
+    setCarouselStaticTarget(String(defaults.carouselStaticTarget || ''));
     setShootDaysPerMonth(String(defaults.shootDaysPerMonth || ''));
     setShootHoursPerDay(String(defaults.shootHoursPerDay || ''));
   };
@@ -268,8 +262,10 @@ export default function ClientManagementPage({
       const result = await saveClientProfile(selectedClient, {
         planId: normalizeClientPlanId(planId),
         reelPointsTarget: normalizeReelPointsTarget(reelPointsTarget),
-        carouselTarget: normalizeFeedCount(carouselTarget),
-        staticTarget: normalizeFeedCount(staticTarget),
+        carouselStaticTarget: normalizeReelPointsTarget(carouselStaticTarget),
+        // Clear split counts so combined feed points remain the source of truth.
+        carouselTarget: 0,
+        staticTarget: 0,
         accountManager: accountManager || '',
         videographer: videographer || '',
         photographer: photographer || '',
@@ -299,8 +295,7 @@ export default function ClientManagementPage({
     selectedClient &&
     (normalizeClientPlanId(planId) !== getClientPlanId(selectedClient) ||
       normalizeReelPointsTarget(reelPointsTarget) !== getClientReelPointsTarget(selectedClient) ||
-      normalizeFeedCount(carouselTarget) !== getClientCarouselTarget(selectedClient) ||
-      normalizeFeedCount(staticTarget) !== getClientStaticTarget(selectedClient) ||
+      normalizeReelPointsTarget(carouselStaticTarget) !== getClientCarouselStaticTarget(selectedClient) ||
       (accountManager || '') !== (getClientAccountManager(selectedClient) || '') ||
       (videographer || '') !== (getClientVideographer(selectedClient) || '') ||
       (photographer || '') !== (getClientPhotographer(selectedClient) || '') ||
@@ -656,7 +651,7 @@ export default function ClientManagementPage({
                 </label>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
                     Monthly reel points
@@ -676,44 +671,25 @@ export default function ClientManagementPage({
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
-                    Carousels
+                    Carousel / static points
                   </span>
                   <input
                     type="number"
                     min="0"
-                    step="1"
-                    value={carouselTarget}
+                    step="0.5"
+                    value={carouselStaticTarget}
                     onChange={(e) => {
-                      setCarouselTarget(e.target.value);
+                      setCarouselStaticTarget(e.target.value);
                       setPlanId('custom');
                     }}
-                    placeholder="e.g. 2"
+                    placeholder="e.g. 3"
                     className="w-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
                   />
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
-                    Statics
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={staticTarget}
-                    onChange={(e) => {
-                      setStaticTarget(e.target.value);
-                      setPlanId('custom');
-                    }}
-                    placeholder="e.g. 2"
-                    className="w-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
-                  />
+                  <p className="mt-1.5 text-[10px] text-white/35">
+                    Shared point budget — carousel = 1 pt · static post = ½ pt.
+                  </p>
                 </label>
               </div>
-              <p className="text-[10px] text-white/35">
-                Deliverables feed budget:{' '}
-                {carouselStaticPointsFromCounts(carouselTarget, staticTarget)} pts (carousel = 1 ·
-                static = ½).
-              </p>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block">

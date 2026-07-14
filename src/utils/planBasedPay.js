@@ -1,18 +1,16 @@
-import {
-  normalizePayRates,
+import { normalizePayRates } from '../constants/clientPlans.js';
+import { normalizeReelPointsTarget } from '../constants.js';
+
+export {
   carouselStaticPointsFromCounts,
   normalizeFeedCount,
 } from '../constants/clientPlans.js';
-import { normalizeReelPointsTarget } from '../constants.js';
-
-export { carouselStaticPointsFromCounts, normalizeFeedCount };
 
 /** Per-client plan pay breakdown from quotas + org rates. */
 export function computeClientPlanPay(
   {
     reelPoints = 0,
-    carousels = 0,
-    statics = 0,
+    carouselStaticPoints = 0,
     shootDays = 0,
     shootHoursPerDay = 0,
   } = {},
@@ -20,26 +18,24 @@ export function computeClientPlanPay(
 ) {
   const r = normalizePayRates(rates);
   const reels = normalizeReelPointsTarget(reelPoints);
-  const carouselCount = normalizeFeedCount(carousels);
-  const staticCount = normalizeFeedCount(statics);
+  const feedPoints = normalizeReelPointsTarget(carouselStaticPoints);
   const days = Math.max(0, Math.round(Number(shootDays) || 0));
   const hoursPerDay = Number(shootHoursPerDay);
   const hours =
     days *
     (Number.isFinite(hoursPerDay) && hoursPerDay >= 0 ? Math.round(hoursPerDay * 2) / 2 : 0);
 
+  // Feed budget is already point-weighted (carousel=1, static=½); pay AM per feed point.
   const amPay =
     r.accountManagerBase +
     reels * r.accountManagerPerReelPoint +
-    carouselCount * r.accountManagerPerCarousel +
-    staticCount * r.accountManagerPerStatic;
+    feedPoints * r.accountManagerPerCarousel;
   const videographerPay = hours * r.videographerHourly;
   const photographerPay = hours * r.photographerHourly;
 
   return {
     reelPoints: reels,
-    carousels: carouselCount,
-    statics: staticCount,
+    carouselStaticPoints: feedPoints,
     shootHours: hours,
     amPay,
     videographerPay,
@@ -71,8 +67,7 @@ export function buildPlanBasedPayByAssignee({
   getClientVideographer,
   getClientPhotographer,
   getClientReelPointsTarget,
-  getClientCarouselTarget,
-  getClientStaticTarget,
+  getClientCarouselStaticTarget,
   getClientShootDaysPerMonth,
   getClientShootHoursPerDay,
   rates,
@@ -91,8 +86,7 @@ export function buildPlanBasedPayByAssignee({
     const pay = computeClientPlanPay(
       {
         reelPoints: getClientReelPointsTarget?.(client) || 0,
-        carousels: getClientCarouselTarget?.(client) || 0,
-        statics: getClientStaticTarget?.(client) || 0,
+        carouselStaticPoints: getClientCarouselStaticTarget?.(client) || 0,
         shootDays: getClientShootDaysPerMonth?.(client) || 0,
         shootHoursPerDay: getClientShootHoursPerDay?.(client) || 0,
       },

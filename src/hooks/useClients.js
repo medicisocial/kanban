@@ -766,7 +766,10 @@ export function useClients() {
         else delete nextStatics[client];
         next.carouselTargets = nextCarousels;
         next.staticTargets = nextStatics;
-        const feed = carouselStaticPointsFromCounts(carousels, statics);
+        const feed =
+          carouselStaticTarget !== undefined
+            ? normalizeReelPointsTarget(carouselStaticTarget)
+            : carouselStaticPointsFromCounts(carousels, statics);
         const nextFeed = { ...(prev.carouselStaticTargets || {}) };
         if (feed > 0) nextFeed[client] = feed;
         else delete nextFeed[client];

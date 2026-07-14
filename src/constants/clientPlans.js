@@ -38,61 +38,54 @@ export const CLIENT_PLAN_OPTIONS = [
 /**
  * Default quotas per plan.
  * Pro variants match content of the base plan (ads type differs outside this app for now).
- * Feed points = carousels + 0.5 × statics.
+ * Carousel / static is a shared point budget: carousel = 1 pt, static = ½ pt.
  */
 export const CLIENT_PLAN_TEMPLATES = {
   starter: {
     reelPointsTarget: 4,
-    carouselTarget: 2,
-    staticTarget: 2,
+    carouselStaticTarget: 3,
     shootDaysPerMonth: 2,
     shootHoursPerDay: 2,
     hasSpecialist: false,
   },
   growth: {
     reelPointsTarget: 6,
-    carouselTarget: 2,
-    staticTarget: 4,
+    carouselStaticTarget: 4,
     shootDaysPerMonth: 2,
     shootHoursPerDay: 3,
     hasSpecialist: false,
   },
   boost: {
     reelPointsTarget: 8,
-    carouselTarget: 4,
-    staticTarget: 4,
+    carouselStaticTarget: 6,
     shootDaysPerMonth: 2,
     shootHoursPerDay: 4,
     hasSpecialist: false,
   },
   starter_pro: {
     reelPointsTarget: 4,
-    carouselTarget: 2,
-    staticTarget: 2,
+    carouselStaticTarget: 3,
     shootDaysPerMonth: 2,
     shootHoursPerDay: 2,
     hasSpecialist: true,
   },
   growth_pro: {
     reelPointsTarget: 6,
-    carouselTarget: 2,
-    staticTarget: 4,
+    carouselStaticTarget: 4,
     shootDaysPerMonth: 2,
     shootHoursPerDay: 3,
     hasSpecialist: true,
   },
   boost_pro: {
     reelPointsTarget: 8,
-    carouselTarget: 4,
-    staticTarget: 4,
+    carouselStaticTarget: 6,
     shootDaysPerMonth: 2,
     shootHoursPerDay: 4,
     hasSpecialist: true,
   },
   custom: {
     reelPointsTarget: 0,
-    carouselTarget: 0,
-    staticTarget: 0,
+    carouselStaticTarget: 0,
     shootDaysPerMonth: 0,
     shootHoursPerDay: 0,
     hasSpecialist: false,
@@ -108,14 +101,10 @@ export function normalizeClientPlanId(planId) {
 export function applyClientPlanDefaults(planId) {
   const id = normalizeClientPlanId(planId);
   const template = CLIENT_PLAN_TEMPLATES[id] || CLIENT_PLAN_TEMPLATES.custom;
-  const carouselTarget = Math.max(0, Math.round(Number(template.carouselTarget) || 0));
-  const staticTarget = Math.max(0, Math.round(Number(template.staticTarget) || 0));
   return {
     planId: id,
     reelPointsTarget: template.reelPointsTarget,
-    carouselTarget,
-    staticTarget,
-    carouselStaticTarget: carouselStaticPointsFromCounts(carouselTarget, staticTarget),
+    carouselStaticTarget: template.carouselStaticTarget,
     shootDaysPerMonth: template.shootDaysPerMonth,
     shootHoursPerDay: template.shootHoursPerDay,
   };
@@ -130,6 +119,7 @@ export const DEFAULT_PAY_RATES = {
   photographerHourly: 50,
   accountManagerBase: 160,
   accountManagerPerReelPoint: 20,
+  /** $/pt against combined carousel/static plan budget (carousel=1, static=½). */
   accountManagerPerCarousel: 20,
   accountManagerPerStatic: 10,
   metaAdsSpecialistFlat: 400,

@@ -337,8 +337,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     getClientVideographer,
     getClientPhotographer,
     getClientReelPointsTarget,
-    getClientCarouselTarget,
-    getClientStaticTarget,
+    getClientCarouselStaticTarget,
     getClientShootDaysPerMonth,
     getClientShootHoursPerDay,
   } = useClientsContext();
@@ -445,8 +444,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
       getClientVideographer,
       getClientPhotographer,
       getClientReelPointsTarget,
-      getClientCarouselTarget,
-      getClientStaticTarget,
+      getClientCarouselStaticTarget,
       getClientShootDaysPerMonth,
       getClientShootHoursPerDay,
       rates: payRates,
@@ -474,8 +472,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     getClientVideographer,
     getClientPhotographer,
     getClientReelPointsTarget,
-    getClientCarouselTarget,
-    getClientStaticTarget,
+    getClientCarouselStaticTarget,
     getClientShootDaysPerMonth,
     getClientShootHoursPerDay,
     payRates,
@@ -670,14 +667,10 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                 onChange={(v) => updateRateDraft('accountManagerPerReelPoint', v)}
               />
               <RateField
-                label="Per carousel"
+                label="Per carousel/static point"
                 value={ratesDraft.accountManagerPerCarousel}
                 onChange={(v) => updateRateDraft('accountManagerPerCarousel', v)}
-              />
-              <RateField
-                label="Per static"
-                value={ratesDraft.accountManagerPerStatic}
-                onChange={(v) => updateRateDraft('accountManagerPerStatic', v)}
+                hint="Against the combined plan feed budget (carousel = 1 · static = ½)."
               />
             </div>
           </div>
