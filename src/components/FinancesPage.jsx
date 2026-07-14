@@ -474,8 +474,8 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
             <h3 className="text-sm font-semibold text-white">People</h3>
             <p className="mt-1 text-xs text-white/45">
               Team members earn reels (${EDITOR_POINT_PAY_RATE}/pt), carousels (${CAROUSEL_PAY_RATE}), and
-              statics (${STATIC_POST_PAY_RATE}). Add custom fields for bonuses or flat amounts.
-              other pay. Custom people use fields only.
+              statics (${STATIC_POST_PAY_RATE}). Add custom fields for bonuses or other pay. Custom people use
+              fields only.
             </p>
           </div>
           <p className="text-base font-bold text-amber-300">
