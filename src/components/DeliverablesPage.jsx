@@ -177,7 +177,7 @@ function ClientDeliverableRow({
             <span className="text-[10px] text-white/30">pts</span>
           </div>
           <div className="flex items-center gap-1.5" title="Carousels + static posts">
-            <span className="text-[10px] uppercase tracking-wider text-white/35">Feed</span>
+            <span className="text-[10px] uppercase tracking-wider text-white/35">Carousels/statics</span>
             <span className={summary.feedOnTrack && carouselStaticTarget > 0 ? "text-emerald-300" : "text-white/70"}>
               {feedPlanned}
             </span>
@@ -350,7 +350,7 @@ export default function DeliverablesPage({
     <section>
       <ClientPortalSectionHeader
         title="Deliverables"
-        description="Contract quotas from each client profile — reel points vs carousels/statics planned this month."
+        description="Contract quotas from each client profile — reels points vs carousels/statics planned this month."
       />
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -379,19 +379,19 @@ export default function DeliverablesPage({
       {clientList.length > 0 && (
         <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className={`${surfacePanelClass} p-4`}>
-            <p className="text-[10px] uppercase tracking-widest text-white/40">Reel pts target</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/40">Reels target</p>
             <p className="mt-1 text-lg font-bold text-white">{formatPoints(totals.reelPointsTarget)}</p>
           </div>
           <div className={`${surfacePanelClass} p-4`}>
-            <p className="text-[10px] uppercase tracking-widest text-white/40">Reel pts planned</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/40">Reels planned</p>
             <p className="mt-1 text-lg font-bold text-emerald-300">{formatPoints(totals.reelPointsPlanned)}</p>
           </div>
           <div className={`${surfacePanelClass} p-4`}>
-            <p className="text-[10px] uppercase tracking-widest text-white/40">Feed target</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/40">Carousels/statics target</p>
             <p className="mt-1 text-lg font-bold text-white">{totals.carouselStaticTarget}</p>
           </div>
           <div className={`${surfacePanelClass} p-4`}>
-            <p className="text-[10px] uppercase tracking-widest text-white/40">Feed planned</p>
+            <p className="text-[10px] uppercase tracking-widest text-white/40">Carousels/statics planned</p>
             <p className="mt-1 text-lg font-bold text-emerald-300">{totals.feedPlanned}</p>
           </div>
         </div>
