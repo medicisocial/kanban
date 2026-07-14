@@ -9,6 +9,8 @@ import {
   needsShootSchedule,
   isOneOffProjectCard,
   isScheduledPostType,
+  EDITOR_POINT_OPTIONS,
+  normalizeEditorPoints,
 } from '../constants';
 import { contentTypeLabelProps } from '../utils/contentTypeColors';
 import { useClientsContext } from '../context/ClientsContext';
@@ -474,6 +476,25 @@ function CardModal({
               )}
             </Field>
           </div>
+
+          {!isOneOff && displayCard.contentType === 'Reel' && (
+            <Field label="Editor points">
+              <select
+                value={String(normalizeEditorPoints(displayCard.editorPoints))}
+                onChange={(e) => handleChange('editorPoints', Number(e.target.value))}
+                className={inputClass}
+              >
+                {EDITOR_POINT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={String(opt.value)}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1.5 text-[10px] text-white/35">
+                1 point = regular reel · ½ point = short / quick edit. Used for payroll and client reel quotas.
+              </p>
+            </Field>
+          )}
 
           {!isOneOff && contentCreators.length > 0 && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

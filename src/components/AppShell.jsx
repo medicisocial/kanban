@@ -1304,7 +1304,11 @@ export default function AppShell({ onSignOut }) {
       )}
 
       {activeView === "finances" && (
-        <FinancesPage finances={financesController} />
+        <FinancesPage
+          finances={financesController}
+          cards={cards}
+          teamMembers={teamMembers}
+        />
       )}
 
       {activeView === "deliverables" && (

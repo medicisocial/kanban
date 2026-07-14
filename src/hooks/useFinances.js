@@ -147,16 +147,69 @@ function normalizeOneOffProjects(monthRevenue) {
     : [];
 }
 
+function createPayrollExtraField(overrides = {}) {
+  return {
+    id: overrides.id || crypto.randomUUID(),
+    label: String(overrides.label || '').trim() || 'Pay',
+    amount: Number(overrides.amount) || 0,
+  };
+}
+
+function normalizePayrollExtraFields(item = {}) {
+  if (Array.isArray(item.extraFields) && item.extraFields.length > 0) {
+    return item.extraFields.map((field) => createPayrollExtraField(field));
+  }
+  if (Array.isArray(item.extraFields)) {
+    return [];
+  }
+  // Legacy flat `amount` → one field labeled "Pay"
+  if (item.amount !== undefined && item.amount !== null && item.amount !== '') {
+    return [createPayrollExtraField({ label: 'Pay', amount: Number(item.amount) || 0 })];
+  }
+  return [];
+}
+
+function sumExtraFields(extraFields = []) {
+  return extraFields.reduce((sum, field) => sum + (Number(field.amount) || 0), 0);
+}
+
+function createPayrollStaff(overrides = {}) {
+  const kind = overrides.kind === 'team' ? 'team' : 'custom';
+  const name = String(overrides.name || '').trim();
+  const extraFields = normalizePayrollExtraFields(overrides);
+  return {
+    id: overrides.id || crypto.randomUUID(),
+    name,
+    kind,
+    teamMemberId: kind === 'team' ? overrides.teamMemberId || null : null,
+    extraFields,
+  };
+}
+
+function payrollStaffExtraTotal(staff = []) {
+  return staff.reduce((sum, item) => sum + sumExtraFields(item.extraFields), 0);
+}
+
+function personPayrollTotal(person, pointsPay = 0) {
+  const extras = sumExtraFields(person?.extraFields);
+  return (person?.kind === 'team' ? Number(pointsPay) || 0 : 0) + extras;
+}
+
 function normalizePayrollMonth(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     const staff = Array.isArray(value.staff)
-      ? value.staff.map((item) => createLineItem(item)).filter((item) => item.name || item.amount)
+      ? value.staff
+          .map((item) => createPayrollStaff(item))
+          .filter((item) => item.name || item.extraFields.length > 0)
       : [];
     const ownerComp = Number(value.ownerComp) || 0;
+    const legacyTotal = Number(value.legacyTotal) || 0;
     return {
       staff,
       ownerComp,
-      total: staff.reduce((sum, item) => sum + (Number(item.amount) || 0), 0) + ownerComp,
+      legacyTotal,
+      // Stored total excludes live reel-points pay (computed at snapshot time).
+      total: payrollStaffExtraTotal(staff) + ownerComp + legacyTotal,
     };
   }
   return {
@@ -164,6 +217,34 @@ function normalizePayrollMonth(value) {
     ownerComp: 0,
     total: Number(value) || 0,
     legacyTotal: Number(value) || 0,
+  };
+}
+
+function writePayrollMonth(month) {
+  const payload = {
+    staff: month.staff,
+    ownerComp: month.ownerComp,
+  };
+  if (month.legacyTotal) {
+    payload.legacyTotal = month.legacyTotal;
+  }
+  return payload;
+}
+
+function copyPayrollRoster(previousMonth) {
+  const previous = normalizePayrollMonth(previousMonth);
+  if (!previous.staff.length && !previous.ownerComp) return null;
+  return {
+    staff: previous.staff.map((item) =>
+      createPayrollStaff({
+        ...item,
+        id: crypto.randomUUID(),
+        extraFields: item.extraFields.map((field) =>
+          createPayrollExtraField({ ...field, id: crypto.randomUUID() }),
+        ),
+      }),
+    ),
+    ownerComp: previous.ownerComp,
   };
 }
 
@@ -347,6 +428,21 @@ export function useFinances() {
         changed = true;
       }
 
+      const payroll = next.find((r) => r.id === 'payroll');
+      const payrollData = payroll?.data ? { ...payroll.data } : {};
+      const existingPayroll = normalizePayrollMonth(payrollData[yearMonth]);
+      if (!payrollData[yearMonth] || (!existingPayroll.staff.length && !existingPayroll.ownerComp && !existingPayroll.legacyTotal)) {
+        const copiedPayroll = copyPayrollRoster(payrollData[previousMonth]);
+        if (copiedPayroll) {
+          payrollData[yearMonth] = copiedPayroll;
+          next = [
+            ...next.filter((r) => r.id !== 'payroll'),
+            { id: 'payroll', data: payrollData },
+          ];
+          changed = true;
+        }
+      }
+
       return changed ? next : prev;
     });
   }, []);
@@ -498,21 +594,41 @@ export function useFinances() {
     });
   }, []);
 
+  const resolvePayrollMonth = useCallback((data, yearMonth) => {
+    const existing = data[yearMonth];
+    if (existing !== undefined && existing !== null) {
+      return normalizePayrollMonth(existing);
+    }
+    const copied = copyPayrollRoster(data[previousYearMonth(yearMonth)]);
+    if (copied) return normalizePayrollMonth(copied);
+    return normalizePayrollMonth(undefined);
+  }, []);
+
   const addPayrollStaff = useCallback((yearMonth, staff) => {
     notifyMutation();
     setFinances((prev) => {
       const record = prev.find((r) => r.id === 'payroll');
       const rest = prev.filter((r) => r.id !== 'payroll');
       const data = record?.data ? { ...record.data } : {};
-      const month = normalizePayrollMonth(data[yearMonth]);
-      const nextStaff = createLineItem(staff);
-      data[yearMonth] = {
+      const month = resolvePayrollMonth(data, yearMonth);
+      const nextStaff = createPayrollStaff(staff);
+      if (!nextStaff.name) return prev;
+      // Avoid duplicate team members in the same month.
+      if (
+        nextStaff.kind === 'team' &&
+        nextStaff.teamMemberId &&
+        month.staff.some((item) => item.kind === 'team' && item.teamMemberId === nextStaff.teamMemberId)
+      ) {
+        return prev;
+      }
+      data[yearMonth] = writePayrollMonth({
         staff: [...month.staff, nextStaff],
         ownerComp: month.ownerComp,
-      };
+        legacyTotal: month.legacyTotal,
+      });
       return [...rest, { id: 'payroll', data }];
     });
-  }, []);
+  }, [resolvePayrollMonth]);
 
   const updatePayrollStaff = useCallback((yearMonth, staffId, updates) => {
     notifyMutation();
@@ -520,16 +636,22 @@ export function useFinances() {
       const record = prev.find((r) => r.id === 'payroll');
       const rest = prev.filter((r) => r.id !== 'payroll');
       const data = record?.data ? { ...record.data } : {};
-      const month = normalizePayrollMonth(data[yearMonth]);
-      data[yearMonth] = {
-        staff: month.staff.map((item) =>
-          item.id === staffId ? createLineItem({ ...item, ...updates }) : item,
-        ),
+      const month = resolvePayrollMonth(data, yearMonth);
+      data[yearMonth] = writePayrollMonth({
+        staff: month.staff.map((item) => {
+          if (item.id !== staffId) return item;
+          const merged = { ...item, ...updates };
+          if (Array.isArray(updates.extraFields)) {
+            merged.extraFields = updates.extraFields;
+          }
+          return createPayrollStaff(merged);
+        }),
         ownerComp: month.ownerComp,
-      };
+        legacyTotal: month.legacyTotal,
+      });
       return [...rest, { id: 'payroll', data }];
     });
-  }, []);
+  }, [resolvePayrollMonth]);
 
   const deletePayrollStaff = useCallback((yearMonth, staffId) => {
     notifyMutation();
@@ -537,14 +659,15 @@ export function useFinances() {
       const record = prev.find((r) => r.id === 'payroll');
       const rest = prev.filter((r) => r.id !== 'payroll');
       const data = record?.data ? { ...record.data } : {};
-      const month = normalizePayrollMonth(data[yearMonth]);
-      data[yearMonth] = {
+      const month = resolvePayrollMonth(data, yearMonth);
+      data[yearMonth] = writePayrollMonth({
         staff: month.staff.filter((item) => item.id !== staffId),
         ownerComp: month.ownerComp,
-      };
+        legacyTotal: month.legacyTotal,
+      });
       return [...rest, { id: 'payroll', data }];
     });
-  }, []);
+  }, [resolvePayrollMonth]);
 
   const setOwnerComp = useCallback((yearMonth, amount) => {
     notifyMutation();
@@ -552,14 +675,15 @@ export function useFinances() {
       const record = prev.find((r) => r.id === 'payroll');
       const rest = prev.filter((r) => r.id !== 'payroll');
       const data = record?.data ? { ...record.data } : {};
-      const month = normalizePayrollMonth(data[yearMonth]);
-      data[yearMonth] = {
+      const month = resolvePayrollMonth(data, yearMonth);
+      data[yearMonth] = writePayrollMonth({
         staff: month.staff,
         ownerComp: Number(amount) || 0,
-      };
+        legacyTotal: month.legacyTotal,
+      });
       return [...rest, { id: 'payroll', data }];
     });
-  }, []);
+  }, [resolvePayrollMonth]);
 
   /** Set expenses for a month. */
   const setExpenses = useCallback((yearMonth, amount) => {
@@ -687,9 +811,14 @@ export function useFinances() {
     });
   }, []);
 
-  /** Get all data for a given month across revenue/payroll/expenses. */
+  /**
+   * Get all data for a given month across revenue/payroll/expenses.
+   * @param {string} yearMonth
+   * @param {{ pointsPayByName?: Record<string, number>, pointsByName?: Record<string, number> }} [options]
+   *   Optional maps keyed by assignee name (case-insensitive). Used for team reel-points pay.
+   */
   const getMonthlySnapshot = useCallback(
-    (yearMonth) => {
+    (yearMonth, options = {}) => {
       const revenue = finances.find((r) => r.id === 'revenue');
       const payroll = finances.find((r) => r.id === 'payroll');
       const expenses = finances.find((r) => r.id === 'expenses');
@@ -710,8 +839,32 @@ export function useFinances() {
       const oneOffQbFees = oneOffProjects.reduce((sum, item) => sum + (Number(item.qbFee) || 0), 0);
       const qbFees = retainerQbFees + oneOffQbFees;
       const payrollMonth = normalizePayrollMonth(payroll?.data?.[yearMonth]);
+      const pointsPayByName = options.pointsPayByName || {};
+      const pointsByName = options.pointsByName || {};
+      const payrollStaff = payrollMonth.staff.map((person) => {
+        const nameKey = String(person.name || '').trim().toLowerCase();
+        const points = Number(pointsByName[nameKey]) || 0;
+        const pointsPay =
+          person.kind === 'team' ? Number(pointsPayByName[nameKey]) || 0 : 0;
+        const extraTotal = sumExtraFields(person.extraFields);
+        const personTotal = personPayrollTotal(person, pointsPay);
+        return {
+          ...person,
+          points,
+          pointsPay,
+          extraTotal,
+          personTotal,
+          // Compat for older UI that still reads `.amount`
+          amount: personTotal,
+        };
+      });
+      const staffPayrollTotal = payrollStaff.reduce(
+        (sum, person) => sum + (Number(person.personTotal) || 0),
+        0,
+      );
+      const totalPayroll =
+        staffPayrollTotal + (Number(payrollMonth.ownerComp) || 0) + (Number(payrollMonth.legacyTotal) || 0);
       const expensesMonth = normalizeExpensesMonth(expenses?.data?.[yearMonth]);
-      const totalPayroll = payrollMonth.total;
       const totalExpenses = expensesMonth.total + qbFees;
       const netProfit = totalRevenue - totalPayroll - totalExpenses;
 
@@ -727,7 +880,7 @@ export function useFinances() {
         qbFees,
         effectiveRevenue: totalRevenue - qbFees,
         payroll: totalPayroll,
-        payrollStaff: payrollMonth.staff,
+        payrollStaff,
         ownerComp: payrollMonth.ownerComp,
         legacyPayroll: payrollMonth.legacyTotal || 0,
         expenses: totalExpenses,

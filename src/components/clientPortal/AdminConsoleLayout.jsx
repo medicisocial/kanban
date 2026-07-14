@@ -41,7 +41,7 @@ const NAV_SECTIONS_BASE = [
     items: [
       { id: 'clients', label: 'Clients', Icon: IconClients },
       { id: 'team', label: 'Team', Icon: IconTeam },
-      { id: 'finances', label: 'Finances', Icon: IconDollar },
+      { id: 'finances', label: 'Payroll', Icon: IconDollar },
       { id: 'settings', label: 'Settings', Icon: IconSettings },
     ],
   },

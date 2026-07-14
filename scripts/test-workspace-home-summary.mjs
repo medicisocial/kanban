@@ -104,6 +104,8 @@ function buildEditorCompletedCount(cards, { assignee = 'all', referenceDate = ne
 function buildEditorCompletedByAssignee(cards, { editorNames = [], referenceDate = new Date() } = {}) {
   const displayNameByKey = new Map();
   const counts = new Map();
+  const pointsByKey = new Map();
+  const PAY_RATE = 70;
 
   const registerName = (name) => {
     const trimmed = (name || '').trim();
@@ -111,6 +113,7 @@ function buildEditorCompletedByAssignee(cards, { editorNames = [], referenceDate
     const key = trimmed.toLowerCase();
     if (!displayNameByKey.has(key)) displayNameByKey.set(key, trimmed);
     if (!counts.has(key)) counts.set(key, 0);
+    if (!pointsByKey.has(key)) pointsByKey.set(key, 0);
   };
 
   for (const name of editorNames) registerName(name);
@@ -122,14 +125,24 @@ function buildEditorCompletedByAssignee(cards, { editorNames = [], referenceDate
     const key = assignee.toLowerCase();
     if (!displayNameByKey.has(key)) displayNameByKey.set(key, assignee);
     counts.set(key, (counts.get(key) || 0) + 1);
+    if (card.contentType === 'Reel') {
+      const pts = Number(card.editorPoints) === 0.5 ? 0.5 : 1;
+      pointsByKey.set(key, (pointsByKey.get(key) || 0) + pts);
+    }
   }
 
   return [...displayNameByKey.keys()]
-    .map((key) => ({
-      name: displayNameByKey.get(key),
-      count: counts.get(key) || 0,
-    }))
+    .map((key) => {
+      const points = pointsByKey.get(key) || 0;
+      return {
+        name: displayNameByKey.get(key),
+        count: counts.get(key) || 0,
+        points,
+        pay: points * PAY_RATE,
+      };
+    })
     .sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
       if (b.count !== a.count) return b.count - a.count;
       return a.name.localeCompare(b.name);
     });
@@ -200,6 +213,7 @@ const cards = [
     assignedTo: 'Sam',
     dueDate: thisMonthDateKey,
     editorCompletedAt: thisMonth,
+    editorPoints: 0.5,
   },
   {
     id: 'scheduled-jordan',
@@ -273,8 +287,11 @@ const byAssignee = buildEditorCompletedByAssignee(cards, {
 });
 assert(byAssignee.length === 3, 'lists each configured editor');
 assert(byAssignee[0].name === 'Jordan' && byAssignee[0].count === 4, 'Jordan leads scheduled count this month');
+assert(byAssignee[0].points === 4 && byAssignee[0].pay === 280, 'Jordan reel points default to 1 each');
 assert(byAssignee[1].name === 'Sam' && byAssignee[1].count === 1, 'Sam second in scheduled breakdown');
+assert(byAssignee[1].points === 0.5 && byAssignee[1].pay === 35, 'half-point reels pay $35');
 assert(byAssignee[2].name === 'Alex' && byAssignee[2].count === 0, 'editors with no scheduled posts still listed');
+assert(byAssignee[2].points === 0, 'editors with no reels have zero points');
 
 const lastMonthOnly = buildEditorCompletedCount(
   [

@@ -69,6 +69,29 @@ export const CONTENT_TYPES = [
 /** Feed posts that require an explicit plan/publish date on the content calendar. */
 export const SCHEDULED_POST_CONTENT_TYPES = ['Reel', 'Carousel', 'Static Post'];
 
+/** Carousel + Static Post count toward the client's non-points feed quota. */
+export const FEED_POST_CONTENT_TYPES = ['Carousel', 'Static Post'];
+
+/** Dollars paid per full reel point (½ point = half of this). */
+export const EDITOR_POINT_PAY_RATE = 70;
+
+export const EDITOR_POINT_OPTIONS = [
+  { value: 1, label: '1 point' },
+  { value: 0.5, label: '½ point' },
+];
+
+export function normalizeEditorPoints(value) {
+  const num = Number(value);
+  if (num === 0.5) return 0.5;
+  return 1;
+}
+
+export function normalizeReelPointsTarget(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) return 0;
+  return Math.round(num * 2) / 2;
+}
+
 export function isScheduledPostType(contentType) {
   return SCHEDULED_POST_CONTENT_TYPES.includes(contentType);
 }
@@ -279,6 +302,7 @@ export function createCard(overrides = {}) {
     storyPostedDates: [],
     postedAt: null,
     editorCompletedAt: null,
+    editorPoints: 1,
     clientComment: '',
     isOneOffProject: false,
     status: 'To Create',

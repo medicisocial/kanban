@@ -129,6 +129,14 @@ function buildPersonalWorkspaceHomeSummary({
     clientFilter,
     assignee,
   });
+  const personalPointsEntry = staffName
+    ? buildEditorCompletedByAssignee(cards, {
+        clientFilter,
+        editorNames: [staffName],
+      }).find((entry) => entry.name.toLowerCase() === staffName.trim().toLowerCase())
+    : null;
+  const editorCompletedPoints = personalPointsEntry?.points || 0;
+  const editorCompletedPay = personalPointsEntry?.pay || 0;
 
   const inReviewTasks = filterAccountManagerTasks(
     buildInReviewTasks(cards, clientAccountManagers),
@@ -176,6 +184,8 @@ function buildPersonalWorkspaceHomeSummary({
     editingCount,
     editorInReviewCount,
     editorCompletedCount,
+    editorCompletedPoints,
+    editorCompletedPay,
     pendingIdeasCount: 0,
     shootsTodayCount,
     scheduledThisWeekCount: scheduledThisWeek.length,

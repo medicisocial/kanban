@@ -1,11 +1,28 @@
-import { getContentTypeStyle } from '../constants';
+import { EDITOR_POINT_PAY_RATE, getContentTypeStyle, normalizeEditorPoints } from '../constants';
 import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
-import { buildEditorCompletedCards, getEditorCompletedStatusLabel } from '../utils/editorTodo';
+import {
+  buildEditorCompletedCards,
+  getEditorCompletedStatusLabel,
+} from '../utils/editorTodo';
 import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
+
+function formatPoints(n) {
+  const num = Number(n) || 0;
+  return Number.isInteger(num) ? String(num) : String(num);
+}
+
+function formatPay(n) {
+  const num = Number(n) || 0;
+  return `$${num.toLocaleString('en-US', {
+    minimumFractionDigits: Number.isInteger(num) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
 
 function CompletedContentCardRow({ card, onOpen, getClientColor }) {
   const typeStyle = card.contentType ? getContentTypeStyle(card.contentType) : null;
   const clientColor = getClientColor?.(card.client) || '#9ca3af';
+  const reelPoints = card.contentType === 'Reel' ? normalizeEditorPoints(card.editorPoints) : null;
 
   return (
     <li>
@@ -18,6 +35,11 @@ function CompletedContentCardRow({ card, onOpen, getClientColor }) {
           <span className="mb-2 flex flex-wrap items-center gap-2">
             {card.contentType && typeStyle && (
               <span {...contentTypePipelinePillProps(typeStyle)}>{card.contentType}</span>
+            )}
+            {reelPoints != null && (
+              <span className="rounded-full border border-amber-400/25 px-2 py-0.5 text-[10px] font-medium text-amber-200/90">
+                {reelPoints === 0.5 ? '½' : '1'} pt
+              </span>
             )}
             <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-medium text-white/45">
               {getEditorCompletedStatusLabel(card)}
@@ -32,6 +54,30 @@ function CompletedContentCardRow({ card, onOpen, getClientColor }) {
         </span>
       </button>
     </li>
+  );
+}
+
+function entryHasWork(entry) {
+  return (entry.count || 0) > 0 || (entry.points || 0) > 0;
+}
+
+function EntryTotals({ entry }) {
+  const points = Number(entry.points) || 0;
+  const pay =
+    entry.pay != null ? Number(entry.pay) : points * EDITOR_POINT_PAY_RATE;
+  if (points > 0) {
+    return (
+      <span className="flex items-center gap-2 text-sm font-semibold tabular-nums text-white/78">
+        <span>{formatPoints(points)} pts</span>
+        <span className="text-white/35">·</span>
+        <span className="text-amber-200/90">{formatPay(pay)}</span>
+      </span>
+    );
+  }
+  return (
+    <span className="text-sm font-semibold tabular-nums text-white/78">
+      {entry.count || 0}
+    </span>
   );
 }
 
@@ -61,7 +107,7 @@ export default function OverviewCompletedContentSection({
             <ul className="divide-y divide-white/[0.06]">
               {entries.map((entry) => {
                 const isExpanded = expandedEditorName === entry.name;
-                const isInteractive = entry.count > 0;
+                const isInteractive = entryHasWork(entry);
 
                 return (
                   <li key={entry.name}>
@@ -74,8 +120,8 @@ export default function OverviewCompletedContentSection({
                         }`}
                       >
                         <span className="text-sm font-medium text-white">{entry.name}</span>
-                        <span className="flex items-center gap-2 text-sm font-semibold tabular-nums text-white/78">
-                          {entry.count}
+                        <span className="flex items-center gap-2">
+                          <EntryTotals entry={entry} />
                           <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">
                             {isExpanded ? 'Hide' : 'View'}
                           </span>
@@ -84,9 +130,7 @@ export default function OverviewCompletedContentSection({
                     ) : (
                       <div className="flex items-center justify-between gap-4 px-4 py-3">
                         <span className="text-sm font-medium text-white/55">{entry.name}</span>
-                        <span className="text-sm font-semibold tabular-nums text-white/35">
-                          {entry.count}
-                        </span>
+                        <EntryTotals entry={entry} />
                       </div>
                     )}
                   </li>

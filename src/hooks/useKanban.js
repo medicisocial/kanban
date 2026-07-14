@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, startTransition } from 'react';
-import { STORAGE_KEY, COLUMNS, PLATFORM, createCard, EDITOR_TODO_STORAGE_KEY, isScheduledPostType, isOneOffProjectCard, syncOneOffScheduleFields } from '../constants';
+import { STORAGE_KEY, COLUMNS, PLATFORM, createCard, EDITOR_TODO_STORAGE_KEY, isScheduledPostType, isOneOffProjectCard, syncOneOffScheduleFields, normalizeEditorPoints } from '../constants';
 import { notifyMutation } from '../utils/undoHistory';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
@@ -78,6 +78,7 @@ function normalizeCard(card) {
     accountManager: card.accountManager || '',
     postedAt,
     editorCompletedAt: card.editorCompletedAt || null,
+    editorPoints: normalizeEditorPoints(card.editorPoints),
     clientComment: card.clientComment || '',
     sourceIdeaId: card.sourceIdeaId || null,
     dueDate,

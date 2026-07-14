@@ -40,7 +40,7 @@ function isEmptyBrandField(field, value) {
   ) {
     return String(value || '').trim() === '';
   }
-  if (field === 'deliverableTarget') {
+  if (field === 'deliverableTarget' || field === 'reelPointsTarget' || field === 'carouselStaticTarget') {
     return !(Number(value) > 0);
   }
   return false;
@@ -113,6 +113,8 @@ export function brandProfilePatchFromWorkspaceBrand(client, workspace = {}) {
     businessType: resolveClientMapValue(client, workspace.businessTypes) || '',
     accountManager: resolveClientMapValue(client, workspace.accountManagers) || '',
     deliverableTarget: Number(resolveClientMapValue(client, workspace.deliverableTargets)) || 0,
+    reelPointsTarget: Number(resolveClientMapValue(client, workspace.reelPointsTargets)) || 0,
+    carouselStaticTarget: Number(resolveClientMapValue(client, workspace.carouselStaticTargets)) || 0,
   };
 }
 
@@ -136,6 +138,8 @@ export function mergeClientRecordRowsIntoWorkspace(workspace = {}, rows = []) {
     applyRemoteBrandField(next, 'businessType', 'businessTypes', client, row.business_type || '');
     applyRemoteBrandField(next, 'accountManager', 'accountManagers', client, row.account_manager || '');
     applyRemoteBrandField(next, 'deliverableTarget', 'deliverableTargets', client, Number(row.deliverable_target) || 0);
+    applyRemoteBrandField(next, 'reelPointsTarget', 'reelPointsTargets', client, Number(row.reel_points_target) || 0);
+    applyRemoteBrandField(next, 'carouselStaticTarget', 'carouselStaticTargets', client, Number(row.carousel_static_target) || 0);
   }
   return next;
 }

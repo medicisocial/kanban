@@ -1,4 +1,9 @@
-import { SCHEDULED_POST_CONTENT_TYPES } from '../constants';
+import {
+  FEED_POST_CONTENT_TYPES,
+  SCHEDULED_POST_CONTENT_TYPES,
+  normalizeEditorPoints,
+  normalizeReelPointsTarget,
+} from '../constants';
 import { clientBrandNameKey, clientMatchesBrand } from './clients';
 import { isSameCalendarMonthDateKey } from './editorTodo';
 
@@ -27,24 +32,29 @@ function yearMonthToReferenceDate(yearMonth) {
   return new Date(year, (month || 1) - 1, 1);
 }
 
-/** Cards that count toward a client's monthly deliverable target: scheduled post types with a dueDate that month. */
+function isContractDeliverableCard(card) {
+  if (!card || card.isOneOffProject || card.contentType === 'One-off Project') return false;
+  return SCHEDULED_POST_CONTENT_TYPES.includes(card.contentType);
+}
+
+/** Cards that count toward contract quotas: Reel / Carousel / Static with dueDate that month (not one-offs). */
 export function getPlannedCardsForClientMonth(cards, client, yearMonth) {
   const referenceDate = yearMonthToReferenceDate(yearMonth);
   return (cards || []).filter(
     (card) =>
-      card &&
+      isContractDeliverableCard(card) &&
       clientMatchesBrand(card.client, client) &&
-      SCHEDULED_POST_CONTENT_TYPES.includes(card.contentType) &&
       isSameCalendarMonthDateKey(card.dueDate, referenceDate),
   );
 }
 
-/** Story cards active that month (recurrence-based — shown separately, not counted toward the target). */
+/** Story cards active that month (shown separately, not counted toward contract quotas). */
 export function getStoryCardsForClientMonth(cards, client, yearMonth) {
   const referenceDate = yearMonthToReferenceDate(yearMonth);
   return (cards || []).filter(
     (card) =>
       card &&
+      !card.isOneOffProject &&
       clientMatchesBrand(card.client, client) &&
       card.contentType === 'Story' &&
       (isSameCalendarMonthDateKey(card.dueDate, referenceDate) ||
@@ -54,8 +64,7 @@ export function getStoryCardsForClientMonth(cards, client, yearMonth) {
 
 /**
  * Single pass over all cards, bucketed by normalized client key — used so the
- * Deliverables page doesn't re-scan the entire card list once per client
- * (was O(clients × cards) × 2, now O(cards) + O(clients)).
+ * Deliverables page doesn't re-scan the entire card list once per client.
  */
 export function groupCardsByClientForMonth(cards, yearMonth) {
   const referenceDate = yearMonthToReferenceDate(yearMonth);
@@ -66,15 +75,13 @@ export function groupCardsByClientForMonth(cards, yearMonth) {
     const key = clientBrandNameKey(card.client);
     if (!key) continue;
 
-    if (
-      SCHEDULED_POST_CONTENT_TYPES.includes(card.contentType) &&
-      isSameCalendarMonthDateKey(card.dueDate, referenceDate)
-    ) {
+    if (isContractDeliverableCard(card) && isSameCalendarMonthDateKey(card.dueDate, referenceDate)) {
       if (!planned.has(key)) planned.set(key, []);
       planned.get(key).push(card);
     }
 
     if (
+      !card.isOneOffProject &&
       card.contentType === 'Story' &&
       (isSameCalendarMonthDateKey(card.dueDate, referenceDate) ||
         isSameCalendarMonthDateKey(card.shootDate, referenceDate))
@@ -86,28 +93,62 @@ export function groupCardsByClientForMonth(cards, yearMonth) {
   return { planned, stories };
 }
 
-export function buildClientDeliverableSummary(grouped, client, target) {
+/**
+ * @param {object} grouped — from groupCardsByClientForMonth
+ * @param {string} client
+ * @param {{ reelPointsTarget?: number, carouselStaticTarget?: number }} targets
+ */
+export function buildClientDeliverableSummary(grouped, client, targets = {}) {
   const key = clientBrandNameKey(client);
   const planned = grouped?.planned?.get(key) || [];
   const storyCards = grouped?.stories?.get(key) || [];
+
   const byType = {};
   for (const type of SCHEDULED_POST_CONTENT_TYPES) {
     byType[type] = 0;
   }
+
+  let reelPointsPlanned = 0;
+  let feedPlanned = 0;
+
   for (const card of planned) {
     if (byType[card.contentType] !== undefined) byType[card.contentType] += 1;
+    if (card.contentType === 'Reel') {
+      reelPointsPlanned += normalizeEditorPoints(card.editorPoints);
+    } else if (FEED_POST_CONTENT_TYPES.includes(card.contentType)) {
+      feedPlanned += 1;
+    }
   }
-  const plannedCount = planned.length;
-  const targetCount = Math.max(0, Number(target) || 0);
+
+  const reelPointsTarget = normalizeReelPointsTarget(targets.reelPointsTarget);
+  const carouselStaticTarget = Math.max(0, Math.round(Number(targets.carouselStaticTarget) || 0));
+
+  const reelRemaining = Math.max(0, reelPointsTarget - reelPointsPlanned);
+  const feedRemaining = Math.max(0, carouselStaticTarget - feedPlanned);
+  const reelOnTrack = reelPointsTarget === 0 || reelPointsPlanned >= reelPointsTarget;
+  const feedOnTrack = carouselStaticTarget === 0 || feedPlanned >= carouselStaticTarget;
+  const hasAnyTarget = reelPointsTarget > 0 || carouselStaticTarget > 0;
+  const onTrack = !hasAnyTarget || (reelOnTrack && feedOnTrack);
+
   return {
     client,
-    target: targetCount,
-    planned: plannedCount,
+    reelPointsTarget,
+    carouselStaticTarget,
+    reelPointsPlanned,
+    feedPlanned,
+    reelRemaining,
+    feedRemaining,
+    remaining: reelRemaining + feedRemaining,
     byType,
     storyCount: storyCards.length,
-    remaining: Math.max(0, targetCount - plannedCount),
-    onTrack: targetCount === 0 || plannedCount >= targetCount,
+    onTrack,
+    reelOnTrack,
+    feedOnTrack,
+    hasAnyTarget,
     cards: planned,
     storyCards,
+    // Back-compat aliases for any old callers (prefer reel/feed fields)
+    target: reelPointsTarget + carouselStaticTarget,
+    planned: reelPointsPlanned + feedPlanned,
   };
 }

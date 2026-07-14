@@ -30,6 +30,7 @@ import CalendarSharePanel from './CalendarSharePanel';
 import ContentReviewSharePanel from './ContentReviewSharePanel';
 import ClientPortalHealthChecklist from './ClientPortalHealthChecklist';
 import { btnPrimaryClass, btnSecondaryClass, selectClass, glassSegmentClass, glassInsetClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import { normalizeReelPointsTarget } from '../constants';
 
 const TABS = [
   { id: 'profile', label: 'Profile' },
@@ -56,7 +57,8 @@ export default function ClientManagementPage({
     getClientLogo,
     getClientBusinessType,
     getClientPhotoGalleryLink,
-    getClientDeliverableTarget,
+    getClientReelPointsTarget,
+    getClientCarouselStaticTarget,
     saveClientProfile,
     getClientUsers,
     setClientPortalUsers,
@@ -78,7 +80,8 @@ export default function ClientManagementPage({
   const [color, setColor] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [photoGalleryLink, setPhotoGalleryLink] = useState('');
-  const [deliverableTarget, setDeliverableTarget] = useState('');
+  const [reelPointsTarget, setReelPointsTarget] = useState('');
+  const [carouselStaticTarget, setCarouselStaticTarget] = useState('');
   const [previewSrc, setPreviewSrc] = useState(null);
   const [logoCrop, setLogoCrop] = useState(DEFAULT_LOGO_CROP);
   const [pendingLogo, setPendingLogo] = useState(undefined);
@@ -118,7 +121,8 @@ export default function ClientManagementPage({
     setColor(getClientColor(selectedClient));
     setBusinessType(getClientBusinessType(selectedClient));
     setPhotoGalleryLink(getClientPhotoGalleryLink(selectedClient));
-    setDeliverableTarget(String(getClientDeliverableTarget(selectedClient) || ''));
+    setReelPointsTarget(String(getClientReelPointsTarget(selectedClient) || ''));
+    setCarouselStaticTarget(String(getClientCarouselStaticTarget(selectedClient) || ''));
     const normalized = normalizeClientLogo(getClientLogo(selectedClient));
     setPreviewSrc(normalized?.src || null);
     setLogoCrop({
@@ -180,7 +184,8 @@ export default function ClientManagementPage({
         color,
         businessType,
         photoGalleryLink,
-        deliverableTarget: Math.max(0, Math.round(Number(deliverableTarget) || 0)),
+        reelPointsTarget: normalizeReelPointsTarget(reelPointsTarget),
+        carouselStaticTarget: Math.max(0, Math.round(Number(carouselStaticTarget) || 0)),
         logo: logoToSave,
       });
       if (result?.ok === false) {
@@ -213,7 +218,9 @@ export default function ClientManagementPage({
     (selectedClient && businessType !== getClientBusinessType(selectedClient)) ||
     (selectedClient && photoGalleryLink !== getClientPhotoGalleryLink(selectedClient)) ||
     (selectedClient &&
-      Math.max(0, Math.round(Number(deliverableTarget) || 0)) !== getClientDeliverableTarget(selectedClient));
+      normalizeReelPointsTarget(reelPointsTarget) !== getClientReelPointsTarget(selectedClient)) ||
+    (selectedClient &&
+      Math.max(0, Math.round(Number(carouselStaticTarget) || 0)) !== getClientCarouselStaticTarget(selectedClient));
 
   const handleAddClient = async (name, clientColor, logo) => {
     const result = await addClient(name, clientColor, logo);
@@ -457,18 +464,37 @@ export default function ClientManagementPage({
 
               <label className="block">
                 <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
-                  Monthly deliverable target
+                  Monthly reel points
                 </span>
                 <input
                   type="number"
                   min="0"
-                  value={deliverableTarget}
-                  onChange={(e) => setDeliverableTarget(e.target.value)}
-                  placeholder="e.g. 9"
+                  step="0.5"
+                  value={reelPointsTarget}
+                  onChange={(e) => setReelPointsTarget(e.target.value)}
+                  placeholder="e.g. 4.5"
                   className="w-32 border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
                 />
                 <p className="mt-1.5 text-[10px] text-white/35">
-                  Posts expected per month for this client — shown on the Deliverables page.
+                  Reel point quota per month for this client — half-point steps allowed.
+                </p>
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                  Monthly carousels / static posts
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={carouselStaticTarget}
+                  onChange={(e) => setCarouselStaticTarget(e.target.value)}
+                  placeholder="e.g. 4"
+                  className="w-32 border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
+                />
+                <p className="mt-1.5 text-[10px] text-white/35">
+                  Carousel and static post count expected per month.
                 </p>
               </label>
 

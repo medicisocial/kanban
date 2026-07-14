@@ -1,4 +1,4 @@
-import { COLUMNS } from '../constants';
+import { COLUMNS, EDITOR_POINT_PAY_RATE, normalizeEditorPoints } from '../constants';
 import { PIPELINE_REGRESSION_AUTH_KEY } from './cardPipelineMerge';
 import { toDateKey } from './calendar';
 import { matchesClientFilter } from './clients';
@@ -347,12 +347,18 @@ export function buildEditorCompletedCount(
   return buildEditorCompletedCards(cards, options).length;
 }
 
+export function getCardEditorPoints(card) {
+  if (card?.contentType !== 'Reel') return 0;
+  return normalizeEditorPoints(card.editorPoints);
+}
+
 export function buildEditorCompletedByAssignee(
   cards,
   { clientFilter = 'all', editorNames = [], referenceDate = new Date() } = {},
 ) {
   const displayNameByKey = new Map();
   const counts = new Map();
+  const pointsByKey = new Map();
 
   const registerName = (name) => {
     const trimmed = (name || '').trim();
@@ -360,6 +366,7 @@ export function buildEditorCompletedByAssignee(
     const key = trimmed.toLowerCase();
     if (!displayNameByKey.has(key)) displayNameByKey.set(key, trimmed);
     if (!counts.has(key)) counts.set(key, 0);
+    if (!pointsByKey.has(key)) pointsByKey.set(key, 0);
   };
 
   for (const name of editorNames) registerName(name);
@@ -372,15 +379,37 @@ export function buildEditorCompletedByAssignee(
     const key = assignee.toLowerCase();
     if (!displayNameByKey.has(key)) displayNameByKey.set(key, assignee);
     counts.set(key, (counts.get(key) || 0) + 1);
+    const reelPoints = getCardEditorPoints(card);
+    if (reelPoints) {
+      pointsByKey.set(key, (pointsByKey.get(key) || 0) + reelPoints);
+    }
   }
 
   return [...displayNameByKey.keys()]
-    .map((key) => ({
-      name: displayNameByKey.get(key),
-      count: counts.get(key) || 0,
-    }))
+    .map((key) => {
+      const points = pointsByKey.get(key) || 0;
+      return {
+        name: displayNameByKey.get(key),
+        count: counts.get(key) || 0,
+        points,
+        pay: points * EDITOR_POINT_PAY_RATE,
+      };
+    })
     .sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
       if (b.count !== a.count) return b.count - a.count;
       return a.name.localeCompare(b.name);
     });
+}
+
+/** Reel points + pay for completed reels this month, keyed by assignee (case-insensitive). */
+export function buildEditorReelPointsByAssignee(
+  cards,
+  { clientFilter = 'all', editorNames = [], referenceDate = new Date() } = {},
+) {
+  return buildEditorCompletedByAssignee(cards, {
+    clientFilter,
+    editorNames,
+    referenceDate,
+  }).map(({ name, points, pay }) => ({ name, points, pay }));
 }

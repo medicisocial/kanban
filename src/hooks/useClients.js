@@ -8,6 +8,7 @@ import {
   CLIENT_COLOR_PALETTE,
   CLIENT_PORTAL_PASSWORD_VAULT_KEY,
   INTERNAL_TEAM_CLIENT,
+  normalizeReelPointsTarget,
 } from '../constants';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import { normalizeContentTypeColors } from '../utils/contentTypeColors';
@@ -98,6 +99,24 @@ function normalizeDeliverableTargetsMap(targets = {}) {
   return normalized;
 }
 
+function normalizeReelPointsTargetsMap(targets = {}) {
+  const normalized = {};
+  for (const [client, value] of Object.entries(targets)) {
+    const num = normalizeReelPointsTarget(value);
+    if (num > 0) normalized[client] = num;
+  }
+  return normalized;
+}
+
+function normalizeCarouselStaticTargetsMap(targets = {}) {
+  const normalized = {};
+  for (const [client, value] of Object.entries(targets)) {
+    const num = Math.max(0, Math.round(Number(value) || 0));
+    if (num > 0) normalized[client] = num;
+  }
+  return normalized;
+}
+
 function normalizeClientsState(data, { includeDefaults = true } = {}) {
   const source = data && typeof data === 'object' ? data : {};
   const now = Date.now();
@@ -142,6 +161,8 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
     specialMenus: stripSuppressed(source.specialMenus || {}),
     photoGalleryLinks: stripSuppressed(source.photoGalleryLinks || {}),
     deliverableTargets: stripSuppressed(normalizeDeliverableTargetsMap(source.deliverableTargets || {})),
+    reelPointsTargets: stripSuppressed(normalizeReelPointsTargetsMap(source.reelPointsTargets || {})),
+    carouselStaticTargets: stripSuppressed(normalizeCarouselStaticTargetsMap(source.carouselStaticTargets || {})),
     portalPasswordVault: isCloudSourceOfTruth()
       ? {}
       : stripSuppressed(
@@ -471,6 +492,8 @@ export function useClients() {
         specialMenus: stripBrand(current.specialMenus),
         photoGalleryLinks: stripBrand(current.photoGalleryLinks),
         deliverableTargets: stripBrand(current.deliverableTargets),
+        reelPointsTargets: stripBrand(current.reelPointsTargets),
+        carouselStaticTargets: stripBrand(current.carouselStaticTargets),
         portalPasswordVault: stripBrand(current.portalPasswordVault),
       },
       { includeDefaults },
@@ -559,7 +582,7 @@ export function useClients() {
   const saveClientProfile = useCallback(async (client, patch = {}) => {
     if (!client) return { ok: false, error: 'Missing client.' };
 
-    const { color, businessType, logo, photoGalleryLink, deliverableTarget } = patch;
+    const { color, businessType, logo, photoGalleryLink, deliverableTarget, reelPointsTarget, carouselStaticTarget } = patch;
     const storedLogo =
       logo === undefined ? undefined : logo ? await persistClientLogoToStorage(client, logo) : null;
     return applyClientsWorkspaceUpdate((prev) => {
@@ -595,6 +618,20 @@ export function useClients() {
         else delete nextTargets[client];
         next.deliverableTargets = nextTargets;
       }
+      if (reelPointsTarget !== undefined) {
+        const num = normalizeReelPointsTarget(reelPointsTarget);
+        const nextTargets = { ...(prev.reelPointsTargets || {}) };
+        if (num > 0) nextTargets[client] = num;
+        else delete nextTargets[client];
+        next.reelPointsTargets = nextTargets;
+      }
+      if (carouselStaticTarget !== undefined) {
+        const num = Math.max(0, Math.round(Number(carouselStaticTarget) || 0));
+        const nextTargets = { ...(prev.carouselStaticTargets || {}) };
+        if (num > 0) nextTargets[client] = num;
+        else delete nextTargets[client];
+        next.carouselStaticTargets = nextTargets;
+      }
       return next;
     }, { syncClients: [client] });
   }, [applyClientsWorkspaceUpdate]);
@@ -617,6 +654,38 @@ export function useClients() {
       if (num > 0) nextTargets[client] = num;
       else delete nextTargets[client];
       return { ...prev, deliverableTargets: nextTargets };
+    }, { syncClients: [client] });
+  }, [applyClientsWorkspaceUpdate]);
+
+  const getClientReelPointsTarget = useCallback(
+    (client) => normalizeReelPointsTarget(resolveClientMapValue(client, state.reelPointsTargets)),
+    [state.reelPointsTargets],
+  );
+
+  const setClientReelPointsTarget = useCallback(async (client, target) => {
+    if (!client) return { ok: false, error: 'Missing client.' };
+    const num = normalizeReelPointsTarget(target);
+    return applyClientsWorkspaceUpdate((prev) => {
+      const nextTargets = { ...(prev.reelPointsTargets || {}) };
+      if (num > 0) nextTargets[client] = num;
+      else delete nextTargets[client];
+      return { ...prev, reelPointsTargets: nextTargets };
+    }, { syncClients: [client] });
+  }, [applyClientsWorkspaceUpdate]);
+
+  const getClientCarouselStaticTarget = useCallback(
+    (client) => Math.max(0, Math.round(Number(resolveClientMapValue(client, state.carouselStaticTargets)) || 0)),
+    [state.carouselStaticTargets],
+  );
+
+  const setClientCarouselStaticTarget = useCallback(async (client, target) => {
+    if (!client) return { ok: false, error: 'Missing client.' };
+    const num = Math.max(0, Math.round(Number(target) || 0));
+    return applyClientsWorkspaceUpdate((prev) => {
+      const nextTargets = { ...(prev.carouselStaticTargets || {}) };
+      if (num > 0) nextTargets[client] = num;
+      else delete nextTargets[client];
+      return { ...prev, carouselStaticTargets: nextTargets };
     }, { syncClients: [client] });
   }, [applyClientsWorkspaceUpdate]);
 
@@ -881,6 +950,10 @@ export function useClients() {
     getClientPhotoGalleryLink,
     getClientDeliverableTarget,
     setClientDeliverableTarget,
+    getClientReelPointsTarget,
+    setClientReelPointsTarget,
+    getClientCarouselStaticTarget,
+    setClientCarouselStaticTarget,
     portalPasswordVault: state.portalPasswordVault,
     getPortalPasswordForUser,
     syncPortalPasswordVault,

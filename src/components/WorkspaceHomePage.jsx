@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { EDITOR_POINT_PAY_RATE } from '../constants';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import {
   PortalRoleSummary,
@@ -96,7 +97,7 @@ export default function WorkspaceHomePage({
     month: 'long',
     year: 'numeric',
   });
-  const completedContentSubtitle = `Posts, reels, and carousels scheduled for ${completedContentMonthLabel}.`;
+  const completedContentSubtitle = `Reels scheduled for ${completedContentMonthLabel} · $${EDITOR_POINT_PAY_RATE}/point.`;
 
   const pipelineRoles = [];
 
@@ -148,12 +149,14 @@ export default function WorkspaceHomePage({
   const showCompletedContentRoster =
     isCompanyWideOverview &&
     visibleCompanyTaskTabs.includes('editor') &&
-    summary.editorCompletedByAssignee?.some((entry) => entry.count > 0);
+    summary.editorCompletedByAssignee?.some(
+      (entry) => (entry.count || 0) > 0 || (entry.points || 0) > 0,
+    );
   const showPersonalCompletedRoster =
     !isCompanyWideOverview &&
     visibleCompanyTaskTabs.includes('editor') &&
     staffName &&
-    (summary.editorCompletedCount || 0) > 0;
+    ((summary.editorCompletedCount || 0) > 0 || (summary.editorCompletedPoints || 0) > 0);
   const workspaceLooksEmpty =
     !workspaceDataLoading && cards.length === 0 && ideas.length === 0 && meetings.length === 0;
 
@@ -251,7 +254,14 @@ export default function WorkspaceHomePage({
         <OverviewCompletedContentSection
           title="Completed content"
           subtitle={completedContentSubtitle}
-          entries={[{ name: staffName, count: summary.editorCompletedCount }]}
+          entries={[
+            {
+              name: staffName,
+              count: summary.editorCompletedCount,
+              points: summary.editorCompletedPoints || 0,
+              pay: summary.editorCompletedPay || 0,
+            },
+          ]}
           cards={cards}
           clientFilter={clientFilter}
           expandedEditorName={expandedCompletedEditor}
