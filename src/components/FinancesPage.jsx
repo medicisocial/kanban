@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { DEFAULT_PAY_RATES, normalizePayRates } from '../constants/clientPlans';
 import {
   btnPrimaryClass,
@@ -50,21 +50,19 @@ function EditableAmount({ value, onSave, className = '' }) {
     if (parsed !== (Number(value) || 0)) onSave(parsed);
   }, [draft, value, onSave]);
 
-  const handleDraftChange = useCallback(
-    (nextDraft) => {
-      setDraft(nextDraft);
-      const parsed = parse$(nextDraft);
-      if (parsed !== (Number(value) || 0)) onSave(parsed);
-    },
-    [onSave, value],
-  );
+  const handleDraftChange = useCallback((nextDraft) => {
+    setDraft(nextDraft);
+  }, []);
 
   const handleKeyDown = useCallback(
     (e) => {
       if (e.key === 'Enter') handleCommit();
-      else if (e.key === 'Escape') setEditing(false);
+      else if (e.key === 'Escape') {
+        setEditing(false);
+        setDraft(String(value || 0));
+      }
     },
-    [handleCommit],
+    [handleCommit, value],
   );
 
   if (editing) {
@@ -254,16 +252,58 @@ function payBreakdownLines(person, rates) {
   return lines;
 }
 
+function fieldsFingerprint(list) {
+  return JSON.stringify(
+    (Array.isArray(list) ? list : []).map((field) => [
+      field.id,
+      field.label,
+      Number(field.amount) || 0,
+    ]),
+  );
+}
+
 function PayrollPersonRow({ person, rates, onUpdate, onRemove }) {
   const [open, setOpen] = useState(false);
-  const fields = Array.isArray(person.extraFields) ? person.extraFields : [];
+  const persistedFields = Array.isArray(person.extraFields) ? person.extraFields : [];
+  const [fields, setFields] = useState(persistedFields);
+  const labelFocusIdRef = useRef(null);
+  const persistedFp = fieldsFingerprint(persistedFields);
   const lines = person.kind === 'team' ? payBreakdownLines(person, rates) : [];
 
-  const setFields = (nextFields) => onUpdate({ extraFields: nextFields });
-  const updateField = (fieldId, patch) => {
-    setFields(fields.map((field) => (field.id === fieldId ? { ...field, ...patch } : field)));
+  // Keep local drafts while typing; only sync from store when not editing a label.
+  useEffect(() => {
+    if (labelFocusIdRef.current) return;
+    setFields(persistedFields);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fingerprint tracks content
+  }, [person.id, persistedFp]);
+
+  const persistFields = useCallback(
+    (nextFields) => {
+      setFields(nextFields);
+      onUpdate({ extraFields: nextFields });
+    },
+    [onUpdate],
+  );
+
+  const updateFieldLocal = (fieldId, patch) => {
+    setFields((prev) =>
+      prev.map((field) => (field.id === fieldId ? { ...field, ...patch } : field)),
+    );
   };
-  const removeField = (fieldId) => setFields(fields.filter((field) => field.id !== fieldId));
+
+  const commitField = (fieldId, patch) => {
+    setFields((prev) => {
+      const next = prev.map((field) =>
+        field.id === fieldId ? { ...field, ...patch } : field,
+      );
+      onUpdate({ extraFields: next });
+      return next;
+    });
+  };
+
+  const removeField = (fieldId) => {
+    persistFields(fields.filter((field) => field.id !== fieldId));
+  };
 
   return (
     <div className="rounded-lg border border-white/10 bg-black/25">
@@ -273,7 +313,7 @@ function PayrollPersonRow({ person, rates, onUpdate, onRemove }) {
           onClick={() => setOpen((v) => !v)}
           className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
-          <span className="text-white/35 text-[10px] w-3">{open ? '▾' : '▸'}</span>
+          <span className="w-3 text-[10px] text-white/35">{open ? '▾' : '▸'}</span>
           <span className="min-w-0">
             <span className="block truncate text-sm font-medium text-white">{person.name}</span>
             <span className="block text-[10px] text-white/35">
@@ -320,13 +360,25 @@ function PayrollPersonRow({ person, rates, onUpdate, onRemove }) {
                 <input
                   type="text"
                   value={field.label}
-                  onChange={(event) => updateField(field.id, { label: event.target.value })}
+                  onFocus={() => {
+                    labelFocusIdRef.current = field.id;
+                  }}
+                  onChange={(event) =>
+                    updateFieldLocal(field.id, { label: event.target.value })
+                  }
+                  onBlur={(event) => {
+                    labelFocusIdRef.current = null;
+                    commitField(field.id, { label: event.target.value });
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') event.currentTarget.blur();
+                  }}
                   placeholder="Label (bonus, mileage…)"
                   className={financeInputClass}
                 />
                 <EditableAmount
                   value={field.amount}
-                  onSave={(amount) => updateField(field.id, { amount })}
+                  onSave={(amount) => commitField(field.id, { amount })}
                   className="justify-self-end text-white"
                 />
                 <button
@@ -340,7 +392,7 @@ function PayrollPersonRow({ person, rates, onUpdate, onRemove }) {
             ))}
             <button
               type="button"
-              onClick={() => setFields([...fields, createExtraField()])}
+              onClick={() => persistFields([...fields, createExtraField()])}
               className={`${btnSecondaryClass} py-1.5 text-[10px]`}
             >
               Add field
