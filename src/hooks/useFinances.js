@@ -231,6 +231,32 @@ function payrollStaffExtraTotal(staff = []) {
   return staff.reduce((sum, item) => sum + sumExtraFields(item.extraFields), 0);
 }
 
+/** Jonathan earns from completed work / plan roles only — no flat base pay. */
+function isJonathanPayrollName(name) {
+  const key = String(name || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  return key === 'jonathan' || key.startsWith('jonathan ');
+}
+
+function sanitizePayrollStaff(staff = []) {
+  const cleaned = [];
+  for (const item of staff) {
+    const person = createPayrollStaff(item);
+    if (isJonathanPayrollName(person.name)) {
+      // Drop custom-only Jonathan rows that exist solely for flat base pay.
+      if (person.kind !== 'team') continue;
+      cleaned.push({ ...person, extraFields: [] });
+      continue;
+    }
+    if (!person.name && person.extraFields.length === 0) continue;
+    cleaned.push(person);
+  }
+  return cleaned;
+}
+
 function personPayrollTotal(person, pointsPay = 0, planPay = 0) {
   const extras = sumExtraFields(person?.extraFields);
   const teamPay =
@@ -240,19 +266,15 @@ function personPayrollTotal(person, pointsPay = 0, planPay = 0) {
 
 function normalizePayrollMonth(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
-    const staff = Array.isArray(value.staff)
-      ? value.staff
-          .map((item) => createPayrollStaff(item))
-          .filter((item) => item.name || item.extraFields.length > 0)
-      : [];
-    const ownerComp = Number(value.ownerComp) || 0;
+    const staff = sanitizePayrollStaff(Array.isArray(value.staff) ? value.staff : []);
+    // Owner draw removed from payroll — ignore stored ownerComp.
     const legacyTotal = Number(value.legacyTotal) || 0;
     return {
       staff,
-      ownerComp,
+      ownerComp: 0,
       legacyTotal,
       // Stored total excludes live reel-points pay (computed at snapshot time).
-      total: payrollStaffExtraTotal(staff) + ownerComp + legacyTotal,
+      total: payrollStaffExtraTotal(staff) + legacyTotal,
     };
   }
   return {
@@ -265,8 +287,8 @@ function normalizePayrollMonth(value) {
 
 function writePayrollMonth(month) {
   const payload = {
-    staff: month.staff,
-    ownerComp: month.ownerComp,
+    staff: sanitizePayrollStaff(month.staff || []),
+    ownerComp: 0,
   };
   if (month.legacyTotal) {
     payload.legacyTotal = month.legacyTotal;
@@ -276,18 +298,20 @@ function writePayrollMonth(month) {
 
 function copyPayrollRoster(previousMonth) {
   const previous = normalizePayrollMonth(previousMonth);
-  if (!previous.staff.length && !previous.ownerComp) return null;
+  if (!previous.staff.length) return null;
   return {
     staff: previous.staff.map((item) =>
       createPayrollStaff({
         ...item,
         id: crypto.randomUUID(),
-        extraFields: item.extraFields.map((field) =>
-          createPayrollExtraField({ ...field, id: crypto.randomUUID() }),
-        ),
+        extraFields: isJonathanPayrollName(item.name)
+          ? []
+          : item.extraFields.map((field) =>
+              createPayrollExtraField({ ...field, id: crypto.randomUUID() }),
+            ),
       }),
     ),
-    ownerComp: previous.ownerComp,
+    ownerComp: 0,
   };
 }
 
@@ -478,11 +502,27 @@ export function useFinances() {
 
       const payroll = next.find((r) => r.id === 'payroll');
       const payrollData = payroll?.data ? { ...payroll.data } : {};
-      const existingPayroll = normalizePayrollMonth(payrollData[yearMonth]);
-      if (!payrollData[yearMonth] || (!existingPayroll.staff.length && !existingPayroll.ownerComp && !existingPayroll.legacyTotal)) {
+      const rawPayroll = payrollData[yearMonth];
+      const existingPayroll = normalizePayrollMonth(rawPayroll);
+      if (!rawPayroll || (!existingPayroll.staff.length && !existingPayroll.legacyTotal)) {
         const copiedPayroll = copyPayrollRoster(payrollData[previousMonth]);
         if (copiedPayroll) {
-          payrollData[yearMonth] = copiedPayroll;
+          payrollData[yearMonth] = writePayrollMonth(copiedPayroll);
+          next = [
+            ...next.filter((r) => r.id !== 'payroll'),
+            { id: 'payroll', data: payrollData },
+          ];
+          changed = true;
+        }
+      } else {
+        // Persist sanitization: clear owner draw + Jonathan flat base on open.
+        const sanitized = writePayrollMonth(existingPayroll);
+        const rawStaff = Array.isArray(rawPayroll.staff) ? rawPayroll.staff : [];
+        const needsRewrite =
+          (Number(rawPayroll.ownerComp) || 0) !== 0 ||
+          JSON.stringify(sanitized.staff) !== JSON.stringify(rawStaff);
+        if (needsRewrite) {
+          payrollData[yearMonth] = sanitized;
           next = [
             ...next.filter((r) => r.id !== 'payroll'),
             { id: 'payroll', data: payrollData },
@@ -745,7 +785,8 @@ export function useFinances() {
     });
   }, [resolvePayrollMonth]);
 
-  const setOwnerComp = useCallback((yearMonth, amount) => {
+  const setOwnerComp = useCallback((yearMonth, _amount) => {
+    // Owner draw removed — keep writes clearing any stored value.
     notifyMutation();
     setFinances((prev) => {
       const record = prev.find((r) => r.id === 'payroll');
@@ -754,7 +795,7 @@ export function useFinances() {
       const month = resolvePayrollMonth(data, yearMonth);
       data[yearMonth] = writePayrollMonth({
         staff: month.staff,
-        ownerComp: Number(amount) || 0,
+        ownerComp: 0,
         legacyTotal: month.legacyTotal,
       });
       return [...rest, { id: 'payroll', data }];
@@ -981,7 +1022,7 @@ export function useFinances() {
         0,
       );
       const totalPayroll =
-        staffPayrollTotal + (Number(payrollMonth.ownerComp) || 0) + (Number(payrollMonth.legacyTotal) || 0);
+        staffPayrollTotal + (Number(payrollMonth.legacyTotal) || 0);
       const expensesMonth = normalizeExpensesMonth(expenses?.data?.[yearMonth]);
       // Operating expenses only (line items + subscriptions + one-time).
       // QB card fees stay separate so the Expenses UI total matches the list;
@@ -1003,7 +1044,7 @@ export function useFinances() {
         effectiveRevenue: totalRevenue - qbFees,
         payroll: totalPayroll,
         payrollStaff,
-        ownerComp: payrollMonth.ownerComp,
+        ownerComp: 0,
         legacyPayroll: payrollMonth.legacyTotal || 0,
         expenses: operatingExpenses,
         totalExpenses,

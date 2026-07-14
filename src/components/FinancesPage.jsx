@@ -466,7 +466,6 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     addPayrollStaff,
     updatePayrollStaff,
     deletePayrollStaff,
-    setOwnerComp,
     setMonthlyRetainer,
     setRetainerPaymentMethod,
     setRetainerStatus,
@@ -971,9 +970,8 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
 
       {activeTab === 'pay' && (
         <>
-          <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="mb-5 grid grid-cols-2 gap-3">
             <SummaryCard label="Staff pay" value={staffTotal} tone="warn" />
-            <SummaryCard label="Owner draw" value={snapshot.ownerComp} />
             <SummaryCard label="Total payroll" value={snapshot.payroll} tone="warn" />
           </div>
 
@@ -1020,18 +1018,6 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                 onAddCustom={(person) => addPayrollStaff(selectedMonth, person)}
               />
             </div>
-
-            <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-3">
-              <div>
-                <p className="text-xs font-medium text-white">Owner draw</p>
-                <p className="text-[10px] text-white/35">Separate from staff pay</p>
-              </div>
-              <EditableAmount
-                value={snapshot.ownerComp}
-                onSave={(amount) => setOwnerComp(selectedMonth, amount)}
-                className="text-amber-200"
-              />
-            </div>
           </div>
 
           <SaveBar
@@ -1049,12 +1035,12 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
             <SummaryCard label="Revenue" value={snapshot.totalRevenue} tone="good" />
             <SummaryCard
               label="Payroll"
-              value={projectedPayroll}
+              value={snapshot.payroll}
               tone="warn"
               hint={
-                actualEditorPay !== fullQuotaEditorPay
-                  ? `At full plan delivery · ${fmt$(actualEditorPay)} earned so far`
-                  : 'At full plan delivery'
+                projectedPayroll > (Number(snapshot.payroll) || 0)
+                  ? `This month so far · ${fmt$(projectedPayroll)} if all plan deliverables finish`
+                  : 'This month'
               }
             />
             <SummaryCard
@@ -1069,8 +1055,13 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
             />
             <SummaryCard
               label="Net profit"
-              value={projectedNetProfit}
-              tone={projectedNetProfit >= 0 ? 'good' : 'bad'}
+              value={snapshot.netProfit}
+              tone={snapshot.netProfit >= 0 ? 'good' : 'bad'}
+              hint={
+                projectedNetProfit !== snapshot.netProfit
+                  ? `${fmt$(projectedNetProfit)} if all plan deliverables finish`
+                  : undefined
+              }
             />
           </div>
 
@@ -1392,8 +1383,9 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                 </button>
               </form>
               <p className="mt-2 text-[10px] text-white/30">
-                Profit = revenue − payroll (full plan delivery) − expenses (includes QB card fees
-                above). Pay tab still shows who earned what from completed work.
+                Profit = this month&apos;s revenue − payroll (earned so far) − expenses. Pay is based
+                on who completed what in {monthLabel}; the payroll card also shows the full-plan
+                estimate if every deliverable finishes.
               </p>
             </div>
           </div>

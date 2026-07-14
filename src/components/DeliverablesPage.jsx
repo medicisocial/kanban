@@ -28,6 +28,73 @@ function formatPoints(n) {
   return Number.isInteger(num) ? String(num) : String(num);
 }
 
+function progressPct(planned, target) {
+  const t = Number(target) || 0;
+  if (t <= 0) return 0;
+  return Math.min(100, Math.round(((Number(planned) || 0) / t) * 100));
+}
+
+function MonthNav({ monthLabel, onPrev, onNext, onToday }) {
+  return (
+    <div className="mb-5 flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={onPrev}
+        className="rounded p-1.5 text-white/55 transition hover:bg-white/10 hover:text-white"
+        aria-label="Previous month"
+      >
+        <IconChevronLeft />
+      </button>
+      <h2 className="min-w-[9rem] text-center text-base font-semibold text-white">{monthLabel}</h2>
+      <button
+        type="button"
+        onClick={onNext}
+        className="rounded p-1.5 text-white/55 transition hover:bg-white/10 hover:text-white"
+        aria-label="Next month"
+      >
+        <IconChevronRight />
+      </button>
+      <button
+        type="button"
+        onClick={onToday}
+        className={`${btnSecondaryClass} ml-1 px-2.5 py-1 text-[10px]`}
+      >
+        This month
+      </button>
+    </div>
+  );
+}
+
+function QuotaSummaryCard({ label, planned, target }) {
+  const onTrack = target <= 0 || planned >= target;
+  const remaining = Math.max(0, (Number(target) || 0) - (Number(planned) || 0));
+  const pct = progressPct(planned, target);
+  return (
+    <div className={`${surfacePanelClass} px-4 py-3`}>
+      <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/40">{label}</p>
+      <p className="mt-1 text-lg font-semibold tabular-nums text-white">
+        <span className={onTrack && target > 0 ? "text-emerald-300" : ""}>
+          {formatPoints(planned)}
+        </span>
+        <span className="text-white/30"> / </span>
+        {formatPoints(target)}
+        <span className="ml-1 text-[10px] font-medium text-white/35">pts</span>
+      </p>
+      {target > 0 && (
+        <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-white/10">
+          <div
+            className={`h-full rounded-full ${onTrack ? "bg-emerald-400/80" : "bg-[#810100]/80"}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
+      {remaining > 0 && (
+        <p className="mt-1.5 text-[10px] text-white/40">{formatPoints(remaining)} pts remaining</p>
+      )}
+    </div>
+  );
+}
+
 /** Click-to-edit number target. */
 function EditableTarget({ value, onSave, loading, step = 1, emptyLabel = "Set" }) {
   const [editing, setEditing] = useState(false);
@@ -41,9 +108,10 @@ function EditableTarget({ value, onSave, loading, step = 1, emptyLabel = "Set" }
 
   const commit = () => {
     setEditing(false);
-    const parsed = step === 0.5
-      ? Math.max(0, Math.round((Number(draft) || 0) * 2) / 2)
-      : Math.max(0, Math.round(Number(draft) || 0));
+    const parsed =
+      step === 0.5
+        ? Math.max(0, Math.round((Number(draft) || 0) * 2) / 2)
+        : Math.max(0, Math.round(Number(draft) || 0));
     if (parsed !== (Number(value) || 0)) onSave(parsed);
   };
 
@@ -61,21 +129,21 @@ function EditableTarget({ value, onSave, loading, step = 1, emptyLabel = "Set" }
           if (e.key === "Escape") setEditing(false);
         }}
         autoFocus
-        className="w-16 rounded border border-white/20 bg-black/40 px-2 py-1 text-right text-sm text-white outline-none focus:border-[#810100]"
+        className="w-14 rounded border border-white/20 bg-black/40 px-1.5 py-0.5 text-right text-xs tabular-nums text-white outline-none focus:border-emerald-400"
       />
     );
   }
 
   if (loading && !(value > 0)) {
-    return <span className="px-2 py-1 text-right text-sm text-white/30">…</span>;
+    return <span className="text-xs tabular-nums text-white/30">…</span>;
   }
 
   return (
     <button
       type="button"
       onClick={handleStartEdit}
-      className="cursor-pointer rounded px-2 py-1 text-right text-sm text-white/80 hover:bg-white/5 hover:text-white"
-      title="Click to edit"
+      className="cursor-pointer text-xs tabular-nums text-white/80 hover:text-white"
+      title="Click to edit target"
     >
       {value > 0 ? formatPoints(value) : emptyLabel}
     </button>
@@ -87,25 +155,66 @@ function TypeBreakdownChips({ byType }) {
     ([, count]) => count > 0,
   );
   if (entries.length === 0) {
-    return <span className="text-xs text-gray-600">No posts planned yet.</span>;
+    return <span className="text-xs text-white/35">No posts planned yet.</span>;
   }
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-x-3 gap-y-1">
       {entries.map(([type, count]) => {
         const style = getContentTypeStyle(type);
         return (
           <span
             key={type}
-            {...contentTypeLabelProps(
-              style,
-              "rounded-full bg-black/20 px-2 py-0.5 text-[10px] font-semibold",
-            )}
+            {...contentTypeLabelProps(style, "text-[10px] font-medium tabular-nums")}
           >
             {count} {type}
             {count === 1 ? "" : "s"}
           </span>
         );
       })}
+    </div>
+  );
+}
+
+function QuotaCell({
+  label,
+  planned,
+  target,
+  onTrack,
+  targetLoading,
+  step,
+  onSaveTarget,
+}) {
+  const pct = progressPct(planned, target);
+  return (
+    <div className="min-w-[7.5rem]">
+      <div className="mb-1 flex items-baseline justify-between gap-2">
+        <span className="text-[10px] uppercase tracking-[0.14em] text-white/35">{label}</span>
+        <span className="text-xs tabular-nums">
+          <span className={onTrack && target > 0 ? "text-emerald-300" : "text-white/75"}>
+            {formatPoints(planned)}
+          </span>
+          <span className="text-white/25"> / </span>
+          <EditableTarget
+            value={target}
+            loading={targetLoading}
+            step={step}
+            emptyLabel="—"
+            onSave={onSaveTarget}
+          />
+        </span>
+      </div>
+      <div className="h-0.5 overflow-hidden rounded-full bg-white/10">
+        <div
+          className={`h-full rounded-full ${
+            target <= 0
+              ? "bg-white/15"
+              : onTrack
+                ? "bg-emerald-400/70"
+                : "bg-[#810100]/70"
+          }`}
+          style={{ width: target > 0 ? `${pct}%` : "0%" }}
+        />
+      </div>
     </div>
   );
 }
@@ -140,7 +249,7 @@ function ClientDeliverableRow({
 
   return (
     <div className={`${surfacePanelClass} overflow-hidden`}>
-      <div className="flex flex-wrap items-center gap-4 px-4 py-3 sm:px-5">
+      <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-5">
         <button
           type="button"
           onClick={onToggleExpand}
@@ -149,7 +258,9 @@ function ClientDeliverableRow({
           <svg
             viewBox="0 0 20 20"
             fill="currentColor"
-            className={`h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform ${expanded ? "rotate-180" : ""}`}
+            className={`h-3.5 w-3.5 shrink-0 text-white/35 transition-transform ${
+              expanded ? "rotate-180" : ""
+            }`}
           >
             <path
               fillRule="evenodd"
@@ -160,53 +271,37 @@ function ClientDeliverableRow({
           <span className="truncate text-sm font-semibold text-white">{client}</span>
         </button>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-3 text-sm">
-          <div className="flex items-center gap-1.5" title="Reel points">
-            <span className="text-[10px] uppercase tracking-wider text-white/35">Reels</span>
-            <span className={summary.reelOnTrack && reelPointsTarget > 0 ? "text-emerald-300" : "text-white/70"}>
-              {formatPoints(reelPointsPlanned)}
-            </span>
-            <span className="text-white/30">/</span>
-            <EditableTarget
-              value={reelPointsTarget}
-              loading={targetLoading}
-              step={0.5}
-              emptyLabel="pts"
-              onSave={(next) => onSaveReelTarget(client, next)}
-            />
-            <span className="text-[10px] text-white/30">pts</span>
-          </div>
-          <div className="flex items-center gap-1.5" title="Carousels + static posts">
-            <span className="text-[10px] uppercase tracking-wider text-white/35">Carousels/statics</span>
-            <span className={summary.feedOnTrack && carouselStaticTarget > 0 ? "text-emerald-300" : "text-white/70"}>
-              {formatPoints(feedPlanned)}
-            </span>
-            <span className="text-white/30">/</span>
-            <EditableTarget
-              value={carouselStaticTarget}
-              loading={targetLoading}
-              step={0.5}
-              emptyLabel="Set"
-              onSave={(next) => onSaveFeedTarget(client, next)}
-            />
-            <span className="text-[10px] text-white/30">pts</span>
-          </div>
+        <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+          <QuotaCell
+            label="Reels"
+            planned={reelPointsPlanned}
+            target={reelPointsTarget}
+            onTrack={summary.reelOnTrack}
+            targetLoading={targetLoading}
+            step={0.5}
+            onSaveTarget={(next) => onSaveReelTarget(client, next)}
+          />
+          <QuotaCell
+            label="Feed"
+            planned={feedPlanned}
+            target={carouselStaticTarget}
+            onTrack={summary.feedOnTrack}
+            targetLoading={targetLoading}
+            step={0.5}
+            onSaveTarget={(next) => onSaveFeedTarget(client, next)}
+          />
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-3 sm:ml-auto">
           {!hasAnyTarget ? (
-            <span className="rounded-full bg-white/5 px-2.5 py-1 text-[10px] font-medium text-gray-500">
-              No targets set
-            </span>
+            <span className="text-[10px] text-white/35">No targets</span>
           ) : onTrack ? (
-            <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">
-              On track
-            </span>
+            <span className="text-[10px] font-medium text-emerald-300/90">On track</span>
           ) : (
             <button
               type="button"
               onClick={() => onAddIdeas(client)}
-              className="rounded-full bg-[#810100]/20 px-2.5 py-1 text-[10px] font-semibold text-[#fca5a5] transition hover:bg-[#810100]/30"
+              className="text-[10px] font-medium text-[#fca5a5] transition hover:text-[#fecaca]"
             >
               {formatPoints(ideasNeeded)} more needed
             </button>
@@ -215,10 +310,10 @@ function ClientDeliverableRow({
             <button
               type="button"
               onClick={() => onAddCard(client)}
-              className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/70 transition hover:border-white/25 hover:text-white"
+              className="text-[10px] font-medium text-white/45 transition hover:text-white"
               title={`Add a card for ${client}`}
             >
-              + Add
+              Add
             </button>
           )}
         </div>
@@ -226,19 +321,19 @@ function ClientDeliverableRow({
 
       {expanded && (
         <div className="border-t border-white/5 px-4 py-3 sm:px-5">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
             <TypeBreakdownChips byType={byType} />
             {storyCount > 0 && (
-              <span className="text-xs text-gray-500">
-                {storyCount} Stor{storyCount === 1 ? "y" : "ies"} this month (tracked separately)
+              <span className="text-[10px] text-white/35">
+                {storyCount} stor{storyCount === 1 ? "y" : "ies"} (separate)
               </span>
             )}
           </div>
 
           {cards.length === 0 ? (
-            <p className="text-xs text-gray-600">No posts scheduled for this client this month yet.</p>
+            <p className="text-xs text-white/35">No posts scheduled this month yet.</p>
           ) : (
-            <ul className="space-y-1.5">
+            <ul className="divide-y divide-white/5">
               {cards
                 .slice()
                 .sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""))
@@ -251,19 +346,30 @@ function ClientDeliverableRow({
                       <button
                         type="button"
                         onClick={() => onOpenCard?.(card)}
-                        className="flex w-full flex-wrap items-center gap-2 rounded-lg bg-black/20 px-3 py-2 text-left text-xs transition hover:bg-black/35"
+                        className="flex w-full items-center gap-2.5 py-2 text-left text-xs transition hover:bg-white/[0.03]"
                       >
-                        <span {...contentTypeLabelProps(style, "font-semibold uppercase text-[10px]")}>
+                        <span
+                          {...contentTypeLabelProps(
+                            style,
+                            "w-16 shrink-0 text-[10px] font-semibold uppercase",
+                          )}
+                        >
                           {card.contentType}
                         </span>
-                        {pts != null && (
-                          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-amber-200/90">
-                            {pts === 0.5 ? "½" : "1"} pt
+                        {pts != null ? (
+                          <span className="w-8 shrink-0 tabular-nums text-white/40">
+                            {pts === 0.5 ? "½" : "1"}
                           </span>
+                        ) : (
+                          <span className="w-8 shrink-0" />
                         )}
-                        <span className="min-w-0 flex-1 truncate text-gray-200">{card.title || "Untitled"}</span>
-                        <span className="shrink-0 text-gray-500">{card.dueDate || "No date"}</span>
-                        <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-gray-400">
+                        <span className="min-w-0 flex-1 truncate text-white/80">
+                          {card.title || "Untitled"}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-white/35">
+                          {card.dueDate || "—"}
+                        </span>
+                        <span className="hidden w-20 shrink-0 truncate text-right text-white/30 sm:block">
                           {columnTitleById[card.columnId] || card.columnId}
                         </span>
                       </button>
@@ -336,14 +442,12 @@ export default function DeliverablesPage({
         reelPointsPlanned: acc.reelPointsPlanned + s.reelPointsPlanned,
         carouselStaticTarget: acc.carouselStaticTarget + s.carouselStaticTarget,
         feedPlanned: acc.feedPlanned + s.feedPlanned,
-        remaining: acc.remaining + s.remaining,
       }),
       {
         reelPointsTarget: 0,
         reelPointsPlanned: 0,
         carouselStaticTarget: 0,
         feedPlanned: 0,
-        remaining: 0,
       },
     );
   }, [summaries]);
@@ -352,50 +456,28 @@ export default function DeliverablesPage({
     <section>
       <ClientPortalSectionHeader
         title="Deliverables"
-        description="Contract quotas from each client profile — reels points vs carousels/statics planned this month."
+        description="Month planned vs contract quotas (reels + feed)."
       />
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={goPrev}
-          className="rounded p-1 text-white/70 hover:text-white"
-          aria-label="Previous month"
-        >
-          <IconChevronLeft />
-        </button>
-        <h2 className="text-lg font-semibold text-white">{formatYearMonthLabel(selectedMonth)}</h2>
-        <button
-          type="button"
-          onClick={goNext}
-          className="rounded p-1 text-white/70 hover:text-white"
-          aria-label="Next month"
-        >
-          <IconChevronRight />
-        </button>
-        <button type="button" onClick={goToday} className={`${btnSecondaryClass} ml-2 py-1.5 text-[10px]`}>
-          This month
-        </button>
-      </div>
+      <MonthNav
+        monthLabel={formatYearMonthLabel(selectedMonth)}
+        onPrev={goPrev}
+        onNext={goNext}
+        onToday={goToday}
+      />
 
       {clientList.length > 0 && (
-        <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className={`${surfacePanelClass} p-4`}>
-            <p className="text-[10px] uppercase tracking-widest text-white/40">Reels target</p>
-            <p className="mt-1 text-lg font-bold text-white">{formatPoints(totals.reelPointsTarget)}</p>
-          </div>
-          <div className={`${surfacePanelClass} p-4`}>
-            <p className="text-[10px] uppercase tracking-widest text-white/40">Reels planned</p>
-            <p className="mt-1 text-lg font-bold text-emerald-300">{formatPoints(totals.reelPointsPlanned)}</p>
-          </div>
-          <div className={`${surfacePanelClass} p-4`}>
-            <p className="text-[10px] uppercase tracking-widest text-white/40">Carousels/statics target</p>
-            <p className="mt-1 text-lg font-bold text-white">{totals.carouselStaticTarget}</p>
-          </div>
-          <div className={`${surfacePanelClass} p-4`}>
-            <p className="text-[10px] uppercase tracking-widest text-white/40">Carousels/statics planned</p>
-            <p className="mt-1 text-lg font-bold text-emerald-300">{totals.feedPlanned}</p>
-          </div>
+        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <QuotaSummaryCard
+            label="Reels"
+            planned={totals.reelPointsPlanned}
+            target={totals.reelPointsTarget}
+          />
+          <QuotaSummaryCard
+            label="Feed"
+            planned={totals.feedPlanned}
+            target={totals.carouselStaticTarget}
+          />
         </div>
       )}
 
