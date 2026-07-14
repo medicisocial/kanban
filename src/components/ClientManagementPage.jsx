@@ -74,7 +74,7 @@ export default function ClientManagementPage({
     getClientPlanId,
     getClientShootDaysPerMonth,
     getClientShootHoursPerDay,
-    getMemberNamesForRole,
+    getAllTeamMemberNames,
     saveClientProfile,
     getClientUsers,
     setClientPortalUsers,
@@ -105,9 +105,8 @@ export default function ClientManagementPage({
   const [planId, setPlanId] = useState('custom');
   const [shootDaysPerMonth, setShootDaysPerMonth] = useState('');
   const [shootHoursPerDay, setShootHoursPerDay] = useState('');
-  const accountManagers = getMemberNamesForRole?.('Account Manager') || [];
-  const videographers = getMemberNamesForRole?.('Content Creator') || [];
-  const photographers = getMemberNamesForRole?.('Photographer') || [];
+  // Any team member can fill AM / videographer / photographer for a client.
+  const teamAssigneeNames = getAllTeamMemberNames?.() || [];
   const [previewSrc, setPreviewSrc] = useState(null);
   const [logoCrop, setLogoCrop] = useState(DEFAULT_LOGO_CROP);
   const [pendingLogo, setPendingLogo] = useState(undefined);
@@ -614,7 +613,7 @@ export default function ClientManagementPage({
                     className={selectClass}
                   >
                     <option value="">Unassigned</option>
-                    {accountManagers.map((name) => (
+                    {teamAssigneeNames.map((name) => (
                       <option key={name} value={name}>
                         {name}
                       </option>
@@ -631,7 +630,7 @@ export default function ClientManagementPage({
                     className={selectClass}
                   >
                     <option value="">Unassigned</option>
-                    {videographers.map((name) => (
+                    {teamAssigneeNames.map((name) => (
                       <option key={name} value={name}>
                         {name}
                       </option>
@@ -648,7 +647,7 @@ export default function ClientManagementPage({
                     className={selectClass}
                   >
                     <option value="">Unassigned</option>
-                    {photographers.map((name) => (
+                    {teamAssigneeNames.map((name) => (
                       <option key={name} value={name}>
                         {name}
                       </option>
