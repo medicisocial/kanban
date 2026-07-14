@@ -918,7 +918,11 @@ export function useFinances() {
       const totalPayroll =
         staffPayrollTotal + (Number(payrollMonth.ownerComp) || 0) + (Number(payrollMonth.legacyTotal) || 0);
       const expensesMonth = normalizeExpensesMonth(expenses?.data?.[yearMonth]);
-      const totalExpenses = expensesMonth.total + qbFees;
+      // Operating expenses only (line items + subscriptions + one-time).
+      // QB card fees stay separate so the Expenses UI total matches the list;
+      // they still reduce net profit below.
+      const operatingExpenses = expensesMonth.total;
+      const totalExpenses = operatingExpenses + qbFees;
       const netProfit = totalRevenue - totalPayroll - totalExpenses;
 
       return {
@@ -936,7 +940,8 @@ export function useFinances() {
         payrollStaff,
         ownerComp: payrollMonth.ownerComp,
         legacyPayroll: payrollMonth.legacyTotal || 0,
-        expenses: totalExpenses,
+        expenses: operatingExpenses,
+        totalExpenses,
         expenseItems: expensesMonth.expenses,
         subscriptions: expensesMonth.subscriptions,
         oneTimeExpenses: expensesMonth.oneTime,

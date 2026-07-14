@@ -91,6 +91,20 @@ function EditableAmount({ value, onSave, className = '' }) {
 const financeInputClass =
   'w-full rounded border border-white/15 bg-black/30 px-2 py-1.5 text-xs text-white outline-none transition focus:border-emerald-400';
 
+function PaymentMethodSelect({ value, onChange }) {
+  return (
+    <select
+      value={value || 'ach'}
+      onChange={(event) => onChange(event.target.value)}
+      className={`${financeInputClass} w-auto min-w-[7.5rem]`}
+      title="QuickBooks payment method"
+    >
+      <option value="ach">ACH / bank</option>
+      <option value="cc">Credit card</option>
+    </select>
+  );
+}
+
 const TABS = [
   { id: 'pay', label: 'Pay' },
   { id: 'revenue', label: 'Revenue' },
@@ -137,7 +151,7 @@ function MonthNav({ monthLabel, onPrev, onNext, onToday }) {
   );
 }
 
-function SummaryCard({ label, value, tone = 'default' }) {
+function SummaryCard({ label, value, tone = 'default', hint }) {
   const toneClass =
     tone === 'good'
       ? 'text-emerald-300'
@@ -150,6 +164,7 @@ function SummaryCard({ label, value, tone = 'default' }) {
     <div className={`${surfacePanelClass} px-4 py-3`}>
       <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/40">{label}</p>
       <p className={`mt-1 text-lg font-semibold tabular-nums ${toneClass}`}>{fmt$(value)}</p>
+      {hint ? <p className="mt-1 text-[10px] text-rose-200/70">{hint}</p> : null}
     </div>
   );
 }
@@ -423,6 +438,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     deletePayrollStaff,
     setOwnerComp,
     setMonthlyRetainer,
+    setRetainerPaymentMethod,
     addOneOffProject,
     updateOneOffProject,
     deleteOneOffProject,
@@ -467,7 +483,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
   const [saveStatus, setSaveStatus] = useState('idle');
   const [saveMessage, setSaveMessage] = useState('');
   const [ratesDraft, setRatesDraft] = useState(() => normalizePayRates(DEFAULT_PAY_RATES));
-  const [oneOffDraft, setOneOffDraft] = useState({ name: '', amount: '' });
+  const [oneOffDraft, setOneOffDraft] = useState({ name: '', amount: '', paymentMethod: 'ach' });
   const [expenseDraft, setExpenseDraft] = useState({ name: '', amount: '' });
 
   const payRates = useMemo(
@@ -899,7 +915,16 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
           <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <SummaryCard label="Revenue" value={snapshot.totalRevenue} tone="good" />
             <SummaryCard label="Payroll" value={snapshot.payroll} tone="warn" />
-            <SummaryCard label="Expenses" value={snapshot.expenses} tone="bad" />
+            <SummaryCard
+              label="Expenses"
+              value={snapshot.totalExpenses}
+              tone="bad"
+              hint={
+                snapshot.qbFees > 0
+                  ? `Includes ${fmt$(snapshot.qbFees)} QB card fees`
+                  : undefined
+              }
+            />
             <SummaryCard
               label="Net profit"
               value={snapshot.netProfit}
@@ -910,7 +935,12 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
           <div className="space-y-4">
             <div className={`${surfacePanelClass} p-4 sm:p-5`}>
               <div className="mb-3 flex items-baseline justify-between gap-3">
-                <h3 className="text-sm font-semibold text-white">Client retainers</h3>
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Client retainers</h3>
+                  <p className="mt-0.5 text-[10px] text-white/35">
+                    Credit card adds a 2.9% + $0.25 QB fee to expenses.
+                  </p>
+                </div>
                 <span className="text-xs tabular-nums text-emerald-300/90">
                   {fmt$(snapshot.retainerTotal)}
                 </span>
@@ -920,25 +950,42 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                   <thead className="sticky top-0 bg-[#141414]">
                     <tr className="text-left text-[10px] uppercase tracking-[0.14em] text-white/35">
                       <th className="pb-2 font-medium">Client</th>
+                      <th className="pb-2 font-medium">Pay</th>
                       <th className="pb-2 text-right font-medium">Monthly</th>
+                      <th className="pb-2 text-right font-medium">QB fee</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {retainerClients.map((client) => (
-                      <tr key={client} className="border-t border-white/5">
-                        <td className="py-2 pr-3 text-white/80">{client}</td>
-                        <td className="py-2 text-right">
-                          <EditableAmount
-                            value={snapshot.retainers?.[client] || 0}
-                            onSave={(amount) => setMonthlyRetainer(client, selectedMonth, amount)}
-                            className="text-white"
-                          />
-                        </td>
-                      </tr>
-                    ))}
+                    {retainerClients.map((client) => {
+                      const payment = snapshot.retainerPayments?.[client] || {};
+                      const retainerAmount = Number(snapshot.retainers?.[client]) || 0;
+                      return (
+                        <tr key={client} className="border-t border-white/5">
+                          <td className="py-2 pr-3 text-white/80">{client}</td>
+                          <td className="py-2 pr-3">
+                            <PaymentMethodSelect
+                              value={payment.paymentMethod}
+                              onChange={(method) =>
+                                setRetainerPaymentMethod(client, selectedMonth, method)
+                              }
+                            />
+                          </td>
+                          <td className="py-2 pr-3 text-right">
+                            <EditableAmount
+                              value={retainerAmount}
+                              onSave={(amount) => setMonthlyRetainer(client, selectedMonth, amount)}
+                              className="text-white"
+                            />
+                          </td>
+                          <td className="py-2 text-right tabular-nums text-rose-200/90">
+                            {fmt$(payment.qbFee || 0)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {retainerClients.length === 0 && (
                       <tr>
-                        <td colSpan={2} className="py-6 text-center text-white/35">
+                        <td colSpan={4} className="py-6 text-center text-white/35">
                           No clients yet.
                         </td>
                       </tr>
@@ -957,7 +1004,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                 {(snapshot.oneOffProjects || []).map((project) => (
                   <div
                     key={project.id}
-                    className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_7rem_auto] sm:items-center"
+                    className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_7.5rem_7rem_5rem_auto] sm:items-center"
                   >
                     <input
                       type="text"
@@ -968,6 +1015,12 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                       placeholder="Project name"
                       className={financeInputClass}
                     />
+                    <PaymentMethodSelect
+                      value={project.paymentMethod}
+                      onChange={(paymentMethod) =>
+                        updateOneOffProject(selectedMonth, project.id, { paymentMethod })
+                      }
+                    />
                     <EditableAmount
                       value={project.amount}
                       onSave={(amount) =>
@@ -975,6 +1028,9 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                       }
                       className="justify-self-end text-white"
                     />
+                    <span className="justify-self-end text-xs tabular-nums text-rose-200/90">
+                      {fmt$(project.qbFee || 0)}
+                    </span>
                     <button
                       type="button"
                       onClick={() => deleteOneOffProject(selectedMonth, project.id)}
@@ -986,14 +1042,18 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                 ))}
               </div>
               <form
-                className="mt-3 flex flex-col gap-2 sm:flex-row"
+                className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap"
                 onSubmit={(event) => {
                   event.preventDefault();
                   const name = oneOffDraft.name.trim();
                   const amount = Number(oneOffDraft.amount) || 0;
                   if (!name && !amount) return;
-                  addOneOffProject(selectedMonth, { name, amount });
-                  setOneOffDraft({ name: '', amount: '' });
+                  addOneOffProject(selectedMonth, {
+                    name,
+                    amount,
+                    paymentMethod: oneOffDraft.paymentMethod || 'ach',
+                  });
+                  setOneOffDraft({ name: '', amount: '', paymentMethod: 'ach' });
                 }}
               >
                 <input
@@ -1004,6 +1064,12 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                   }
                   placeholder="New project"
                   className={`${financeInputClass} flex-1`}
+                />
+                <PaymentMethodSelect
+                  value={oneOffDraft.paymentMethod}
+                  onChange={(paymentMethod) =>
+                    setOneOffDraft((prev) => ({ ...prev, paymentMethod }))
+                  }
                 />
                 <input
                   type="number"
@@ -1025,7 +1091,21 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
             <div className={`${surfacePanelClass} p-4 sm:p-5`}>
               <div className="mb-3 flex items-baseline justify-between gap-3">
                 <h3 className="text-sm font-semibold text-white">Expenses</h3>
-                <span className="text-xs tabular-nums text-rose-300/90">{fmt$(snapshot.expenses)}</span>
+                <span className="text-xs tabular-nums text-rose-300/90">
+                  {fmt$(snapshot.totalExpenses)}
+                </span>
+              </div>
+
+              <div className="mb-3 flex items-center justify-between gap-3 rounded border border-white/10 bg-black/20 px-3 py-2">
+                <div>
+                  <p className="text-xs font-medium text-white/80">QuickBooks Payments — CC fees</p>
+                  <p className="mt-0.5 text-[10px] text-white/35">
+                    Auto-calculated at 2.9% + $0.25 when a retainer or one-off is paid by credit card.
+                  </p>
+                </div>
+                <p className="text-xs font-semibold tabular-nums text-rose-200">
+                  {fmt$(snapshot.qbFees || 0)}
+                </p>
               </div>
 
               <div className="mb-3 flex items-center justify-between gap-3 rounded border border-white/10 bg-black/20 px-3 py-2">
@@ -1144,7 +1224,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                 </button>
               </form>
               <p className="mt-2 text-[10px] text-white/30">
-                Profit = revenue − payroll − expenses (includes QB card fees when set on retainers).
+                Profit = revenue − payroll − expenses (includes QB card fees above).
               </p>
             </div>
           </div>
