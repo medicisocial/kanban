@@ -76,10 +76,10 @@ export const FEED_POST_CONTENT_TYPES = ['Carousel', 'Static Post'];
 export const EDITOR_POINT_PAY_RATE = 70;
 
 /** Flat pay for a completed Carousel (not on the reel point scale). */
-export const CAROUSEL_PAY_RATE = 70;
+export const CAROUSEL_PAY_RATE = 50;
 
 /** Flat pay for a completed Static Post. */
-export const STATIC_POST_PAY_RATE = 35;
+export const STATIC_POST_PAY_RATE = 25;
 
 export const EDITOR_POINT_OPTIONS = [
   { value: 1, label: '1 point' },

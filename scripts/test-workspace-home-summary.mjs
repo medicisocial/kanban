@@ -109,8 +109,8 @@ function buildEditorCompletedByAssignee(cards, { editorNames = [], referenceDate
   const staticsByKey = new Map();
   const payByKey = new Map();
   const REEL_RATE = 70;
-  const CAROUSEL_RATE = 70;
-  const STATIC_RATE = 35;
+  const CAROUSEL_RATE = 50;
+  const STATIC_RATE = 25;
 
   const registerName = (name) => {
     const trimmed = (name || '').trim();
@@ -341,9 +341,9 @@ assert(byAssignee[2].points === 0, 'editors with no reels have zero points');
     { editorNames: ['Jordan'] },
   );
   const jordan = withFeedPay.find((entry) => entry.name === 'Jordan');
-  assert(jordan.carousels === 1 && jordan.carouselPay === 70, 'carousels pay $70 each');
-  assert(jordan.statics === 1 && jordan.staticPay === 35, 'static posts pay $35 each');
-  assert(jordan.pay === 280 + 70 + 35, 'total pay includes reels + carousel + static');
+  assert(jordan.carousels === 1 && jordan.carouselPay === 50, 'carousels pay $50 each');
+  assert(jordan.statics === 1 && jordan.staticPay === 25, 'static posts pay $25 each');
+  assert(jordan.pay === 280 + 50 + 25, 'total pay includes reels + carousel + static');
 }
 
 const lastMonthOnly = buildEditorCompletedCount(
