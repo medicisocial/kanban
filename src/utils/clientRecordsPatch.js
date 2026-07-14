@@ -49,6 +49,10 @@ export function patchToRecordColumns(patch = {}) {
     const n = Number(patch.shootHoursPerDay);
     columns.shoot_hours_per_day = Number.isFinite(n) && n >= 0 ? Math.round(n * 2) / 2 : 0;
   }
+  if (patch.monthlyPackageAmount !== undefined) {
+    const n = Number(patch.monthlyPackageAmount);
+    columns.monthly_package_amount = Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0;
+  }
   if (patch.deletedCompanyFileIds !== undefined) {
     columns.deleted_company_file_ids = patch.deletedCompanyFileIds || [];
   }

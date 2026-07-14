@@ -159,6 +159,16 @@ function normalizeShootHoursPerDayMap(hours = {}) {
   return normalized;
 }
 
+function normalizeMonthlyPackageAmountsMap(amounts = {}) {
+  const normalized = {};
+  for (const [client, value] of Object.entries(amounts)) {
+    const num = Number(value);
+    const rounded = Number.isFinite(num) && num >= 0 ? Math.round(num * 100) / 100 : 0;
+    if (rounded > 0) normalized[client] = rounded;
+  }
+  return normalized;
+}
+
 function normalizeClientsState(data, { includeDefaults = true } = {}) {
   const source = data && typeof data === 'object' ? data : {};
   const now = Date.now();
@@ -212,6 +222,9 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
     planIds: stripSuppressed(normalizePlanIdsMap(source.planIds || {})),
     shootDaysPerMonth: stripSuppressed(normalizeShootDaysPerMonthMap(source.shootDaysPerMonth || {})),
     shootHoursPerDay: stripSuppressed(normalizeShootHoursPerDayMap(source.shootHoursPerDay || {})),
+    monthlyPackageAmounts: stripSuppressed(
+      normalizeMonthlyPackageAmountsMap(source.monthlyPackageAmounts || {}),
+    ),
     portalPasswordVault: isCloudSourceOfTruth()
       ? {}
       : stripSuppressed(
@@ -552,6 +565,7 @@ export function useClients() {
         planIds: stripBrand(current.planIds),
         shootDaysPerMonth: stripBrand(current.shootDaysPerMonth),
         shootHoursPerDay: stripBrand(current.shootHoursPerDay),
+        monthlyPackageAmounts: stripBrand(current.monthlyPackageAmounts),
         portalPasswordVault: stripBrand(current.portalPasswordVault),
       },
       { includeDefaults },
@@ -688,6 +702,7 @@ export function useClients() {
       planId,
       shootDaysPerMonth,
       shootHoursPerDay,
+      monthlyPackageAmount,
     } = patch;
     const storedLogo =
       logo === undefined ? undefined : logo ? await persistClientLogoToStorage(client, logo) : null;
@@ -802,6 +817,14 @@ export function useClients() {
         else delete nextHours[client];
         next.shootHoursPerDay = nextHours;
       }
+      if (monthlyPackageAmount !== undefined) {
+        const n = Number(monthlyPackageAmount);
+        const num = Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0;
+        const nextAmounts = { ...(prev.monthlyPackageAmounts || {}) };
+        if (num > 0) nextAmounts[client] = num;
+        else delete nextAmounts[client];
+        next.monthlyPackageAmounts = nextAmounts;
+      }
       return next;
     }, { syncClients: [client] });
   }, [applyClientsWorkspaceUpdate]);
@@ -892,6 +915,14 @@ export function useClients() {
       return Number.isFinite(n) && n >= 0 ? Math.round(n * 2) / 2 : 0;
     },
     [state.shootHoursPerDay],
+  );
+
+  const getClientMonthlyPackageAmount = useCallback(
+    (client) => {
+      const n = Number(resolveClientMapValue(client, state.monthlyPackageAmounts));
+      return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0;
+    },
+    [state.monthlyPackageAmounts],
   );
 
   const getPortalPasswordForUser = useCallback(
@@ -1170,6 +1201,7 @@ export function useClients() {
     getClientPlanId,
     getClientShootDaysPerMonth,
     getClientShootHoursPerDay,
+    getClientMonthlyPackageAmount,
     portalPasswordVault: state.portalPasswordVault,
     getPortalPasswordForUser,
     syncPortalPasswordVault,

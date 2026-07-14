@@ -49,7 +49,8 @@ function isEmptyBrandField(field, value) {
     field === 'carouselTarget' ||
     field === 'staticTarget' ||
     field === 'shootDaysPerMonth' ||
-    field === 'shootHoursPerDay'
+    field === 'shootHoursPerDay' ||
+    field === 'monthlyPackageAmount'
   ) {
     return !(Number(value) > 0);
   }
@@ -136,6 +137,7 @@ export function brandProfilePatchFromWorkspaceBrand(client, workspace = {}) {
     planId: String(resolveClientMapValue(client, workspace.planIds) || '').trim().toLowerCase() || 'custom',
     shootDaysPerMonth: Number(resolveClientMapValue(client, workspace.shootDaysPerMonth)) || 0,
     shootHoursPerDay: Number(resolveClientMapValue(client, workspace.shootHoursPerDay)) || 0,
+    monthlyPackageAmount: Number(resolveClientMapValue(client, workspace.monthlyPackageAmounts)) || 0,
   };
 }
 
@@ -187,6 +189,16 @@ export function mergeClientRecordRowsIntoWorkspace(workspace = {}, rows = []) {
         'shootHoursPerDay',
         client,
         Number.isFinite(n) && n >= 0 ? Math.round(n * 2) / 2 : 0,
+      );
+    }
+    {
+      const n = Number(row.monthly_package_amount);
+      applyRemoteBrandField(
+        next,
+        'monthlyPackageAmount',
+        'monthlyPackageAmounts',
+        client,
+        Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0,
       );
     }
   }

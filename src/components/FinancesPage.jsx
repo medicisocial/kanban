@@ -448,6 +448,7 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     getClientCarouselStaticTarget,
     getClientShootDaysPerMonth,
     getClientShootHoursPerDay,
+    getClientMonthlyPackageAmount,
   } = useClientsContext();
   const teamMembers = teamMembersProp || contextTeamMembers || [];
 
@@ -481,6 +482,18 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
   useEffect(() => {
     ensureRecurringMonth(selectedMonth);
   }, [ensureRecurringMonth, selectedMonth]);
+
+  // Seed empty retainers from each client's stored monthly package amount.
+  useEffect(() => {
+    for (const client of clients || []) {
+      const packageAmount = getClientMonthlyPackageAmount?.(client) || 0;
+      if (!(packageAmount > 0)) continue;
+      const existing = Number(snapshot.retainers?.[client]) || 0;
+      if (existing > 0) continue;
+      setMonthlyRetainer(client, selectedMonth, packageAmount);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clients, getClientMonthlyPackageAmount, selectedMonth, setMonthlyRetainer]);
 
   const shiftMonth = useCallback(
     (yearMonth, offset) => {

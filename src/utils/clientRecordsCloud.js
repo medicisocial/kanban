@@ -17,7 +17,7 @@ export const CLIENT_RECORDS_LIST_SELECT =
   'org_id,brand_key,display_name,client_color,updated_at';
 
 const CLIENT_RECORDS_FULL_SELECT =
-  'id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,videographer,photographer,deliverable_target,reel_points_target,carousel_static_target,carousel_target,static_target,plan_id,shoot_days_per_month,shoot_hours_per_day,deleted_company_file_ids,updated_at';
+  'id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,videographer,photographer,deliverable_target,reel_points_target,carousel_static_target,carousel_target,static_target,plan_id,shoot_days_per_month,shoot_hours_per_day,monthly_package_amount,deleted_company_file_ids,updated_at';
 
 const DIRECT_READ_TIMEOUT_MS = 3000;
 const DIRECT_PROFILE_SAVE_TIMEOUT_MS = 8000;

@@ -132,7 +132,7 @@ export async function fetchClientRecordRows(orgIdOverride) {
   if (!url || !key) return [];
 
   const endpoint =
-    `${url}/rest/v1/client_records?select=id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,videographer,photographer,deliverable_target,reel_points_target,carousel_static_target,carousel_target,static_target,plan_id,shoot_days_per_month,shoot_hours_per_day,deleted_company_file_ids,updated_at&org_id=eq.${encodeURIComponent(orgId)}`;
+    `${url}/rest/v1/client_records?select=id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,videographer,photographer,deliverable_target,reel_points_target,carousel_static_target,carousel_target,static_target,plan_id,shoot_days_per_month,shoot_hours_per_day,monthly_package_amount,deleted_company_file_ids,updated_at&org_id=eq.${encodeURIComponent(orgId)}`;
   const response = await fetchWithTimeout(endpoint, {
     headers: { apikey: key, Authorization: `Bearer ${key}` },
   });
@@ -165,6 +165,7 @@ export function brandProfilePatchFromWorkspaceBrand(client, workspace = {}) {
     planId: String(workspace.planIds?.[client] || '').trim().toLowerCase() || 'custom',
     shootDaysPerMonth: Number(workspace.shootDaysPerMonth?.[client]) || 0,
     shootHoursPerDay: Number(workspace.shootHoursPerDay?.[client]) || 0,
+    monthlyPackageAmount: Number(workspace.monthlyPackageAmounts?.[client]) || 0,
   };
 }
 
@@ -249,6 +250,12 @@ export function mergeClientRecordRowsIntoWorkspace(workspace = {}, rows = []) {
       next.shootHoursPerDay = {
         ...(next.shootHoursPerDay || {}),
         [client]: Number(row.shoot_hours_per_day),
+      };
+    }
+    if (Number(row.monthly_package_amount) > 0) {
+      next.monthlyPackageAmounts = {
+        ...(next.monthlyPackageAmounts || {}),
+        [client]: Number(row.monthly_package_amount),
       };
     }
   }

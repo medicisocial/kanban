@@ -127,7 +127,7 @@ async function fetchClientRecordRows(orgId) {
   if (!url || !key) return [];
 
   const endpoint =
-    `${url}/rest/v1/client_records?select=id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,videographer,photographer,deliverable_target,reel_points_target,carousel_static_target,carousel_target,static_target,plan_id,shoot_days_per_month,shoot_hours_per_day,deleted_company_file_ids,updated_at&org_id=eq.${encodeURIComponent(orgId)}`;
+    `${url}/rest/v1/client_records?select=id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,business_type,account_manager,videographer,photographer,deliverable_target,reel_points_target,carousel_static_target,carousel_target,static_target,plan_id,shoot_days_per_month,shoot_hours_per_day,monthly_package_amount,deleted_company_file_ids,updated_at&org_id=eq.${encodeURIComponent(orgId)}`;
   const response = await fetch(endpoint, {
     headers: { apikey: key, Authorization: `Bearer ${key}` },
   });

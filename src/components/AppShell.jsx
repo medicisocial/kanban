@@ -1289,6 +1289,8 @@ export default function AppShell({ onSignOut }) {
           ideas={ideas}
           initialTab={clientsTab}
           onTabChange={setClientsTab}
+          setMonthlyRetainer={financesController.setMonthlyRetainer}
+          currentYearMonth={financesController.currentYearMonth}
         />
       )}
 

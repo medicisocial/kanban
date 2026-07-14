@@ -53,6 +53,8 @@ export default function ClientManagementPage({
   onClientAdded,
   cards = [],
   ideas = [],
+  setMonthlyRetainer,
+  currentYearMonth,
 }) {
   const {
     clients,
@@ -71,6 +73,7 @@ export default function ClientManagementPage({
     getClientPlanId,
     getClientShootDaysPerMonth,
     getClientShootHoursPerDay,
+    getClientMonthlyPackageAmount,
     getAllTeamMemberNames,
     saveClientProfile,
     getClientUsers,
@@ -101,6 +104,7 @@ export default function ClientManagementPage({
   const [planId, setPlanId] = useState('custom');
   const [shootDaysPerMonth, setShootDaysPerMonth] = useState('');
   const [shootHoursPerDay, setShootHoursPerDay] = useState('');
+  const [monthlyPackageAmount, setMonthlyPackageAmount] = useState('');
   // Any team member can fill AM / videographer / photographer for a client.
   const teamAssigneeNames = getAllTeamMemberNames?.() || [];
   const [previewSrc, setPreviewSrc] = useState(null);
@@ -153,6 +157,7 @@ export default function ClientManagementPage({
     setPlanId(getClientPlanId(selectedClient) || 'custom');
     setShootDaysPerMonth(String(getClientShootDaysPerMonth(selectedClient) || ''));
     setShootHoursPerDay(String(getClientShootHoursPerDay(selectedClient) || ''));
+    setMonthlyPackageAmount(String(getClientMonthlyPackageAmount(selectedClient) || ''));
     const normalized = normalizeClientLogo(getClientLogo(selectedClient));
     setPreviewSrc(normalized?.src || null);
     setLogoCrop({
@@ -259,6 +264,10 @@ export default function ClientManagementPage({
     setPlanError('');
     setPlanMessage('');
     try {
+      const packageAmount = (() => {
+        const n = Number(monthlyPackageAmount);
+        return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0;
+      })();
       const result = await saveClientProfile(selectedClient, {
         planId: normalizeClientPlanId(planId),
         reelPointsTarget: normalizeReelPointsTarget(reelPointsTarget),
@@ -271,10 +280,14 @@ export default function ClientManagementPage({
         photographer: photographer || '',
         shootDaysPerMonth: Math.max(0, Math.round(Number(shootDaysPerMonth) || 0)),
         shootHoursPerDay: Math.max(0, Number(shootHoursPerDay) || 0),
+        monthlyPackageAmount: packageAmount,
       });
       if (result?.ok === false) {
         setPlanError(result.error || 'Could not save plan.');
         return;
+      }
+      if (typeof setMonthlyRetainer === 'function' && typeof currentYearMonth === 'function') {
+        setMonthlyRetainer(selectedClient, currentYearMonth(), packageAmount);
       }
       setPlanMessage('Plan saved.');
       setTimeout(() => setPlanMessage(''), 4000);
@@ -300,7 +313,12 @@ export default function ClientManagementPage({
       (videographer || '') !== (getClientVideographer(selectedClient) || '') ||
       (photographer || '') !== (getClientPhotographer(selectedClient) || '') ||
       Math.max(0, Math.round(Number(shootDaysPerMonth) || 0)) !== getClientShootDaysPerMonth(selectedClient) ||
-      Math.max(0, Number(shootHoursPerDay) || 0) !== getClientShootHoursPerDay(selectedClient));
+      Math.max(0, Number(shootHoursPerDay) || 0) !== getClientShootHoursPerDay(selectedClient) ||
+      (() => {
+        const n = Number(monthlyPackageAmount);
+        const packageAmount = Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0;
+        return packageAmount !== getClientMonthlyPackageAmount(selectedClient);
+      })());
 
   const handleAddClient = async (name, clientColor, logo) => {
     const result = await addClient(name, clientColor, logo);
@@ -691,7 +709,24 @@ export default function ClientManagementPage({
                 </label>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <label className="block">
+                  <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                    Monthly package ($)
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={monthlyPackageAmount}
+                    onChange={(e) => setMonthlyPackageAmount(e.target.value)}
+                    placeholder="e.g. 2500"
+                    className="w-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
+                  />
+                  <p className="mt-1.5 text-[10px] text-white/35">
+                    Sets this month’s Revenue retainer for the client.
+                  </p>
+                </label>
                 <label className="block">
                   <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
                     Shoot days / month
@@ -729,8 +764,8 @@ export default function ClientManagementPage({
               </div>
 
               <p className="text-[10px] text-white/35">
-                Assigned AM / videographer / photographer earn plan pay on Payroll. Editors still earn from
-                completed cards.
+                Assigned AM / videographer / photographer earn plan pay on Finances → Pay. Editors still earn
+                from completed cards.
               </p>
 
               {planError && <p className="text-sm text-rose-300">{planError}</p>}
