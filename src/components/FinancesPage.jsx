@@ -14,7 +14,7 @@ import { useClientsContext } from '../context/ClientsContext';
 import { isSharedOperationsLogin } from '../utils/staffAuth';
 import { staffHasLeadershipWorkspaceAccess } from '../utils/staffMembers';
 import { buildEditorReelPointsByAssignee } from '../utils/editorTodo';
-import { buildPlanBasedPayByAssignee } from '../utils/planBasedPay';
+import { buildPlanBasedPayByAssignee, buildFullQuotaEditorPay, projectPayrollAtFullDelivery } from '../utils/planBasedPay';
 import { sortClientNamesAlphabetically } from '../utils/clients';
 
 function fmt$(n) {
@@ -160,11 +160,19 @@ function SummaryCard({ label, value, tone = 'default', hint }) {
         : tone === 'warn'
           ? 'text-amber-300'
           : 'text-white';
+  const hintClass =
+    tone === 'good'
+      ? 'text-emerald-200/70'
+      : tone === 'bad'
+        ? 'text-rose-200/70'
+        : tone === 'warn'
+          ? 'text-amber-200/70'
+          : 'text-white/45';
   return (
     <div className={`${surfacePanelClass} px-4 py-3`}>
       <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/40">{label}</p>
       <p className={`mt-1 text-lg font-semibold tabular-nums ${toneClass}`}>{fmt$(value)}</p>
-      {hint ? <p className="mt-1 text-[10px] text-rose-200/70">{hint}</p> : null}
+      {hint ? <p className={`mt-1 text-[10px] ${hintClass}`}>{hint}</p> : null}
     </div>
   );
 }
@@ -462,6 +470,8 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     getClientPhotographer,
     getClientReelPointsTarget,
     getClientCarouselStaticTarget,
+    getClientCarouselTarget,
+    getClientStaticTarget,
     getClientShootDaysPerMonth,
     getClientShootHoursPerDay,
     getClientMonthlyPackageAmount,
@@ -655,6 +665,53 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
   const snapshot = useMemo(
     () => getMonthlySnapshot(selectedMonth, pointsMaps),
     [getMonthlySnapshot, selectedMonth, pointsMaps],
+  );
+
+  const actualEditorPay = useMemo(
+    () =>
+      (snapshot.payrollStaff || []).reduce(
+        (sum, person) => sum + (Number(person.pointsPay) || 0),
+        0,
+      ),
+    [snapshot.payrollStaff],
+  );
+
+  const fullQuotaEditorPay = useMemo(() => {
+    const { total } = buildFullQuotaEditorPay({
+      clients,
+      getClientReelPointsTarget,
+      getClientCarouselStaticTarget,
+      getClientCarouselTarget,
+      getClientStaticTarget,
+      rates: payRates,
+    });
+    return total;
+  }, [
+    clients,
+    getClientReelPointsTarget,
+    getClientCarouselStaticTarget,
+    getClientCarouselTarget,
+    getClientStaticTarget,
+    payRates,
+  ]);
+
+  /** Revenue uses payroll as if all plan deliverables are done; Pay tab still uses actuals. */
+  const projectedPayroll = useMemo(
+    () =>
+      projectPayrollAtFullDelivery({
+        currentPayroll: snapshot.payroll,
+        actualEditorPay,
+        fullQuotaEditorPay,
+      }),
+    [snapshot.payroll, actualEditorPay, fullQuotaEditorPay],
+  );
+
+  const projectedNetProfit = useMemo(
+    () =>
+      (Number(snapshot.totalRevenue) || 0) -
+      projectedPayroll -
+      (Number(snapshot.totalExpenses) || 0),
+    [snapshot.totalRevenue, snapshot.totalExpenses, projectedPayroll],
   );
 
   const existingTeamIds = useMemo(() => {
@@ -914,7 +971,16 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
         <>
           <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <SummaryCard label="Revenue" value={snapshot.totalRevenue} tone="good" />
-            <SummaryCard label="Payroll" value={snapshot.payroll} tone="warn" />
+            <SummaryCard
+              label="Payroll"
+              value={projectedPayroll}
+              tone="warn"
+              hint={
+                actualEditorPay !== fullQuotaEditorPay
+                  ? `At full plan delivery · ${fmt$(actualEditorPay)} earned so far`
+                  : 'At full plan delivery'
+              }
+            />
             <SummaryCard
               label="Expenses"
               value={snapshot.totalExpenses}
@@ -927,8 +993,8 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
             />
             <SummaryCard
               label="Net profit"
-              value={snapshot.netProfit}
-              tone={snapshot.netProfit >= 0 ? 'good' : 'bad'}
+              value={projectedNetProfit}
+              tone={projectedNetProfit >= 0 ? 'good' : 'bad'}
             />
           </div>
 
@@ -1224,7 +1290,8 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
                 </button>
               </form>
               <p className="mt-2 text-[10px] text-white/30">
-                Profit = revenue − payroll − expenses (includes QB card fees above).
+                Profit = revenue − payroll (full plan delivery) − expenses (includes QB card fees
+                above). Pay tab still shows who earned what from completed work.
               </p>
             </div>
           </div>

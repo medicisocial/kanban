@@ -44,6 +44,93 @@ export function computeClientPlanPay(
   };
 }
 
+/**
+ * Editor deliverable $ to finish a client's monthly plan quotas.
+ * Uses discrete carousel/static counts when set; otherwise prices the feed
+ * point budget at the carousel rate ($/pt — same $ as all-statics at current rates).
+ */
+export function computeClientEditorQuotaPay(
+  {
+    reelPoints = 0,
+    carouselStaticPoints = 0,
+    carouselTarget = 0,
+    staticTarget = 0,
+  } = {},
+  rates = {},
+) {
+  const r = normalizePayRates(rates);
+  const reels = normalizeReelPointsTarget(reelPoints);
+  const feedPoints = normalizeReelPointsTarget(carouselStaticPoints);
+  const carousels = Math.max(0, Math.round(Number(carouselTarget) || 0));
+  const statics = Math.max(0, Math.round(Number(staticTarget) || 0));
+
+  const reelPay = reels * r.reelPointRate;
+  let carouselPay = 0;
+  let staticPay = 0;
+  if (carousels > 0 || statics > 0) {
+    carouselPay = carousels * r.carouselRate;
+    staticPay = statics * r.staticPostRate;
+  } else if (feedPoints > 0) {
+    // Feed point = 1 carousel or 2 statics; at default rates both cost carouselRate per point.
+    carouselPay = feedPoints * r.carouselRate;
+  }
+
+  return {
+    reelPoints: reels,
+    carouselStaticPoints: feedPoints,
+    carousels,
+    statics,
+    reelPay,
+    carouselPay,
+    staticPay,
+    editorPay: reelPay + carouselPay + staticPay,
+  };
+}
+
+/** Sum editor pay if every client hit their plan content quotas this month. */
+export function buildFullQuotaEditorPay({
+  clients = [],
+  getClientReelPointsTarget,
+  getClientCarouselStaticTarget,
+  getClientCarouselTarget,
+  getClientStaticTarget,
+  rates,
+} = {}) {
+  let total = 0;
+  const byClient = {};
+  for (const client of clients || []) {
+    if (!client) continue;
+    const pay = computeClientEditorQuotaPay(
+      {
+        reelPoints: getClientReelPointsTarget?.(client) || 0,
+        carouselStaticPoints: getClientCarouselStaticTarget?.(client) || 0,
+        carouselTarget: getClientCarouselTarget?.(client) || 0,
+        staticTarget: getClientStaticTarget?.(client) || 0,
+      },
+      rates,
+    );
+    if (!pay.editorPay) continue;
+    byClient[client] = pay;
+    total += pay.editorPay;
+  }
+  return { total, byClient };
+}
+
+/**
+ * Revenue projection: current payroll with editor piece replaced by full plan quotas.
+ * Plan-role and extras stay as-is; Pay tab still uses actual completions for who earned what.
+ */
+export function projectPayrollAtFullDelivery({
+  currentPayroll = 0,
+  actualEditorPay = 0,
+  fullQuotaEditorPay = 0,
+} = {}) {
+  const current = Number(currentPayroll) || 0;
+  const actual = Number(actualEditorPay) || 0;
+  const full = Number(fullQuotaEditorPay) || 0;
+  return current - actual + full;
+}
+
 function emptyAssignee(name) {
   return {
     name,
