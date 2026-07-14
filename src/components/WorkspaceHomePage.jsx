@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { EDITOR_POINT_PAY_RATE } from '../constants';
+import { CAROUSEL_PAY_RATE, EDITOR_POINT_PAY_RATE, STATIC_POST_PAY_RATE } from '../constants';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import {
   PortalRoleSummary,
@@ -97,7 +97,7 @@ export default function WorkspaceHomePage({
     month: 'long',
     year: 'numeric',
   });
-  const completedContentSubtitle = `Reels scheduled for ${completedContentMonthLabel} · $${EDITOR_POINT_PAY_RATE}/point.`;
+  const completedContentSubtitle = `Reels ($${EDITOR_POINT_PAY_RATE}/pt), carousels ($${CAROUSEL_PAY_RATE}), and statics ($${STATIC_POST_PAY_RATE}) scheduled for ${completedContentMonthLabel}.`;
 
   const pipelineRoles = [];
 

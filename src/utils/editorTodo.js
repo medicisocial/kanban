@@ -1,4 +1,11 @@
-import { COLUMNS, EDITOR_POINT_PAY_RATE, normalizeEditorPoints } from '../constants';
+import {
+  COLUMNS,
+  CAROUSEL_PAY_RATE,
+  EDITOR_POINT_PAY_RATE,
+  STATIC_POST_PAY_RATE,
+  getCardEditorPay,
+  normalizeEditorPoints,
+} from '../constants';
 import { PIPELINE_REGRESSION_AUTH_KEY } from './cardPipelineMerge';
 import { toDateKey } from './calendar';
 import { matchesClientFilter } from './clients';
@@ -359,6 +366,9 @@ export function buildEditorCompletedByAssignee(
   const displayNameByKey = new Map();
   const counts = new Map();
   const pointsByKey = new Map();
+  const carouselsByKey = new Map();
+  const staticsByKey = new Map();
+  const payByKey = new Map();
 
   const registerName = (name) => {
     const trimmed = (name || '').trim();
@@ -367,6 +377,9 @@ export function buildEditorCompletedByAssignee(
     if (!displayNameByKey.has(key)) displayNameByKey.set(key, trimmed);
     if (!counts.has(key)) counts.set(key, 0);
     if (!pointsByKey.has(key)) pointsByKey.set(key, 0);
+    if (!carouselsByKey.has(key)) carouselsByKey.set(key, 0);
+    if (!staticsByKey.has(key)) staticsByKey.set(key, 0);
+    if (!payByKey.has(key)) payByKey.set(key, 0);
   };
 
   for (const name of editorNames) registerName(name);
@@ -379,30 +392,51 @@ export function buildEditorCompletedByAssignee(
     const key = assignee.toLowerCase();
     if (!displayNameByKey.has(key)) displayNameByKey.set(key, assignee);
     counts.set(key, (counts.get(key) || 0) + 1);
+
     const reelPoints = getCardEditorPoints(card);
     if (reelPoints) {
       pointsByKey.set(key, (pointsByKey.get(key) || 0) + reelPoints);
+    }
+    if (card.contentType === 'Carousel') {
+      carouselsByKey.set(key, (carouselsByKey.get(key) || 0) + 1);
+    }
+    if (card.contentType === 'Static Post') {
+      staticsByKey.set(key, (staticsByKey.get(key) || 0) + 1);
+    }
+
+    const pay = getCardEditorPay(card);
+    if (pay) {
+      payByKey.set(key, (payByKey.get(key) || 0) + pay);
     }
   }
 
   return [...displayNameByKey.keys()]
     .map((key) => {
       const points = pointsByKey.get(key) || 0;
+      const carousels = carouselsByKey.get(key) || 0;
+      const statics = staticsByKey.get(key) || 0;
+      const pay = payByKey.get(key) || 0;
       return {
         name: displayNameByKey.get(key),
         count: counts.get(key) || 0,
         points,
-        pay: points * EDITOR_POINT_PAY_RATE,
+        carousels,
+        statics,
+        carouselPay: carousels * CAROUSEL_PAY_RATE,
+        staticPay: statics * STATIC_POST_PAY_RATE,
+        reelPay: points * EDITOR_POINT_PAY_RATE,
+        pay,
       };
     })
     .sort((a, b) => {
+      if (b.pay !== a.pay) return b.pay - a.pay;
       if (b.points !== a.points) return b.points - a.points;
       if (b.count !== a.count) return b.count - a.count;
       return a.name.localeCompare(b.name);
     });
 }
 
-/** Reel points + pay for completed reels this month, keyed by assignee (case-insensitive). */
+/** Completed deliverable pay this month by assignee (reels + carousels + statics). */
 export function buildEditorReelPointsByAssignee(
   cards,
   { clientFilter = 'all', editorNames = [], referenceDate = new Date() } = {},
@@ -411,5 +445,14 @@ export function buildEditorReelPointsByAssignee(
     clientFilter,
     editorNames,
     referenceDate,
-  }).map(({ name, points, pay }) => ({ name, points, pay }));
+  }).map(({ name, points, carousels, statics, carouselPay, staticPay, reelPay, pay }) => ({
+    name,
+    points,
+    carousels,
+    statics,
+    carouselPay,
+    staticPay,
+    reelPay,
+    pay,
+  }));
 }

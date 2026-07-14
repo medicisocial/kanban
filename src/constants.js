@@ -75,6 +75,12 @@ export const FEED_POST_CONTENT_TYPES = ['Carousel', 'Static Post'];
 /** Dollars paid per full reel point (½ point = half of this). */
 export const EDITOR_POINT_PAY_RATE = 70;
 
+/** Flat pay for a completed Carousel (not on the reel point scale). */
+export const CAROUSEL_PAY_RATE = 70;
+
+/** Flat pay for a completed Static Post. */
+export const STATIC_POST_PAY_RATE = 35;
+
 export const EDITOR_POINT_OPTIONS = [
   { value: 1, label: '1 point' },
   { value: 0.5, label: '½ point' },
@@ -84,6 +90,17 @@ export function normalizeEditorPoints(value) {
   const num = Number(value);
   if (num === 0.5) return 0.5;
   return 1;
+}
+
+/** Payroll dollars for one completed card (0 if not a paid content type). */
+export function getCardEditorPay(card) {
+  if (!card) return 0;
+  if (card.contentType === 'Reel') {
+    return normalizeEditorPoints(card.editorPoints) * EDITOR_POINT_PAY_RATE;
+  }
+  if (card.contentType === 'Carousel') return CAROUSEL_PAY_RATE;
+  if (card.contentType === 'Static Post') return STATIC_POST_PAY_RATE;
+  return 0;
 }
 
 export function normalizeReelPointsTarget(value) {

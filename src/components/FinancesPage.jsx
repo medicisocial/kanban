@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { EDITOR_POINT_PAY_RATE } from '../constants';
+import { CAROUSEL_PAY_RATE, EDITOR_POINT_PAY_RATE, STATIC_POST_PAY_RATE } from '../constants';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import { IconChevronLeft, IconChevronRight } from './clientPortal/ClientPortalIcons';
@@ -139,10 +139,20 @@ function PayrollPersonRow({ person, onUpdate, onRemove }) {
       </div>
 
       {person.kind === 'team' && (
-        <p className="mt-3 text-xs text-white/55">
-          Reel points: {person.points || 0} · {fmt$(person.pointsPay || 0)}
-          <span className="text-white/35"> (${EDITOR_POINT_PAY_RATE}/pt)</span>
-        </p>
+        <div className="mt-3 space-y-1 text-xs text-white/55">
+          <p>
+            Reels: {person.points || 0} pts · {fmt$(person.reelPay ?? (person.points || 0) * EDITOR_POINT_PAY_RATE)}
+            <span className="text-white/35"> (${EDITOR_POINT_PAY_RATE}/pt)</span>
+          </p>
+          <p>
+            Carousels: {person.carousels || 0} · {fmt$(person.carouselPay || 0)}
+            <span className="text-white/35"> (${CAROUSEL_PAY_RATE} each)</span>
+          </p>
+          <p>
+            Statics: {person.statics || 0} · {fmt$(person.staticPay || 0)}
+            <span className="text-white/35"> (${STATIC_POST_PAY_RATE} each)</span>
+          </p>
+        </div>
       )}
 
       <div className="mt-3 space-y-2">
@@ -353,13 +363,31 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
     const roster = buildEditorReelPointsByAssignee(cards || [], { referenceDate });
     const pointsByName = {};
     const pointsPayByName = {};
+    const carouselsByName = {};
+    const staticsByName = {};
+    const carouselPayByName = {};
+    const staticPayByName = {};
+    const reelPayByName = {};
     for (const entry of roster) {
       const key = String(entry.name || '').trim().toLowerCase();
       if (!key) continue;
       pointsByName[key] = entry.points || 0;
       pointsPayByName[key] = entry.pay || 0;
+      carouselsByName[key] = entry.carousels || 0;
+      staticsByName[key] = entry.statics || 0;
+      carouselPayByName[key] = entry.carouselPay || 0;
+      staticPayByName[key] = entry.staticPay || 0;
+      reelPayByName[key] = entry.reelPay || 0;
     }
-    return { pointsByName, pointsPayByName };
+    return {
+      pointsByName,
+      pointsPayByName,
+      carouselsByName,
+      staticsByName,
+      carouselPayByName,
+      staticPayByName,
+      reelPayByName,
+    };
   }, [cards, selectedMonth]);
 
   const snapshot = useMemo(
@@ -445,7 +473,8 @@ export default function FinancesPage({ finances, cards = [], teamMembers: teamMe
           <div>
             <h3 className="text-sm font-semibold text-white">People</h3>
             <p className="mt-1 text-xs text-white/45">
-              Team members earn reel points × ${EDITOR_POINT_PAY_RATE}. Add custom fields for bonuses or
+              Team members earn reels (${EDITOR_POINT_PAY_RATE}/pt), carousels (${CAROUSEL_PAY_RATE}), and
+              statics (${STATIC_POST_PAY_RATE}). Add custom fields for bonuses or flat amounts.
               other pay. Custom people use fields only.
             </p>
           </div>

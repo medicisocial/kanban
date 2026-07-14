@@ -845,9 +845,19 @@ export function useFinances() {
       const payrollMonth = normalizePayrollMonth(payroll?.data?.[yearMonth]);
       const pointsPayByName = options.pointsPayByName || {};
       const pointsByName = options.pointsByName || {};
+      const carouselsByName = options.carouselsByName || {};
+      const staticsByName = options.staticsByName || {};
+      const carouselPayByName = options.carouselPayByName || {};
+      const staticPayByName = options.staticPayByName || {};
+      const reelPayByName = options.reelPayByName || {};
       const payrollStaff = payrollMonth.staff.map((person) => {
         const nameKey = String(person.name || '').trim().toLowerCase();
         const points = Number(pointsByName[nameKey]) || 0;
+        const carousels = Number(carouselsByName[nameKey]) || 0;
+        const statics = Number(staticsByName[nameKey]) || 0;
+        const reelPay = Number(reelPayByName[nameKey]) || 0;
+        const carouselPay = Number(carouselPayByName[nameKey]) || 0;
+        const staticPay = Number(staticPayByName[nameKey]) || 0;
         const pointsPay =
           person.kind === 'team' ? Number(pointsPayByName[nameKey]) || 0 : 0;
         const extraTotal = sumExtraFields(person.extraFields);
@@ -855,6 +865,11 @@ export function useFinances() {
         return {
           ...person,
           points,
+          carousels,
+          statics,
+          reelPay,
+          carouselPay,
+          staticPay,
           pointsPay,
           extraTotal,
           personTotal,

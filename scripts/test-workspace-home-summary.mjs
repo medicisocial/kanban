@@ -105,7 +105,12 @@ function buildEditorCompletedByAssignee(cards, { editorNames = [], referenceDate
   const displayNameByKey = new Map();
   const counts = new Map();
   const pointsByKey = new Map();
-  const PAY_RATE = 70;
+  const carouselsByKey = new Map();
+  const staticsByKey = new Map();
+  const payByKey = new Map();
+  const REEL_RATE = 70;
+  const CAROUSEL_RATE = 70;
+  const STATIC_RATE = 35;
 
   const registerName = (name) => {
     const trimmed = (name || '').trim();
@@ -114,6 +119,9 @@ function buildEditorCompletedByAssignee(cards, { editorNames = [], referenceDate
     if (!displayNameByKey.has(key)) displayNameByKey.set(key, trimmed);
     if (!counts.has(key)) counts.set(key, 0);
     if (!pointsByKey.has(key)) pointsByKey.set(key, 0);
+    if (!carouselsByKey.has(key)) carouselsByKey.set(key, 0);
+    if (!staticsByKey.has(key)) staticsByKey.set(key, 0);
+    if (!payByKey.has(key)) payByKey.set(key, 0);
   };
 
   for (const name of editorNames) registerName(name);
@@ -125,23 +133,39 @@ function buildEditorCompletedByAssignee(cards, { editorNames = [], referenceDate
     const key = assignee.toLowerCase();
     if (!displayNameByKey.has(key)) displayNameByKey.set(key, assignee);
     counts.set(key, (counts.get(key) || 0) + 1);
+    let pay = 0;
     if (card.contentType === 'Reel') {
       const pts = Number(card.editorPoints) === 0.5 ? 0.5 : 1;
       pointsByKey.set(key, (pointsByKey.get(key) || 0) + pts);
+      pay = pts * REEL_RATE;
+    } else if (card.contentType === 'Carousel') {
+      carouselsByKey.set(key, (carouselsByKey.get(key) || 0) + 1);
+      pay = CAROUSEL_RATE;
+    } else if (card.contentType === 'Static Post') {
+      staticsByKey.set(key, (staticsByKey.get(key) || 0) + 1);
+      pay = STATIC_RATE;
     }
+    if (pay) payByKey.set(key, (payByKey.get(key) || 0) + pay);
   }
 
   return [...displayNameByKey.keys()]
     .map((key) => {
       const points = pointsByKey.get(key) || 0;
+      const carousels = carouselsByKey.get(key) || 0;
+      const statics = staticsByKey.get(key) || 0;
       return {
         name: displayNameByKey.get(key),
         count: counts.get(key) || 0,
         points,
-        pay: points * PAY_RATE,
+        carousels,
+        statics,
+        carouselPay: carousels * CAROUSEL_RATE,
+        staticPay: statics * STATIC_RATE,
+        pay: payByKey.get(key) || 0,
       };
     })
     .sort((a, b) => {
+      if (b.pay !== a.pay) return b.pay - a.pay;
       if (b.points !== a.points) return b.points - a.points;
       if (b.count !== a.count) return b.count - a.count;
       return a.name.localeCompare(b.name);
@@ -292,6 +316,35 @@ assert(byAssignee[1].name === 'Sam' && byAssignee[1].count === 1, 'Sam second in
 assert(byAssignee[1].points === 0.5 && byAssignee[1].pay === 35, 'half-point reels pay $35');
 assert(byAssignee[2].name === 'Alex' && byAssignee[2].count === 0, 'editors with no scheduled posts still listed');
 assert(byAssignee[2].points === 0, 'editors with no reels have zero points');
+
+{
+  const withFeedPay = buildEditorCompletedByAssignee(
+    [
+      ...cards,
+      {
+        id: 'carousel-jordan',
+        columnId: 'approved',
+        contentType: 'Carousel',
+        assignedTo: 'Jordan',
+        dueDate: thisMonthDateKey,
+        editorCompletedAt: thisMonth,
+      },
+      {
+        id: 'static-jordan',
+        columnId: 'approved',
+        contentType: 'Static Post',
+        assignedTo: 'Jordan',
+        dueDate: thisMonthDateKey,
+        editorCompletedAt: thisMonth,
+      },
+    ],
+    { editorNames: ['Jordan'] },
+  );
+  const jordan = withFeedPay.find((entry) => entry.name === 'Jordan');
+  assert(jordan.carousels === 1 && jordan.carouselPay === 70, 'carousels pay $70 each');
+  assert(jordan.statics === 1 && jordan.staticPay === 35, 'static posts pay $35 each');
+  assert(jordan.pay === 280 + 70 + 35, 'total pay includes reels + carousel + static');
+}
 
 const lastMonthOnly = buildEditorCompletedCount(
   [

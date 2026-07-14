@@ -1,4 +1,4 @@
-import { EDITOR_POINT_PAY_RATE, getContentTypeStyle, normalizeEditorPoints } from '../constants';
+import { CAROUSEL_PAY_RATE, STATIC_POST_PAY_RATE, getContentTypeStyle, normalizeEditorPoints } from '../constants';
 import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import {
   buildEditorCompletedCards,
@@ -41,6 +41,16 @@ function CompletedContentCardRow({ card, onOpen, getClientColor }) {
                 {reelPoints === 0.5 ? '½' : '1'} pt
               </span>
             )}
+            {card.contentType === 'Carousel' && (
+              <span className="rounded-full border border-amber-400/25 px-2 py-0.5 text-[10px] font-medium text-amber-200/90">
+                ${CAROUSEL_PAY_RATE}
+              </span>
+            )}
+            {card.contentType === 'Static Post' && (
+              <span className="rounded-full border border-amber-400/25 px-2 py-0.5 text-[10px] font-medium text-amber-200/90">
+                ${STATIC_POST_PAY_RATE}
+              </span>
+            )}
             <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-medium text-white/45">
               {getEditorCompletedStatusLabel(card)}
             </span>
@@ -58,18 +68,21 @@ function CompletedContentCardRow({ card, onOpen, getClientColor }) {
 }
 
 function entryHasWork(entry) {
-  return (entry.count || 0) > 0 || (entry.points || 0) > 0;
+  return (entry.count || 0) > 0 || (entry.points || 0) > 0 || (entry.pay || 0) > 0;
 }
 
 function EntryTotals({ entry }) {
   const points = Number(entry.points) || 0;
-  const pay =
-    entry.pay != null ? Number(entry.pay) : points * EDITOR_POINT_PAY_RATE;
-  if (points > 0) {
+  const pay = Number(entry.pay) || 0;
+  if (pay > 0 || points > 0) {
+    const parts = [];
+    if (points > 0) parts.push(`${formatPoints(points)} pts`);
+    if ((entry.carousels || 0) > 0) parts.push(`${entry.carousels} car`);
+    if ((entry.statics || 0) > 0) parts.push(`${entry.statics} static`);
     return (
-      <span className="flex items-center gap-2 text-sm font-semibold tabular-nums text-white/78">
-        <span>{formatPoints(points)} pts</span>
-        <span className="text-white/35">·</span>
+      <span className="flex flex-wrap items-center justify-end gap-2 text-sm font-semibold tabular-nums text-white/78">
+        {parts.length > 0 && <span>{parts.join(' · ')}</span>}
+        {parts.length > 0 && <span className="text-white/35">·</span>}
         <span className="text-amber-200/90">{formatPay(pay)}</span>
       </span>
     );
