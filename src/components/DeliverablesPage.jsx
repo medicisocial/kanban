@@ -282,7 +282,7 @@ function ClientDeliverableRow({
             onSaveTarget={(next) => onSaveReelTarget(client, next)}
           />
           <QuotaCell
-            label="Feed"
+            label="Carousel / static"
             planned={feedPlanned}
             target={carouselStaticTarget}
             onTrack={summary.feedOnTrack}
@@ -456,7 +456,7 @@ export default function DeliverablesPage({
     <section>
       <ClientPortalSectionHeader
         title="Deliverables"
-        description="Month planned vs contract quotas (reels + feed)."
+        description="Month planned vs contract quotas (reel points + carousel / static)."
       />
 
       <MonthNav
@@ -474,7 +474,7 @@ export default function DeliverablesPage({
             target={totals.reelPointsTarget}
           />
           <QuotaSummaryCard
-            label="Feed"
+            label="Carousel / static"
             planned={totals.feedPlanned}
             target={totals.carouselStaticTarget}
           />
