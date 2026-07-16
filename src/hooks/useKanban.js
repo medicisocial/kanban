@@ -9,6 +9,7 @@ import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import { pushStaffSyncRecords } from '../lib/staffSyncApi';
 import { reportSyncIssue } from '../lib/workspaceSyncHealth';
 import { applyVaultIdeaShootSchedule, withPipelineRegressionAuthorization } from '../utils/cardPipelineMerge';
+import { resolveShootScriptFromIdea } from '../utils/videoIdeas';
 
 const getCardId = (card) => card.id;
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
@@ -268,6 +269,7 @@ export function useKanban() {
               {
                 ...card,
                 sourceIdeaId: idea.id,
+                shootScript: resolveShootScriptFromIdea(idea, card),
               },
               { isNew: false },
             ),
@@ -298,7 +300,7 @@ export function useKanban() {
           shootDuration: 45,
           shootModels: '',
           shootNeeds: '',
-          shootScript: '',
+          shootScript: resolveShootScriptFromIdea(idea),
           contentCreator: getDefaultAssigneeForRole('Content Creator'),
           assignedTo: getDefaultAssigneeForRole('Editor'),
           notes,

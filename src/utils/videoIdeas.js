@@ -58,8 +58,41 @@ export function buildBankIdeaData(ideaData = {}) {
   const now = Date.now();
   return {
     ...ideaData,
+    script: String(ideaData.script || '').trim(),
     status: 'approved',
     boardCardId: null,
     reviewedAt: now,
+  };
+}
+
+/** Resolve shoot script when scheduling an idea onto a card. */
+export function resolveShootScriptFromIdea(idea, existingCard = null) {
+  const ideaScript = String(idea?.script || '').trim();
+  const existingScript = String(existingCard?.shootScript || '').trim();
+  if (existingCard && existingScript) return existingScript;
+  return ideaScript;
+}
+
+/** Fields to restore onto an idea when a shoot card returns to the bank. */
+export function buildIdeaReturnFromCard(card, existingIdea = null) {
+  const shootScript = String(card?.shootScript || '').trim();
+  if (existingIdea) {
+    return {
+      boardCardId: null,
+      status: 'approved',
+      script: shootScript || String(existingIdea.script || '').trim(),
+    };
+  }
+  return {
+    client: card.client,
+    title: card.title,
+    contentType: card.contentType,
+    referenceVideo: card.referenceVideo || '',
+    description: card.notes || '',
+    script: shootScript,
+    clientComment: card.clientComment || '',
+    status: 'approved',
+    boardCardId: null,
+    reviewedAt: Date.now(),
   };
 }

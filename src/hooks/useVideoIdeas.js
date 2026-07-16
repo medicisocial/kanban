@@ -26,6 +26,7 @@ function createIdea(overrides = {}) {
     title: "",
     referenceVideo: "",
     description: "",
+    script: "",
     contentType: "Reel",
     status: "pending",
     clientComment: "",

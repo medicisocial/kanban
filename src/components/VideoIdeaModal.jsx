@@ -17,6 +17,7 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
     title: idea?.title || "",
     referenceVideo: idea?.referenceVideo || "",
     description: idea?.description || "",
+    script: idea?.script || "",
     contentType: idea?.contentType || "Reel",
     clientComment: idea?.clientComment || "",
   });
@@ -51,6 +52,7 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
       title,
       referenceVideo: referenceVideo || "",
       description: form.description.trim(),
+      script: form.script.trim(),
       clientComment: form.clientComment.trim(),
     });
     onClose();
@@ -169,6 +171,20 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
                 placeholder="Why this reference works, creative direction..."
                 className={`${inputClass} resize-y`}
               />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-gray-400">Script</span>
+              <textarea
+                value={form.script}
+                onChange={(e) => setForm({ ...form, script: e.target.value })}
+                rows={5}
+                placeholder="Write the full script — hooks, dialogue, on-screen text, shot notes..."
+                className={`${inputClass} resize-y`}
+              />
+              <p className="mt-1 text-[10px] text-gray-500">
+                Carries over to the shoot script when this idea is scheduled.
+              </p>
             </label>
 
             <label className="block">
