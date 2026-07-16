@@ -27,10 +27,12 @@ import { getCalendarClientNote, hasCalendarClientNote, isContentCalendarCard } f
 import { buildCalendarNoteDeletePatch } from '../utils/calendarNote';
 import { canReturnCardToVault } from '../utils/videoIdeas';
 import { beginBatch, endBatch } from '../utils/undoHistory';
+import ScriptPanel from './ScriptPanel';
 import DebouncedField, { DebouncedModelTagInput, DebouncedTimeInput } from './DebouncedField';
 
 const CARD_TABS = [
   { id: 'details', label: 'Details' },
+  { id: 'script', label: 'Script' },
   { id: 'production', label: 'Production' },
   { id: 'schedule', label: 'Schedule' },
   { id: 'references', label: 'References' },
@@ -410,6 +412,21 @@ function CardModal({
               className={inputClass}
             />
           </Field>
+
+          {activeTab === 'script' && (
+            <div>
+              <ScriptPanel
+                hook={card.shootScriptHook || ''}
+                body={card.shootScriptBody || ''}
+                overlays={card.shootTextOverlays || ''}
+                onChange={(next) => {
+                  if (next.hook !== undefined) commitTextField('shootScriptHook', next.hook);
+                  if (next.body !== undefined) commitTextField('shootScriptBody', next.body);
+                  if (next.overlays !== undefined) commitTextField('shootTextOverlays', next.overlays);
+                }}
+              />
+            </div>
+          )}
 
 
           <Field label="Video File Link">

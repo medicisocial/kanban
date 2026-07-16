@@ -17,7 +17,9 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
     title: idea?.title || "",
     referenceVideo: idea?.referenceVideo || "",
     description: idea?.description || "",
-    script: idea?.script || "",
+    scriptHook: idea?.scriptHook || "",
+    scriptBody: idea?.scriptBody || "",
+    scriptOverlays: idea?.scriptOverlays || "",
     contentType: idea?.contentType || "Reel",
     clientComment: idea?.clientComment || "",
   });
@@ -52,7 +54,9 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
       title,
       referenceVideo: referenceVideo || "",
       description: form.description.trim(),
-      script: form.script.trim(),
+      scriptHook: form.scriptHook.trim(),
+      scriptBody: form.scriptBody.trim(),
+      scriptOverlays: form.scriptOverlays.trim(),
       clientComment: form.clientComment.trim(),
     });
     onClose();
@@ -162,30 +166,55 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
               </p>
             </label>
 
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-gray-400">Notes for Client</span>
-              <textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                rows={3}
-                placeholder="Why this reference works, creative direction..."
-                className={`${inputClass} resize-y`}
-              />
-            </label>
+            {/* Hide Notes for Client when editing an approved bank idea */}
+            {!(isEdit && idea?.status === 'approved') && (
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-gray-400">Notes for Client</span>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  rows={3}
+                  placeholder="Why this reference works, creative direction..."
+                  className={`${inputClass} resize-y`}
+                />
+              </label>
+            )}
 
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-gray-400">Script</span>
-              <textarea
-                value={form.script}
-                onChange={(e) => setForm({ ...form, script: e.target.value })}
-                rows={5}
-                placeholder="Write the full script — hooks, dialogue, on-screen text, shot notes..."
-                className={`${inputClass} resize-y`}
-              />
-              <p className="mt-1 text-[10px] text-gray-500">
-                Carries over to the shoot script when this idea is scheduled.
-              </p>
-            </label>
+            <div className="space-y-4">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-gray-400">Hook</span>
+                <textarea
+                  value={form.scriptHook}
+                  onChange={(e) => setForm({ ...form, scriptHook: e.target.value })}
+                  rows={3}
+                  placeholder="First 1–3 seconds — opening line / hook"
+                  className={`${inputClass} resize-y`}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-gray-400">Body</span>
+                <textarea
+                  value={form.scriptBody}
+                  onChange={(e) => setForm({ ...form, scriptBody: e.target.value })}
+                  rows={6}
+                  placeholder="Main beats, dialogue, B-roll notes"
+                  className={`${inputClass} resize-y`}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-gray-400">Text overlays</span>
+                <textarea
+                  value={form.scriptOverlays}
+                  onChange={(e) => setForm({ ...form, scriptOverlays: e.target.value })}
+                  rows={4}
+                  placeholder="On-screen copy, line by line"
+                  className={`${inputClass} resize-y`}
+                />
+                <p className="mt-1 text-[10px] text-gray-500">
+                  Carries over to the shoot script when this idea is scheduled.
+                </p>
+              </label>
+            </div>
 
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-gray-400">Client Comment</span>
