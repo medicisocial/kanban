@@ -18,6 +18,7 @@ import { CardLinks } from "./clientPortal/ReferenceVideoLink";
 import DebouncedField, { DebouncedModelTagInput, DebouncedTimeInput } from "./DebouncedField";
 import ShootDayTimelinePrintButton from "./ShootDayTimelinePrintButton";
 import ShootScriptModal from "./ShootScriptModal";
+import { hasStructuredScript } from "../utils/scriptFields";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-2 py-1 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50";
@@ -134,12 +135,12 @@ function ShootDayScheduleRow({
               type="button"
               onClick={() => onOpenScript(card)}
               className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-                card.shootScript
+                hasStructuredScript(card)
                   ? "bg-[#810100]/20 text-[#fca5a5] hover:bg-[#810100]/30"
                   : "border border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
               }`}
             >
-              {card.shootScript ? "Script" : "Write script"}
+              {hasStructuredScript(card) ? "Script" : "Write script"}
             </button>
           )}
           {onReturnToVault && canReturnCardToVault(card) && !rowReadOnly && (

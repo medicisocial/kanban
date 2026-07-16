@@ -100,6 +100,9 @@ export default function ClientShootDayPortal({
         shootModels: card.shootModels || "",
         shootNeeds: card.shootNeeds || "",
         shootScript: card.shootScript || "",
+        shootScriptHook: card.shootScriptHook || "",
+        shootScriptBody: card.shootScriptBody || "",
+        shootTextOverlays: card.shootTextOverlays || "",
       });
     }
   }, [localCards, localPlan, onUpdateCard, onUpdatePlan]);

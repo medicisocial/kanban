@@ -11,6 +11,7 @@ import {
 } from "../utils/shootDay";
 import ShootDayTimelinePrintButton from "./ShootDayTimelinePrintButton";
 import ShootScriptModal from "./ShootScriptModal";
+import { hasStructuredScript } from "../utils/scriptFields";
 import { canReturnCardToVault } from "../utils/videoIdeas";
 
 const LANE_HEIGHT = 104;
@@ -222,7 +223,7 @@ export default function ShootDayTimeline({
                         <span>Reference video ↗</span>
                       </a>
                     )}
-                    {(entry.card.shootScript || canEditScript) && (
+                    {(hasStructuredScript(entry.card) || canEditScript) && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -232,7 +233,7 @@ export default function ShootDayTimeline({
                         className="inline-flex items-center gap-1.5 text-sm text-[#fca5a5] transition hover:text-[#fecaca]"
                       >
                         <span>📄</span>
-                        <span>{entry.card.shootScript ? 'View script' : 'Write script'}</span>
+                        <span>{hasStructuredScript(entry.card) ? 'View script' : 'Write script'}</span>
                       </button>
                     )}
                     {onReturnToVault && canReturnCardToVault(entry.card) && (

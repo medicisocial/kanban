@@ -413,22 +413,6 @@ function CardModal({
             />
           </Field>
 
-          {activeTab === 'script' && (
-            <div>
-              <ScriptPanel
-                hook={card.shootScriptHook || ''}
-                body={card.shootScriptBody || ''}
-                overlays={card.shootTextOverlays || ''}
-                onChange={(next) => {
-                  if (next.hook !== undefined) commitTextField('shootScriptHook', next.hook);
-                  if (next.body !== undefined) commitTextField('shootScriptBody', next.body);
-                  if (next.overlays !== undefined) commitTextField('shootTextOverlays', next.overlays);
-                }}
-              />
-            </div>
-          )}
-
-
           <Field label="Video File Link">
             <DebouncedField
               {...SAVE_ON_CLOSE}
@@ -637,6 +621,19 @@ function CardModal({
             <span className="text-xs text-gray-400">{card.client}</span>
           </div>
             </>
+          )}
+
+          {activeTab === 'script' && (
+            <ScriptPanel
+              hook={displayCard.shootScriptHook || ''}
+              body={displayCard.shootScriptBody || displayCard.shootScript || ''}
+              overlays={displayCard.shootTextOverlays || ''}
+              onChange={(next) => {
+                if (next.hook !== undefined) commitTextField('shootScriptHook', next.hook);
+                if (next.body !== undefined) commitTextField('shootScriptBody', next.body);
+                if (next.overlays !== undefined) commitTextField('shootTextOverlays', next.overlays);
+              }}
+            />
           )}
 
           {activeTab === 'production' && !isOneOff && (

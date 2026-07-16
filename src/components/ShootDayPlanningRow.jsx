@@ -3,6 +3,7 @@ import { contentTypeLabelProps, contentTypeCardStyle } from "../utils/contentTyp
 import { useClientsContext } from "../context/ClientsContext";
 import { getDefaultShootEndTime, parseTimeToMinutes } from "../utils/shootDay";
 import { canReturnCardToVault } from "../utils/videoIdeas";
+import { hasStructuredScript } from "../utils/scriptFields";
 import ShootLocationLink from "./ShootLocationLink";
 import DebouncedField, { DebouncedModelTagInput, DebouncedTimeInput } from "./DebouncedField";
 
@@ -83,12 +84,12 @@ export default function ShootDayPlanningRow({
               type="button"
               onClick={() => onOpenScript(card)}
               className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-                card.shootScript
+                hasStructuredScript(card)
                   ? "bg-[#810100]/20 text-[#fca5a5] hover:bg-[#810100]/30"
                   : "border border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
               }`}
             >
-              {card.shootScript ? "Edit script" : "Write script"}
+              {hasStructuredScript(card) ? "Edit script" : "Write script"}
             </button>
           )}
           {onReturnToVault && canReturnCardToVault(card) && !readOnly && (
