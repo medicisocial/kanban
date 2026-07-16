@@ -46,7 +46,6 @@ export default function ScriptPanel({
           value={hook}
           onChange={(e) => onChange({ hook: e.target.value })}
           rows={3}
-          placeholder="First 1–3 seconds — opening line / hook"
           className={`${inputClass} resize-y`}
         />
       </label>
@@ -56,7 +55,6 @@ export default function ScriptPanel({
           value={body}
           onChange={(e) => onChange({ body: e.target.value })}
           rows={6}
-          placeholder="Main beats, dialogue, B-roll notes"
           className={`${inputClass} resize-y`}
         />
       </label>
@@ -66,7 +64,6 @@ export default function ScriptPanel({
           value={overlays}
           onChange={(e) => onChange({ overlays: e.target.value })}
           rows={4}
-          placeholder="On-screen copy, line by line"
           className={`${inputClass} resize-y`}
         />
       </label>
