@@ -7,6 +7,7 @@ import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDe
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import { pushStaffSyncRecords } from '../lib/staffSyncApi';
+import { markRecentlyPushed } from '../lib/syncEchoGuard';
 import { reportSyncIssue } from '../lib/workspaceSyncHealth';
 import { applyVaultIdeaShootSchedule, withPipelineRegressionAuthorization } from '../utils/cardPipelineMerge';
 import { resolveShootScriptsFromIdea } from '../utils/videoIdeas';
@@ -170,7 +171,9 @@ export function useKanban() {
     if (!SUPABASE_ENABLED || !card) return;
     pushStaffSyncRecords('cards', [card])
       .then((ok) => {
-        if (!ok) {
+        if (ok) {
+          markRecentlyPushed('cards', [card.id]);
+        } else {
           reportSyncIssue({
             level: 'warn',
             table: 'cards',
