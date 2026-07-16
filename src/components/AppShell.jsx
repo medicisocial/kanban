@@ -74,6 +74,7 @@ import {
   findIdeaBoardCard,
   findIdeaForCard,
   getVaultIdeas,
+  buildIdeaReturnFromCard,
 } from "../utils/videoIdeas";
 
 function PageLoadingFallback() {
@@ -505,19 +506,9 @@ export default function AppShell({ onSignOut }) {
           removeCardFromShootRoster(card.client, card.shootDate, card.id);
         }
         if (idea) {
-          updateIdea(idea.id, { boardCardId: null, status: "approved" });
+          updateIdea(idea.id, buildIdeaReturnFromCard(card, idea));
         } else {
-          addIdea({
-            client: card.client,
-            title: card.title,
-            contentType: card.contentType,
-            referenceVideo: card.referenceVideo || "",
-            description: card.notes || "",
-            clientComment: card.clientComment || "",
-            status: "approved",
-            boardCardId: null,
-            reviewedAt: Date.now(),
-          });
+          addIdea(buildIdeaReturnFromCard(card));
         }
         if (selectedCard?.id === card.id) setSelectedCard(null);
       } finally {
