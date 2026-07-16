@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getDefaultCalendarDate,
   addWeeks,
@@ -17,6 +17,7 @@ import AddCalendarPostModal from './AddCalendarPostModal';
 import CalendarZoomControls, { CalendarZoomViewport } from './CalendarZoomControls';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import { useCalendarZoom, CALENDAR_ZOOM_STORAGE_KEYS } from '../hooks/useCalendarZoom';
+import { applyPendingCalendarMoves } from '../utils/calendarPendingMoves';
 import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 
 export default function Calendar({
@@ -36,6 +37,7 @@ export default function Calendar({
   const [viewMode, setViewMode] = useState('month');
   const [showAddModal, setShowAddModal] = useState(false);
   const [addDefaults, setAddDefaults] = useState({ dueDate: '' });
+  const [pendingMoves, setPendingMoves] = useState({});
   const { zoom, defaultZoom, setZoom } = useCalendarZoom(CALENDAR_ZOOM_STORAGE_KEYS.content);
 
   const isStories = calendarTab === 'stories';
@@ -45,12 +47,47 @@ export default function Calendar({
     return filterCards(planned, { client: clientFilter });
   }, [cards, clientFilter, isStories]);
 
+  const optimisticCards = useMemo(
+    () => applyPendingCalendarMoves(visibleCards, pendingMoves),
+    [visibleCards, pendingMoves],
+  );
+
   const cardsByDate = useMemo(() => {
     if (isStories) {
-      return buildStoryCalendarByDate(visibleCards, focusDate, viewMode);
+      return buildStoryCalendarByDate(optimisticCards, focusDate, viewMode);
     }
-    return groupCalendarCardsByDate(visibleCards, getPlan);
-  }, [visibleCards, isStories, focusDate, viewMode, getPlan]);
+    return groupCalendarCardsByDate(optimisticCards, getPlan);
+  }, [optimisticCards, isStories, focusDate, viewMode, getPlan]);
+
+  // Keep the optimistic date through brief stale cloud renders. Once canonical
+  // state remains on the requested date, release the override after a settle window.
+  useEffect(() => {
+    const timers = [];
+    for (const [cardId, dueDate] of Object.entries(pendingMoves)) {
+      const card = cards.find((entry) => entry.id === cardId);
+      if (card?.dueDate !== dueDate) continue;
+      timers.push(
+        window.setTimeout(() => {
+          setPendingMoves((current) => {
+            if (current[cardId] !== dueDate) return current;
+            const next = { ...current };
+            delete next[cardId];
+            return next;
+          });
+        }, 1200),
+      );
+    }
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [cards, pendingMoves]);
+
+  const handleMoveCalendarPost = useCallback(
+    (cardId, dueDate) => {
+      if (!onMoveCalendarPost || !cardId || !dueDate) return;
+      setPendingMoves((current) => ({ ...current, [cardId]: dueDate }));
+      onMoveCalendarPost(cardId, dueDate);
+    },
+    [onMoveCalendarPost],
+  );
 
   const handleCalendarClick = (entry) => {
     if (entry?.isShootSession) {
@@ -174,7 +211,7 @@ export default function Calendar({
               cardsByDate={cardsByDate}
               onCardClick={handleCalendarClick}
               onRemoveFromCalendar={onRemoveFromCalendar}
-              onMoveCalendarPost={onMoveCalendarPost}
+              onMoveCalendarPost={handleMoveCalendarPost}
               onChangeCardStage={onChangeCardStage}
               overviewLabel={overviewLabel}
             />
@@ -184,7 +221,7 @@ export default function Calendar({
               cardsByDate={cardsByDate}
               onCardClick={handleCalendarClick}
               onRemoveFromCalendar={onRemoveFromCalendar}
-              onMoveCalendarPost={onMoveCalendarPost}
+              onMoveCalendarPost={handleMoveCalendarPost}
               onChangeCardStage={onChangeCardStage}
               overviewLabel={overviewLabel}
             />

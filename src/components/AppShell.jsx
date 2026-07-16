@@ -378,7 +378,7 @@ export default function AppShell({ onSignOut }) {
     if (!card || !dueDate || card.dueDate === dueDate) return;
     beginBatch();
     try {
-      updateCard(cardId, { dueDate });
+      updateCard(cardId, { dueDate }, { immediateSync: true });
       setSelectedCard((prev) =>
         prev?.id === cardId ? { ...prev, dueDate } : prev,
       );

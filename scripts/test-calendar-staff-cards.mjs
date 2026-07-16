@@ -2,6 +2,9 @@
  * Staff content calendar includes To Create cards that already have a publish date.
  * Mirrors isStaffCalendarCard / getCalendarPosts rules from src/utils/calendar.js.
  */
+import { readFileSync } from 'node:fs';
+import { applyPendingCalendarMoves } from '../src/utils/calendarPendingMoves.js';
+
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
@@ -74,5 +77,34 @@ const storyShoot = {
 };
 const stories = getCalendarStories([storyShoot]);
 assert(stories.length === 1, 'dated To Create story appears on calendar');
+
+const pendingSource = [
+  { id: 'drag-1', dueDate: '2026-06-10', title: 'Moved post' },
+  { id: 'drag-2', dueDate: '2026-06-11', title: 'Unmoved post' },
+];
+const optimistic = applyPendingCalendarMoves(pendingSource, {
+  'drag-1': '2026-06-18',
+});
+assert(optimistic[0].dueDate === '2026-06-18', 'pending drag date overrides stale card date');
+assert(optimistic[1] === pendingSource[1], 'unmoved card keeps its original reference');
+assert(pendingSource[0].dueDate === '2026-06-10', 'pending override does not mutate card state');
+
+const appShellSource = readFileSync(new URL('../src/components/AppShell.jsx', import.meta.url), 'utf8');
+assert(
+  appShellSource.includes("updateCard(cardId, { dueDate }, { immediateSync: true })"),
+  'calendar drag moves persist immediately',
+);
+
+const calendarSource = readFileSync(new URL('../src/components/Calendar.jsx', import.meta.url), 'utf8');
+assert(
+  calendarSource.includes('applyPendingCalendarMoves'),
+  'calendar renders pending drag positions optimistically',
+);
+
+const kanbanSource = readFileSync(new URL('../src/hooks/useKanban.js', import.meta.url), 'utf8');
+assert(
+  kanbanSource.includes("markRecentlyPushed('cards', [card.id])"),
+  'immediate card push suppresses its realtime echo',
+);
 
 console.log('Calendar staff card tests passed.');
