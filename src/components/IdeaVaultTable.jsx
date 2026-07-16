@@ -4,6 +4,7 @@ import { normalizeLink } from '../utils/links';
 import ClientAvatar from './ClientAvatar';
 import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
 import DebouncedField from './DebouncedField';
+import { getStructuredScript, hasStructuredScript } from '../utils/scriptFields';
 import {
   btnGhostClass,
   btnPrimaryClass,
@@ -171,10 +172,7 @@ export default function IdeaVaultTable({
               >
                 {idea.title || 'Untitled idea'}
               </button>
-              {idea.description && !expanded && (
-                <p className="mt-1 line-clamp-2 text-xs text-white/40">{idea.description}</p>
-              )}
-              {idea.script?.trim() && !expanded && (
+              {hasStructuredScript(idea) && !expanded && (
                 <p className="mt-1 text-[10px] uppercase tracking-wider text-white/35">Script ready</p>
               )}
               <div className="mt-2">
@@ -222,11 +220,19 @@ export default function IdeaVaultTable({
               )}
               {expanded && (
                 <div className="mt-3 border border-white/10 bg-white/[0.02] p-3 text-sm text-white/70">
-                  {idea.description && <p>{idea.description}</p>}
-                  {idea.script?.trim() && (
-                    <div className={idea.description ? 'mt-3' : ''}>
+                  {hasStructuredScript(idea) && (
+                    <div>
                       <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">Script</p>
-                      <p className="mt-1 whitespace-pre-wrap text-xs text-white/65">{idea.script}</p>
+                      {(() => {
+                        const script = getStructuredScript(idea);
+                        return (
+                          <div className="mt-1 space-y-2 text-xs text-white/65">
+                            {script.hook && <p><span className="text-white/40">Hook: </span>{script.hook}</p>}
+                            {script.body && <p className="whitespace-pre-wrap"><span className="text-white/40">Body: </span>{script.body}</p>}
+                            {script.overlays && <p className="whitespace-pre-wrap"><span className="text-white/40">Overlays: </span>{script.overlays}</p>}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                   {idea.clientComment && (
@@ -261,10 +267,7 @@ export default function IdeaVaultTable({
                 <tr key={idea.id} className={tableRowClass}>
                   <td className={bankRowMetaClass}>
                     <p className="font-medium text-white">{idea.title || 'Untitled idea'}</p>
-                    {idea.description && (
-                      <p className="mt-0.5 line-clamp-1 text-xs text-white/40">{idea.description}</p>
-                    )}
-                    {idea.script?.trim() && (
+                    {hasStructuredScript(idea) && (
                       <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/35">Script ready</p>
                     )}
                   </td>

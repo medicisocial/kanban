@@ -26,6 +26,11 @@ function createIdea(overrides = {}) {
     title: "",
     referenceVideo: "",
     description: "",
+    // Structured script fields for bank → shoot carryover
+    scriptHook: "",
+    scriptBody: "",
+    scriptOverlays: "",
+    // Legacy freeform (kept for backward compatibility/display-only)
     script: "",
     contentType: "Reel",
     status: "pending",

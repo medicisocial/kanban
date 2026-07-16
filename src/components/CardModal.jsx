@@ -27,10 +27,12 @@ import { getCalendarClientNote, hasCalendarClientNote, isContentCalendarCard } f
 import { buildCalendarNoteDeletePatch } from '../utils/calendarNote';
 import { canReturnCardToVault } from '../utils/videoIdeas';
 import { beginBatch, endBatch } from '../utils/undoHistory';
+import ScriptPanel from './ScriptPanel';
 import DebouncedField, { DebouncedModelTagInput, DebouncedTimeInput } from './DebouncedField';
 
 const CARD_TABS = [
   { id: 'details', label: 'Details' },
+  { id: 'script', label: 'Script' },
   { id: 'production', label: 'Production' },
   { id: 'schedule', label: 'Schedule' },
   { id: 'references', label: 'References' },
@@ -411,7 +413,6 @@ function CardModal({
             />
           </Field>
 
-
           <Field label="Video File Link">
             <DebouncedField
               {...SAVE_ON_CLOSE}
@@ -620,6 +621,19 @@ function CardModal({
             <span className="text-xs text-gray-400">{card.client}</span>
           </div>
             </>
+          )}
+
+          {activeTab === 'script' && (
+            <ScriptPanel
+              hook={displayCard.shootScriptHook || ''}
+              body={displayCard.shootScriptBody || displayCard.shootScript || ''}
+              overlays={displayCard.shootTextOverlays || ''}
+              onChange={(next) => {
+                if (next.hook !== undefined) commitTextField('shootScriptHook', next.hook);
+                if (next.body !== undefined) commitTextField('shootScriptBody', next.body);
+                if (next.overlays !== undefined) commitTextField('shootTextOverlays', next.overlays);
+              }}
+            />
           )}
 
           {activeTab === 'production' && !isOneOff && (

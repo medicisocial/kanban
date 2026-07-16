@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react';
 import { getContentTypeStyle } from '../constants';
 import { contentTypeLabelProps } from '../utils/contentTypeColors';
-
-const inputClass =
-  'select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50';
+import ScriptPanel from './ScriptPanel';
+import { getStructuredScript } from '../utils/scriptFields';
 
 export default function ShootScriptModal({ card, onClose, onSave, readOnly = false }) {
-  const [draft, setDraft] = useState(card?.shootScript || '');
+  const [draft, setDraft] = useState(() => getStructuredScript(card));
   const typeStyle = getContentTypeStyle(card?.contentType);
 
   useEffect(() => {
-    setDraft(card?.shootScript || '');
+    setDraft(getStructuredScript(card));
   }, [card]);
 
   useEffect(() => {
@@ -28,7 +27,13 @@ export default function ShootScriptModal({ card, onClose, onSave, readOnly = fal
   if (!card) return null;
 
   const handleSave = () => {
-    onSave?.(card.id, { shootScript: draft.trim() });
+    onSave?.(card.id, {
+      shootScriptHook: draft.hook.trim(),
+      shootScriptBody: draft.body.trim(),
+      shootTextOverlays: draft.overlays.trim(),
+      // Keep the legacy field in sync for older share links/clients.
+      shootScript: draft.body.trim(),
+    });
     onClose();
   };
 
@@ -58,22 +63,13 @@ export default function ShootScriptModal({ card, onClose, onSave, readOnly = fal
         </div>
 
         <div className="px-5 py-4">
-          {readOnly ? (
-            draft ? (
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#f9f6f2]">{draft}</p>
-            ) : (
-              <p className="text-sm text-gray-500">No script written yet.</p>
-            )
-          ) : (
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              rows={14}
-              placeholder="Write the full script — hooks, dialogue, on-screen text, shot notes..."
-              className={`${inputClass} resize-y`}
-              autoFocus
-            />
-          )}
+          <ScriptPanel
+            hook={draft.hook}
+            body={draft.body}
+            overlays={draft.overlays}
+            readOnly={readOnly}
+            onChange={(next) => setDraft((current) => ({ ...current, ...next }))}
+          />
         </div>
 
         <div className="flex justify-end gap-2 border-t border-white/5 px-5 py-4">

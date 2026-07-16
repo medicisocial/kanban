@@ -58,6 +58,11 @@ export function buildBankIdeaData(ideaData = {}) {
   const now = Date.now();
   return {
     ...ideaData,
+    // normalize structured fields
+    scriptHook: String(ideaData.scriptHook || '').trim(),
+    scriptBody: String(ideaData.scriptBody || '').trim(),
+    scriptOverlays: String(ideaData.scriptOverlays || '').trim(),
+    // legacy freeform
     script: String(ideaData.script || '').trim(),
     status: 'approved',
     boardCardId: null,
@@ -65,21 +70,35 @@ export function buildBankIdeaData(ideaData = {}) {
   };
 }
 
-/** Resolve shoot script when scheduling an idea onto a card. */
-export function resolveShootScriptFromIdea(idea, existingCard = null) {
-  const ideaScript = String(idea?.script || '').trim();
-  const existingScript = String(existingCard?.shootScript || '').trim();
-  if (existingCard && existingScript) return existingScript;
-  return ideaScript;
+/** Resolve shoot script fields when scheduling an idea onto a card. */
+export function resolveShootScriptsFromIdea(idea, existingCard = null) {
+  const resolved = {
+    shootScriptHook: String(idea?.scriptHook || '').trim(),
+    shootScriptBody: String(idea?.scriptBody || '').trim(),
+    shootTextOverlays: String(idea?.scriptOverlays || '').trim(),
+  };
+  if (existingCard) {
+    // preserve any existing on-set edits
+    resolved.shootScriptHook = String(existingCard.shootScriptHook || resolved.shootScriptHook || '').trim();
+    resolved.shootScriptBody = String(existingCard.shootScriptBody || resolved.shootScriptBody || '').trim();
+    resolved.shootTextOverlays = String(existingCard.shootTextOverlays || resolved.shootTextOverlays || '').trim();
+  }
+  return resolved;
 }
 
 /** Fields to restore onto an idea when a shoot card returns to the bank. */
 export function buildIdeaReturnFromCard(card, existingIdea = null) {
   const shootScript = String(card?.shootScript || '').trim();
+  const hook = String(card?.shootScriptHook || '').trim();
+  const body = String(card?.shootScriptBody || '').trim();
+  const overlays = String(card?.shootTextOverlays || '').trim();
   if (existingIdea) {
     return {
       boardCardId: null,
       status: 'approved',
+      scriptHook: hook || String(existingIdea.scriptHook || '').trim(),
+      scriptBody: body || String(existingIdea.scriptBody || '').trim(),
+      scriptOverlays: overlays || String(existingIdea.scriptOverlays || '').trim(),
       script: shootScript || String(existingIdea.script || '').trim(),
     };
   }
@@ -89,6 +108,9 @@ export function buildIdeaReturnFromCard(card, existingIdea = null) {
     contentType: card.contentType,
     referenceVideo: card.referenceVideo || '',
     description: card.notes || '',
+    scriptHook: hook,
+    scriptBody: body,
+    scriptOverlays: overlays,
     script: shootScript,
     clientComment: card.clientComment || '',
     status: 'approved',

@@ -9,7 +9,7 @@ import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import { pushStaffSyncRecords } from '../lib/staffSyncApi';
 import { reportSyncIssue } from '../lib/workspaceSyncHealth';
 import { applyVaultIdeaShootSchedule, withPipelineRegressionAuthorization } from '../utils/cardPipelineMerge';
-import { resolveShootScriptFromIdea } from '../utils/videoIdeas';
+import { resolveShootScriptsFromIdea } from '../utils/videoIdeas';
 
 const getCardId = (card) => card.id;
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
@@ -71,6 +71,9 @@ function normalizeCard(card) {
     shootModels: card.shootModels || '',
     shootNeeds: card.shootNeeds || '',
     shootScript: card.shootScript || '',
+    shootScriptHook: card.shootScriptHook || '',
+    shootScriptBody: card.shootScriptBody || '',
+    shootTextOverlays: card.shootTextOverlays || '',
     contentCreator: card.contentCreator || '',
     storyRecurrenceDays: parseRecurrenceDays(card.storyRecurrenceDays),
     storyEndDate: card.storyEndDate || '',
@@ -232,6 +235,9 @@ export function useKanban() {
       shootModels: '',
       shootNeeds: '',
       shootScript: '',
+      shootScriptHook: '',
+      shootScriptBody: '',
+      shootTextOverlays: '',
       contentCreator:
         columnId === 'shoot' ? getDefaultAssigneeForRole('Content Creator') : '',
       assignedTo: getDefaultAssigneeForRole('Editor'),
@@ -269,7 +275,8 @@ export function useKanban() {
               {
                 ...card,
                 sourceIdeaId: idea.id,
-                shootScript: resolveShootScriptFromIdea(idea, card),
+                // preserve existing structured fields; fill from idea when empty
+                ...resolveShootScriptsFromIdea(idea, card),
               },
               { isNew: false },
             ),
@@ -284,6 +291,7 @@ export function useKanban() {
         .filter(Boolean)
         .join('\n\n');
 
+      const scriptFields = resolveShootScriptsFromIdea(idea);
       const persisted = normalizeCard(
         withSchedule(
           {
@@ -300,7 +308,10 @@ export function useKanban() {
           shootDuration: 45,
           shootModels: '',
           shootNeeds: '',
-          shootScript: resolveShootScriptFromIdea(idea),
+          // legacy freeform
+          shootScript: String(idea.script || '').trim(),
+          // structured
+          ...scriptFields,
           contentCreator: getDefaultAssigneeForRole('Content Creator'),
           assignedTo: getDefaultAssigneeForRole('Editor'),
           notes,

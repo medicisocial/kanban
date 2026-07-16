@@ -4,6 +4,7 @@ import { CONTENT_TYPES, IDEA_STATUSES } from "../constants";
 import { useClientsContext } from "../context/ClientsContext";
 import { normalizeLink } from "../utils/links";
 import { btnPrimaryClass, btnSecondaryClass } from "./clientPortal/clientPortalUi";
+import ScriptPanel from "./ScriptPanel";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30";
@@ -17,11 +18,14 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
     title: idea?.title || "",
     referenceVideo: idea?.referenceVideo || "",
     description: idea?.description || "",
-    script: idea?.script || "",
+    scriptHook: idea?.scriptHook || "",
+    scriptBody: idea?.scriptBody || idea?.script || "",
+    scriptOverlays: idea?.scriptOverlays || "",
     contentType: idea?.contentType || "Reel",
     clientComment: idea?.clientComment || "",
   });
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("details");
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -52,7 +56,9 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
       title,
       referenceVideo: referenceVideo || "",
       description: form.description.trim(),
-      script: form.script.trim(),
+      scriptHook: form.scriptHook.trim(),
+      scriptBody: form.scriptBody.trim(),
+      scriptOverlays: form.scriptOverlays.trim(),
       clientComment: form.clientComment.trim(),
     });
     onClose();
@@ -103,7 +109,29 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
             </button>
           </div>
 
+          <div className="flex gap-1 border-b border-white/5 px-5 py-2">
+            {[
+              ["details", "Details"],
+              ["script", "Script"],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setActiveTab(id)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  activeTab === id
+                    ? "bg-white/10 text-white"
+                    : "text-gray-500 hover:bg-white/5 hover:text-gray-300"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4">
+            {activeTab === "details" && (
+              <>
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-gray-400">Idea Title</span>
               <input
@@ -162,30 +190,19 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
               </p>
             </label>
 
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-gray-400">Notes for Client</span>
-              <textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                rows={3}
-                placeholder="Why this reference works, creative direction..."
-                className={`${inputClass} resize-y`}
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-gray-400">Script</span>
-              <textarea
-                value={form.script}
-                onChange={(e) => setForm({ ...form, script: e.target.value })}
-                rows={5}
-                placeholder="Write the full script — hooks, dialogue, on-screen text, shot notes..."
-                className={`${inputClass} resize-y`}
-              />
-              <p className="mt-1 text-[10px] text-gray-500">
-                Carries over to the shoot script when this idea is scheduled.
-              </p>
-            </label>
+            {/* Hide Notes for Client when editing an approved bank idea */}
+            {!(isEdit && idea?.status === 'approved') && (
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-gray-400">Notes for Client</span>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  rows={3}
+                  placeholder="Why this reference works, creative direction..."
+                  className={`${inputClass} resize-y`}
+                />
+              </label>
+            )}
 
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-gray-400">Client Comment</span>
@@ -197,6 +214,29 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
                 className={`${inputClass} resize-y`}
               />
             </label>
+              </>
+            )}
+
+            {activeTab === "script" && (
+              <div>
+                <ScriptPanel
+                  hook={form.scriptHook}
+                  body={form.scriptBody}
+                  overlays={form.scriptOverlays}
+                  onChange={(next) =>
+                    setForm((current) => ({
+                      ...current,
+                      ...(next.hook !== undefined ? { scriptHook: next.hook } : {}),
+                      ...(next.body !== undefined ? { scriptBody: next.body } : {}),
+                      ...(next.overlays !== undefined ? { scriptOverlays: next.overlays } : {}),
+                    }))
+                  }
+                />
+                <p className="mt-2 text-[10px] text-gray-500">
+                  Carries over to the card when this idea is scheduled.
+                </p>
+              </div>
+            )}
 
             {error && <p className="text-sm text-red-400">{error}</p>}
           </div>

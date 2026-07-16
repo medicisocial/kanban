@@ -22,6 +22,9 @@ function compactShootCard(card) {
     card.shootScript || '',
     card.referenceVideo || '',
     card.notes || '',
+    card.shootScriptHook || '',
+    card.shootScriptBody || '',
+    card.shootTextOverlays || '',
   ];
 }
 
@@ -38,6 +41,9 @@ function expandShootCard(client, dateKey, tuple) {
     shootScript,
     referenceVideo,
     notes,
+    shootScriptHook,
+    shootScriptBody,
+    shootTextOverlays,
   ] = tuple;
 
   return {
@@ -51,6 +57,9 @@ function expandShootCard(client, dateKey, tuple) {
     shootModels,
     shootNeeds,
     shootScript,
+    shootScriptHook: shootScriptHook || '',
+    shootScriptBody: shootScriptBody || '',
+    shootTextOverlays: shootTextOverlays || '',
     referenceVideo,
     notes,
     shootDate: dateKey,
@@ -146,6 +155,9 @@ export function buildShootSubmission(client, dateKey, plan, cards) {
       shootModels: c.shootModels || '',
       shootNeeds: c.shootNeeds || '',
       shootScript: c.shootScript || '',
+      shootScriptHook: c.shootScriptHook || '',
+      shootScriptBody: c.shootScriptBody || '',
+      shootTextOverlays: c.shootTextOverlays || '',
     })),
   };
 }
@@ -167,6 +179,9 @@ export function applyShootSubmission(submission, cards, { updateCard, updatePlan
         shootModels: item.shootModels || '',
         shootNeeds: item.shootNeeds || '',
         shootScript: item.shootScript || '',
+        shootScriptHook: item.shootScriptHook || '',
+        shootScriptBody: item.shootScriptBody || '',
+        shootTextOverlays: item.shootTextOverlays || '',
       });
       applied += 1;
     }
