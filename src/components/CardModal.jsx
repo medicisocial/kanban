@@ -28,8 +28,6 @@ import { buildCalendarNoteDeletePatch } from '../utils/calendarNote';
 import { canReturnCardToVault } from '../utils/videoIdeas';
 import { beginBatch, endBatch } from '../utils/undoHistory';
 import DebouncedField, { DebouncedModelTagInput, DebouncedTimeInput } from './DebouncedField';
-import { chooseDropboxFile, isDropboxChooserConfigured } from '../utils/dropboxChooser';
-import { normalizeLink } from '../utils/links';
 
 const CARD_TABS = [
   { id: 'details', label: 'Details' },
@@ -163,24 +161,6 @@ function CardModal({
     },
     [queueUpdate],
   );
-
-  const [dropboxPickError, setDropboxPickError] = useState('');
-  const [dropboxPicking, setDropboxPicking] = useState(false);
-
-  const pickDropboxLink = useCallback(async () => {
-    if (!isDropboxChooserConfigured() || dropboxPicking) return;
-    setDropboxPickError('');
-    setDropboxPicking(true);
-    try {
-      const link = await chooseDropboxFile({ extensions: ['video'] });
-      commitTextField('dropboxLink', normalizeLink(link));
-    } catch (error) {
-      if (error?.message === 'cancelled') return;
-      setDropboxPickError(error?.message || 'Could not open Dropbox.');
-    } finally {
-      setDropboxPicking(false);
-    }
-  }, [commitTextField, dropboxPicking]);
 
   const commitNotes = useCallback(
     (value) => {
@@ -442,22 +422,9 @@ function CardModal({
               placeholder="Paste link to video file (Dropbox, Google Drive, Vimeo, WeTransfer…)"
               className={inputClass}
             />
-            {isDropboxChooserConfigured() ? (
-              <button
-                type="button"
-                onClick={pickDropboxLink}
-                disabled={dropboxPicking}
-                className="mt-2 inline-flex items-center rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:bg-white/10 disabled:opacity-60"
-              >
-                {dropboxPicking ? 'Opening Dropbox…' : 'Choose from Dropbox'}
-              </button>
-            ) : null}
-            {dropboxPickError ? (
-              <p className="mt-1.5 text-xs text-[#fca5a5]">{dropboxPickError}</p>
-            ) : null}
             {displayCard.dropboxLink?.trim() ? (
               <a
-                href={normalizeLink(displayCard.dropboxLink)}
+                href={displayCard.dropboxLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-1.5 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
