@@ -75,6 +75,7 @@ function normalizeCard(card) {
     shootScriptHook: card.shootScriptHook || '',
     shootScriptBody: card.shootScriptBody || '',
     shootTextOverlays: card.shootTextOverlays || '',
+    caption: card.caption || '',
     contentCreator: card.contentCreator || '',
     storyRecurrenceDays: parseRecurrenceDays(card.storyRecurrenceDays),
     storyEndDate: card.storyEndDate || '',

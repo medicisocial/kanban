@@ -7,6 +7,7 @@ export default function ScriptPanel({
   hook = '',
   body = '',
   overlays = '',
+  caption = null,
   onChange = () => {},
   readOnly = false,
 }) {
@@ -31,7 +32,13 @@ export default function ScriptPanel({
             <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[#f9f6f2]">{overlays}</p>
           </section>
         )}
-        {!hook?.trim() && !body?.trim() && !overlays?.trim() && (
+        {caption?.trim() && (
+          <section>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-white/50">Caption</h4>
+            <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[#f9f6f2]">{caption}</p>
+          </section>
+        )}
+        {!hook?.trim() && !body?.trim() && !overlays?.trim() && !caption?.trim() && (
           <p className="text-sm text-gray-500">No script written yet.</p>
         )}
       </div>
@@ -67,6 +74,18 @@ export default function ScriptPanel({
           className={`${inputClass} resize-y`}
         />
       </label>
+      {caption !== null && (
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-medium text-gray-400">Caption</span>
+          <textarea
+            value={caption}
+            onChange={(e) => onChange({ caption: e.target.value })}
+            rows={5}
+            placeholder="Write the post caption..."
+            className={`${inputClass} resize-y`}
+          />
+        </label>
+      )}
     </div>
   );
 }

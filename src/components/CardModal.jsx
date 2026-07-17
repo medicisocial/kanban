@@ -628,10 +628,12 @@ function CardModal({
               hook={displayCard.shootScriptHook || ''}
               body={displayCard.shootScriptBody || displayCard.shootScript || ''}
               overlays={displayCard.shootTextOverlays || ''}
+              caption={displayCard.caption || ''}
               onChange={(next) => {
                 if (next.hook !== undefined) commitTextField('shootScriptHook', next.hook);
                 if (next.body !== undefined) commitTextField('shootScriptBody', next.body);
                 if (next.overlays !== undefined) commitTextField('shootTextOverlays', next.overlays);
+                if (next.caption !== undefined) commitTextField('caption', next.caption);
               }}
             />
           )}

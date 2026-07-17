@@ -329,6 +329,7 @@ export function createCard(overrides = {}) {
     shootScriptHook: '',
     shootScriptBody: '',
     shootTextOverlays: '',
+    caption: '',
     storyRecurrenceDays: [],
     storyEndDate: '',
     storyOccurrenceNotes: {},
