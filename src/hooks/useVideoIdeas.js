@@ -30,6 +30,7 @@ function createIdea(overrides = {}) {
     scriptHook: "",
     scriptBody: "",
     scriptOverlays: "",
+    caption: "",
     // Legacy freeform (kept for backward compatibility/display-only)
     script: "",
     contentType: "Reel",

@@ -62,6 +62,7 @@ export function buildBankIdeaData(ideaData = {}) {
     scriptHook: String(ideaData.scriptHook || '').trim(),
     scriptBody: String(ideaData.scriptBody || '').trim(),
     scriptOverlays: String(ideaData.scriptOverlays || '').trim(),
+    caption: String(ideaData.caption || '').trim(),
     // legacy freeform
     script: String(ideaData.script || '').trim(),
     status: 'approved',
@@ -76,12 +77,14 @@ export function resolveShootScriptsFromIdea(idea, existingCard = null) {
     shootScriptHook: String(idea?.scriptHook || '').trim(),
     shootScriptBody: String(idea?.scriptBody || '').trim(),
     shootTextOverlays: String(idea?.scriptOverlays || '').trim(),
+    caption: String(idea?.caption || '').trim(),
   };
   if (existingCard) {
     // preserve any existing on-set edits
     resolved.shootScriptHook = String(existingCard.shootScriptHook || resolved.shootScriptHook || '').trim();
     resolved.shootScriptBody = String(existingCard.shootScriptBody || resolved.shootScriptBody || '').trim();
     resolved.shootTextOverlays = String(existingCard.shootTextOverlays || resolved.shootTextOverlays || '').trim();
+    resolved.caption = String(existingCard.caption || resolved.caption || '').trim();
   }
   return resolved;
 }
@@ -92,6 +95,7 @@ export function buildIdeaReturnFromCard(card, existingIdea = null) {
   const hook = String(card?.shootScriptHook || '').trim();
   const body = String(card?.shootScriptBody || '').trim();
   const overlays = String(card?.shootTextOverlays || '').trim();
+  const caption = String(card?.caption || '').trim();
   if (existingIdea) {
     return {
       boardCardId: null,
@@ -99,6 +103,7 @@ export function buildIdeaReturnFromCard(card, existingIdea = null) {
       scriptHook: hook || String(existingIdea.scriptHook || '').trim(),
       scriptBody: body || String(existingIdea.scriptBody || '').trim(),
       scriptOverlays: overlays || String(existingIdea.scriptOverlays || '').trim(),
+      caption: caption || String(existingIdea.caption || '').trim(),
       script: shootScript || String(existingIdea.script || '').trim(),
     };
   }
@@ -111,6 +116,7 @@ export function buildIdeaReturnFromCard(card, existingIdea = null) {
     scriptHook: hook,
     scriptBody: body,
     scriptOverlays: overlays,
+    caption,
     script: shootScript,
     clientComment: card.clientComment || '',
     status: 'approved',

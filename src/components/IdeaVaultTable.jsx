@@ -230,6 +230,7 @@ export default function IdeaVaultTable({
                             {script.hook && <p><span className="text-white/40">Hook: </span>{script.hook}</p>}
                             {script.body && <p className="whitespace-pre-wrap"><span className="text-white/40">Body: </span>{script.body}</p>}
                             {script.overlays && <p className="whitespace-pre-wrap"><span className="text-white/40">Overlays: </span>{script.overlays}</p>}
+                            {script.caption && <p className="whitespace-pre-wrap"><span className="text-white/40">Caption: </span>{script.caption}</p>}
                           </div>
                         );
                       })()}

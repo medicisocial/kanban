@@ -31,6 +31,7 @@ export default function ShootScriptModal({ card, onClose, onSave, readOnly = fal
       shootScriptHook: draft.hook.trim(),
       shootScriptBody: draft.body.trim(),
       shootTextOverlays: draft.overlays.trim(),
+      caption: draft.caption.trim(),
       // Keep the legacy field in sync for older share links/clients.
       shootScript: draft.body.trim(),
     });
@@ -67,6 +68,7 @@ export default function ShootScriptModal({ card, onClose, onSave, readOnly = fal
             hook={draft.hook}
             body={draft.body}
             overlays={draft.overlays}
+            caption={draft.caption}
             readOnly={readOnly}
             onChange={(next) => setDraft((current) => ({ ...current, ...next }))}
           />

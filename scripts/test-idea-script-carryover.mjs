@@ -14,6 +14,7 @@ function buildBankIdeaData(ideaData = {}) {
     scriptHook: String(ideaData.scriptHook || '').trim(),
     scriptBody: String(ideaData.scriptBody || '').trim(),
     scriptOverlays: String(ideaData.scriptOverlays || '').trim(),
+    caption: String(ideaData.caption || '').trim(),
     status: 'approved',
     boardCardId: null,
     reviewedAt: now,
@@ -25,11 +26,13 @@ function resolveShootScriptsFromIdea(idea, existingCard = null) {
     shootScriptHook: String(idea?.scriptHook || '').trim(),
     shootScriptBody: String(idea?.scriptBody || '').trim(),
     shootTextOverlays: String(idea?.scriptOverlays || '').trim(),
+    caption: String(idea?.caption || '').trim(),
   };
   if (existingCard) {
     resolved.shootScriptHook = String(existingCard.shootScriptHook || resolved.shootScriptHook || '').trim();
     resolved.shootScriptBody = String(existingCard.shootScriptBody || resolved.shootScriptBody || '').trim();
     resolved.shootTextOverlays = String(existingCard.shootTextOverlays || resolved.shootTextOverlays || '').trim();
+    resolved.caption = String(existingCard.caption || resolved.caption || '').trim();
   }
   return resolved;
 }
@@ -38,6 +41,7 @@ function buildIdeaReturnFromCard(card, existingIdea = null) {
   const hook = String(card?.shootScriptHook || '').trim();
   const body = String(card?.shootScriptBody || '').trim();
   const overlays = String(card?.shootTextOverlays || '').trim();
+  const caption = String(card?.caption || '').trim();
   if (existingIdea) {
     return {
       boardCardId: null,
@@ -45,6 +49,7 @@ function buildIdeaReturnFromCard(card, existingIdea = null) {
       scriptHook: hook || String(existingIdea.scriptHook || '').trim(),
       scriptBody: body || String(existingIdea.scriptBody || '').trim(),
       scriptOverlays: overlays || String(existingIdea.scriptOverlays || '').trim(),
+      caption: caption || String(existingIdea.caption || '').trim(),
     };
   }
   return {
@@ -56,6 +61,7 @@ function buildIdeaReturnFromCard(card, existingIdea = null) {
     scriptHook: hook,
     scriptBody: body,
     scriptOverlays: overlays,
+    caption,
     clientComment: card.clientComment || '',
     status: 'approved',
     boardCardId: null,
@@ -69,28 +75,33 @@ const bankPayload = buildBankIdeaData({
   scriptHook: '  Hook line  ',
   scriptBody: '  B-roll cut  ',
   scriptOverlays: '  Summer sale  ',
+  caption: '  Shop the summer sale.  ',
   description: 'Client-facing note',
 });
 assert(bankPayload.scriptHook === 'Hook line', 'bank payload trims hook');
 assert(bankPayload.scriptBody === 'B-roll cut', 'bank payload trims body');
 assert(bankPayload.scriptOverlays === 'Summer sale', 'bank payload trims overlays');
+assert(bankPayload.caption === 'Shop the summer sale.', 'bank payload trims caption');
 assert(bankPayload.description === 'Client-facing note', 'notes stay separate from script');
 
 const scheduled = resolveShootScriptsFromIdea({
   scriptHook: 'Hook',
   scriptBody: 'Body',
   scriptOverlays: 'Overlay',
+  caption: 'Post caption',
 });
 assert(scheduled.shootScriptHook === 'Hook', 'new card gets idea hook');
 assert(scheduled.shootScriptBody === 'Body', 'new card gets idea body');
 assert(scheduled.shootTextOverlays === 'Overlay', 'new card gets idea overlays');
+assert(scheduled.caption === 'Post caption', 'new card gets idea caption');
 
 const preserved = resolveShootScriptsFromIdea(
-  { scriptHook: 'Idea hook', scriptBody: 'Idea body' },
-  { shootScriptHook: 'Edited hook', shootScriptBody: '' },
+  { scriptHook: 'Idea hook', scriptBody: 'Idea body', caption: 'Idea caption' },
+  { shootScriptHook: 'Edited hook', shootScriptBody: '', caption: 'Edited caption' },
 );
 assert(preserved.shootScriptHook === 'Edited hook', 'existing hook is preserved');
 assert(preserved.shootScriptBody === 'Idea body', 'empty body fills from idea');
+assert(preserved.caption === 'Edited caption', 'existing caption is preserved');
 
 const returned = buildIdeaReturnFromCard(
   {
@@ -102,6 +113,7 @@ const returned = buildIdeaReturnFromCard(
     shootScriptHook: 'Final hook',
     shootScriptBody: 'Final body',
     shootTextOverlays: 'Final overlay',
+    caption: 'Final caption',
     clientComment: '',
   },
   { id: 'idea-1', scriptHook: 'Old hook', scriptBody: 'Old body' },
@@ -111,6 +123,7 @@ assert(returned.status === 'approved', 'return keeps approved');
 assert(returned.scriptHook === 'Final hook', 'return copies hook onto idea');
 assert(returned.scriptBody === 'Final body', 'return copies body onto idea');
 assert(returned.scriptOverlays === 'Final overlay', 'return copies overlays onto idea');
+assert(returned.caption === 'Final caption', 'return copies caption onto idea');
 
 const recreated = buildIdeaReturnFromCard({
   client: 'Plume',
@@ -119,9 +132,11 @@ const recreated = buildIdeaReturnFromCard({
   notes: 'From card notes',
   shootScriptHook: 'Hook from card',
   shootScriptBody: 'Body from card',
+  caption: 'Caption from card',
 });
 assert(recreated.scriptHook === 'Hook from card', 'orphan return includes hook');
 assert(recreated.scriptBody === 'Body from card', 'orphan return includes body');
+assert(recreated.caption === 'Caption from card', 'orphan return includes caption');
 assert(recreated.description === 'From card notes', 'orphan return keeps notes as description');
 
 const utilsSource = readFileSync(new URL('../src/utils/videoIdeas.js', import.meta.url), 'utf8');
@@ -131,6 +146,7 @@ assert(utilsSource.includes("scriptHook: String(ideaData.scriptHook || '').trim(
 
 const ideaSource = readFileSync(new URL('../src/hooks/useVideoIdeas.js', import.meta.url), 'utf8');
 assert(ideaSource.includes('scriptHook: ""'), 'createIdea defaults hook');
+assert(ideaSource.includes('caption: ""'), 'createIdea defaults caption');
 
 const kanbanSource = readFileSync(new URL('../src/hooks/useKanban.js', import.meta.url), 'utf8');
 assert(
@@ -143,6 +159,7 @@ assert(shellSource.includes('buildIdeaReturnFromCard'), 'AppShell returns script
 
 const modalSource = readFileSync(new URL('../src/components/VideoIdeaModal.jsx', import.meta.url), 'utf8');
 assert(modalSource.includes('form.scriptHook'), 'VideoIdeaModal binds hook');
+assert(modalSource.includes('caption={form.caption}'), 'VideoIdeaModal binds caption');
 assert(modalSource.includes('ScriptPanel'), 'VideoIdeaModal uses shared ScriptPanel');
 
 const vaultSource = readFileSync(new URL('../src/components/IdeaVaultTable.jsx', import.meta.url), 'utf8');

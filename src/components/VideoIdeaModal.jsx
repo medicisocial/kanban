@@ -21,6 +21,7 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
     scriptHook: idea?.scriptHook || "",
     scriptBody: idea?.scriptBody || idea?.script || "",
     scriptOverlays: idea?.scriptOverlays || "",
+    caption: idea?.caption || "",
     contentType: idea?.contentType || "Reel",
     clientComment: idea?.clientComment || "",
   });
@@ -59,6 +60,7 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
       scriptHook: form.scriptHook.trim(),
       scriptBody: form.scriptBody.trim(),
       scriptOverlays: form.scriptOverlays.trim(),
+      caption: form.caption.trim(),
       clientComment: form.clientComment.trim(),
     });
     onClose();
@@ -223,12 +225,14 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
                   hook={form.scriptHook}
                   body={form.scriptBody}
                   overlays={form.scriptOverlays}
+                  caption={form.caption}
                   onChange={(next) =>
                     setForm((current) => ({
                       ...current,
                       ...(next.hook !== undefined ? { scriptHook: next.hook } : {}),
                       ...(next.body !== undefined ? { scriptBody: next.body } : {}),
                       ...(next.overlays !== undefined ? { scriptOverlays: next.overlays } : {}),
+                      ...(next.caption !== undefined ? { caption: next.caption } : {}),
                     }))
                   }
                 />
