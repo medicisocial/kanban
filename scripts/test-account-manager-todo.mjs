@@ -101,8 +101,8 @@ assert(
 assert(editorTodoSource.includes('onAddCard'), 'editor supports manual board card add');
 assert(editorTodoSource.includes('+ Add card'), 'editor exposes Add card control');
 assert(
-  !editorTodoSource.includes('task.label') && !editorTodoSource.includes('kindStyles'),
-  'editor cards omit Edit / In review kind pills',
+  editorTodoSource.includes('task.label') && editorTodoSource.includes('kindStyles'),
+  'editor cards show Edit / In review kind pills',
 );
 
 const accountTodoSource = readFileSync(
@@ -115,16 +115,20 @@ assert(
   'account manager exposes In review as a tab',
 );
 assert(
-  !accountTodoSource.includes("kindStyles['set-post-date']"),
-  'set post date cards omit Set post date kind pill',
+  accountTodoSource.includes("kindStyles['set-post-date']"),
+  'set post date cards show Set post date kind pill',
 );
 assert(
-  !accountTodoSource.includes('inReviewKindStyle'),
-  'in review cards omit In review kind pill',
+  accountTodoSource.includes('inReviewKindStyle'),
+  'in review cards show In review kind pill',
 );
 assert(
-  (accountTodoSource.match(/\{task\.label\}/g) || []).length === 1,
-  'only publish/story cards keep a kind label; approved schedule cards omit Approved pill',
+  (accountTodoSource.match(/\{task\.label\}/g) || []).length >= 4,
+  'AM cards show kind labels for set post date, in review, approved schedule, and publish/story',
+);
+assert(
+  accountTodoSource.includes('Mark scheduled'),
+  'Posts & content action uses Mark scheduled label',
 );
 assert(
   accountTodoSource.includes("['stories', 'Stories to post', orderedStoryTasks.length]"),

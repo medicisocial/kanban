@@ -34,6 +34,8 @@ const kindStyles = {
   'post-story': 'border-blue-500/30 bg-blue-500/10 text-blue-200',
 };
 
+const inReviewKindStyle = 'border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]';
+
 function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate, animationDelay }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const clientColor = getClientColor(task.client);
@@ -45,6 +47,11 @@ function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate, ani
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="tesla-task-card-meta mb-2">
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${kindStyles['set-post-date']}`}
+            >
+              {task.label}
+            </span>
             {pipelineStage && (
               <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-medium text-gray-400">
                 {pipelineStage}
@@ -107,6 +114,9 @@ function InReviewTaskCard({
 
         <div className="min-w-0 flex-1 text-left">
           <div className="tesla-task-card-meta mb-2">
+            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${inReviewKindStyle}`}>
+              {task.label}
+            </span>
             {task.contentType && typeStyle && (
               <span {...contentTypePipelinePillProps(typeStyle)}>
                 {task.contentType}
@@ -196,6 +206,11 @@ function ApprovedScheduleTaskCard({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="tesla-task-card-meta mb-2">
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${kindStyles.schedule}`}
+            >
+              {task.label}
+            </span>
             {task.contentType && typeStyle && (
               <span {...contentTypePipelinePillProps(typeStyle)}>
                 {task.contentType}
@@ -226,7 +241,7 @@ function ApprovedScheduleTaskCard({
 
         <div className="flex shrink-0 flex-col gap-1.5">
           <button type="button" onClick={() => onMarkScheduled(task.cardId)} className={taskActionBtnClass}>
-            Scheduled
+            Mark scheduled
           </button>
         </div>
       </div>
