@@ -86,8 +86,13 @@ assert(
   'CompanyTasks does not pass convert-to-one-off into Content Creator',
 );
 assert(
-  shellSource.includes('onConvertCardToOneOff') && shellSource.includes('buildOneOffConversionUpdates'),
-  'AppShell still converts Vault To Create cards to one-offs in place',
+  !shellSource.includes('onConvertCardToOneOff'),
+  'AppShell no longer converts Vault To Create cards from row actions',
+);
+const cardModalSource = readFileSync(new URL('../src/components/CardModal.jsx', import.meta.url), 'utf8');
+assert(
+  cardModalSource.includes('buildOneOffConversionUpdates') && cardModalSource.includes('MakeOneOffModal'),
+  'Card modal still converts cards to one-offs when opened',
 );
 assert(
   shellSource.includes("handleNavigate('shoot'") && shellSource.includes('onOpenShoot={(card)'),
