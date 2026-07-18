@@ -13,6 +13,12 @@ import PostSlidesPanel from "./PostSlidesPanel";
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30";
 
+const IDEA_TABS = [
+  ["details", "Details"],
+  ["script", "Script"],
+  ["references", "References"],
+];
+
 export default function VideoIdeaModal({
   onClose,
   onSave,
@@ -129,10 +135,7 @@ export default function VideoIdeaModal({
           </div>
 
           <div className="flex gap-1 border-b border-white/5 px-5 py-2">
-            {[
-              ["details", "Details"],
-              ["script", "Script"],
-            ].map(([id, label]) => (
+            {IDEA_TABS.map(([id, label]) => (
               <button
                 key={id}
                 type="button"
@@ -151,101 +154,60 @@ export default function VideoIdeaModal({
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4">
             {activeTab === "details" && (
               <>
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-gray-400">Idea Title</span>
-              <input
-                type="text"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="e.g. Summer launch reel concept"
-                className={inputClass}
-                autoFocus
-              />
-            </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-gray-400">Task Title</span>
+                  <input
+                    type="text"
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="e.g. Summer launch reel concept"
+                    className={inputClass}
+                    autoFocus
+                  />
+                </label>
 
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-gray-400">Client</span>
-              <select
-                value={form.client}
-                onChange={(e) => setForm({ ...form, client: e.target.value })}
-                className={inputClass}
-              >
-                {clients.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-medium text-gray-400">Client</span>
+                    <select
+                      value={form.client}
+                      onChange={(e) => setForm({ ...form, client: e.target.value })}
+                      className={inputClass}
+                    >
+                      {clients.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-gray-400">Content Type</span>
-              <select
-                value={form.contentType}
-                onChange={(e) => setForm({ ...form, contentType: e.target.value })}
-                className={inputClass}
-              >
-                {CONTENT_TYPES.filter((t) => t !== "Story").map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-gray-400">
-                Reference Video Link (optional)
-              </span>
-              <input
-                type="text"
-                value={form.referenceVideo}
-                onChange={(e) => setForm({ ...form, referenceVideo: e.target.value })}
-                placeholder="Paste Instagram, TikTok, or YouTube link..."
-                className={inputClass}
-              />
-              <p className="mt-1 text-[10px] text-gray-500">
-                Paste any video URL — https:// is added automatically if needed.
-              </p>
-              {form.referenceVideo?.trim() && (
-                <div className="mt-2">
-                  <ReferenceVideoLink url={form.referenceVideo} />
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-medium text-gray-400">Content Type</span>
+                    <select
+                      value={form.contentType}
+                      onChange={(e) => setForm({ ...form, contentType: e.target.value })}
+                      className={inputClass}
+                    >
+                      {CONTENT_TYPES.filter((t) => t !== "Story").map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
-              )}
-            </label>
 
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-gray-400">
-                Reference Music Link (optional)
-              </span>
-              <input
-                type="text"
-                value={form.referenceMusic}
-                onChange={(e) => setForm({ ...form, referenceMusic: e.target.value })}
-                placeholder="Paste Spotify, YouTube, or audio link..."
-                className={inputClass}
-              />
-              {form.referenceMusic?.trim() && (
-                <div className="mt-2">
-                  <ReferenceMusicLink url={form.referenceMusic} />
-                </div>
-              )}
-            </label>
-
-            {/* Hide Notes for Client when editing an approved bank idea */}
-            {!(isEdit && idea?.status === 'approved') && (
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-medium text-gray-400">Notes for Client</span>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  rows={3}
-                  placeholder="Why this reference works, creative direction..."
-                  className={`${inputClass} resize-y`}
-                />
-              </label>
-            )}
-
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-gray-400">Notes</span>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    rows={4}
+                    placeholder="Add notes..."
+                    className={`${inputClass} resize-y`}
+                  />
+                </label>
               </>
             )}
 
@@ -279,6 +241,45 @@ export default function VideoIdeaModal({
                 <p className="mt-2 text-[10px] text-gray-500">
                   Carries over to the card when this idea is scheduled.
                 </p>
+              </div>
+            )}
+
+            {activeTab === "references" && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-gray-400">Reference Music</span>
+                  <input
+                    type="text"
+                    value={form.referenceMusic}
+                    onChange={(e) => setForm({ ...form, referenceMusic: e.target.value })}
+                    placeholder="Paste Spotify, Apple Music, or other link..."
+                    className={inputClass}
+                  />
+                  {form.referenceMusic?.trim() && (
+                    <div className="mt-2">
+                      <ReferenceMusicLink url={form.referenceMusic} />
+                    </div>
+                  )}
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-gray-400">Reference Video</span>
+                  <input
+                    type="text"
+                    value={form.referenceVideo}
+                    onChange={(e) => setForm({ ...form, referenceVideo: e.target.value })}
+                    placeholder="Paste Instagram, TikTok, or YouTube link..."
+                    className={inputClass}
+                  />
+                  <p className="mt-1 text-[10px] text-gray-500">
+                    Paste any video URL — https:// is added automatically if needed.
+                  </p>
+                  {form.referenceVideo?.trim() && (
+                    <div className="mt-2">
+                      <ReferenceVideoLink url={form.referenceVideo} />
+                    </div>
+                  )}
+                </label>
               </div>
             )}
 

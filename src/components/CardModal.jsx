@@ -415,31 +415,35 @@ function CardModal({
             )}
           </Field>
 
-          <Field label="Video File Link">
-            <DebouncedField
-              {...SAVE_ON_CLOSE}
-              resetKey={card.id}
-              type="text"
-              value={displayCard.dropboxLink}
-              onCommit={(value) => commitTextField('dropboxLink', value)}
-              placeholder="Paste link to video file (Dropbox, Google Drive, Vimeo, WeTransfer…)"
-              className={inputClass}
-            />
-            {displayCard.dropboxLink?.trim() ? (
-              <a
-                href={displayCard.dropboxLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-1.5 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
-              >
-                Open file →
-              </a>
-            ) : (
-              <p className="mt-1.5 text-xs text-gray-500">
-                When set, clicking the card title on the board opens this link.
-              </p>
-            )}
-          </Field>
+          {['editing', 'in-review', 'not-approved', 'approved', 'scheduled'].includes(
+            displayCard.columnId,
+          ) && (
+            <Field label="Video File Link">
+              <DebouncedField
+                {...SAVE_ON_CLOSE}
+                resetKey={card.id}
+                type="text"
+                value={displayCard.dropboxLink}
+                onCommit={(value) => commitTextField('dropboxLink', value)}
+                placeholder="Paste link to video file (Dropbox, Google Drive, Vimeo, WeTransfer…)"
+                className={inputClass}
+              />
+              {displayCard.dropboxLink?.trim() ? (
+                <a
+                  href={displayCard.dropboxLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1.5 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
+                >
+                  Open file →
+                </a>
+              ) : (
+                <p className="mt-1.5 text-xs text-gray-500">
+                  When set, clicking the card title on the board opens this link.
+                </p>
+              )}
+            </Field>
+          )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Client">
