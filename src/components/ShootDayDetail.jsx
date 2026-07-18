@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useClientsContext } from "../context/ClientsContext";
 import {
   formatShootDayLabel,
@@ -11,6 +11,11 @@ import { ShootDaySessionFields, ShootDaySessionExtras } from "./ShootDayPlanning
 import ShootDaySharePanel from "./ShootDaySharePanel";
 import ShootDayPrintButton from "./ShootDayPrintButton";
 import ModelScheduleSummary from "./ModelScheduleSummary";
+import {
+  btnPrimaryClass,
+  btnSecondaryClass,
+  glassSegmentClass,
+} from "./clientPortal/clientPortalUi";
 
 export default function ShootDayDetail({
   focusDate,
@@ -18,6 +23,8 @@ export default function ShootDayDetail({
   clientGroups,
   shootCount,
   hasShootDay,
+  preferredClient = null,
+  focusToken = null,
   onCardClick,
   onUpdateCard,
   onAddShootDay,
@@ -33,6 +40,36 @@ export default function ShootDayDetail({
   onHandoff,
   ideas = [],
 }) {
+  const clientNames = useMemo(() => clientGroups.map((group) => group.client), [clientGroups]);
+  const clientNamesKey = clientNames.join('\u0001');
+  const [activeClient, setActiveClient] = useState(null);
+  const lastFocusTokenRef = useRef(null);
+
+  useEffect(() => {
+    if (!clientNames.length) {
+      setActiveClient(null);
+      return;
+    }
+    const focusChanged = focusToken != null && focusToken !== lastFocusTokenRef.current;
+    if (focusChanged) {
+      lastFocusTokenRef.current = focusToken;
+      if (preferredClient && clientNames.includes(preferredClient)) {
+        setActiveClient(preferredClient);
+        return;
+      }
+    }
+    setActiveClient((prev) => (prev && clientNames.includes(prev) ? prev : clientNames[0]));
+  }, [dateKey, focusToken, preferredClient, clientNames, clientNamesKey]);
+
+  const showClientTabs = clientGroups.length > 1;
+  const activeGroup =
+    clientGroups.find((group) => group.client === activeClient) || clientGroups[0] || null;
+
+  const clientTabClass = (client) =>
+    activeClient === client
+      ? `${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`
+      : `${btnSecondaryClass} !px-4 !py-1.5 !text-xs !tracking-wider !border-transparent !text-white/45 hover:!text-white`;
+
   return (
     <>
       <div className="mb-6">
@@ -70,27 +107,45 @@ export default function ShootDayDetail({
           </div>
         </div>
       ) : (
-        <div className="space-y-10">
-          {clientGroups.map(({ client, cards: clientCards }) => (
+        <div className="space-y-4">
+          {showClientTabs && (
+            <div className={`${glassSegmentClass} flex w-fit max-w-full flex-wrap gap-0.5 p-0.5`}>
+              {clientGroups.map(({ client }) => (
+                <button
+                  key={client}
+                  type="button"
+                  onClick={() => setActiveClient(client)}
+                  className={clientTabClass(client)}
+                >
+                  {client}
+                </button>
+              ))}
+            </div>
+          )}
+          {activeGroup && (
             <ClientShootSection
-              key={client}
-              client={client}
+              key={activeGroup.client}
+              client={activeGroup.client}
               dateKey={dateKey}
-              clientCards={clientCards}
+              clientCards={activeGroup.cards}
               ideas={ideas}
               onCardClick={onCardClick}
               onUpdateCard={onUpdateCard}
               onAddShootItemForClient={onAddShootItemForClient}
               onAddCardsToShoot={onAddCardsToShoot}
-              plan={getPlan(client, dateKey)}
-              onUpdatePlan={(updates, options) => onUpdatePlan(client, dateKey, updates, options)}
+              plan={getPlan(activeGroup.client, dateKey)}
+              onUpdatePlan={(updates, options) =>
+                onUpdatePlan(activeGroup.client, dateKey, updates, options)
+              }
               onRemoveFromSchedule={onRemoveFromSchedule}
               onReturnToVault={onReturnToVault}
-              onRemoveClientShoot={() => onRemoveClientShoot(client, dateKey, clientCards)}
+              onRemoveClientShoot={() =>
+                onRemoveClientShoot(activeGroup.client, dateKey, activeGroup.cards)
+              }
               onMoveShootDay={onMoveClientShootDay}
               onHandoff={onHandoff}
             />
-          ))}
+          )}
         </div>
       )}
     </>

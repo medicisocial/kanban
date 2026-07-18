@@ -138,14 +138,19 @@ export default function ShootDay({
   const hasShootDay = shootCards.length > 0 || planClientsForDay.length > 0;
 
   const goPrev = () => {
+    setPinnedClient(null);
     setFocusDate((d) => (viewMode === 'day' ? addDays(d, -1) : addMonths(d, -1)));
   };
 
   const goNext = () => {
+    setPinnedClient(null);
     setFocusDate((d) => (viewMode === 'day' ? addDays(d, 1) : addMonths(d, 1)));
   };
 
-  const goToday = () => setFocusDate(getDefaultShootDate());
+  const goToday = () => {
+    setPinnedClient(null);
+    setFocusDate(getDefaultShootDate());
+  };
 
   const handleFocusDateChange = (value) => {
     const nextDateKey = value;
@@ -160,10 +165,12 @@ export default function ShootDay({
       }
     }
 
+    setPinnedClient(null);
     setFocusDate(inputValueToDate(nextDateKey));
   };
 
   const handleDayClick = (day) => {
+    setPinnedClient(null);
     setFocusDate(day);
     setViewMode('day');
   };
@@ -275,6 +282,8 @@ export default function ShootDay({
               clientGroups={clientGroups}
               shootCount={shootCards.length}
               hasShootDay={hasShootDay}
+              preferredClient={pinnedClient}
+              focusToken={focusRequest?.token ?? null}
               cards={cards}
               ideas={ideas}
               onCardClick={onCardClick}

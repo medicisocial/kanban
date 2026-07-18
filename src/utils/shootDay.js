@@ -110,7 +110,7 @@ export function isOnShootRoster(
   return roster.includes(card.id);
 }
 
-/** On past shoot days, only handed-off roster content counts as shoot history. */
+/** Past days keep handed-off history and still-unshot To Create cards. */
 export function shouldAppearOnShootDayRoster(
   card,
   dateKey,
@@ -120,7 +120,9 @@ export function shouldAppearOnShootDayRoster(
 ) {
   if (!isShootDayContentCard(card) || card.shootDate !== dateKey) return false;
   if (!isOnShootRoster(card, plan, dateKey, todayKey, clientCardsOnDate)) return false;
-  if (isPastShootDay(dateKey, todayKey)) return isHandedOffFromShoot(card);
+  if (isPastShootDay(dateKey, todayKey)) {
+    return isHandedOffFromShoot(card) || card.columnId === "shoot";
+  }
   return card.columnId === "shoot";
 }
 

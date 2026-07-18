@@ -203,10 +203,14 @@ async function fetchLiveCards(orgId = 'medici') {
     const rank = getCardPipelineRank(card.columnId);
     if (rank < 0 || rank > CARD_PIPELINE_RANK.approved) return false;
     if (card.shootDate !== pastDate) return false;
+    // Past days keep handed-off history and still-unshot To Create cards.
     if (pastDate >= todayKey) return card.columnId === 'shoot';
-    return card.columnId !== 'shoot';
+    return true;
   });
-  assert(filtered.length === 1 && filtered[0].id === 'b', 'past shoot days keep only handed-off content for that date');
+  assert(
+    filtered.length === 2 && filtered.some((card) => card.id === 'a') && filtered.some((card) => card.id === 'b'),
+    'past shoot days keep To Create and handed-off content for that date',
+  );
 }
 
 const liveCards = await fetchLiveCards();
