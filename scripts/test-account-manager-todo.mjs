@@ -123,8 +123,8 @@ assert(
   'in review cards omit In review kind pill',
 );
 assert(
-  !accountTodoSource.includes('kindStyles.schedule'),
-  'approved schedule cards omit Approved kind pill',
+  (accountTodoSource.match(/\{task\.label\}/g) || []).length === 1,
+  'only publish/story cards keep a kind label; approved schedule cards omit Approved pill',
 );
 assert(
   accountTodoSource.includes("['stories', 'Stories to post', orderedStoryTasks.length]"),
