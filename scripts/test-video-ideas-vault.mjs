@@ -208,19 +208,40 @@ assert(toCreateSource.includes('Go to shoot'), 'To Create row can navigate to it
 assert(!toCreateSource.includes('Edit idea'), 'To Create removes duplicate idea editor action');
 assert(!toCreateSource.includes('Open card'), 'To Create opens cards from the full row instead');
 assert(toCreateSource.includes('openCardFromRow(event, card)'), 'To Create rows open linked cards');
+assert(
+  toCreateSource.includes('btnSecondaryClass'),
+  'To Create secondary action uses bordered secondary styling',
+);
 const approvedSource = readFileSync(new URL('../src/components/IdeaVaultTable.jsx', import.meta.url), 'utf8');
+assert(approvedSource.includes('Add to shoot'), 'Approved rows keep Add to shoot primary action');
 assert(approvedSource.includes('Move to Review'), 'Approved rows can return ideas to Review');
+assert(approvedSource.includes('btnSecondaryClass'), 'Approved secondary action uses bordered styling');
 assert(approvedSource.includes('openIdeaFromRow(event, idea)'), 'Approved rows open idea editor');
+assert(approvedSource.includes('align-middle'), 'Approved title cell is vertically centered');
+assert(!/>\s*Edit\s*</.test(approvedSource), 'Approved rows do not show a standalone Edit action');
+assert(!/>\s*Delete\s*</.test(approvedSource), 'Approved rows do not show a standalone Delete action');
 const reviewSource = readFileSync(
   new URL('../src/components/clientPortal/AdminIdeasTable.jsx', import.meta.url),
   'utf8',
 );
 assert(reviewSource.includes('openIdeaFromRow(event, idea)'), 'Review rows open idea editor');
+assert(reviewSource.includes('btnSecondaryClass'), 'Review Delete uses bordered secondary styling');
+assert(!/>\s*Edit\s*</.test(reviewSource), 'Review rows do not show a standalone Edit action');
 const ideaModalSource = readFileSync(
   new URL('../src/components/VideoIdeaModal.jsx', import.meta.url),
   'utf8',
 );
 assert(!ideaModalSource.includes('Client Comment'), 'idea editor hides client comments');
+assert(ideaModalSource.includes('onDelete'), 'idea editor accepts Delete handler');
+assert(ideaModalSource.includes('>Delete<') || ideaModalSource.includes('Delete\n'), 'idea editor exposes Delete for existing ideas');
+const videoIdeasUiSource = readFileSync(
+  new URL('../src/components/VideoIdeas.jsx', import.meta.url),
+  'utf8',
+);
+assert(
+  videoIdeasUiSource.includes('onDelete={handleDeleteIdeaFromModal}'),
+  'Vault wires idea modal Delete handler',
+);
 const navSource = readFileSync(
   new URL('../src/components/clientPortal/AdminConsoleLayout.jsx', import.meta.url),
   'utf8',

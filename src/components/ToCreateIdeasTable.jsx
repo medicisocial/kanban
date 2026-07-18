@@ -5,8 +5,8 @@ import { findIdeaBoardCard, sortIdeasByShootSchedule } from '../utils/videoIdeas
 import { contentTypeLabelProps } from '../utils/contentTypeColors';
 import ClientAvatar from './ClientAvatar';
 import {
-  btnGhostClass,
   btnPrimaryClass,
+  btnSecondaryClass,
   surfacePanelClass,
 } from './clientPortal/clientPortalUi';
 
@@ -99,7 +99,7 @@ export default function ToCreateIdeasTable({
               <button
                 type="button"
                 onClick={() => onReturnToApproved?.(card)}
-                className={`${btnGhostClass} px-2.5 py-1.5 text-[10px] text-violet-200`}
+                className={`${btnSecondaryClass} px-2.5 py-1.5 text-[10px] text-violet-200`}
               >
                 Move back to Approved
               </button>
