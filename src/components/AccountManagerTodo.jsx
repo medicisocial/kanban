@@ -473,7 +473,7 @@ export default function AccountManagerTodo({
             onClick={() => setActiveQueue(id)}
             className={`px-3 py-1.5 text-xs font-medium transition ${
               activeQueue === id
-                ? 'bg-[#810100] text-white'
+                ? 'bg-white text-black'
                 : 'text-white/45 hover:bg-white/5 hover:text-white'
             }`}
           >
