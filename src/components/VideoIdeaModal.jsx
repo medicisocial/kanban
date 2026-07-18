@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   CONTENT_TYPES,
@@ -23,6 +23,23 @@ const IDEA_TABS = [
   ["script", "Script"],
   ["references", "References"],
 ];
+
+function buildIdeaSavePayload(form) {
+  return {
+    ...form,
+    title: form.title.trim(),
+    referenceVideo: normalizeLink(form.referenceVideo) || "",
+    referenceMusic: normalizeLink(form.referenceMusic) || "",
+    description: form.description.trim(),
+    scriptHook: form.scriptHook.trim(),
+    scriptBody: form.scriptBody.trim(),
+    scriptOverlays: form.scriptOverlays.trim(),
+    caption: form.caption.trim(),
+    captionMode: normalizeCaptionMode(form.captionMode, form.contentType),
+    postSlides: normalizePostSlides(form.postSlides, form.contentType),
+    editorPoints: normalizeEditorPoints(form.editorPoints),
+  };
+}
 
 export default function VideoIdeaModal({
   onClose,
@@ -54,45 +71,76 @@ export default function VideoIdeaModal({
   const [activeTab, setActiveTab] = useState("details");
   const [showMakeOneOff, setShowMakeOneOff] = useState(false);
 
+  const formRef = useRef(form);
+  const savedRef = useRef(false);
+  const showMakeOneOffRef = useRef(showMakeOneOff);
+  const onSaveRef = useRef(onSave);
+  const onCloseRef = useRef(onClose);
+
+  formRef.current = form;
+  showMakeOneOffRef.current = showMakeOneOff;
+  onSaveRef.current = onSave;
+  onCloseRef.current = onClose;
+
+  const flushEditSave = useCallback(({ requireTitle = false } = {}) => {
+    if (!isEdit || savedRef.current) return true;
+    const title = formRef.current.title.trim();
+    if (!title) {
+      if (requireTitle) {
+        setError("Please enter an idea title.");
+        return false;
+      }
+      return true;
+    }
+    onSaveRef.current(buildIdeaSavePayload(formRef.current));
+    savedRef.current = true;
+    return true;
+  }, [isEdit]);
+
+  const requestClose = useCallback(() => {
+    if (showMakeOneOffRef.current) return;
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    if (isEdit) flushEditSave({ requireTitle: false });
+    onCloseRef.current();
+  }, [flushEditSave, isEdit]);
+
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (showMakeOneOffRef.current) return;
+        if (isEdit) requestClose();
+        else onCloseRef.current();
+      }
     };
     document.addEventListener("keydown", handleKey);
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", handleKey);
       document.body.style.overflow = "";
+      if (isEdit) flushEditSave({ requireTitle: false });
     };
-  }, [onClose]);
+  }, [flushEditSave, isEdit, requestClose]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setError("");
 
-    const title = form.title.trim();
-    const referenceVideo = normalizeLink(form.referenceVideo);
-    const referenceMusic = normalizeLink(form.referenceMusic);
+    if (isEdit) {
+      if (!flushEditSave({ requireTitle: true })) return;
+      onClose();
+      return;
+    }
 
+    const title = form.title.trim();
     if (!title) {
       setError("Please enter an idea title.");
       return;
     }
 
-    onSave({
-      ...form,
-      title,
-      referenceVideo: referenceVideo || "",
-      referenceMusic: referenceMusic || "",
-      description: form.description.trim(),
-      scriptHook: form.scriptHook.trim(),
-      scriptBody: form.scriptBody.trim(),
-      scriptOverlays: form.scriptOverlays.trim(),
-      caption: form.caption.trim(),
-      captionMode: normalizeCaptionMode(form.captionMode, form.contentType),
-      postSlides: normalizePostSlides(form.postSlides, form.contentType),
-      editorPoints: normalizeEditorPoints(form.editorPoints),
-    });
+    onSave(buildIdeaSavePayload(form));
+    savedRef.current = true;
     onClose();
   };
 
@@ -107,7 +155,7 @@ export default function VideoIdeaModal({
         type="button"
         className="absolute inset-0 cursor-default bg-black/70 backdrop-blur-sm"
         aria-label="Close dialog"
-        onClick={onClose}
+        onClick={isEdit ? requestClose : onClose}
       />
 
       <div className="pointer-events-none relative flex min-h-full items-center justify-center p-4 sm:p-6">
@@ -133,7 +181,7 @@ export default function VideoIdeaModal({
             </div>
             <button
               type="button"
-              onClick={onClose}
+              onClick={isEdit ? requestClose : onClose}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 text-lg text-gray-400 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
               aria-label="Close"
             >
@@ -336,9 +384,11 @@ export default function VideoIdeaModal({
                 Delete
               </button>
             )}
-            <button type="button" onClick={onClose} className={`${btnSecondaryClass} min-w-0 flex-1`}>
-              Cancel
-            </button>
+            {!isEdit && (
+              <button type="button" onClick={onClose} className={`${btnSecondaryClass} min-w-0 flex-1`}>
+                Cancel
+              </button>
+            )}
             <button type="submit" className={`${btnPrimaryClass} min-w-0 flex-1`}>
               {isEdit ? "Save Changes" : "Share with Client"}
             </button>
@@ -354,7 +404,9 @@ export default function VideoIdeaModal({
           initialEditorPoints={form.editorPoints}
           onClose={() => setShowMakeOneOff(false)}
           onConfirm={(data) => {
+            flushEditSave({ requireTitle: false });
             onMakeOneOff?.(idea, data);
+            savedRef.current = true;
             onClose();
           }}
         />

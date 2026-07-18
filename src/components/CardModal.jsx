@@ -42,7 +42,7 @@ const CARD_TABS = [
   { id: 'references', label: 'References' },
 ];
 
-/** Text fields in the modal sync to cloud only when Done / close — not while typing. */
+/** Text fields in the modal sync to cloud only when Save Changes / close — not while typing. */
 const SAVE_ON_CLOSE = { deferCommit: true, commitOnBlur: true };
 
 function CardModal({
@@ -1116,7 +1116,7 @@ function CardModal({
             onClick={handleDone}
             className="flex-1 rounded-lg bg-[#810100] py-2.5 text-sm font-medium text-white transition hover:bg-[#a00000]"
           >
-            Done
+            Save Changes
           </button>
         </div>
       </div>

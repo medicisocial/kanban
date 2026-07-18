@@ -411,6 +411,26 @@ assert(
   assert(!refVideoInDetails, 'idea editor keeps reference video off Details');
 }
 assert(ideaModalSource.includes('MakeOneOffModal'), 'idea editor can open Make one-off modal');
+assert(
+  ideaModalSource.includes('isEdit ? "Save Changes" : "Share with Client"'),
+  'idea editor edit footer uses Save Changes (not Done)',
+);
+assert(
+  ideaModalSource.includes('flushEditSave') && ideaModalSource.includes('requestClose'),
+  'idea editor flushes local draft on close in edit mode',
+);
+{
+  const footerMarker = 'flex shrink-0 flex-wrap gap-2 border-t border-white/5 px-5 py-4';
+  const footerIdx = ideaModalSource.indexOf(footerMarker);
+  assert(footerIdx > 0, 'idea editor has a footer actions row');
+  const footerSlice = ideaModalSource.slice(footerIdx, footerIdx + 900);
+  const createOnlyIdx = footerSlice.indexOf('{!isEdit &&');
+  const cancelIdx = footerSlice.indexOf('Cancel');
+  assert(
+    createOnlyIdx > 0 && cancelIdx > createOnlyIdx,
+    'idea editor Cancel is gated behind create (!isEdit) — not shown on edit',
+  );
+}
 const makeOneOffSource = readFileSync(
   new URL('../src/components/MakeOneOffModal.jsx', import.meta.url),
   'utf8',
@@ -428,6 +448,14 @@ assert(
 const cardModalSource = readFileSync(new URL('../src/components/CardModal.jsx', import.meta.url), 'utf8');
 assert(cardModalSource.includes('Make one-off project'), 'card editor exposes Make one-off project');
 assert(cardModalSource.includes('MakeOneOffModal'), 'card editor opens Make one-off modal');
+assert(
+  cardModalSource.includes('Save Changes'),
+  'card editor footer uses Save Changes when edits are not live-saved',
+);
+assert(
+  !/>\s*Done\s*</.test(cardModalSource),
+  'card editor footer no longer uses Done label',
+);
 assert(
   cardModalSource.includes('buildOneOffConversionUpdates'),
   'card editor uses shared one-off conversion helper',
