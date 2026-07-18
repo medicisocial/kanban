@@ -142,7 +142,14 @@ export default function AdminIdeasTable({
                     </label>
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-1.5 text-[10px] text-white/45">
+                      <ClientAvatar client={idea.client} size="xs" color={clientColor} />
+                      <span className="truncate">{idea.client}</span>
+                    </div>
+                    <h3 className="mt-1 truncate text-sm font-semibold text-white">
+                      {idea.title || 'Untitled idea'}
+                    </h3>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
                       <StatusBadge status={idea.status} />
                       {idea.contentType && (
                         <p
@@ -155,19 +162,12 @@ export default function AdminIdeasTable({
                         </p>
                       )}
                     </div>
-                    <h3 className="mt-1 truncate text-sm font-semibold text-white">
-                      {idea.title || 'Untitled idea'}
-                    </h3>
                     {idea.description && (
-                      <p className="mt-0.5 line-clamp-2 text-xs text-white/40">{idea.description}</p>
+                      <p className="mt-1 line-clamp-2 text-xs text-white/40">{idea.description}</p>
                     )}
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-white/45">
-                      <span className="inline-flex items-center gap-1.5">
-                        <ClientAvatar client={idea.client} size="xs" color={clientColor} />
-                        <span className="truncate">{idea.client}</span>
-                      </span>
-                      <span className="tabular-nums">{formatPortalDate(idea.createdAt)}</span>
-                    </div>
+                    <p className="mt-1 text-[10px] tabular-nums text-white/45">
+                      {formatPortalDate(idea.createdAt)}
+                    </p>
                     {(idea.referenceVideo || idea.referenceMusic) && (
                       <div className="mt-2 flex flex-wrap gap-3">
                         {idea.referenceVideo && (

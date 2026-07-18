@@ -71,6 +71,14 @@ assert(
   creatorSource.includes('taskActionBtnClass'),
   'Content Creator card actions use compact team-card button styling',
 );
+const teamTaskCardSource = readFileSync(
+  new URL('../src/components/TeamTaskCard.jsx', import.meta.url),
+  'utf8',
+);
+assert(
+  teamTaskCardSource.includes('ClientAvatar') && teamTaskCardSource.includes('TeamTaskClientLabel'),
+  'team task client labels include client logos',
+);
 assert(!creatorSource.includes('Make one-off'), 'Content Creator cards do not expose Make one-off');
 assert(!creatorSource.includes('onConvertToOneOff'), 'Content Creator does not wire one-off conversion');
 assert(
