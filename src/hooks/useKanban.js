@@ -11,6 +11,7 @@ import { markRecentlyPushed } from '../lib/syncEchoGuard';
 import { reportSyncIssue } from '../lib/workspaceSyncHealth';
 import { applyVaultIdeaShootSchedule, withPipelineRegressionAuthorization } from '../utils/cardPipelineMerge';
 import { resolveShootScriptsFromIdea } from '../utils/videoIdeas';
+import { normalizeCaptionMode, normalizePostSlides } from '../utils/postSlides';
 
 const getCardId = (card) => card.id;
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
@@ -76,6 +77,11 @@ function normalizeCard(card) {
     shootScriptBody: card.shootScriptBody || '',
     shootTextOverlays: card.shootTextOverlays || '',
     caption: card.caption || '',
+    captionMode: normalizeCaptionMode(card.captionMode, card.contentType),
+    postSlides: normalizePostSlides(card.postSlides, card.contentType, {
+      fallbackDescription: card.shootScriptBody || card.shootScript || '',
+      fallbackTextOverlay: card.shootTextOverlays || '',
+    }),
     contentCreator: card.contentCreator || '',
     storyRecurrenceDays: parseRecurrenceDays(card.storyRecurrenceDays),
     storyEndDate: card.storyEndDate || '',
@@ -319,7 +325,7 @@ export function useKanban() {
           contentCreator: getDefaultAssigneeForRole('Content Creator'),
           assignedTo: getDefaultAssigneeForRole('Editor'),
           notes,
-          referenceMusic: '',
+          referenceMusic: idea.referenceMusic || '',
           referenceVideo: idea.referenceVideo || '',
           dropboxLink: '',
           clientComment: '',

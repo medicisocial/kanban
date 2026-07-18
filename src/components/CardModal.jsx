@@ -28,6 +28,7 @@ import { buildCalendarNoteDeletePatch } from '../utils/calendarNote';
 import { canReturnCardToVault } from '../utils/videoIdeas';
 import { beginBatch, endBatch } from '../utils/undoHistory';
 import ScriptPanel from './ScriptPanel';
+import PostSlidesPanel from './PostSlidesPanel';
 import DebouncedField, { DebouncedModelTagInput, DebouncedTimeInput } from './DebouncedField';
 
 const CARD_TABS = [
@@ -624,18 +625,28 @@ function CardModal({
           )}
 
           {activeTab === 'script' && (
-            <ScriptPanel
-              hook={displayCard.shootScriptHook || ''}
-              body={displayCard.shootScriptBody || displayCard.shootScript || ''}
-              overlays={displayCard.shootTextOverlays || ''}
-              caption={displayCard.caption || ''}
-              onChange={(next) => {
-                if (next.hook !== undefined) commitTextField('shootScriptHook', next.hook);
-                if (next.body !== undefined) commitTextField('shootScriptBody', next.body);
-                if (next.overlays !== undefined) commitTextField('shootTextOverlays', next.overlays);
-                if (next.caption !== undefined) commitTextField('caption', next.caption);
-              }}
-            />
+            displayCard.contentType === 'Carousel' || displayCard.contentType === 'Static Post' ? (
+              <PostSlidesPanel
+                contentType={displayCard.contentType}
+                caption={displayCard.caption || ''}
+                captionMode={displayCard.captionMode || 'shared'}
+                slides={displayCard.postSlides || []}
+                onChange={queueUpdate}
+              />
+            ) : (
+              <ScriptPanel
+                hook={displayCard.shootScriptHook || ''}
+                body={displayCard.shootScriptBody || displayCard.shootScript || ''}
+                overlays={displayCard.shootTextOverlays || ''}
+                caption={displayCard.caption || ''}
+                onChange={(next) => {
+                  if (next.hook !== undefined) commitTextField('shootScriptHook', next.hook);
+                  if (next.body !== undefined) commitTextField('shootScriptBody', next.body);
+                  if (next.overlays !== undefined) commitTextField('shootTextOverlays', next.overlays);
+                  if (next.caption !== undefined) commitTextField('caption', next.caption);
+                }}
+              />
+            )
           )}
 
           {activeTab === 'production' && !isOneOff && (

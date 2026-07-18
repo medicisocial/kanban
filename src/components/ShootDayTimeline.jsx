@@ -13,6 +13,7 @@ import ShootDayTimelinePrintButton from "./ShootDayTimelinePrintButton";
 import ShootScriptModal from "./ShootScriptModal";
 import { hasStructuredScript } from "../utils/scriptFields";
 import { canReturnCardToVault } from "../utils/videoIdeas";
+import { isSlidePostType } from "../utils/postSlides";
 
 const LANE_HEIGHT = 104;
 /** Minimum timeline width (% of track) so short slots stay visible without overlapping neighbors. */
@@ -28,6 +29,7 @@ export default function ShootDayTimeline({
   onUpdateCard,
   onCardClick,
   onReturnToVault,
+  hideSlidePostPlans = false,
 }) {
   const [scriptCard, setScriptCard] = useState(null);
   const canEditScript = Boolean(onUpdateCard);
@@ -223,7 +225,8 @@ export default function ShootDayTimeline({
                         <span>Reference video ↗</span>
                       </a>
                     )}
-                    {(hasStructuredScript(entry.card) || canEditScript) && (
+                    {(hasStructuredScript(entry.card) || canEditScript) &&
+                      !(hideSlidePostPlans && isSlidePostType(entry.card.contentType)) && (
                       <button
                         type="button"
                         onClick={(e) => {

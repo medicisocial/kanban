@@ -1,5 +1,10 @@
 import { isOneOffProjectCard } from '../constants';
 import { matchesClientFilter } from './clients';
+import {
+  hasPostSlidePlan,
+  normalizeCaptionMode,
+  normalizePostSlides,
+} from './postSlides';
 
 /** Approved ideas waiting to be scheduled on a shoot day. */
 export function findIdeaBoardCard(idea, cards = []) {
@@ -56,6 +61,10 @@ export function canReturnCardToVault(card) {
 /** Fields for an idea added straight to the bank (skips review). */
 export function buildBankIdeaData(ideaData = {}) {
   const now = Date.now();
+  const postSlides = normalizePostSlides(ideaData.postSlides, ideaData.contentType, {
+    fallbackDescription: ideaData.scriptBody || ideaData.script || '',
+    fallbackTextOverlay: ideaData.scriptOverlays || '',
+  });
   return {
     ...ideaData,
     // normalize structured fields
@@ -63,6 +72,9 @@ export function buildBankIdeaData(ideaData = {}) {
     scriptBody: String(ideaData.scriptBody || '').trim(),
     scriptOverlays: String(ideaData.scriptOverlays || '').trim(),
     caption: String(ideaData.caption || '').trim(),
+    captionMode: normalizeCaptionMode(ideaData.captionMode, ideaData.contentType),
+    postSlides,
+    referenceMusic: String(ideaData.referenceMusic || '').trim(),
     // legacy freeform
     script: String(ideaData.script || '').trim(),
     status: 'approved',
@@ -73,11 +85,17 @@ export function buildBankIdeaData(ideaData = {}) {
 
 /** Resolve shoot script fields when scheduling an idea onto a card. */
 export function resolveShootScriptsFromIdea(idea, existingCard = null) {
+  const ideaSlides = normalizePostSlides(idea?.postSlides, idea?.contentType, {
+    fallbackDescription: idea?.scriptBody || idea?.script || '',
+    fallbackTextOverlay: idea?.scriptOverlays || '',
+  });
   const resolved = {
     shootScriptHook: String(idea?.scriptHook || '').trim(),
     shootScriptBody: String(idea?.scriptBody || '').trim(),
     shootTextOverlays: String(idea?.scriptOverlays || '').trim(),
     caption: String(idea?.caption || '').trim(),
+    captionMode: normalizeCaptionMode(idea?.captionMode, idea?.contentType),
+    postSlides: ideaSlides,
   };
   if (existingCard) {
     // preserve any existing on-set edits
@@ -85,6 +103,14 @@ export function resolveShootScriptsFromIdea(idea, existingCard = null) {
     resolved.shootScriptBody = String(existingCard.shootScriptBody || resolved.shootScriptBody || '').trim();
     resolved.shootTextOverlays = String(existingCard.shootTextOverlays || resolved.shootTextOverlays || '').trim();
     resolved.caption = String(existingCard.caption || resolved.caption || '').trim();
+    const existingSlides = normalizePostSlides(existingCard.postSlides, existingCard.contentType, {
+      fallbackDescription: existingCard.shootScriptBody || existingCard.shootScript || '',
+      fallbackTextOverlay: existingCard.shootTextOverlays || '',
+    });
+    if (hasPostSlidePlan(existingSlides)) {
+      resolved.postSlides = existingSlides;
+      resolved.captionMode = normalizeCaptionMode(existingCard.captionMode, existingCard.contentType);
+    }
   }
   return resolved;
 }
@@ -96,7 +122,16 @@ export function buildIdeaReturnFromCard(card, existingIdea = null) {
   const body = String(card?.shootScriptBody || '').trim();
   const overlays = String(card?.shootTextOverlays || '').trim();
   const caption = String(card?.caption || '').trim();
+  const cardSlides = normalizePostSlides(card?.postSlides, card?.contentType, {
+    fallbackDescription: body || shootScript,
+    fallbackTextOverlay: overlays,
+  });
   if (existingIdea) {
+    const existingSlides = normalizePostSlides(existingIdea.postSlides, existingIdea.contentType, {
+      fallbackDescription: existingIdea.scriptBody || existingIdea.script || '',
+      fallbackTextOverlay: existingIdea.scriptOverlays || '',
+    });
+    const postSlides = hasPostSlidePlan(cardSlides) ? cardSlides : existingSlides;
     return {
       boardCardId: null,
       status: 'approved',
@@ -104,6 +139,11 @@ export function buildIdeaReturnFromCard(card, existingIdea = null) {
       scriptBody: body || String(existingIdea.scriptBody || '').trim(),
       scriptOverlays: overlays || String(existingIdea.scriptOverlays || '').trim(),
       caption: caption || String(existingIdea.caption || '').trim(),
+      captionMode: hasPostSlidePlan(cardSlides)
+        ? normalizeCaptionMode(card.captionMode, card.contentType)
+        : normalizeCaptionMode(existingIdea.captionMode, existingIdea.contentType),
+      postSlides,
+      referenceMusic: card.referenceMusic || existingIdea.referenceMusic || '',
       script: shootScript || String(existingIdea.script || '').trim(),
     };
   }
@@ -112,11 +152,14 @@ export function buildIdeaReturnFromCard(card, existingIdea = null) {
     title: card.title,
     contentType: card.contentType,
     referenceVideo: card.referenceVideo || '',
+    referenceMusic: card.referenceMusic || '',
     description: card.notes || '',
     scriptHook: hook,
     scriptBody: body,
     scriptOverlays: overlays,
     caption,
+    captionMode: normalizeCaptionMode(card.captionMode, card.contentType),
+    postSlides: cardSlides,
     script: shootScript,
     clientComment: card.clientComment || '',
     status: 'approved',

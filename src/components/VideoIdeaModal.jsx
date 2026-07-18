@@ -3,8 +3,10 @@ import { createPortal } from "react-dom";
 import { CONTENT_TYPES, IDEA_STATUSES } from "../constants";
 import { useClientsContext } from "../context/ClientsContext";
 import { normalizeLink } from "../utils/links";
+import { normalizeCaptionMode, normalizePostSlides } from "../utils/postSlides";
 import { btnPrimaryClass, btnSecondaryClass } from "./clientPortal/clientPortalUi";
 import ScriptPanel from "./ScriptPanel";
+import PostSlidesPanel from "./PostSlidesPanel";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30";
@@ -17,11 +19,14 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
     client: idea?.client || (defaultClient && defaultClient !== "all" ? defaultClient : firstClient),
     title: idea?.title || "",
     referenceVideo: idea?.referenceVideo || "",
+    referenceMusic: idea?.referenceMusic || "",
     description: idea?.description || "",
     scriptHook: idea?.scriptHook || "",
     scriptBody: idea?.scriptBody || idea?.script || "",
     scriptOverlays: idea?.scriptOverlays || "",
     caption: idea?.caption || "",
+    captionMode: idea?.captionMode || "shared",
+    postSlides: idea?.postSlides || [],
     contentType: idea?.contentType || "Reel",
     clientComment: idea?.clientComment || "",
   });
@@ -46,6 +51,7 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
 
     const title = form.title.trim();
     const referenceVideo = normalizeLink(form.referenceVideo);
+    const referenceMusic = normalizeLink(form.referenceMusic);
 
     if (!title) {
       setError("Please enter an idea title.");
@@ -56,11 +62,14 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
       ...form,
       title,
       referenceVideo: referenceVideo || "",
+      referenceMusic: referenceMusic || "",
       description: form.description.trim(),
       scriptHook: form.scriptHook.trim(),
       scriptBody: form.scriptBody.trim(),
       scriptOverlays: form.scriptOverlays.trim(),
       caption: form.caption.trim(),
+      captionMode: normalizeCaptionMode(form.captionMode, form.contentType),
+      postSlides: normalizePostSlides(form.postSlides, form.contentType),
       clientComment: form.clientComment.trim(),
     });
     onClose();
@@ -192,6 +201,19 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
               </p>
             </label>
 
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-gray-400">
+                Reference Music Link (optional)
+              </span>
+              <input
+                type="text"
+                value={form.referenceMusic}
+                onChange={(e) => setForm({ ...form, referenceMusic: e.target.value })}
+                placeholder="Paste Spotify, YouTube, or audio link..."
+                className={inputClass}
+              />
+            </label>
+
             {/* Hide Notes for Client when editing an approved bank idea */}
             {!(isEdit && idea?.status === 'approved') && (
               <label className="block">
@@ -221,21 +243,31 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
 
             {activeTab === "script" && (
               <div>
-                <ScriptPanel
-                  hook={form.scriptHook}
-                  body={form.scriptBody}
-                  overlays={form.scriptOverlays}
-                  caption={form.caption}
-                  onChange={(next) =>
-                    setForm((current) => ({
-                      ...current,
-                      ...(next.hook !== undefined ? { scriptHook: next.hook } : {}),
-                      ...(next.body !== undefined ? { scriptBody: next.body } : {}),
-                      ...(next.overlays !== undefined ? { scriptOverlays: next.overlays } : {}),
-                      ...(next.caption !== undefined ? { caption: next.caption } : {}),
-                    }))
-                  }
-                />
+                {form.contentType === "Carousel" || form.contentType === "Static Post" ? (
+                  <PostSlidesPanel
+                    contentType={form.contentType}
+                    caption={form.caption}
+                    captionMode={form.captionMode}
+                    slides={form.postSlides}
+                    onChange={(next) => setForm((current) => ({ ...current, ...next }))}
+                  />
+                ) : (
+                  <ScriptPanel
+                    hook={form.scriptHook}
+                    body={form.scriptBody}
+                    overlays={form.scriptOverlays}
+                    caption={form.caption}
+                    onChange={(next) =>
+                      setForm((current) => ({
+                        ...current,
+                        ...(next.hook !== undefined ? { scriptHook: next.hook } : {}),
+                        ...(next.body !== undefined ? { scriptBody: next.body } : {}),
+                        ...(next.overlays !== undefined ? { scriptOverlays: next.overlays } : {}),
+                        ...(next.caption !== undefined ? { caption: next.caption } : {}),
+                      }))
+                    }
+                  />
+                )}
                 <p className="mt-2 text-[10px] text-gray-500">
                   Carries over to the card when this idea is scheduled.
                 </p>

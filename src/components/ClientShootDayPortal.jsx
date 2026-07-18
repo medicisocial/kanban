@@ -22,6 +22,7 @@ import ShootScriptModal from "./ShootScriptModal";
 import ModelScheduleSummary from "./ModelScheduleSummary";
 import SharePortalShell from "./clientPortal/SharePortalShell";
 import { btnPrimaryClass, surfacePanelClass } from "./clientPortal/clientPortalUi";
+import { isSlidePostType } from "../utils/postSlides";
 
 function planToUpdates(plan) {
   return {
@@ -188,7 +189,7 @@ export default function ClientShootDayPortal({
                 card={card}
                 onUpdate={handleUpdateCard}
                 shootWindow={localPlan}
-                onOpenScript={setScriptCard}
+                onOpenScript={isSlidePostType(card.contentType) ? undefined : setScriptCard}
               />
             ))}
           </div>
@@ -211,6 +212,7 @@ export default function ClientShootDayPortal({
             client={client}
             dateKey={dateKey}
             onUpdateCard={handleUpdateCard}
+            hideSlidePostPlans
           />
         </section>
 

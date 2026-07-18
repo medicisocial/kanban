@@ -4,6 +4,7 @@ import { normalizeLink } from '../utils/links';
 import ClientAvatar from './ClientAvatar';
 import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
 import DebouncedField from './DebouncedField';
+import PostSlidesPanel from './PostSlidesPanel';
 import { getStructuredScript, hasStructuredScript } from '../utils/scriptFields';
 import {
   btnGhostClass,
@@ -32,6 +33,12 @@ const BANK_TYPE_OPTIONS = [
 
 function bankTypeLabel(value) {
   return BANK_TYPE_OPTIONS.find((option) => option.value === value)?.label || value || '—';
+}
+
+function contentReadyLabel(idea) {
+  return idea.contentType === 'Carousel' || idea.contentType === 'Static Post'
+    ? 'Post plan ready'
+    : 'Script ready';
 }
 
 function IdeaReferenceField({ ideaId, value = '', onSave, readOnly = false, compact = false }) {
@@ -173,7 +180,9 @@ export default function IdeaVaultTable({
                 {idea.title || 'Untitled idea'}
               </button>
               {hasStructuredScript(idea) && !expanded && (
-                <p className="mt-1 text-[10px] uppercase tracking-wider text-white/35">Script ready</p>
+                <p className="mt-1 text-[10px] uppercase tracking-wider text-white/35">
+                  {contentReadyLabel(idea)}
+                </p>
               )}
               <div className="mt-2">
                 <IdeaReferenceField
@@ -220,20 +229,37 @@ export default function IdeaVaultTable({
               )}
               {expanded && (
                 <div className="mt-3 border border-white/10 bg-white/[0.02] p-3 text-sm text-white/70">
-                  {hasStructuredScript(idea) && (
+                  {hasStructuredScript(idea) &&
+                    (!(idea.contentType === 'Carousel' || idea.contentType === 'Static Post') || !readOnly) && (
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">Script</p>
-                      {(() => {
-                        const script = getStructuredScript(idea);
-                        return (
-                          <div className="mt-1 space-y-2 text-xs text-white/65">
-                            {script.hook && <p><span className="text-white/40">Hook: </span>{script.hook}</p>}
-                            {script.body && <p className="whitespace-pre-wrap"><span className="text-white/40">Body: </span>{script.body}</p>}
-                            {script.overlays && <p className="whitespace-pre-wrap"><span className="text-white/40">Overlays: </span>{script.overlays}</p>}
-                            {script.caption && <p className="whitespace-pre-wrap"><span className="text-white/40">Caption: </span>{script.caption}</p>}
-                          </div>
-                        );
-                      })()}
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+                        {idea.contentType === 'Carousel' || idea.contentType === 'Static Post'
+                          ? 'Post plan'
+                          : 'Script'}
+                      </p>
+                      {idea.contentType === 'Carousel' || idea.contentType === 'Static Post' ? (
+                        <div className="mt-2">
+                          <PostSlidesPanel
+                            contentType={idea.contentType}
+                            caption={idea.caption || ''}
+                            captionMode={idea.captionMode || 'shared'}
+                            slides={idea.postSlides || []}
+                            readOnly
+                          />
+                        </div>
+                      ) : (
+                        (() => {
+                          const script = getStructuredScript(idea);
+                          return (
+                            <div className="mt-1 space-y-2 text-xs text-white/65">
+                              {script.hook && <p><span className="text-white/40">Hook: </span>{script.hook}</p>}
+                              {script.body && <p className="whitespace-pre-wrap"><span className="text-white/40">Body: </span>{script.body}</p>}
+                              {script.overlays && <p className="whitespace-pre-wrap"><span className="text-white/40">Overlays: </span>{script.overlays}</p>}
+                              {script.caption && <p className="whitespace-pre-wrap"><span className="text-white/40">Caption: </span>{script.caption}</p>}
+                            </div>
+                          );
+                        })()
+                      )}
                     </div>
                   )}
                   {idea.clientComment && (
@@ -269,7 +295,9 @@ export default function IdeaVaultTable({
                   <td className={bankRowMetaClass}>
                     <p className="font-medium text-white">{idea.title || 'Untitled idea'}</p>
                     {hasStructuredScript(idea) && (
-                      <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/35">Script ready</p>
+                      <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/35">
+                        {contentReadyLabel(idea)}
+                      </p>
                     )}
                   </td>
                   <td className={bankRowControlClass}>

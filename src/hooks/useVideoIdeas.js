@@ -25,12 +25,15 @@ function createIdea(overrides = {}) {
     client: DEFAULT_CLIENTS[0],
     title: "",
     referenceVideo: "",
+    referenceMusic: "",
     description: "",
     // Structured script fields for bank → shoot carryover
     scriptHook: "",
     scriptBody: "",
     scriptOverlays: "",
     caption: "",
+    captionMode: "shared",
+    postSlides: [],
     // Legacy freeform (kept for backward compatibility/display-only)
     script: "",
     contentType: "Reel",

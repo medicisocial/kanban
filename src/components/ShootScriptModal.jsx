@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getContentTypeStyle } from '../constants';
 import { contentTypeLabelProps } from '../utils/contentTypeColors';
 import ScriptPanel from './ScriptPanel';
+import PostSlidesPanel from './PostSlidesPanel';
 import { getStructuredScript } from '../utils/scriptFields';
 
 export default function ShootScriptModal({ card, onClose, onSave, readOnly = false }) {
@@ -32,6 +33,8 @@ export default function ShootScriptModal({ card, onClose, onSave, readOnly = fal
       shootScriptBody: draft.body.trim(),
       shootTextOverlays: draft.overlays.trim(),
       caption: draft.caption.trim(),
+      captionMode: draft.captionMode,
+      postSlides: draft.postSlides,
       // Keep the legacy field in sync for older share links/clients.
       shootScript: draft.body.trim(),
     });
@@ -64,14 +67,25 @@ export default function ShootScriptModal({ card, onClose, onSave, readOnly = fal
         </div>
 
         <div className="px-5 py-4">
-          <ScriptPanel
-            hook={draft.hook}
-            body={draft.body}
-            overlays={draft.overlays}
-            caption={draft.caption}
-            readOnly={readOnly}
-            onChange={(next) => setDraft((current) => ({ ...current, ...next }))}
-          />
+          {card.contentType === 'Carousel' || card.contentType === 'Static Post' ? (
+            <PostSlidesPanel
+              contentType={card.contentType}
+              caption={draft.caption}
+              captionMode={draft.captionMode}
+              slides={draft.postSlides}
+              readOnly={readOnly}
+              onChange={(next) => setDraft((current) => ({ ...current, ...next }))}
+            />
+          ) : (
+            <ScriptPanel
+              hook={draft.hook}
+              body={draft.body}
+              overlays={draft.overlays}
+              caption={draft.caption}
+              readOnly={readOnly}
+              onChange={(next) => setDraft((current) => ({ ...current, ...next }))}
+            />
+          )}
         </div>
 
         <div className="flex justify-end gap-2 border-t border-white/5 px-5 py-4">

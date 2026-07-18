@@ -330,6 +330,8 @@ export function createCard(overrides = {}) {
     shootScriptBody: '',
     shootTextOverlays: '',
     caption: '',
+    captionMode: 'shared',
+    postSlides: [],
     storyRecurrenceDays: [],
     storyEndDate: '',
     storyOccurrenceNotes: {},

@@ -26,6 +26,9 @@ function compactShootCard(card) {
     card.shootScriptBody || '',
     card.shootTextOverlays || '',
     card.caption || '',
+    card.captionMode || 'shared',
+    card.postSlides || [],
+    card.referenceMusic || '',
   ];
 }
 
@@ -46,6 +49,9 @@ function expandShootCard(client, dateKey, tuple) {
     shootScriptBody,
     shootTextOverlays,
     caption,
+    captionMode,
+    postSlides,
+    referenceMusic,
   ] = tuple;
 
   return {
@@ -63,7 +69,10 @@ function expandShootCard(client, dateKey, tuple) {
     shootScriptBody: shootScriptBody || '',
     shootTextOverlays: shootTextOverlays || '',
     caption: caption || '',
+    captionMode: captionMode || 'shared',
+    postSlides: Array.isArray(postSlides) ? postSlides : [],
     referenceVideo,
+    referenceMusic: referenceMusic || '',
     notes,
     shootDate: dateKey,
   };
@@ -162,6 +171,9 @@ export function buildShootSubmission(client, dateKey, plan, cards) {
       shootScriptBody: c.shootScriptBody || '',
       shootTextOverlays: c.shootTextOverlays || '',
       caption: c.caption || '',
+      captionMode: c.captionMode || 'shared',
+      postSlides: c.postSlides || [],
+      referenceMusic: c.referenceMusic || '',
     })),
   };
 }
@@ -187,6 +199,9 @@ export function applyShootSubmission(submission, cards, { updateCard, updatePlan
         shootScriptBody: item.shootScriptBody || '',
         shootTextOverlays: item.shootTextOverlays || '',
         caption: item.caption || '',
+        captionMode: item.captionMode || 'shared',
+        postSlides: Array.isArray(item.postSlides) ? item.postSlides : [],
+        referenceMusic: item.referenceMusic || '',
       });
       applied += 1;
     }
