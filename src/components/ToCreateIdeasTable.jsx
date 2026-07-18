@@ -4,6 +4,7 @@ import { formatDate, formatTime } from '../utils';
 import { findIdeaBoardCard, sortIdeasByShootSchedule } from '../utils/videoIdeas';
 import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import ClientAvatar from './ClientAvatar';
+import TeamTaskCard from './TeamTaskCard';
 import {
   surfacePanelClass,
   taskActionBtnClass,
@@ -34,74 +35,63 @@ export default function ToCreateIdeasTable({
     .map((idea) => ({ idea, card: findIdeaBoardCard(idea, cards) }))
     .filter(({ card }) => card);
 
-  const openCardFromRow = (event, card) => {
-    if (event.target.closest('button, a, input, select, textarea, label')) return;
-    onOpenCard?.(card);
-  };
-
-  const handleRowKeyDown = (event, card) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    onOpenCard?.(card);
-  };
-
   return (
-    <div className={`${surfacePanelClass} divide-y divide-white/[0.06] overflow-hidden`}>
-      {scheduledIdeas.map(({ idea, card }) => {
+    <div className="space-y-3">
+      {scheduledIdeas.map(({ idea, card }, index) => {
         const typeStyle = getContentTypeStyle(card.contentType);
         const clientColor = getClientColor(card.client);
         return (
-          <article
+          <TeamTaskCard
             key={idea.id}
-            className="flex cursor-pointer flex-col gap-3 px-4 py-3 transition hover:bg-white/[0.04] sm:flex-row sm:items-center"
-            onClick={(event) => openCardFromRow(event, card)}
-            onKeyDown={(event) => handleRowKeyDown(event, card)}
-            role="button"
-            tabIndex={0}
+            accentColor={clientColor}
+            animationDelay={`${0.08 + index * 0.05}s`}
+            onOpen={() => onOpenCard?.(card)}
           >
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <div className="w-[6.75rem] shrink-0">
-                <p className="text-xs font-medium tabular-nums text-white/80">
-                  {formatDate(card.shootDate)}
-                </p>
-                <p className="mt-0.5 text-[10px] tabular-nums text-white/35">
-                  {card.shootTime ? formatTime(card.shootTime) : 'Time not set'}
-                  {card.shootEndTime ? ` – ${formatTime(card.shootEndTime)}` : ''}
-                </p>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span {...contentTypePipelinePillProps(typeStyle)}>
-                    {card.contentType}
-                  </span>
-                  <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-white/45">
-                    <ClientAvatar client={card.client} size="xs" color={clientColor} />
-                    <span className="truncate">{card.client}</span>
-                  </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="w-[6.75rem] shrink-0">
+                  <p className="text-xs font-medium tabular-nums text-white/80">
+                    {formatDate(card.shootDate)}
+                  </p>
+                  <p className="mt-0.5 text-[10px] tabular-nums text-white/35">
+                    {card.shootTime ? formatTime(card.shootTime) : 'Time not set'}
+                    {card.shootEndTime ? ` – ${formatTime(card.shootEndTime)}` : ''}
+                  </p>
                 </div>
-                <h3 className="mt-1 truncate text-sm font-semibold text-white">
-                  {card.title || idea.title || 'Untitled idea'}
-                </h3>
+                <div className="min-w-0 flex-1">
+                  <div className="tesla-task-card-meta mb-2">
+                    <span {...contentTypePipelinePillProps(typeStyle)}>
+                      {card.contentType}
+                    </span>
+                    <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-white/45">
+                      <ClientAvatar client={card.client} size="xs" color={clientColor} />
+                      <span className="truncate">{card.client}</span>
+                    </div>
+                  </div>
+                  <h3 className="truncate text-sm font-semibold text-white">
+                    {card.title || idea.title || 'Untitled idea'}
+                  </h3>
+                </div>
+              </div>
+
+              <div className={vaultRowActionsClass}>
+                <button
+                  type="button"
+                  onClick={() => onOpenShoot?.(card)}
+                  className={taskActionBtnClass}
+                >
+                  Go to shoot
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onReturnToApproved?.(card)}
+                  className={taskActionBtnClass}
+                >
+                  Move back to Approved
+                </button>
               </div>
             </div>
-
-            <div className={vaultRowActionsClass}>
-              <button
-                type="button"
-                onClick={() => onOpenShoot?.(card)}
-                className={taskActionBtnClass}
-              >
-                Go to shoot
-              </button>
-              <button
-                type="button"
-                onClick={() => onReturnToApproved?.(card)}
-                className={taskActionBtnClass}
-              >
-                Move back to Approved
-              </button>
-            </div>
-          </article>
+          </TeamTaskCard>
         );
       })}
     </div>

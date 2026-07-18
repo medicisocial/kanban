@@ -5,6 +5,7 @@ import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import ClientAvatar from './ClientAvatar';
 import ReferenceVideoLink, { ReferenceMusicLink } from './clientPortal/ReferenceVideoLink';
 import PostSlidesPanel from './PostSlidesPanel';
+import TeamTaskCard from './TeamTaskCard';
 import { getStructuredScript, hasStructuredScript } from '../utils/scriptFields';
 import {
   surfacePanelClass,
@@ -29,18 +30,7 @@ export default function IdeaVaultTable({
   const { getClientColor } = useClientsContext();
   const [expandedId, setExpandedId] = useState(null);
 
-  const openIdeaFromRow = (event, idea) => {
-    if (event.target.closest('button, a, input, select, textarea, label')) return;
-    if (readOnly) {
-      setExpandedId((prev) => (prev === idea.id ? null : idea.id));
-      return;
-    }
-    onEdit?.(idea);
-  };
-
-  const handleRowKeyDown = (event, idea) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
+  const openIdea = (idea) => {
     if (readOnly) {
       setExpandedId((prev) => (prev === idea.id ? null : idea.id));
       return;
@@ -76,16 +66,16 @@ export default function IdeaVaultTable({
   }
 
   return (
-    <div className={`${surfacePanelClass} overflow-hidden`}>
-      <div className="border-b border-white/10 px-4 py-3">
+    <div>
+      <div className={`${surfacePanelClass} mb-3 px-4 py-3`}>
         <p className="text-xs text-white/45">
           {sorted.length} concept{sorted.length === 1 ? '' : 's'}{' '}
           {readOnly ? 'ready to schedule' : 'approved and ready'}
         </p>
       </div>
 
-      <div className="divide-y divide-white/[0.06]">
-        {sorted.map((idea) => {
+      <div className="space-y-3">
+        {sorted.map((idea, index) => {
           const clientColor = getClientColor(idea.client);
           const typeStyle = getContentTypeStyle(idea.contentType);
           const expanded = expandedId === idea.id;
@@ -95,121 +85,119 @@ export default function IdeaVaultTable({
             (!(idea.contentType === 'Carousel' || idea.contentType === 'Static Post') || !readOnly);
 
           return (
-            <article
+            <TeamTaskCard
               key={idea.id}
-              className={`flex flex-col gap-3 px-4 py-3 transition hover:bg-white/[0.04] sm:flex-row sm:items-center ${
-                readOnly || onEdit ? 'cursor-pointer' : ''
-              }`}
-              onClick={(event) => openIdeaFromRow(event, idea)}
-              onKeyDown={(event) => handleRowKeyDown(event, idea)}
-              role="button"
-              tabIndex={0}
+              accentColor={clientColor}
+              animationDelay={`${0.08 + index * 0.05}s`}
+              onOpen={readOnly || onEdit ? () => openIdea(idea) : undefined}
             >
-              <div className="flex min-w-0 flex-1 items-start gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span {...contentTypePipelinePillProps(typeStyle)}>
-                      {idea.contentType || 'Reel'}
-                    </span>
-                    {!hideClientColumn && (
-                      <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-white/45">
-                        <ClientAvatar client={idea.client} size="xs" color={clientColor} />
-                        <span className="truncate">{idea.client}</span>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="tesla-task-card-meta mb-2">
+                      <span {...contentTypePipelinePillProps(typeStyle)}>
+                        {idea.contentType || 'Reel'}
+                      </span>
+                      {!hideClientColumn && (
+                        <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-white/45">
+                          <ClientAvatar client={idea.client} size="xs" color={clientColor} />
+                          <span className="truncate">{idea.client}</span>
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="truncate text-sm font-semibold text-white">
+                      {idea.title || 'Untitled idea'}
+                    </h3>
+                    {hasStructuredScript(idea) && (
+                      <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/45">
+                        {contentReadyLabel(idea)}
+                      </span>
+                    )}
+                    {(idea.referenceVideo?.trim() || idea.referenceMusic?.trim()) && (
+                      <div className="mt-2 flex flex-wrap gap-3">
+                        {idea.referenceVideo?.trim() && (
+                          <ReferenceVideoLink url={idea.referenceVideo} compact />
+                        )}
+                        {idea.referenceMusic?.trim() && (
+                          <ReferenceMusicLink url={idea.referenceMusic} compact />
+                        )}
+                      </div>
+                    )}
+                    {showScriptPanel && (
+                      <div className="mt-3 border border-white/10 bg-white/[0.02] p-3 text-sm text-white/70">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+                          {idea.contentType === 'Carousel' || idea.contentType === 'Static Post'
+                            ? 'Post plan'
+                            : 'Script'}
+                        </p>
+                        {idea.contentType === 'Carousel' || idea.contentType === 'Static Post' ? (
+                          <div className="mt-2">
+                            <PostSlidesPanel
+                              contentType={idea.contentType}
+                              caption={idea.caption || ''}
+                              captionMode={idea.captionMode || 'shared'}
+                              slides={idea.postSlides || []}
+                              readOnly
+                            />
+                          </div>
+                        ) : (
+                          (() => {
+                            const script = getStructuredScript(idea);
+                            return (
+                              <div className="mt-1 space-y-2 text-xs text-white/65">
+                                {script.hook && (
+                                  <p>
+                                    <span className="text-white/40">Hook: </span>
+                                    {script.hook}
+                                  </p>
+                                )}
+                                {script.body && (
+                                  <p className="whitespace-pre-wrap">
+                                    <span className="text-white/40">Body: </span>
+                                    {script.body}
+                                  </p>
+                                )}
+                                {script.overlays && (
+                                  <p className="whitespace-pre-wrap">
+                                    <span className="text-white/40">Overlays: </span>
+                                    {script.overlays}
+                                  </p>
+                                )}
+                                {script.caption && (
+                                  <p className="whitespace-pre-wrap">
+                                    <span className="text-white/40">Caption: </span>
+                                    {script.caption}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })()
+                        )}
                       </div>
                     )}
                   </div>
-                  <h3 className="mt-1 truncate text-sm font-semibold text-white">
-                    {idea.title || 'Untitled idea'}
-                  </h3>
-                  {hasStructuredScript(idea) && (
-                    <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/45">
-                      {contentReadyLabel(idea)}
-                    </span>
-                  )}
-                  {(idea.referenceVideo?.trim() || idea.referenceMusic?.trim()) && (
-                    <div className="mt-2 flex flex-wrap gap-3">
-                      {idea.referenceVideo?.trim() && (
-                        <ReferenceVideoLink url={idea.referenceVideo} compact />
-                      )}
-                      {idea.referenceMusic?.trim() && (
-                        <ReferenceMusicLink url={idea.referenceMusic} compact />
-                      )}
-                    </div>
-                  )}
-                  {showScriptPanel && (
-                    <div className="mt-3 border border-white/10 bg-white/[0.02] p-3 text-sm text-white/70">
-                      <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
-                        {idea.contentType === 'Carousel' || idea.contentType === 'Static Post'
-                          ? 'Post plan'
-                          : 'Script'}
-                      </p>
-                      {idea.contentType === 'Carousel' || idea.contentType === 'Static Post' ? (
-                        <div className="mt-2">
-                          <PostSlidesPanel
-                            contentType={idea.contentType}
-                            caption={idea.caption || ''}
-                            captionMode={idea.captionMode || 'shared'}
-                            slides={idea.postSlides || []}
-                            readOnly
-                          />
-                        </div>
-                      ) : (
-                        (() => {
-                          const script = getStructuredScript(idea);
-                          return (
-                            <div className="mt-1 space-y-2 text-xs text-white/65">
-                              {script.hook && (
-                                <p>
-                                  <span className="text-white/40">Hook: </span>
-                                  {script.hook}
-                                </p>
-                              )}
-                              {script.body && (
-                                <p className="whitespace-pre-wrap">
-                                  <span className="text-white/40">Body: </span>
-                                  {script.body}
-                                </p>
-                              )}
-                              {script.overlays && (
-                                <p className="whitespace-pre-wrap">
-                                  <span className="text-white/40">Overlays: </span>
-                                  {script.overlays}
-                                </p>
-                              )}
-                              {script.caption && (
-                                <p className="whitespace-pre-wrap">
-                                  <span className="text-white/40">Caption: </span>
-                                  {script.caption}
-                                </p>
-                              )}
-                            </div>
-                          );
-                        })()
-                      )}
-                    </div>
-                  )}
                 </div>
-              </div>
 
-              {!readOnly && (
-                <div className={vaultRowActionsClass}>
-                  <button
-                    type="button"
-                    onClick={() => onSchedule?.(idea)}
-                    className={taskActionBtnClass}
-                  >
-                    Add to shoot
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onMoveToReview?.(idea.id)}
-                    className={taskActionBtnClass}
-                  >
-                    Move to Review
-                  </button>
-                </div>
-              )}
-            </article>
+                {!readOnly && (
+                  <div className={vaultRowActionsClass}>
+                    <button
+                      type="button"
+                      onClick={() => onSchedule?.(idea)}
+                      className={taskActionBtnClass}
+                    >
+                      Add to shoot
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onMoveToReview?.(idea.id)}
+                      className={taskActionBtnClass}
+                    >
+                      Move to Review
+                    </button>
+                  </div>
+                )}
+              </div>
+            </TeamTaskCard>
           );
         })}
       </div>

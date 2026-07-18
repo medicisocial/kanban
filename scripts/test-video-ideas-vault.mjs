@@ -201,13 +201,13 @@ assert(
   'To Create view uses chronological shoot ordering',
 );
 assert(
-  toCreateSource.includes('divide-y divide-white'),
-  'To Create view renders one compact divided list',
+  toCreateSource.includes('space-y-3') && toCreateSource.includes('TeamTaskCard'),
+  'To Create view renders separated team-task style cards',
 );
 assert(toCreateSource.includes('Go to shoot'), 'To Create row can navigate to its scheduled shoot');
 assert(!toCreateSource.includes('Edit idea'), 'To Create removes duplicate idea editor action');
 assert(!toCreateSource.includes('Open card'), 'To Create opens cards from the full row instead');
-assert(toCreateSource.includes('openCardFromRow(event, card)'), 'To Create rows open linked cards');
+assert(toCreateSource.includes('onOpen={() => onOpenCard?.(card)}'), 'To Create rows open linked cards');
 assert(
   toCreateSource.includes('taskActionBtnClass'),
   'To Create actions use compact team-card button styling',
@@ -254,10 +254,10 @@ const approvedSource = readFileSync(new URL('../src/components/IdeaVaultTable.js
 assert(approvedSource.includes('Add to shoot'), 'Approved rows keep Add to shoot primary action');
 assert(approvedSource.includes('Move to Review'), 'Approved rows can return ideas to Review');
 assert(approvedSource.includes('taskActionBtnClass'), 'Approved actions use compact team-card button styling');
-assert(approvedSource.includes('openIdeaFromRow(event, idea)'), 'Approved rows open idea editor');
+assert(approvedSource.includes('TeamTaskCard'), 'Approved rows use team-task separated cards');
 assert(
-  approvedSource.includes('divide-y divide-white/[0.06]'),
-  'Approved uses To Create-style divided card list',
+  approvedSource.includes('space-y-3'),
+  'Approved uses spaced team-task style card list',
 );
 assert(
   approvedSource.includes('vaultRowActionsClass'),
@@ -300,11 +300,11 @@ const reviewSource = readFileSync(
   new URL('../src/components/clientPortal/AdminIdeasTable.jsx', import.meta.url),
   'utf8',
 );
-assert(reviewSource.includes('openIdeaFromRow(event, idea)'), 'Review rows open idea editor');
+assert(reviewSource.includes('TeamTaskCard'), 'Review rows use team-task separated cards');
 assert(reviewSource.includes('taskActionBtnClass'), 'Review actions use compact team-card button styling');
 assert(
-  reviewSource.includes('divide-y divide-white/[0.06]'),
-  'Review uses To Create-style divided card list',
+  reviewSource.includes('space-y-3'),
+  'Review uses spaced team-task style card list',
 );
 assert(
   reviewSource.includes('vaultRowActionsClass'),
