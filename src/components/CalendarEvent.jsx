@@ -116,11 +116,9 @@ export default function CalendarEvent({
       ? `↻ ${scheduleSummary || 'recurring'}`
       : scheduleSummary || '';
 
-  // Inline stage picker: lets staff move a card through the pipeline right from
-  // the calendar chip, without opening the full card modal. Skipped once a card
-  // is computed as "Posted" (date-derived, not a real columnId) since there's
-  // no matching option to reflect that state.
-  const stageBadgeNode =
+  // Stage picker sits under the title so the top meta row stays client/type only.
+  // Skipped once a card is computed as "Posted" (date-derived, not a real columnId).
+  const stageFooter =
     onChangeStage && !clientPortal && card.id && showBoardStatus && !isPosted ? (
       <select
         value={card.columnId}
@@ -130,8 +128,9 @@ export default function CalendarEvent({
           onChangeStage(card.id, ev.target.value);
         }}
         title="Change pipeline stage"
-        className={`max-w-[52%] shrink-0 cursor-pointer truncate rounded border-0 bg-transparent px-0 py-0 font-semibold outline-none ${
-          relaxed ? 'text-xs' : 'text-[11px]'
+        aria-label="Pipeline stage"
+        className={`mt-0.5 w-full max-w-full cursor-pointer truncate rounded border border-white/10 bg-black/20 px-1.5 py-0.5 font-semibold outline-none transition hover:border-white/20 ${
+          relaxed ? 'text-xs' : 'text-[10px]'
         } ${statusClass}`}
       >
         {COLUMNS.map((col) => (
@@ -160,9 +159,8 @@ export default function CalendarEvent({
         clientLabel={card.client}
         hideClient={hideClient}
         timeLabel={timeLabel}
-        badgeLabel={showBoardStatus ? boardStatus : ''}
+        badgeLabel={stageFooter ? '' : showBoardStatus ? boardStatus : ''}
         badgeClassName={`font-semibold ${statusClass}`}
-        badgeNode={stageBadgeNode}
         typeLabel={card.contentType}
         typeLabelProps={typeLabelPresentation}
         title={card.title}
@@ -182,6 +180,7 @@ export default function CalendarEvent({
         dense
         relaxed={relaxed}
         clientPortal={clientPortal}
+        footerContent={stageFooter}
         className={`min-w-0 ${highlighted ? 'ring-1 ring-white/30' : ''} ${
           canDrag ? 'cursor-grab active:cursor-grabbing' : ''
         } ${onRemove ? (relaxed ? 'pr-6' : 'pr-5') : ''}`}
