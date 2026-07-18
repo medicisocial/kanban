@@ -1,39 +1,16 @@
-import { Fragment, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useClientsContext } from '../../context/ClientsContext';
 import { IDEA_STATUSES } from '../../constants';
 import ClientAvatar from '../ClientAvatar';
 import ReferenceVideoLink, { ReferenceMusicLink } from './ReferenceVideoLink';
 import {
   formatPortalDate,
-  mobileActionRowClass,
-  mobileCardClass,
-  mobileMetaClass,
   selectClass,
   statusBadgeClass,
   statusDotClass,
   surfacePanelClass,
-  tableCellClass,
-  tableHeaderClass,
-  tableRowClass,
   taskActionBtnClass,
 } from './clientPortalUi';
-
-function SortHeader({ label, sortKey, sort, onSort }) {
-  const active = sort.key === sortKey;
-  const arrow = active ? (sort.dir === 'asc' ? '↑' : '↓') : '↕';
-  return (
-    <button
-      type="button"
-      onClick={() => onSort(sortKey)}
-      className={`${tableHeaderClass} w-full cursor-pointer select-none text-left transition-colors hover:text-white/70`}
-    >
-      <span className="inline-flex items-center gap-1.5">
-        {label}
-        <span className={`text-[9px] ${active ? 'text-white/60' : 'text-white/25'}`}>{arrow}</span>
-      </span>
-    </button>
-  );
-}
 
 function StatusBadge({ status }) {
   const tone = status === 'approved' ? 'approved' : status === 'declined' ? 'declined' : 'pending';
@@ -60,7 +37,6 @@ export default function AdminIdeasTable({
   onMakeOneOff,
 }) {
   const { getClientColor } = useClientsContext();
-  const [sort, setSort] = useState({ key: 'createdAt', dir: 'desc' });
 
   const openIdeaFromRow = (event, idea) => {
     if (event.target.closest('button, a, input, select, textarea, label')) return;
@@ -71,12 +47,6 @@ export default function AdminIdeasTable({
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
     onEdit?.(idea);
-  };
-
-  const handleSort = (key) => {
-    setSort((prev) =>
-      prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' },
-    );
   };
 
   const statusCounts = useMemo(
@@ -95,16 +65,13 @@ export default function AdminIdeasTable({
       rows = rows.filter((idea) => idea.status === statusFilter);
     }
 
-    const dir = sort.dir === 'asc' ? 1 : -1;
-    return rows.sort((a, b) => {
-      if (sort.key === 'createdAt') {
-        return ((a.createdAt || 0) - (b.createdAt || 0)) * dir;
-      }
-      const av = (a[sort.key] || '').toString().toLowerCase();
-      const bv = (b[sort.key] || '').toString().toLowerCase();
-      return av.localeCompare(bv) * dir;
-    });
-  }, [ideas, statusFilter, sort]);
+    return rows.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }, [ideas, statusFilter]);
+
+  const emptyMessage =
+    ideas.length > 0 && statusFilter !== 'all'
+      ? `No ${statusFilter} ideas. Try "All statuses" to see every record for this filter.`
+      : 'No ideas match your filters.';
 
   return (
     <div className={`${surfacePanelClass} overflow-hidden`}>
@@ -143,67 +110,76 @@ export default function AdminIdeasTable({
         </div>
       )}
 
-      <div className="md:hidden">
-        {filtered.length === 0 ? (
-          <p className="px-4 py-12 text-center text-sm text-white/40">
-            {ideas.length > 0 && statusFilter !== 'all'
-              ? `No ${statusFilter} ideas. Try "All statuses" to see every record for this filter.`
-              : 'No ideas match your filters.'}
-          </p>
-        ) : (
-          filtered.map((idea) => {
+      {filtered.length === 0 ? (
+        <p className="px-4 py-16 text-center text-sm text-white/40">{emptyMessage}</p>
+      ) : (
+        <div className="divide-y divide-white/[0.06]">
+          {filtered.map((idea) => {
+            const clientColor = getClientColor(idea.client);
+            const isPending = idea.status === 'pending';
+
             return (
-              <div
+              <article
                 key={idea.id}
-                className={`${mobileCardClass} cursor-pointer transition hover:bg-white/[0.04]`}
+                className="flex cursor-pointer flex-col gap-3 px-4 py-3 transition hover:bg-white/[0.04] sm:flex-row sm:items-center"
                 onClick={(event) => openIdeaFromRow(event, idea)}
                 onKeyDown={(event) => handleRowKeyDown(event, idea)}
                 role="button"
                 tabIndex={0}
               >
-                {selectable && (
-                  <label className="mb-2 flex items-center gap-2 text-xs text-white/55">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(idea.id)}
-                      onChange={() => onToggleSelect(idea.id)}
-                      className="border-white/20 bg-[#111111]"
-                    />
-                    Select
-                  </label>
-                )}
-                <button
-                  type="button"
-                  onClick={() => onEdit?.(idea)}
-                  className="w-full text-left font-medium text-white"
-                >
-                  {idea.title || 'Untitled idea'}
-                </button>
-                {idea.description && (
-                  <p className="mt-1 line-clamp-2 text-xs text-white/40">{idea.description}</p>
-                )}
-                {(idea.referenceVideo || idea.referenceMusic) && (
-                  <div className="mt-2 flex flex-wrap gap-3">
-                    {idea.referenceMusic && (
-                      <ReferenceMusicLink url={idea.referenceMusic} compact />
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                  {selectable && (
+                    <label className="mt-1 flex shrink-0 items-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(idea.id)}
+                        onChange={() => onToggleSelect(idea.id)}
+                        className="border-white/20 bg-[#111111]"
+                      />
+                      <span className="sr-only">Select</span>
+                    </label>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusBadge status={idea.status} />
+                      {idea.contentType && (
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/55">
+                          {idea.contentType}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="mt-1 truncate text-sm font-semibold text-white">
+                      {idea.title || 'Untitled idea'}
+                    </h3>
+                    {idea.description && (
+                      <p className="mt-0.5 line-clamp-2 text-xs text-white/40">{idea.description}</p>
                     )}
-                    {idea.referenceVideo && (
-                      <ReferenceVideoLink url={idea.referenceVideo} compact />
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-white/45">
+                      <span className="inline-flex items-center gap-1.5">
+                        <ClientAvatar client={idea.client} size="xs" color={clientColor} />
+                        <span className="truncate">{idea.client}</span>
+                      </span>
+                      <span className="tabular-nums">{formatPortalDate(idea.createdAt)}</span>
+                    </div>
+                    {(idea.referenceVideo || idea.referenceMusic) && (
+                      <div className="mt-2 flex flex-wrap gap-3">
+                        {idea.referenceVideo && (
+                          <ReferenceVideoLink url={idea.referenceVideo} compact />
+                        )}
+                        {idea.referenceMusic?.trim() && (
+                          <ReferenceMusicLink url={idea.referenceMusic} compact />
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-                <div className={mobileMetaClass}>
-                  <StatusBadge status={idea.status} />
-                  {idea.contentType && <span className="uppercase tracking-wider">{idea.contentType}</span>}
-                  <span className="text-white/70">{idea.client}</span>
-                  <span>{formatPortalDate(idea.createdAt)}</span>
                 </div>
-                <div className={mobileActionRowClass}>
-                  {idea.status === 'pending' && onApprove && (
+
+                <div className="flex shrink-0 flex-col gap-1.5 sm:items-stretch">
+                  {isPending && onApprove && (
                     <button
                       type="button"
                       onClick={() => onApprove(idea.id, idea.clientComment || '')}
-                      className={`${taskActionBtnClass} min-h-10 flex-1`}
+                      className={taskActionBtnClass}
                     >
                       Approve
                     </button>
@@ -212,7 +188,7 @@ export default function AdminIdeasTable({
                     <button
                       type="button"
                       onClick={() => onMakeOneOff(idea)}
-                      className={`${taskActionBtnClass} min-h-10 flex-1`}
+                      className={taskActionBtnClass}
                     >
                       Make one-off
                     </button>
@@ -220,140 +196,16 @@ export default function AdminIdeasTable({
                   <button
                     type="button"
                     onClick={() => onDelete(idea.id)}
-                    className={`${taskActionBtnClass} min-h-10 flex-1`}
+                    className={taskActionBtnClass}
                   >
                     Delete
                   </button>
                 </div>
-              </div>
+              </article>
             );
-          })
-        )}
-      </div>
-
-      <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[940px] border-collapse">
-          <thead>
-            <tr>
-              {selectable && (
-                <th className="w-[40px]">
-                  <span className={tableHeaderClass} />
-                </th>
-              )}
-              <th className="w-[24%]"><SortHeader label="Title" sortKey="title" sort={sort} onSort={handleSort} /></th>
-              <th className="w-[12%]"><span className={tableHeaderClass}>Reference</span></th>
-              <th className="w-[10%]"><SortHeader label="Status" sortKey="status" sort={sort} onSort={handleSort} /></th>
-              <th className="w-[8%]"><SortHeader label="Type" sortKey="contentType" sort={sort} onSort={handleSort} /></th>
-              <th className="w-[12%]"><SortHeader label="Client" sortKey="client" sort={sort} onSort={handleSort} /></th>
-              <th className="w-[9%]"><SortHeader label="Created" sortKey="createdAt" sort={sort} onSort={handleSort} /></th>
-              <th className="w-[17%]"><span className={tableHeaderClass}>Actions</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={selectable ? 8 : 7} className="px-4 py-16 text-center text-sm text-white/40">
-                  {ideas.length > 0 && statusFilter !== 'all'
-                    ? `No ${statusFilter} ideas. Try "All statuses" to see every record for this filter.`
-                    : 'No ideas match your filters.'}
-                </td>
-              </tr>
-            ) : (
-              filtered.map((idea) => {
-                const clientColor = getClientColor(idea.client);
-                const isPending = idea.status === 'pending';
-
-                return (
-                  <Fragment key={idea.id}>
-                    <tr
-                      className={`${tableRowClass} cursor-pointer`}
-                      onClick={(event) => openIdeaFromRow(event, idea)}
-                      onKeyDown={(event) => handleRowKeyDown(event, idea)}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      {selectable && (
-                        <td className={`${tableCellClass} w-[40px]`}>
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(idea.id)}
-                            onChange={() => onToggleSelect(idea.id)}
-                            className="border-white/20 bg-[#111111]"
-                          />
-                        </td>
-                      )}
-                      <td className={tableCellClass}>
-                        <button
-                          type="button"
-                          onClick={() => onEdit?.(idea)}
-                          className="max-w-full text-left font-medium text-white transition-colors hover:text-[#c88]"
-                        >
-                          {idea.title || 'Untitled idea'}
-                        </button>
-                        {idea.description && (
-                          <p className="mt-0.5 line-clamp-1 text-xs text-white/40">{idea.description}</p>
-                        )}
-                      </td>
-                      <td className={tableCellClass}>
-                        <div className="flex flex-col gap-1.5">
-                          <ReferenceVideoLink url={idea.referenceVideo} />
-                          {idea.referenceMusic?.trim() && (
-                            <ReferenceMusicLink url={idea.referenceMusic} compact />
-                          )}
-                        </div>
-                      </td>
-                      <td className={tableCellClass}>
-                        <StatusBadge status={idea.status} />
-                      </td>
-                      <td className={`${tableCellClass} text-xs uppercase tracking-wider text-white/55`}>
-                        {idea.contentType || '—'}
-                      </td>
-                      <td className={tableCellClass}>
-                        <div className="flex items-center gap-2">
-                          <ClientAvatar client={idea.client} size="md" color={clientColor} />
-                          <span className="truncate text-xs text-white/70">{idea.client}</span>
-                        </div>
-                      </td>
-                      <td className={`${tableCellClass} text-xs tabular-nums text-white/55`}>
-                        {formatPortalDate(idea.createdAt)}
-                      </td>
-                      <td className={tableCellClass}>
-                        <div className="flex flex-col items-stretch gap-1.5">
-                          {isPending && onApprove && (
-                            <button
-                              type="button"
-                              onClick={() => onApprove(idea.id, idea.clientComment || '')}
-                              className={taskActionBtnClass}
-                            >
-                              Approve
-                            </button>
-                          )}
-                          {onMakeOneOff && (
-                            <button
-                              type="button"
-                              onClick={() => onMakeOneOff(idea)}
-                              className={taskActionBtnClass}
-                            >
-                              Make one-off
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => onDelete(idea.id)}
-                            className={taskActionBtnClass}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  </Fragment>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 }
