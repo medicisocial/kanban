@@ -94,7 +94,10 @@ assert(
   editorTodoSource.includes("activeQueue === 'editing'"),
   'editor renders only the selected task queue',
 );
-assert(editorTodoSource.includes("'bg-white text-black'"), 'selected editor tab uses white style');
+assert(
+  editorTodoSource.includes('`${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`'),
+  'editor tabs reuse Vault selected styling',
+);
 
 const accountTodoSource = readFileSync(
   new URL('../src/components/AccountManagerTodo.jsx', import.meta.url),
@@ -113,6 +116,9 @@ assert(
   accountTodoSource.includes("['posts', 'Posts & content', visiblePostsTasks.length]"),
   'account manager exposes Posts & content as a tab',
 );
-assert(accountTodoSource.includes("'bg-white text-black'"), 'selected account tab uses white style');
+assert(
+  accountTodoSource.includes('`${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`'),
+  'account tabs reuse Vault selected styling',
+);
 
 console.log('Account manager todo tests passed.');

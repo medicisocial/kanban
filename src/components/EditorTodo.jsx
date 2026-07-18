@@ -15,7 +15,12 @@ import {
 import AddEditorTaskModal from './AddEditorTaskModal';
 import NeedsEditsModal from './NeedsEditsModal';
 import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
-import { btnPrimaryClass, glassSegmentClass, selectClass } from './clientPortal/clientPortalUi';
+import {
+  btnPrimaryClass,
+  btnSecondaryClass,
+  glassSegmentClass,
+  selectClass,
+} from './clientPortal/clientPortalUi';
 import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
 
 const taskActionBtnClass =
@@ -387,11 +392,11 @@ export default function EditorTodo({
             key={id}
             type="button"
             onClick={() => setActiveQueue(id)}
-            className={`px-3 py-1.5 text-xs font-medium transition ${
+            className={
               activeQueue === id
-                ? 'bg-white text-black'
-                : 'text-white/45 hover:bg-white/5 hover:text-white'
-            }`}
+                ? `${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`
+                : `${btnSecondaryClass} !border-transparent !px-4 !py-1.5 !text-xs !tracking-wider !text-white/45 hover:!text-white`
+            }
           >
             {label} ({count})
           </button>

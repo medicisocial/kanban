@@ -17,7 +17,12 @@ import {
 import { getEditorTaskStatusOptions } from '../utils/editorTodo';
 import NeedsEditsModal from './NeedsEditsModal';
 import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
-import { glassSegmentClass, selectClass } from './clientPortal/clientPortalUi';
+import {
+  btnPrimaryClass,
+  btnSecondaryClass,
+  glassSegmentClass,
+  selectClass,
+} from './clientPortal/clientPortalUi';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
 import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
 
@@ -471,11 +476,11 @@ export default function AccountManagerTodo({
             key={id}
             type="button"
             onClick={() => setActiveQueue(id)}
-            className={`px-3 py-1.5 text-xs font-medium transition ${
+            className={
               activeQueue === id
-                ? 'bg-white text-black'
-                : 'text-white/45 hover:bg-white/5 hover:text-white'
-            }`}
+                ? `${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`
+                : `${btnSecondaryClass} !border-transparent !px-4 !py-1.5 !text-xs !tracking-wider !text-white/45 hover:!text-white`
+            }
           >
             {label} ({count})
           </button>
