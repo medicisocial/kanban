@@ -205,7 +205,7 @@ function ApprovedScheduleTaskCard({
 
   return (
     <TeamTaskCard accentColor={clientColor} animationDelay={animationDelay} onOpen={openCard}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="tesla-task-card-meta mb-2">
             <span
