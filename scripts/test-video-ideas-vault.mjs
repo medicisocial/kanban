@@ -212,6 +212,16 @@ assert(
   toCreateSource.includes('taskActionBtnClass'),
   'To Create actions use compact team-card button styling',
 );
+assert(toCreateSource.includes('onMakeOneOff'), 'To Create rows can make a one-off from a card');
+assert(toCreateSource.includes('Make one-off'), 'To Create rows expose Make one-off action');
+assert(
+  videoIdeasSource.includes('onConvertCardToOneOff'),
+  'Vault wires in-place To Create card → one-off conversion',
+);
+assert(
+  videoIdeasSource.includes('onMakeOneOff={setOneOffCard}'),
+  'To Create tab opens Make one-off against the linked board card',
+);
 const approvedSource = readFileSync(new URL('../src/components/IdeaVaultTable.jsx', import.meta.url), 'utf8');
 assert(approvedSource.includes('Add to shoot'), 'Approved rows keep Add to shoot primary action');
 assert(approvedSource.includes('Move to Review'), 'Approved rows can return ideas to Review');
@@ -253,9 +263,22 @@ const makeOneOffSource = readFileSync(
   'utf8',
 );
 assert(makeOneOffSource.includes('ClientNameInput'), 'Make one-off modal allows custom client names');
+assert(makeOneOffSource.includes('EDITOR_POINT_OPTIONS'), 'Make one-off modal assigns editor points');
+assert(
+  makeOneOffSource.includes('editor payroll only'),
+  'Make one-off points copy is editor-pay only',
+);
 const cardModalSource = readFileSync(new URL('../src/components/CardModal.jsx', import.meta.url), 'utf8');
 assert(cardModalSource.includes('Make one-off project'), 'card editor exposes Make one-off project');
 assert(cardModalSource.includes('MakeOneOffModal'), 'card editor opens Make one-off modal');
+assert(
+  cardModalSource.includes('buildOneOffConversionUpdates'),
+  'card editor uses shared one-off conversion helper',
+);
+assert(
+  cardModalSource.includes('isOneOff || displayCard.contentType === \'Reel\''),
+  'card editor shows editor points for one-offs and reels',
+);
 const shootItemSource = readFileSync(
   new URL('../src/components/ShootDayItem.jsx', import.meta.url),
   'utf8',

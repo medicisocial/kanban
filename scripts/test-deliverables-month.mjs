@@ -46,6 +46,16 @@ const cards = [
     dueDate: '2026-06-10',
     isOneOffProject: true,
   },
+  {
+    id: 'one-off-with-points',
+    client: 'Plume',
+    contentType: 'One-off Project',
+    shootDate: '2026-06-01',
+    dueDate: '2026-06-15',
+    editorPoints: 1,
+    isOneOffProject: true,
+    columnId: 'editing',
+  },
 ];
 
 assert(
@@ -62,6 +72,10 @@ assert(juneCards.some((card) => card.id === 'reel-shoot-only'), 'shoot-only reel
 assert(juneCards.some((card) => card.id === 'static-publish-date'), 'static post counts in publish month');
 assert(!juneCards.some((card) => card.id === 'carousel-publish-date'), 'published carousel leaves shoot month');
 assert(!juneCards.some((card) => card.id === 'one-off'), 'one-off projects do not affect quota');
+assert(
+  !juneCards.some((card) => card.id === 'one-off-with-points'),
+  'one-off with publish dueDate and editorPoints still does not affect quota',
+);
 
 const juneSummary = buildClientDeliverableSummary(
   groupCardsByClientForMonth(cards, '2026-06'),
@@ -70,6 +84,10 @@ const juneSummary = buildClientDeliverableSummary(
 );
 assert(juneSummary.reelPointsPlanned === 0.5, 'reel point value counts in quota month');
 assert(juneSummary.feedPlanned === 0.5, 'static post counts as half a feed point');
+assert(
+  !juneSummary.cards?.some?.((card) => card.id === 'one-off-with-points'),
+  'deliverable summary excludes one-offs even when points are set',
+);
 
 const julySummary = buildClientDeliverableSummary(
   groupCardsByClientForMonth(cards, '2026-07'),

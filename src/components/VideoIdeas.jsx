@@ -42,12 +42,14 @@ export default function VideoIdeas({
   onReturnToApproved,
   onScheduleVaultIdea,
   onCreateOneOffFromIdea,
+  onConvertCardToOneOff,
 }) {
   const [activeTab, setActiveTab] = useState('review');
   const [statusFilter, setStatusFilter] = useState('pending');
   const [ideaModal, setIdeaModal] = useState(null);
   const [scheduleIdea, setScheduleIdea] = useState(null);
   const [oneOffIdea, setOneOffIdea] = useState(null);
+  const [oneOffCard, setOneOffCard] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   const vaultIdeas = useMemo(
@@ -252,6 +254,7 @@ export default function VideoIdeas({
           onOpenCard={onOpenCard}
           onOpenShoot={onOpenShoot}
           onReturnToApproved={onReturnToApproved}
+          onMakeOneOff={setOneOffCard}
         />
       )}
 
@@ -295,6 +298,22 @@ export default function VideoIdeas({
           onConfirm={(data) => {
             onCreateOneOffFromIdea?.(oneOffIdea, data);
             setOneOffIdea(null);
+          }}
+        />
+      )}
+
+      {oneOffCard && (
+        <MakeOneOffModal
+          initialClient={oneOffCard.client}
+          initialTitle={oneOffCard.title}
+          initialNotes={oneOffCard.notes}
+          initialDueDate={oneOffCard.dueDate}
+          initialEditorPoints={oneOffCard.editorPoints}
+          defaultAssignee={oneOffCard.assignedTo}
+          onClose={() => setOneOffCard(null)}
+          onConfirm={(data) => {
+            onConvertCardToOneOff?.(oneOffCard, data);
+            setOneOffCard(null);
           }}
         />
       )}

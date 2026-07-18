@@ -42,6 +42,7 @@ export default function CompanyTasks({
   onMoveTask,
   onHandoff,
   onReturnToVault,
+  onConvertCardToOneOff,
   onNavigate,
   onOpenShoot,
   onPlanPostDate,
@@ -131,6 +132,7 @@ export default function CompanyTasks({
           onOpenShoot={onOpenShoot}
           onHandoff={onHandoff}
           onReturnToVault={onReturnToVault}
+          onConvertToOneOff={onConvertCardToOneOff}
           onNavigate={onNavigate}
         />
       )}

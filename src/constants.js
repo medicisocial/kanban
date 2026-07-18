@@ -101,7 +101,12 @@ export function getCardEditorPay(card, rates = {}) {
   const reel = Number.isFinite(reelRate) && reelRate >= 0 ? reelRate : EDITOR_POINT_PAY_RATE;
   const carousel = Number.isFinite(carouselRate) && carouselRate >= 0 ? carouselRate : CAROUSEL_PAY_RATE;
   const staticPost = Number.isFinite(staticRate) && staticRate >= 0 ? staticRate : STATIC_POST_PAY_RATE;
-  if (card.contentType === 'Reel') {
+  // One-offs earn editor pay from points; they never feed AM plan pay or deliverable quotas.
+  if (
+    card.contentType === 'Reel' ||
+    card.isOneOffProject ||
+    card.contentType === 'One-off Project'
+  ) {
     return normalizeEditorPoints(card.editorPoints) * reel;
   }
   if (card.contentType === 'Carousel') return carousel;

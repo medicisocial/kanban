@@ -15,6 +15,7 @@ export default function ToCreateIdeasTable({
   onOpenCard,
   onOpenShoot,
   onReturnToApproved,
+  onMakeOneOff,
 }) {
   const { getClientColor } = useClientsContext();
 
@@ -95,6 +96,15 @@ export default function ToCreateIdeasTable({
               >
                 Go to shoot
               </button>
+              {onMakeOneOff && (
+                <button
+                  type="button"
+                  onClick={() => onMakeOneOff(card)}
+                  className={taskActionBtnClass}
+                >
+                  Make one-off
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => onReturnToApproved?.(card)}

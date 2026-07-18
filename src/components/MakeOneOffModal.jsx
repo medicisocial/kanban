@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { EDITOR_POINT_OPTIONS, normalizeEditorPoints } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import ClientNameInput from './ClientNameInput';
 import DateInput from './DateInput';
@@ -12,6 +13,7 @@ export default function MakeOneOffModal({
   initialTitle = '',
   initialNotes = '',
   initialDueDate = '',
+  initialEditorPoints = 1,
   defaultAssignee = '',
   heading = 'Make one-off project',
   description = 'Confirm the client name (existing or custom) and project details. Opens in Editing for review like other one-offs.',
@@ -24,6 +26,7 @@ export default function MakeOneOffModal({
   const [notes, setNotes] = useState(initialNotes || '');
   const [dueDate, setDueDate] = useState(initialDueDate || '');
   const [assignedTo, setAssignedTo] = useState(defaultAssignee || editors[0] || '');
+  const [editorPoints, setEditorPoints] = useState(normalizeEditorPoints(initialEditorPoints));
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -54,6 +57,7 @@ export default function MakeOneOffModal({
       description: notes.trim(),
       dueDate,
       assignedTo,
+      editorPoints: normalizeEditorPoints(editorPoints),
     });
     onClose();
   };
@@ -146,6 +150,24 @@ export default function MakeOneOffModal({
                 </select>
               </label>
             </div>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-gray-400">Editor points</span>
+              <select
+                value={String(editorPoints)}
+                onChange={(e) => setEditorPoints(Number(e.target.value))}
+                className={inputClass}
+              >
+                {EDITOR_POINT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={String(opt.value)}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1.5 text-[10px] text-white/35">
+                For editor payroll only — not deliverable quotas or account manager pay.
+              </p>
+            </label>
 
             {error && (
               <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">

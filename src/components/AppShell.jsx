@@ -24,6 +24,7 @@ import { getCalendarPortalClient } from "../utils/calendarShare";
 import { withStoryOccurrence, parseStoryOccurrenceNotes } from "../utils/calendar";
 import { createCard, COLUMNS } from "../constants";
 import { buildSendBackForEditingUpdates } from "../utils/editorTodo";
+import { buildOneOffConversionUpdates } from "../utils/oneOffConversion";
 import { useFinances } from "../hooks/useFinances";
 import { useAdminTasks } from "../hooks/useAdminTasks";
 import { useEvents } from "../hooks/useEvents";
@@ -1224,11 +1225,16 @@ export default function AppShell({ onSignOut }) {
               description: data.notes || data.description || idea.description || '',
               dueDate: data.dueDate || '',
               assignedTo: data.assignedTo,
+              editorPoints: data.editorPoints,
               sourceIdeaId: idea.id,
               referenceVideo: idea.referenceVideo || '',
               referenceMusic: idea.referenceMusic || '',
             });
             if (newCard) setSelectedCard(newCard);
+          }}
+          onConvertCardToOneOff={(card, data) => {
+            if (!card?.id) return;
+            updateCard(card.id, buildOneOffConversionUpdates(card, data), { immediateSync: true });
           }}
         />
       )}
@@ -1321,6 +1327,10 @@ export default function AppShell({ onSignOut }) {
           onMoveTask={handleMoveEditorTask}
           onHandoff={handleHandoffRequest}
           onReturnToVault={handleReturnCardToVault}
+          onConvertCardToOneOff={(card, data) => {
+            if (!card?.id) return;
+            updateCard(card.id, buildOneOffConversionUpdates(card, data), { immediateSync: true });
+          }}
           onNavigate={handleNavigate}
           onOpenShoot={(card) =>
             handleNavigate('shoot', {
