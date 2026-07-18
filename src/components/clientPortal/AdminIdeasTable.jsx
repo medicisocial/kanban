@@ -1,14 +1,12 @@
 import { useMemo } from 'react';
 import { useClientsContext } from '../../context/ClientsContext';
 import { IDEA_STATUSES, getContentTypeStyle } from '../../constants';
-import { contentTypeLabelProps } from '../../utils/contentTypeColors';
+import { contentTypePipelinePillProps } from '../../utils/contentTypeColors';
 import ClientAvatar from '../ClientAvatar';
 import ReferenceVideoLink, { ReferenceMusicLink } from './ReferenceVideoLink';
 import {
-  formatPortalDate,
   selectClass,
-  statusBadgeClass,
-  statusDotClass,
+  statusPipelinePillProps,
   surfacePanelClass,
   taskActionBtnClass,
   vaultRowActionsClass,
@@ -16,12 +14,7 @@ import {
 
 function StatusBadge({ status }) {
   const tone = status === 'approved' ? 'approved' : status === 'declined' ? 'declined' : 'pending';
-  return (
-    <span className={statusBadgeClass(tone)}>
-      <span className={statusDotClass(tone)} />
-      {IDEA_STATUSES[status] || status}
-    </span>
-  );
+  return <span {...statusPipelinePillProps(tone)}>{IDEA_STATUSES[status] || status}</span>;
 }
 
 export default function AdminIdeasTable({
@@ -142,32 +135,26 @@ export default function AdminIdeasTable({
                     </label>
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 text-[10px] text-white/45">
-                      <ClientAvatar client={idea.client} size="xs" color={clientColor} />
-                      <span className="truncate">{idea.client}</span>
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      {idea.contentType && (
+                        <span {...contentTypePipelinePillProps(getContentTypeStyle(idea.contentType))}>
+                          {idea.contentType}
+                        </span>
+                      )}
+                      <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-white/45">
+                        <ClientAvatar client={idea.client} size="xs" color={clientColor} />
+                        <span className="truncate">{idea.client}</span>
+                      </div>
                     </div>
                     <h3 className="mt-1 truncate text-sm font-semibold text-white">
                       {idea.title || 'Untitled idea'}
                     </h3>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <div className="mt-1">
                       <StatusBadge status={idea.status} />
-                      {idea.contentType && (
-                        <p
-                          {...contentTypeLabelProps(
-                            getContentTypeStyle(idea.contentType),
-                            'text-[10px] font-semibold uppercase',
-                          )}
-                        >
-                          {idea.contentType}
-                        </p>
-                      )}
                     </div>
                     {idea.description && (
                       <p className="mt-1 line-clamp-2 text-xs text-white/40">{idea.description}</p>
                     )}
-                    <p className="mt-1 text-[10px] tabular-nums text-white/45">
-                      {formatPortalDate(idea.createdAt)}
-                    </p>
                     {(idea.referenceVideo || idea.referenceMusic) && (
                       <div className="mt-2 flex flex-wrap gap-3">
                         {idea.referenceVideo && (

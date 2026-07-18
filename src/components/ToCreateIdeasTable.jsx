@@ -2,9 +2,10 @@ import { useClientsContext } from '../context/ClientsContext';
 import { getContentTypeStyle } from '../constants';
 import { formatDate, formatTime } from '../utils';
 import { findIdeaBoardCard, sortIdeasByShootSchedule } from '../utils/videoIdeas';
-import { contentTypeLabelProps } from '../utils/contentTypeColors';
+import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import ClientAvatar from './ClientAvatar';
 import {
+  statusPipelinePillProps,
   surfacePanelClass,
   taskActionBtnClass,
   vaultRowActionsClass,
@@ -71,20 +72,20 @@ export default function ToCreateIdeasTable({
                 </p>
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 text-[10px] text-white/45">
-                  <ClientAvatar client={card.client} size="xs" color={clientColor} />
-                  <span className="truncate">{card.client}</span>
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span {...contentTypePipelinePillProps(typeStyle)}>
+                    {card.contentType}
+                  </span>
+                  <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-white/45">
+                    <ClientAvatar client={card.client} size="xs" color={clientColor} />
+                    <span className="truncate">{card.client}</span>
+                  </div>
                 </div>
                 <h3 className="mt-1 truncate text-sm font-semibold text-white">
                   {card.title || idea.title || 'Untitled idea'}
                 </h3>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <p {...contentTypeLabelProps(typeStyle, 'text-[10px] font-semibold uppercase')}>
-                    {card.contentType}
-                  </p>
-                  <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-amber-200">
-                    To Create
-                  </span>
+                <div className="mt-1">
+                  <span {...statusPipelinePillProps('create')}>To create</span>
                 </div>
               </div>
             </div>

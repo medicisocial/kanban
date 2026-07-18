@@ -44,17 +44,54 @@ export const mobileMetaClass = 'mt-2 flex flex-wrap items-center gap-x-3 gap-y-1
 
 export const mobileActionRowClass = 'mt-3 flex flex-wrap gap-2';
 
-export function statusBadgeClass(tone) {
-  const tones = {
-    pending: 'border-amber-500/20 bg-amber-500/8 text-amber-200/90',
-    approved: 'border-emerald-500/20 bg-emerald-500/8 text-emerald-200/90',
-    declined: 'border-rose-500/20 bg-rose-500/8 text-rose-200/90',
-    review: 'border-sky-500/20 bg-sky-500/8 text-sky-200/90',
-    scheduled: 'border-violet-500/20 bg-violet-500/8 text-violet-200/90',
-    posted: 'border-zinc-500/20 bg-zinc-500/8 text-zinc-300',
-    default: 'border-white/10 bg-white/[0.03] text-white/55',
+/** Accent colors for status pipeline pills (match content-type pill treatment). */
+const STATUS_ACCENTS = {
+  pending: '#f59e0b',
+  approved: '#34d399',
+  declined: '#fb7185',
+  review: '#38bdf8',
+  scheduled: '#a78bfa',
+  posted: '#a1a1aa',
+  create: '#fbbf24',
+  default: '#a3a3a3',
+};
+
+function statusAccentRgba(hex, alpha = 0.72) {
+  const normalized = String(hex || '').trim().replace('#', '');
+  if (normalized.length !== 6) return `rgba(163, 163, 163, ${alpha})`;
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+export const STATUS_PIPELINE_PILL_CLASS =
+  'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#f9f6f2]';
+
+/** Pipeline-matched status pill (dark fill, white text, accent inset outline). */
+export function statusPipelinePillProps(tone, className = STATUS_PIPELINE_PILL_CLASS) {
+  const accent = STATUS_ACCENTS[tone] || STATUS_ACCENTS.default;
+  return {
+    className: `${className}`.trim(),
+    style: {
+      backgroundColor: 'rgba(0, 0, 0, 0.48)',
+      boxShadow: `inset 0 0 0 1px ${statusAccentRgba(accent, 0.72)}`,
+    },
   };
-  return `inline-flex items-center gap-1.5 border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] ${tones[tone] || tones.default}`;
+}
+
+export function statusBadgeClass(tone) {
+  const rings = {
+    pending: 'shadow-[inset_0_0_0_1px_rgba(245,158,11,0.72)]',
+    approved: 'shadow-[inset_0_0_0_1px_rgba(52,211,153,0.72)]',
+    declined: 'shadow-[inset_0_0_0_1px_rgba(251,113,133,0.72)]',
+    review: 'shadow-[inset_0_0_0_1px_rgba(56,189,248,0.72)]',
+    scheduled: 'shadow-[inset_0_0_0_1px_rgba(167,139,250,0.72)]',
+    posted: 'shadow-[inset_0_0_0_1px_rgba(161,161,170,0.72)]',
+    create: 'shadow-[inset_0_0_0_1px_rgba(251,191,36,0.72)]',
+    default: 'shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)]',
+  };
+  return `${STATUS_PIPELINE_PILL_CLASS} bg-black/50 ${rings[tone] || rings.default}`;
 }
 
 export function statusDotClass(tone) {
@@ -65,6 +102,7 @@ export function statusDotClass(tone) {
     review: 'bg-sky-400/80',
     scheduled: 'bg-violet-400/80',
     posted: 'bg-zinc-400/80',
+    create: 'bg-amber-300/80',
     default: 'bg-white/40',
   };
   return `h-1.5 w-1.5 shrink-0 rounded-full ${tones[tone] || tones.default}`;

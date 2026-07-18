@@ -100,6 +100,10 @@ assert(
 );
 assert(editorTodoSource.includes('onAddCard'), 'editor supports manual board card add');
 assert(editorTodoSource.includes('+ Add card'), 'editor exposes Add card control');
+assert(
+  !editorTodoSource.includes('task.label') && !editorTodoSource.includes('kindStyles'),
+  'editor cards omit Edit / In review kind pills',
+);
 
 const accountTodoSource = readFileSync(
   new URL('../src/components/AccountManagerTodo.jsx', import.meta.url),
@@ -109,6 +113,18 @@ assert(accountTodoSource.includes("useState('post-date')"), 'account manager tab
 assert(
   accountTodoSource.includes("['review', 'In review', orderedInReviewTasks.length]"),
   'account manager exposes In review as a tab',
+);
+assert(
+  !accountTodoSource.includes("kindStyles['set-post-date']"),
+  'set post date cards omit Set post date kind pill',
+);
+assert(
+  !accountTodoSource.includes('inReviewKindStyle'),
+  'in review cards omit In review kind pill',
+);
+assert(
+  (accountTodoSource.match(/\{task\.label\}/g) || []).length === 1,
+  'only publish/story cards keep a kind label; approved schedule cards omit Approved pill',
 );
 assert(
   accountTodoSource.includes("['stories', 'Stories to post', orderedStoryTasks.length]"),

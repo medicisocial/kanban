@@ -216,11 +216,24 @@ assert(
   toCreateSource.includes('vaultRowActionsClass'),
   'To Create uses shared Vault action column width',
 );
-assert(toCreateSource.includes('contentTypeLabelProps'), 'To Create uses colored content type labels');
+assert(
+  toCreateSource.includes('contentTypePipelinePillProps'),
+  'To Create uses team-task style content type pills',
+);
 assert(toCreateSource.includes('ClientAvatar'), 'To Create rows show client logo');
+assert(
+  toCreateSource.includes("statusPipelinePillProps('create')"),
+  'To Create rows use pipeline-style To create status pill',
+);
+assert(
+  !toCreateSource.includes('border-amber-400/20'),
+  'To Create rows no longer use the old amber To Create badge fill',
+);
 {
+  const typeIdx = toCreateSource.indexOf('contentTypePipelinePillProps(typeStyle)');
   const clientIdx = toCreateSource.indexOf('<ClientAvatar client={card.client}');
   const titleIdx = toCreateSource.indexOf('card.title || idea.title');
+  assert(typeIdx > 0 && typeIdx < clientIdx, 'To Create shows content type left of client');
   assert(clientIdx > 0 && clientIdx < titleIdx, 'To Create shows client above title');
 }
 assert(toCreateSource.includes('onMakeOneOff'), 'To Create rows can make a one-off from a card');
@@ -251,12 +264,22 @@ assert(
   'Approved uses shared Vault action column width',
 );
 assert(
-  approvedSource.includes('contentTypeLabelProps'),
-  'Approved uses colored content type labels like To Create',
+  approvedSource.includes('contentTypePipelinePillProps'),
+  'Approved uses team-task style content type pills',
+);
+assert(
+  approvedSource.includes("statusPipelinePillProps('approved')"),
+  'Approved rows use pipeline-style Approved status pill',
+);
+assert(
+  !approvedSource.includes('rounded-full border border-white/10 bg-white/[0.04]'),
+  'Approved script-ready chip no longer uses the old soft pill style',
 );
 {
+  const typeIdx = approvedSource.indexOf('contentTypePipelinePillProps(typeStyle)');
   const clientIdx = approvedSource.indexOf('<ClientAvatar client={idea.client}');
   const titleIdx = approvedSource.indexOf('idea.title || \'Untitled idea\'');
+  assert(typeIdx > 0 && typeIdx < clientIdx, 'Approved shows content type left of client');
   assert(clientIdx > 0 && clientIdx < titleIdx, 'Approved shows client above title');
 }
 assert(!approvedSource.includes('<select'), 'Approved content type is not a clickable select');
@@ -288,13 +311,27 @@ assert(
   'Review uses shared Vault action column width',
 );
 assert(
-  reviewSource.includes('contentTypeLabelProps'),
-  'Review uses colored content type labels like To Create',
+  reviewSource.includes('contentTypePipelinePillProps'),
+  'Review uses team-task style content type pills',
+);
+assert(
+  reviewSource.includes('statusPipelinePillProps'),
+  'Review status badge uses pipeline-style status pills',
+);
+assert(
+  videoIdeasSource.includes('statusPipelinePillProps'),
+  'Vault header counts use pipeline-style status pills',
+);
+assert(
+  !videoIdeasSource.includes('border-amber-500/25'),
+  'Vault header counts no longer use amber fill chips',
 );
 {
+  const typeIdx = reviewSource.indexOf('contentTypePipelinePillProps(');
   const clientIdx = reviewSource.indexOf('<ClientAvatar client={idea.client}');
   const titleIdx = reviewSource.indexOf('idea.title || \'Untitled idea\'');
   const statusIdx = reviewSource.indexOf('<StatusBadge status={idea.status} />');
+  assert(typeIdx > 0 && typeIdx < clientIdx, 'Review shows content type left of client');
   assert(clientIdx > 0 && clientIdx < titleIdx, 'Review shows client above title');
   assert(titleIdx > 0 && statusIdx > titleIdx, 'Review shows status badge below title');
 }
@@ -313,6 +350,10 @@ const uiSource = readFileSync(
 assert(
   uiSource.includes("sm:w-[9.5rem]") && uiSource.includes('vaultRowActionsClass'),
   'shared Vault action column uses fixed To Create-matched width',
+);
+assert(
+  uiSource.includes('statusPipelinePillProps') && uiSource.includes('STATUS_PIPELINE_PILL_CLASS'),
+  'shared status pipeline pill helper matches content-type pill treatment',
 );
 const ideaModalSource = readFileSync(
   new URL('../src/components/VideoIdeaModal.jsx', import.meta.url),

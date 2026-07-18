@@ -13,6 +13,8 @@ import {
   btnPrimaryClass,
   btnSecondaryClass,
   glassSegmentClass,
+  STATUS_PIPELINE_PILL_CLASS,
+  statusPipelinePillProps,
   surfacePanelClass,
 } from './clientPortal/clientPortalUi';
 import MakeOneOffModal from './MakeOneOffModal';
@@ -157,17 +159,32 @@ export default function VideoIdeas({
         description="Review ideas, keep approved concepts ready, and track what is scheduled for creation."
       >
         {pendingCount > 0 && activeTab === 'review' && (
-          <span className="border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-amber-200/90">
+          <span
+            {...statusPipelinePillProps(
+              'pending',
+              `${STATUS_PIPELINE_PILL_CLASS} px-2.5 py-1.5 tracking-wider`,
+            )}
+          >
             {pendingCount} awaiting client review
           </span>
         )}
         {vaultIdeas.length > 0 && (
-          <span className="border border-white/25 bg-white/[0.08] px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-white">
+          <span
+            {...statusPipelinePillProps(
+              'approved',
+              `${STATUS_PIPELINE_PILL_CLASS} px-2.5 py-1.5 tracking-wider`,
+            )}
+          >
             {vaultIdeas.length} approved
           </span>
         )}
         {toCreateIdeas.length > 0 && (
-          <span className="border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-amber-100">
+          <span
+            {...statusPipelinePillProps(
+              'create',
+              `${STATUS_PIPELINE_PILL_CLASS} px-2.5 py-1.5 tracking-wider`,
+            )}
+          >
             {toCreateIdeas.length} to create
           </span>
         )}
