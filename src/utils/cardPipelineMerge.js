@@ -36,11 +36,18 @@ export function stripPipelineInternalFields(record) {
   return next;
 }
 
-/** Server-side card upsert prep: honor explicit regression, otherwise keep advanced stage. */
+/**
+ * Server-side card upsert prep: honor explicit regression, otherwise keep advanced stage.
+ * Authorized regressions keep `_allowPipelineRegression` so the DB `protect_card_pipeline`
+ * trigger can allow the backward move and strip the flag itself.
+ */
 export function prepareCardPipelineUpsert(stored, incoming) {
   if (!incoming) return incoming || stored;
   if (incoming[PIPELINE_REGRESSION_AUTH_KEY]) {
-    return preserveCardIdeaLink(stored, stripPipelineInternalFields(incoming));
+    return {
+      ...preserveCardIdeaLink(stored, stripPipelineInternalFields(incoming)),
+      [PIPELINE_REGRESSION_AUTH_KEY]: true,
+    };
   }
   return mergeCardPipelineFields(stored, stripPipelineInternalFields(incoming));
 }

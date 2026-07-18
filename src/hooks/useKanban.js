@@ -9,7 +9,12 @@ import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import { pushStaffSyncRecords } from '../lib/staffSyncApi';
 import { markRecentlyPushed } from '../lib/syncEchoGuard';
 import { reportSyncIssue } from '../lib/workspaceSyncHealth';
-import { applyVaultIdeaShootSchedule, withPipelineRegressionAuthorization } from '../utils/cardPipelineMerge';
+import {
+  applyVaultIdeaShootSchedule,
+  PIPELINE_REGRESSION_AUTH_KEY,
+  stripPipelineInternalFields,
+  withPipelineRegressionAuthorization,
+} from '../utils/cardPipelineMerge';
 import { resolveShootScriptsFromIdea } from '../utils/videoIdeas';
 import { normalizeCaptionMode, normalizePostSlides } from '../utils/postSlides';
 
@@ -183,6 +188,14 @@ export function useKanban() {
       .then((ok) => {
         if (ok) {
           markRecentlyPushed('cards', [card.id]);
+          // Ephemeral auth flag only needs to ride the cloud write; drop it locally after.
+          if (card[PIPELINE_REGRESSION_AUTH_KEY]) {
+            setCards((prev) =>
+              prev.map((entry) =>
+                entry.id === card.id ? stripPipelineInternalFields(entry) : entry,
+              ),
+            );
+          }
         } else {
           reportSyncIssue({
             level: 'warn',

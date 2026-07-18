@@ -14,7 +14,13 @@ import {
   mergeClientsWorkspaceStateSupabase,
   mergePortalCredentialDataForPush,
 } from '../src/lib/syncHelpers.js';
-import { mergeCardPipelineFields, prepareCardPipelineUpsert } from '../src/utils/cardPipelineMerge.js';
+import {
+  mergeCardPipelineFields,
+  prepareCardPipelineUpsert,
+  PIPELINE_REGRESSION_AUTH_KEY,
+} from '../src/utils/cardPipelineMerge.js';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import {
   mergePortalCredentialData,
   filterAuthCriticalDeletes,
@@ -181,7 +187,47 @@ const getId = (record) => record.id;
     },
   );
   assert(merged.columnId === 'editing', 'authorized regression should move card back to editing');
-  assert(merged._allowPipelineRegression === undefined, 'authorization flag must be stripped');
+  assert(
+    merged._allowPipelineRegression === true,
+    'authorization flag must stay for the DB pipeline trigger',
+  );
+}
+
+// Editing → To Create (e.g. undo Make one-off handoff) must persist when authorized.
+{
+  const merged = prepareCardPipelineUpsert(
+    { columnId: 'editing', status: 'Editing', title: 'Clay Shoot Commentary', updatedAt: 200 },
+    {
+      id: 'clay-1',
+      columnId: 'shoot',
+      status: 'To Create',
+      title: 'Clay Shoot Commentary',
+      _allowPipelineRegression: true,
+      updatedAt: 300,
+    },
+  );
+  assert(merged.columnId === 'shoot', 'authorized Editing → To Create must keep shoot');
+  assert(merged.status === 'To Create', 'authorized Editing → To Create must keep To Create status');
+  assert(
+    merged[PIPELINE_REGRESSION_AUTH_KEY] === true,
+    'Editing → To Create auth flag must reach the DB trigger',
+  );
+}
+
+// Pre-push guard must keep the auth flag so staff-sync / DB can honor regressions.
+{
+  const guardSource = readFileSync(
+    fileURLToPath(new URL('../src/lib/cardPushGuard.js', import.meta.url)),
+    'utf8',
+  );
+  assert(
+    guardSource.includes('authorized.push(record)'),
+    'card push guard must forward authorized records with _allowPipelineRegression intact',
+  );
+  assert(
+    !guardSource.includes('authorized.push(stripPipelineInternalFields'),
+    'card push guard must not strip regression auth before the cloud write',
+  );
 }
 
 // Stale tab push prep: cloud scheduled beats local editing even with newer updatedAt.
