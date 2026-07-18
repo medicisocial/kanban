@@ -361,28 +361,9 @@ function CardModal({
         style={{ borderTopColor: typeStyle.border, borderTopWidth: '3px' }}
       >
         <div className="flex shrink-0 items-start justify-between border-b border-white/5 px-5 py-4">
-          <div>
-            {onMoveCard ? (
-              <select
-                value={displayCard.columnId}
-                onChange={(e) => onMoveCard(card.id, e.target.value)}
-                className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wider text-gray-300 outline-none transition hover:border-white/20 focus:border-[#810100]/50"
-              >
-                {COLUMNS.map((col) => (
-                  <option key={col.id} value={col.id}>
-                    {col.title}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                {card.status}
-              </p>
-            )}
-            <h2 className="mt-1 text-lg font-semibold text-white">
-              {isOneOff ? 'Edit one-off project' : 'Edit Card'}
-            </h2>
-          </div>
+          <h2 className="text-lg font-semibold text-white">
+            {isOneOff ? 'Edit one-off project' : 'Edit Card'}
+          </h2>
           <button
             type="button"
             onClick={handleDone}
@@ -413,6 +394,27 @@ function CardModal({
               onCommit={(value) => commitTextField('title', value)}
               className={inputClass}
             />
+          </Field>
+
+          <Field label="Pipeline stage">
+            {onMoveCard ? (
+              <select
+                value={displayCard.columnId}
+                onChange={(e) => onMoveCard(card.id, e.target.value)}
+                className={inputClass}
+                aria-label="Pipeline stage"
+              >
+                {COLUMNS.map((col) => (
+                  <option key={col.id} value={col.id}>
+                    {col.title}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white/70">
+                {card.status || COLUMNS.find((col) => col.id === displayCard.columnId)?.title || '—'}
+              </p>
+            )}
           </Field>
 
           <Field label="Video File Link">
