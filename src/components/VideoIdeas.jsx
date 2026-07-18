@@ -9,7 +9,12 @@ import ToCreateIdeasTable from './ToCreateIdeasTable';
 import ScheduleVaultIdeaModal from './ScheduleVaultIdeaModal';
 import { getToCreateIdeas, getVaultIdeas } from '../utils/videoIdeas';
 import { matchesClientFilter } from '../utils/clients';
-import { btnPrimaryClass, btnSecondaryClass, glassSegmentClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import {
+  btnSecondaryClass,
+  segmentTabClass,
+  segmentTabShellClass,
+  surfacePanelClass,
+} from './clientPortal/clientPortalUi';
 
 const IDEA_TABS = [
   { id: 'review', label: 'Review' },
@@ -135,11 +140,6 @@ export default function VideoIdeas({
     if (deleted) setIdeaModal(null);
   };
 
-  const tabClass = (tabId) =>
-    activeTab === tabId
-      ? `${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`
-      : `${btnSecondaryClass} !px-4 !py-1.5 !text-xs !tracking-wider !border-transparent !text-white/45 hover:!text-white`;
-
   return (
     <section>
       <ClientPortalSectionHeader
@@ -163,13 +163,13 @@ export default function VideoIdeas({
         )}
       </ClientPortalSectionHeader>
 
-      <div className={`${glassSegmentClass} mb-5 flex w-fit gap-0.5 p-0.5`}>
+      <div className={`${segmentTabShellClass} mb-5`}>
         {IDEA_TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={tabClass(tab.id)}
+            className={segmentTabClass(activeTab === tab.id)}
           >
             {tab.label}
             {tab.id === 'approved' && vaultIdeas.length > 0 ? ` (${vaultIdeas.length})` : ''}

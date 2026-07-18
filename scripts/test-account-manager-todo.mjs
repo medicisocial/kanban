@@ -95,8 +95,12 @@ assert(
   'editor renders only the selected task queue',
 );
 assert(
-  editorTodoSource.includes('`${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`'),
-  'editor tabs reuse Vault selected styling',
+  editorTodoSource.includes('segmentTabClass(activeQueue === id)'),
+  'editor tabs use shared segment tab sizing',
+);
+assert(
+  editorTodoSource.includes('segmentTabShellClass'),
+  'editor tabs use shared segment tab shell',
 );
 
 const accountTodoSource = readFileSync(
@@ -117,8 +121,12 @@ assert(
   'account manager exposes Posts & content as a tab',
 );
 assert(
-  accountTodoSource.includes('`${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`'),
-  'account tabs reuse Vault selected styling',
+  accountTodoSource.includes('segmentTabClass(activeQueue === id)'),
+  'account tabs use shared segment tab sizing',
+);
+assert(
+  accountTodoSource.includes('segmentTabShellClass'),
+  'account tabs use shared segment tab shell',
 );
 assert(
   (accountTodoSource.match(/onOpen=\{openCard\}/g) || []).length >= 4,

@@ -18,10 +18,9 @@ import { getEditorTaskStatusOptions } from '../utils/editorTodo';
 import NeedsEditsModal from './NeedsEditsModal';
 import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
 import {
-  btnPrimaryClass,
-  btnSecondaryClass,
-  glassSegmentClass,
   selectClass,
+  segmentTabClass,
+  segmentTabShellClass,
 } from './clientPortal/clientPortalUi';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
 import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
@@ -436,7 +435,7 @@ export default function AccountManagerTodo({
         </label>
       </div>
 
-      <div className={`${glassSegmentClass} mb-4 flex w-fit flex-wrap gap-0.5 p-0.5`}>
+      <div className={`${segmentTabShellClass} mb-4`}>
         {[
           ['post-date', 'Set post date', orderedSetPostDateTasks.length],
           ['review', 'In review', orderedInReviewTasks.length],
@@ -447,11 +446,7 @@ export default function AccountManagerTodo({
             key={id}
             type="button"
             onClick={() => setActiveQueue(id)}
-            className={
-              activeQueue === id
-                ? `${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`
-                : `${btnSecondaryClass} !border-transparent !px-4 !py-1.5 !text-xs !tracking-wider !text-white/45 hover:!text-white`
-            }
+            className={segmentTabClass(activeQueue === id)}
           >
             {label} ({count})
           </button>
