@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useClientsContext } from '../../context/ClientsContext';
-import { IDEA_STATUSES } from '../../constants';
+import { IDEA_STATUSES, getContentTypeStyle } from '../../constants';
+import { contentTypeLabelProps } from '../../utils/contentTypeColors';
 import ClientAvatar from '../ClientAvatar';
 import ReferenceVideoLink, { ReferenceMusicLink } from './ReferenceVideoLink';
 import {
@@ -10,6 +11,7 @@ import {
   statusDotClass,
   surfacePanelClass,
   taskActionBtnClass,
+  vaultRowActionsClass,
 } from './clientPortalUi';
 
 function StatusBadge({ status }) {
@@ -143,9 +145,14 @@ export default function AdminIdeasTable({
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge status={idea.status} />
                       {idea.contentType && (
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/55">
+                        <p
+                          {...contentTypeLabelProps(
+                            getContentTypeStyle(idea.contentType),
+                            'text-[10px] font-semibold uppercase',
+                          )}
+                        >
                           {idea.contentType}
-                        </span>
+                        </p>
                       )}
                     </div>
                     <h3 className="mt-1 truncate text-sm font-semibold text-white">
@@ -174,7 +181,7 @@ export default function AdminIdeasTable({
                   </div>
                 </div>
 
-                <div className="flex shrink-0 flex-col gap-1.5 sm:items-stretch">
+                <div className={vaultRowActionsClass}>
                   {isPending && onApprove && (
                     <button
                       type="button"

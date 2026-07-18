@@ -7,6 +7,7 @@ import ClientAvatar from './ClientAvatar';
 import {
   surfacePanelClass,
   taskActionBtnClass,
+  vaultRowActionsClass,
 } from './clientPortal/clientPortalUi';
 
 export default function ToCreateIdeasTable({
@@ -88,7 +89,7 @@ export default function ToCreateIdeasTable({
               </div>
             </div>
 
-            <div className="flex shrink-0 flex-col gap-1.5 sm:items-stretch">
+            <div className={vaultRowActionsClass}>
               <button
                 type="button"
                 onClick={() => onOpenShoot?.(card)}

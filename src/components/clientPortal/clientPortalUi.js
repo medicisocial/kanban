@@ -20,6 +20,10 @@ export const btnGhostClass =
 export const taskActionBtnClass =
   'inline-flex items-center justify-center rounded-sm bg-white px-3 py-1.5 text-[10px] font-medium normal-case tracking-normal text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40';
 
+/** Shared Vault row action stack width (matches To Create longest label). */
+export const vaultRowActionsClass =
+  'flex w-full shrink-0 flex-col gap-1.5 sm:w-[9.5rem] sm:items-stretch';
+
 export const selectClass =
   'select-dark appearance-none rounded-sm border border-white/10 bg-white/[0.04] px-3 py-2.5 pr-8 text-xs text-white/90 outline-none transition-[border-color,background-color] duration-300 hover:border-white/20 focus:border-white/30 focus:bg-white/[0.06]';
 
