@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { normalizeLink } from '../utils/links';
 import ClientAvatar from './ClientAvatar';
-import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
+import ReferenceVideoLink, { ReferenceMusicLink } from './clientPortal/ReferenceVideoLink';
 import DebouncedField from './DebouncedField';
 import PostSlidesPanel from './PostSlidesPanel';
 import { getStructuredScript, hasStructuredScript } from '../utils/scriptFields';
@@ -206,7 +206,7 @@ export default function IdeaVaultTable({
                   {contentReadyLabel(idea)}
                 </p>
               )}
-              <div className="mt-2">
+              <div className="mt-2 space-y-1.5">
                 <IdeaReferenceField
                   ideaId={idea.id}
                   value={idea.referenceVideo}
@@ -214,6 +214,9 @@ export default function IdeaVaultTable({
                   readOnly={readOnly}
                   compact
                 />
+                {idea.referenceMusic?.trim() && (
+                  <ReferenceMusicLink url={idea.referenceMusic} compact />
+                )}
               </div>
               <div className={mobileMetaClass}>
                 <IdeaContentTypeField
@@ -320,12 +323,17 @@ export default function IdeaVaultTable({
                     )}
                   </td>
                   <td className={bankRowControlClass}>
-                    <IdeaReferenceField
-                      ideaId={idea.id}
-                      value={idea.referenceVideo}
-                      onSave={onUpdateReference}
-                      readOnly={readOnly}
-                    />
+                    <div className="space-y-1.5">
+                      <IdeaReferenceField
+                        ideaId={idea.id}
+                        value={idea.referenceVideo}
+                        onSave={onUpdateReference}
+                        readOnly={readOnly}
+                      />
+                      {idea.referenceMusic?.trim() && (
+                        <ReferenceMusicLink url={idea.referenceMusic} compact />
+                      )}
+                    </div>
                   </td>
                   <td className={bankRowControlClass}>
                     <IdeaContentTypeField

@@ -3,6 +3,7 @@ import { getContentTypeStyle, IDEA_STATUSES } from "../constants";
 import { contentTypePillProps } from "../utils/contentTypeColors";
 import { useClientsContext } from "../context/ClientsContext";
 import { glassInsetClass } from "./clientPortal/clientPortalUi";
+import ReferenceVideoLink, { ReferenceMusicLink } from "./clientPortal/ReferenceVideoLink";
 
 export default function VideoIdeaCard({
   idea,
@@ -21,7 +22,8 @@ export default function VideoIdeaCard({
   const typeStyle = getContentTypeStyle(idea.contentType);
   const clientColor = getClientColor(idea.client);
   const isPending = idea.status === "pending";
-  const hasLink = Boolean(idea.referenceVideo);
+  const hasVideoLink = Boolean(idea.referenceVideo?.trim());
+  const hasMusicLink = Boolean(idea.referenceMusic?.trim());
   const isEditable = Boolean(onEdit) && !reviewMode;
 
   const handleCardClick = (e) => {
@@ -94,20 +96,13 @@ export default function VideoIdeaCard({
           </span>
         </div>
 
-        {hasLink ? (
-          <div className="mb-3">
-            <a
-              href={idea.referenceVideo}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2.5 text-sm text-[#fca5a5] transition hover:bg-white/10 hover:text-[#fecaca]"
-            >
-              <span>🎬</span>
-              <span className="truncate">Watch reference video ↗</span>
-            </a>
+        {hasVideoLink || hasMusicLink ? (
+          <div className="mb-3 flex flex-wrap gap-3">
+            {hasMusicLink && <ReferenceMusicLink url={idea.referenceMusic} />}
+            {hasVideoLink && <ReferenceVideoLink url={idea.referenceVideo} />}
           </div>
         ) : (
-          <p className="mb-3 text-xs text-gray-500">No reference video</p>
+          <p className="mb-3 text-xs text-gray-500">No reference links</p>
         )}
 
         {idea.description && <p className="mb-3 text-sm text-gray-400">{idea.description}</p>}

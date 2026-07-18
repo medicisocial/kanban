@@ -5,7 +5,7 @@ import {
 import { contentTypePillProps, contentTypeCardStyle } from "../utils/contentTypeColors";
 import { formatTimeInput } from "../utils/shootDay";
 import CardTitleLink from "./CardTitleLink";
-import ReferenceVideoLink from "./clientPortal/ReferenceVideoLink";
+import ReferenceVideoLink, { ReferenceMusicLink } from "./clientPortal/ReferenceVideoLink";
 
 export default function ShootDayItem({ card, onClick }) {
   const typeStyle = getContentTypeStyle(card.contentType);
@@ -44,7 +44,9 @@ export default function ShootDayItem({ card, onClick }) {
       <div className="flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
         {card.contentCreator && <span>🎥 {card.contentCreator}</span>}
         {card.assignedTo && <span>{PLATFORM_ICON} {card.assignedTo}</span>}
-        {card.referenceMusic && <span>🎵 Music ref</span>}
+        {card.referenceMusic && (
+          <ReferenceMusicLink url={card.referenceMusic} compact />
+        )}
         {card.referenceVideo && (
           <ReferenceVideoLink url={card.referenceVideo} compact />
         )}

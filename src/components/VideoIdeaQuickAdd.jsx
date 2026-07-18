@@ -3,6 +3,7 @@ import { CONTENT_TYPES } from '../constants';
 import { useClientsContext } from '../context/ClientsContext';
 import { normalizeLink } from '../utils/links';
 import { btnPrimaryClass, inputClass, selectClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
 
 function clientFromFilter(clientFilter, fallbackClient) {
   if (clientFilter && clientFilter !== 'all') return clientFilter;
@@ -148,6 +149,11 @@ export default function VideoIdeaQuickAdd({
             placeholder="Paste Instagram, TikTok, or YouTube link…"
             className={inputClass}
           />
+          {form.referenceVideo?.trim() && (
+            <div className="mt-2">
+              <ReferenceVideoLink url={form.referenceVideo} />
+            </div>
+          )}
         </label>
 
         {!hideClientField && (
