@@ -216,14 +216,17 @@ assert(
   toCreateSource.includes('vaultRowActionsClass'),
   'To Create uses shared Vault action column width',
 );
-assert(toCreateSource.includes('contentTypeLabelProps'), 'To Create uses colored content type labels');
+assert(
+  toCreateSource.includes('contentTypePipelinePillProps'),
+  'To Create uses team-task style content type pills',
+);
 assert(toCreateSource.includes('ClientAvatar'), 'To Create rows show client logo');
 assert(
   !toCreateSource.includes('border-amber-400/20'),
   'To Create rows no longer show a To Create status badge',
 );
 {
-  const typeIdx = toCreateSource.indexOf('contentTypeLabelProps(typeStyle');
+  const typeIdx = toCreateSource.indexOf('contentTypePipelinePillProps(typeStyle)');
   const clientIdx = toCreateSource.indexOf('<ClientAvatar client={card.client}');
   const titleIdx = toCreateSource.indexOf('card.title || idea.title');
   assert(typeIdx > 0 && typeIdx < clientIdx, 'To Create shows content type left of client');
@@ -257,11 +260,11 @@ assert(
   'Approved uses shared Vault action column width',
 );
 assert(
-  approvedSource.includes('contentTypeLabelProps'),
-  'Approved uses colored content type labels like To Create',
+  approvedSource.includes('contentTypePipelinePillProps'),
+  'Approved uses team-task style content type pills',
 );
 {
-  const typeIdx = approvedSource.indexOf('contentTypeLabelProps(typeStyle');
+  const typeIdx = approvedSource.indexOf('contentTypePipelinePillProps(typeStyle)');
   const clientIdx = approvedSource.indexOf('<ClientAvatar client={idea.client}');
   const titleIdx = approvedSource.indexOf('idea.title || \'Untitled idea\'');
   assert(typeIdx > 0 && typeIdx < clientIdx, 'Approved shows content type left of client');
@@ -296,11 +299,11 @@ assert(
   'Review uses shared Vault action column width',
 );
 assert(
-  reviewSource.includes('contentTypeLabelProps'),
-  'Review uses colored content type labels like To Create',
+  reviewSource.includes('contentTypePipelinePillProps'),
+  'Review uses team-task style content type pills',
 );
 {
-  const typeIdx = reviewSource.indexOf('contentTypeLabelProps(');
+  const typeIdx = reviewSource.indexOf('contentTypePipelinePillProps(');
   const clientIdx = reviewSource.indexOf('<ClientAvatar client={idea.client}');
   const titleIdx = reviewSource.indexOf('idea.title || \'Untitled idea\'');
   const statusIdx = reviewSource.indexOf('<StatusBadge status={idea.status} />');

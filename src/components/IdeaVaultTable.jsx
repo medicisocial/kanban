@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { getContentTypeStyle } from '../constants';
-import { contentTypeLabelProps } from '../utils/contentTypeColors';
+import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import ClientAvatar from './ClientAvatar';
 import ReferenceVideoLink, { ReferenceMusicLink } from './clientPortal/ReferenceVideoLink';
 import PostSlidesPanel from './PostSlidesPanel';
@@ -109,9 +109,9 @@ export default function IdeaVaultTable({
               <div className="flex min-w-0 flex-1 items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <p {...contentTypeLabelProps(typeStyle, 'text-[10px] font-semibold uppercase')}>
+                    <span {...contentTypePipelinePillProps(typeStyle)}>
                       {idea.contentType || 'Reel'}
-                    </p>
+                    </span>
                     {!hideClientColumn && (
                       <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-white/45">
                         <ClientAvatar client={idea.client} size="xs" color={clientColor} />

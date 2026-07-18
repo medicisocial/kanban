@@ -2,7 +2,7 @@ import { useClientsContext } from '../context/ClientsContext';
 import { getContentTypeStyle } from '../constants';
 import { formatDate, formatTime } from '../utils';
 import { findIdeaBoardCard, sortIdeasByShootSchedule } from '../utils/videoIdeas';
-import { contentTypeLabelProps } from '../utils/contentTypeColors';
+import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import ClientAvatar from './ClientAvatar';
 import {
   surfacePanelClass,
@@ -72,9 +72,9 @@ export default function ToCreateIdeasTable({
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <p {...contentTypeLabelProps(typeStyle, 'text-[10px] font-semibold uppercase')}>
+                  <span {...contentTypePipelinePillProps(typeStyle)}>
                     {card.contentType}
-                  </p>
+                  </span>
                   <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-white/45">
                     <ClientAvatar client={card.client} size="xs" color={clientColor} />
                     <span className="truncate">{card.client}</span>

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useClientsContext } from '../../context/ClientsContext';
 import { IDEA_STATUSES, getContentTypeStyle } from '../../constants';
-import { contentTypeLabelProps } from '../../utils/contentTypeColors';
+import { contentTypePipelinePillProps } from '../../utils/contentTypeColors';
 import ClientAvatar from '../ClientAvatar';
 import ReferenceVideoLink, { ReferenceMusicLink } from './ReferenceVideoLink';
 import {
@@ -144,14 +144,9 @@ export default function AdminIdeasTable({
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
                       {idea.contentType && (
-                        <p
-                          {...contentTypeLabelProps(
-                            getContentTypeStyle(idea.contentType),
-                            'text-[10px] font-semibold uppercase',
-                          )}
-                        >
+                        <span {...contentTypePipelinePillProps(getContentTypeStyle(idea.contentType))}>
                           {idea.contentType}
-                        </p>
+                        </span>
                       )}
                       <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-white/45">
                         <ClientAvatar client={idea.client} size="xs" color={clientColor} />
