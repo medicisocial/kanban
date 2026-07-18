@@ -13,7 +13,7 @@ import {
 
 function StatusBadge({ status }) {
   return (
-    <span className="mt-0 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/45">
+    <span className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/45">
       {IDEA_STATUSES[status] || status}
     </span>
   );
