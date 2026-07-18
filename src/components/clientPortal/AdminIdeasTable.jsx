@@ -6,8 +6,7 @@ import ClientAvatar from '../ClientAvatar';
 import ReferenceVideoLink, { ReferenceMusicLink } from './ReferenceVideoLink';
 import {
   selectClass,
-  statusBadgeClass,
-  statusDotClass,
+  statusPipelinePillProps,
   surfacePanelClass,
   taskActionBtnClass,
   vaultRowActionsClass,
@@ -15,12 +14,7 @@ import {
 
 function StatusBadge({ status }) {
   const tone = status === 'approved' ? 'approved' : status === 'declined' ? 'declined' : 'pending';
-  return (
-    <span className={statusBadgeClass(tone)}>
-      <span className={statusDotClass(tone)} />
-      {IDEA_STATUSES[status] || status}
-    </span>
-  );
+  return <span {...statusPipelinePillProps(tone)}>{IDEA_STATUSES[status] || status}</span>;
 }
 
 export default function AdminIdeasTable({

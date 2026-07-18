@@ -7,6 +7,7 @@ import ReferenceVideoLink, { ReferenceMusicLink } from './clientPortal/Reference
 import PostSlidesPanel from './PostSlidesPanel';
 import { getStructuredScript, hasStructuredScript } from '../utils/scriptFields';
 import {
+  statusPipelinePillProps,
   surfacePanelClass,
   taskActionBtnClass,
   vaultRowActionsClass,
@@ -122,11 +123,12 @@ export default function IdeaVaultTable({
                   <h3 className="mt-1 truncate text-sm font-semibold text-white">
                     {idea.title || 'Untitled idea'}
                   </h3>
-                  {hasStructuredScript(idea) && (
-                    <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/45">
-                      {contentReadyLabel(idea)}
-                    </span>
-                  )}
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <span {...statusPipelinePillProps('approved')}>Approved</span>
+                    {hasStructuredScript(idea) && (
+                      <span {...statusPipelinePillProps('default')}>{contentReadyLabel(idea)}</span>
+                    )}
+                  </div>
                   {(idea.referenceVideo?.trim() || idea.referenceMusic?.trim()) && (
                     <div className="mt-2 flex flex-wrap gap-3">
                       {idea.referenceVideo?.trim() && (
