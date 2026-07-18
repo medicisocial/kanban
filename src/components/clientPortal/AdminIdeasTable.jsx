@@ -6,15 +6,17 @@ import ClientAvatar from '../ClientAvatar';
 import ReferenceVideoLink, { ReferenceMusicLink } from './ReferenceVideoLink';
 import {
   selectClass,
-  statusPipelinePillProps,
   surfacePanelClass,
   taskActionBtnClass,
   vaultRowActionsClass,
 } from './clientPortalUi';
 
 function StatusBadge({ status }) {
-  const tone = status === 'approved' ? 'approved' : status === 'declined' ? 'declined' : 'pending';
-  return <span {...statusPipelinePillProps(tone)}>{IDEA_STATUSES[status] || status}</span>;
+  return (
+    <span className="mt-0 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/45">
+      {IDEA_STATUSES[status] || status}
+    </span>
+  );
 }
 
 export default function AdminIdeasTable({

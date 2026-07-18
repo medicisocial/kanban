@@ -5,7 +5,6 @@ import { findIdeaBoardCard, sortIdeasByShootSchedule } from '../utils/videoIdeas
 import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import ClientAvatar from './ClientAvatar';
 import {
-  statusPipelinePillProps,
   surfacePanelClass,
   taskActionBtnClass,
   vaultRowActionsClass,
@@ -84,9 +83,6 @@ export default function ToCreateIdeasTable({
                 <h3 className="mt-1 truncate text-sm font-semibold text-white">
                   {card.title || idea.title || 'Untitled idea'}
                 </h3>
-                <div className="mt-1">
-                  <span {...statusPipelinePillProps('create')}>To create</span>
-                </div>
               </div>
             </div>
 
