@@ -214,6 +214,7 @@ function normalizeClientsState(data, { includeDefaults = true } = {}) {
     companyFiles: stripSuppressed(source.companyFiles || {}),
     specialMenus: stripSuppressed(source.specialMenus || {}),
     photoGalleryLinks: stripSuppressed(source.photoGalleryLinks || {}),
+    websites: stripSuppressed(source.websites || {}),
     deliverableTargets: stripSuppressed(normalizeDeliverableTargetsMap(source.deliverableTargets || {})),
     reelPointsTargets: stripSuppressed(normalizeReelPointsTargetsMap(source.reelPointsTargets || {})),
     carouselStaticTargets: stripSuppressed(normalizeCarouselStaticTargetsMap(source.carouselStaticTargets || {})),
@@ -557,6 +558,7 @@ export function useClients() {
         companyFiles: stripBrand(current.companyFiles),
         specialMenus: stripBrand(current.specialMenus),
         photoGalleryLinks: stripBrand(current.photoGalleryLinks),
+        websites: stripBrand(current.websites),
         deliverableTargets: stripBrand(current.deliverableTargets),
         reelPointsTargets: stripBrand(current.reelPointsTargets),
         carouselStaticTargets: stripBrand(current.carouselStaticTargets),
@@ -691,6 +693,7 @@ export function useClients() {
       businessType,
       logo,
       photoGalleryLink,
+      website,
       deliverableTarget,
       reelPointsTarget,
       carouselStaticTarget,
@@ -730,6 +733,12 @@ export function useClients() {
         next.photoGalleryLinks = {
           ...(prev.photoGalleryLinks || {}),
           [client]: photoGalleryLink || '',
+        };
+      }
+      if (website !== undefined) {
+        next.websites = {
+          ...(prev.websites || {}),
+          [client]: website || '',
         };
       }
       if (deliverableTarget !== undefined) {
@@ -832,6 +841,11 @@ export function useClients() {
   const getClientPhotoGalleryLink = useCallback(
     (client) => resolveClientMapValue(client, state.photoGalleryLinks) || '',
     [state.photoGalleryLinks],
+  );
+
+  const getClientWebsite = useCallback(
+    (client) => resolveClientMapValue(client, state.websites) || '',
+    [state.websites],
   );
 
   const getClientDeliverableTarget = useCallback(
@@ -1190,6 +1204,7 @@ export function useClients() {
     getClientSpecialMenus,
     setClientSpecialMenus,
     getClientPhotoGalleryLink,
+    getClientWebsite,
     getClientDeliverableTarget,
     setClientDeliverableTarget,
     getClientReelPointsTarget,

@@ -662,6 +662,7 @@ const CLIENTS_WORKSPACE_KEYS = [
   'companyFiles',
   'specialMenus',
   'photoGalleryLinks',
+  'websites',
   'portalPasswordVault',
   'contentTypeColors',
   'customColorPalette',
@@ -725,6 +726,12 @@ function mergeClientsWorkspaceField(key, remote, local, synced) {
     return mergeBrandStringMap(
       mergeBrandStringMap(remote?.photoGalleryLinks, local?.photoGalleryLinks),
       synced?.photoGalleryLinks,
+    );
+  }
+  if (key === 'websites') {
+    return mergeBrandStringMap(
+      mergeBrandStringMap(remote?.websites, local?.websites),
+      synced?.websites,
     );
   }
   return undefined;

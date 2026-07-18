@@ -57,7 +57,7 @@ export default function KanbanColumn({
 
         {cards.length === 0 && (
           <div className="kanban-column-empty">
-            {column.id === 'finished' ? 'Finished one-offs land here' : 'Drop cards here'}
+            {column.id === 'finished' ? 'Posted one-offs land here' : 'Drop cards here'}
           </div>
         )}
       </div>

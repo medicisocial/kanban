@@ -96,6 +96,7 @@ export function stripSuppressedClientNames(workspace = {}, suppressedKeys = new 
     companyFiles: stripMap(workspace.companyFiles),
     specialMenus: stripMap(workspace.specialMenus),
     photoGalleryLinks: stripMap(workspace.photoGalleryLinks),
+    websites: stripMap(workspace.websites),
     portalPasswordVault: stripMap(workspace.portalPasswordVault),
   };
 }
@@ -715,6 +716,7 @@ export function mergeClientsWorkspaceData(stored = {}, incoming = {}) {
     logos: mergeBrandLogoMap(stored.logos, incoming.logos),
     socialLogins: mergeBrandSocialLoginsMap(stored.socialLogins, incoming.socialLogins),
     photoGalleryLinks: mergeBrandStringMap(stored.photoGalleryLinks, incoming.photoGalleryLinks),
+    websites: mergeBrandStringMap(stored.websites, incoming.websites),
     companyFiles: mergeBrandMap(
       stored.companyFiles,
       incoming.companyFiles,

@@ -64,7 +64,7 @@ export function getEditorTaskLabel(columnId, isOneOffProject = false) {
   if (columnId === 'not-approved') return isOneOffProject ? 'One-off · Revise' : 'Revise';
   if (columnId === 'in-review') return isOneOffProject ? 'One-off · Review' : 'In review';
   if (columnId === 'approved') return 'One-off · Approved';
-  if (columnId === 'finished') return 'One-off · Finished';
+  if (columnId === 'finished') return 'One-off · Posted';
   return 'Task';
 }
 
@@ -323,7 +323,7 @@ function matchesEditorAssignee(card, assignee) {
 
 export function getEditorCompletedStatusLabel(card) {
   if (card.postedAt) return 'Posted';
-  if (card.isOneOffProject && card.columnId === 'finished') return 'Finished';
+  if (card.isOneOffProject && card.columnId === 'finished') return 'Posted';
   const column = COLUMNS.find((col) => col.id === card.columnId);
   return column?.title || card.status || 'Completed';
 }

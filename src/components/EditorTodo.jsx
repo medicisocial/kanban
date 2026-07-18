@@ -179,7 +179,7 @@ function EditorTodoItem({
               onClick={() => onMoveTask?.(task.cardId, 'finished')}
               className={taskActionBtnClass}
             >
-              Mark finished
+              Mark posted
             </button>
           )}
           {isOneOff && task.completed && (
@@ -386,7 +386,7 @@ export default function EditorTodo({
         {[
           ['editing', 'Needs editing', editCount],
           ['review', 'In review', approveCount],
-          ...(finishedCount > 0 ? [['finished', 'Finished one-offs', finishedCount]] : []),
+          ...(finishedCount > 0 ? [['finished', 'Posted one-offs', finishedCount]] : []),
         ].map(([id, label, count]) => (
           <button
             key={id}
@@ -436,7 +436,7 @@ export default function EditorTodo({
           )}
           {activeQueue === 'finished' && finishedCount > 0 && (
             <EditorTaskColumn
-              title="Finished one-offs"
+              title="Posted one-offs"
               description="Completed one-off projects stay here instead of appearing in Needs editing."
               count={finishedCount}
               accentClass="border-emerald-500/30 bg-emerald-500/10 text-emerald-200"

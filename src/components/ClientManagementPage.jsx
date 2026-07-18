@@ -65,6 +65,7 @@ export default function ClientManagementPage({
     getClientLogo,
     getClientBusinessType,
     getClientPhotoGalleryLink,
+    getClientWebsite,
     getClientReelPointsTarget,
     getClientCarouselStaticTarget,
     getClientAccountManager,
@@ -96,6 +97,7 @@ export default function ClientManagementPage({
   const [color, setColor] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [photoGalleryLink, setPhotoGalleryLink] = useState('');
+  const [website, setWebsite] = useState('');
   const [reelPointsTarget, setReelPointsTarget] = useState('');
   const [carouselStaticTarget, setCarouselStaticTarget] = useState('');
   const [accountManager, setAccountManager] = useState('');
@@ -149,6 +151,7 @@ export default function ClientManagementPage({
     setColor(getClientColor(selectedClient));
     setBusinessType(getClientBusinessType(selectedClient));
     setPhotoGalleryLink(getClientPhotoGalleryLink(selectedClient));
+    setWebsite(getClientWebsite(selectedClient));
     setReelPointsTarget(String(getClientReelPointsTarget(selectedClient) || ''));
     setCarouselStaticTarget(String(getClientCarouselStaticTarget(selectedClient) || ''));
     setAccountManager(getClientAccountManager(selectedClient) || '');
@@ -221,6 +224,7 @@ export default function ClientManagementPage({
         color,
         businessType,
         photoGalleryLink,
+        website,
         logo: logoToSave,
       });
       if (result?.ok === false) {
@@ -302,7 +306,8 @@ export default function ClientManagementPage({
     pendingLogo !== undefined ||
     (selectedClient && color !== getClientColor(selectedClient)) ||
     (selectedClient && businessType !== getClientBusinessType(selectedClient)) ||
-    (selectedClient && photoGalleryLink !== getClientPhotoGalleryLink(selectedClient));
+    (selectedClient && photoGalleryLink !== getClientPhotoGalleryLink(selectedClient)) ||
+    (selectedClient && website !== getClientWebsite(selectedClient));
 
   const hasPlanChanges =
     selectedClient &&
@@ -441,6 +446,16 @@ export default function ClientManagementPage({
             />
             <div className="min-w-0">
               <h3 className="text-xl font-semibold tracking-tight text-white">{selectedClient}</h3>
+              {(website.trim() || getClientWebsite(selectedClient)) && (
+                <a
+                  href={normalizeLink(website.trim() || getClientWebsite(selectedClient))}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
+                >
+                  Open website →
+                </a>
+              )}
             </div>
           </div>
 
@@ -531,6 +546,33 @@ export default function ClientManagementPage({
                 <p className="mt-1.5 text-[10px] text-white/35">
                   Controls which event form this client sees on the Events Calendar.
                 </p>
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+                  Website
+                </span>
+                <input
+                  type="url"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  placeholder="https://…"
+                  className="w-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/25 outline-none focus:border-white/25"
+                />
+                {website.trim() ? (
+                  <a
+                    href={normalizeLink(website)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1.5 inline-block truncate text-xs text-[#dc2626] hover:text-[#fca5a5]"
+                  >
+                    Open website →
+                  </a>
+                ) : (
+                  <p className="mt-1.5 text-[10px] text-white/35">
+                    Optional public website for this client.
+                  </p>
+                )}
               </label>
 
               <label className="block">
