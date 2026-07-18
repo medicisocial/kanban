@@ -1,9 +1,14 @@
+import ClientAvatar from './ClientAvatar';
+
 export function TeamTaskClientLabel({ client, color }) {
   if (!client) return null;
 
   return (
-    <span className="tesla-task-card-client" style={{ color }}>
-      {client}
+    <span className="inline-flex min-w-0 items-center gap-1.5">
+      <ClientAvatar client={client} size="xs" color={color} />
+      <span className="tesla-task-card-client truncate" style={{ color }}>
+        {client}
+      </span>
     </span>
   );
 }

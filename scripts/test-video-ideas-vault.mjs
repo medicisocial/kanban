@@ -217,6 +217,12 @@ assert(
   'To Create uses shared Vault action column width',
 );
 assert(toCreateSource.includes('contentTypeLabelProps'), 'To Create uses colored content type labels');
+assert(toCreateSource.includes('ClientAvatar'), 'To Create rows show client logo');
+{
+  const clientIdx = toCreateSource.indexOf('<ClientAvatar client={card.client}');
+  const titleIdx = toCreateSource.indexOf('card.title || idea.title');
+  assert(clientIdx > 0 && clientIdx < titleIdx, 'To Create shows client above title');
+}
 assert(toCreateSource.includes('onMakeOneOff'), 'To Create rows can make a one-off from a card');
 assert(toCreateSource.includes('Make one-off'), 'To Create rows expose Make one-off action');
 assert(
@@ -248,6 +254,11 @@ assert(
   approvedSource.includes('contentTypeLabelProps'),
   'Approved uses colored content type labels like To Create',
 );
+{
+  const clientIdx = approvedSource.indexOf('<ClientAvatar client={idea.client}');
+  const titleIdx = approvedSource.indexOf('idea.title || \'Untitled idea\'');
+  assert(clientIdx > 0 && clientIdx < titleIdx, 'Approved shows client above title');
+}
 assert(!approvedSource.includes('<select'), 'Approved content type is not a clickable select');
 assert(!approvedSource.includes('DebouncedField'), 'Approved row has no inline paste-link field');
 assert(!approvedSource.includes('Paste link'), 'Approved row does not show paste-link placeholder');
@@ -280,6 +291,13 @@ assert(
   reviewSource.includes('contentTypeLabelProps'),
   'Review uses colored content type labels like To Create',
 );
+{
+  const clientIdx = reviewSource.indexOf('<ClientAvatar client={idea.client}');
+  const titleIdx = reviewSource.indexOf('idea.title || \'Untitled idea\'');
+  const statusIdx = reviewSource.indexOf('<StatusBadge status={idea.status} />');
+  assert(clientIdx > 0 && clientIdx < titleIdx, 'Review shows client above title');
+  assert(titleIdx > 0 && statusIdx > titleIdx, 'Review shows status badge below title');
+}
 assert(!reviewSource.includes('min-w-[940px]'), 'Review no longer uses a wide desktop table');
 assert(
   !reviewSource.includes('min-h-10 flex-1') && !reviewSource.includes('w-[17%]'),
