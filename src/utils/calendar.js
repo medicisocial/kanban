@@ -443,7 +443,10 @@ export function getCalendarCards(cards) {
 
 export function getCalendarPosts(cards) {
   return cards.filter(
-    (c) => isStaffCalendarCard(c) && c.dueDate && isScheduledPostType(c.contentType),
+    (c) =>
+      isStaffCalendarCard(c) &&
+      c.dueDate &&
+      (isScheduledPostType(c.contentType) || isOneOffProjectCard(c)),
   );
 }
 

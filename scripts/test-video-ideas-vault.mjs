@@ -381,6 +381,10 @@ assert(
   makeOneOffSource.includes('editor payroll only'),
   'Make one-off points copy is editor-pay only',
 );
+assert(
+  makeOneOffSource.includes('Team Tasks → Editors'),
+  'Make one-off modal tells users where converted cards appear',
+);
 const cardModalSource = readFileSync(new URL('../src/components/CardModal.jsx', import.meta.url), 'utf8');
 assert(cardModalSource.includes('Make one-off project'), 'card editor exposes Make one-off project');
 assert(cardModalSource.includes('MakeOneOffModal'), 'card editor opens Make one-off modal');

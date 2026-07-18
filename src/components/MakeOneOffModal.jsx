@@ -16,7 +16,7 @@ export default function MakeOneOffModal({
   initialEditorPoints = 1,
   defaultAssignee = '',
   heading = 'Make one-off project',
-  description = 'Confirm the client name (existing or custom) and project details. Opens in Editing for review like other one-offs.',
+  description = 'Confirm the client name (existing or custom) and project details. Moves the card to Editing — find it under Team Tasks → Editors (not To Create or Content Creator).',
   confirmLabel = 'Make one-off',
 }) {
   const { clients, getMemberNamesForRole } = useClientsContext();

@@ -9,6 +9,7 @@ const ONE_OFF_EDITOR_COLUMNS = new Set(['editing', 'in-review', 'approved', 'fin
  */
 export function buildOneOffConversionUpdates(card = {}, form = {}) {
   const dueDate = form.dueDate || card.dueDate || '';
+  const dueTime = dueDate ? form.dueTime || card.dueTime || '' : '';
   const notes = form.notes ?? form.description ?? card.notes ?? '';
 
   const updates = {
@@ -18,15 +19,15 @@ export function buildOneOffConversionUpdates(card = {}, form = {}) {
     title: (form.title ?? card.title ?? '').trim() || card.title || '',
     notes,
     dueDate,
+    dueTime,
     // Align shootDate with dueDate so syncOneOffScheduleFields does not wipe dueDate.
     shootDate: dueDate,
+    shootTime: dueTime,
     assignedTo: form.assignedTo || card.assignedTo || '',
     editorPoints: normalizeEditorPoints(form.editorPoints ?? card.editorPoints),
-    shootTime: '',
     shootEndTime: '',
     shootModels: '',
     shootNeeds: '',
-    dueTime: '',
     storyRecurrenceDays: [],
     storyEndDate: '',
     storyOccurrenceNotes: {},
