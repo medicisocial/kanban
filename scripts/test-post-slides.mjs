@@ -117,6 +117,7 @@ assert(
   ideaModalSource.includes('ReferenceVideoLink') && ideaModalSource.includes('ReferenceMusicLink'),
   'bank idea modal renders clickable reference video and music links',
 );
+assert(ideaModalSource.includes('MakeOneOffModal'), 'bank idea modal can make a one-off project');
 const slidesPanelSource = readFileSync(
   new URL('../src/components/PostSlidesPanel.jsx', import.meta.url),
   'utf8',

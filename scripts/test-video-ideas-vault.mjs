@@ -218,6 +218,17 @@ assert(approvedSource.includes('Move to Review'), 'Approved rows can return idea
 assert(approvedSource.includes('btnSecondaryClass'), 'Approved secondary action uses bordered styling');
 assert(approvedSource.includes('openIdeaFromRow(event, idea)'), 'Approved rows open idea editor');
 assert(approvedSource.includes('align-middle'), 'Approved title cell is vertically centered');
+assert(
+  approvedSource.includes('flex items-center gap-1.5') &&
+    !approvedSource.includes('flex flex-wrap items-center gap-1.5'),
+  'Approved actions stay side by side without wrapping',
+);
+assert(
+  approvedSource.includes('whitespace-nowrap') && approvedSource.includes('align-middle'),
+  'Approved action buttons stay on one line and vertically centered',
+);
+assert(approvedSource.includes('onMakeOneOff'), 'Approved rows can make a one-off from an idea');
+assert(approvedSource.includes('Make one-off'), 'Approved rows expose Make one-off action');
 assert(approvedSource.includes('ReferenceMusicLink'), 'Approved rows show clickable music links');
 assert(!/>\s*Edit\s*</.test(approvedSource), 'Approved rows do not show a standalone Edit action');
 assert(!/>\s*Delete\s*</.test(approvedSource), 'Approved rows do not show a standalone Delete action');
@@ -228,6 +239,7 @@ const reviewSource = readFileSync(
 assert(reviewSource.includes('openIdeaFromRow(event, idea)'), 'Review rows open idea editor');
 assert(reviewSource.includes('btnSecondaryClass'), 'Review Delete uses bordered secondary styling');
 assert(reviewSource.includes('ReferenceMusicLink'), 'Review rows show clickable music links');
+assert(reviewSource.includes('onMakeOneOff'), 'Review rows can make a one-off from an idea');
 assert(!/>\s*Edit\s*</.test(reviewSource), 'Review rows do not show a standalone Edit action');
 const ideaModalSource = readFileSync(
   new URL('../src/components/VideoIdeaModal.jsx', import.meta.url),
@@ -240,6 +252,15 @@ assert(
   ideaModalSource.includes('<ReferenceVideoLink') && ideaModalSource.includes('<ReferenceMusicLink'),
   'idea editor exposes clickable reference video and music links',
 );
+assert(ideaModalSource.includes('MakeOneOffModal'), 'idea editor can open Make one-off modal');
+const makeOneOffSource = readFileSync(
+  new URL('../src/components/MakeOneOffModal.jsx', import.meta.url),
+  'utf8',
+);
+assert(makeOneOffSource.includes('ClientNameInput'), 'Make one-off modal allows custom client names');
+const cardModalSource = readFileSync(new URL('../src/components/CardModal.jsx', import.meta.url), 'utf8');
+assert(cardModalSource.includes('Make one-off project'), 'card editor exposes Make one-off project');
+assert(cardModalSource.includes('MakeOneOffModal'), 'card editor opens Make one-off modal');
 const shootItemSource = readFileSync(
   new URL('../src/components/ShootDayItem.jsx', import.meta.url),
   'utf8',
@@ -266,6 +287,10 @@ assert(
   videoIdeasUiSource.includes('onDelete={handleDeleteIdeaFromModal}'),
   'Vault wires idea modal Delete handler',
 );
+assert(
+  videoIdeasUiSource.includes('onCreateOneOffFromIdea'),
+  'Vault wires create one-off from idea',
+);
 const navSource = readFileSync(
   new URL('../src/components/clientPortal/AdminConsoleLayout.jsx', import.meta.url),
   'utf8',
@@ -276,6 +301,10 @@ assert(shellSource.includes('activeView === "board"'), 'legacy direct board rout
 assert(
   shellSource.includes('handleMoveApprovedIdeaToReview'),
   'AppShell wires Approved-to-Review lifecycle handler',
+);
+assert(
+  shellSource.includes('onCreateOneOffFromIdea') && shellSource.includes('addOneOffProject'),
+  'AppShell creates one-off board cards from vault ideas',
 );
 assert(
   shellSource.includes("handleNavigate('shoot'"),

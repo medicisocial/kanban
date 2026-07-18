@@ -58,6 +58,7 @@ export default function AdminIdeasTable({
   onEdit,
   onDelete,
   onApprove,
+  onMakeOneOff,
 }) {
   const { getClientColor } = useClientsContext();
   const [sort, setSort] = useState({ key: 'createdAt', dir: 'desc' });
@@ -208,6 +209,15 @@ export default function AdminIdeasTable({
                       Approve
                     </button>
                   )}
+                  {onMakeOneOff && (
+                    <button
+                      type="button"
+                      onClick={() => onMakeOneOff(idea)}
+                      className={`${btnSecondaryClass} min-h-10 flex-1 px-3 py-2 text-[11px] text-violet-200`}
+                    >
+                      Make one-off
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => onDelete(idea.id)}
@@ -317,6 +327,15 @@ export default function AdminIdeasTable({
                               className={`${btnPrimaryClass} px-2.5 py-1.5 text-[10px]`}
                             >
                               Approve
+                            </button>
+                          )}
+                          {onMakeOneOff && (
+                            <button
+                              type="button"
+                              onClick={() => onMakeOneOff(idea)}
+                              className={`${btnSecondaryClass} px-2.5 py-1.5 text-[10px] text-violet-200`}
+                            >
+                              Make one-off
                             </button>
                           )}
                           <button

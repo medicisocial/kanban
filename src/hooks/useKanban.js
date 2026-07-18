@@ -556,20 +556,38 @@ export function useKanban() {
   );
 
   const addOneOffProject = useCallback(
-    ({ client, title, description = '', dueDate = '', assignedTo }) => {
-      return addCardWithDetails({
-        client,
-        title,
-        notes: description,
-        dueDate,
-        assignedTo: assignedTo || getDefaultAssigneeForRole('Editor'),
-        contentType: 'One-off Project',
-        isOneOffProject: true,
-        columnId: 'editing',
-        status: 'Editing',
-      });
+    ({
+      client,
+      title,
+      description = '',
+      notes,
+      dueDate = '',
+      assignedTo,
+      sourceIdeaId = null,
+      referenceVideo = '',
+      referenceMusic = '',
+    } = {}) => {
+      notifyMutation();
+      const card = normalizeCard(
+        createCard({
+          client,
+          title,
+          notes: notes ?? description,
+          dueDate,
+          assignedTo: assignedTo || getDefaultAssigneeForRole('Editor'),
+          contentType: 'One-off Project',
+          isOneOffProject: true,
+          columnId: 'editing',
+          status: 'Editing',
+          sourceIdeaId: sourceIdeaId || null,
+          referenceVideo: referenceVideo || '',
+          referenceMusic: referenceMusic || '',
+        }),
+      );
+      setCards((prev) => [...prev, card]);
+      return card;
     },
-    [addCardWithDetails],
+    [],
   );
 
   return {

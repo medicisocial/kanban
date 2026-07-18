@@ -6,13 +6,21 @@ import { normalizeLink } from "../utils/links";
 import { isSlidePostType, normalizeCaptionMode, normalizePostSlides } from "../utils/postSlides";
 import { btnPrimaryClass, btnSecondaryClass } from "./clientPortal/clientPortalUi";
 import ReferenceVideoLink, { ReferenceMusicLink } from "./clientPortal/ReferenceVideoLink";
+import MakeOneOffModal from "./MakeOneOffModal";
 import ScriptPanel from "./ScriptPanel";
 import PostSlidesPanel from "./PostSlidesPanel";
 
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30";
 
-export default function VideoIdeaModal({ onClose, onSave, onDelete, idea = null, defaultClient }) {
+export default function VideoIdeaModal({
+  onClose,
+  onSave,
+  onDelete,
+  onMakeOneOff,
+  idea = null,
+  defaultClient,
+}) {
   const isEdit = Boolean(idea);
   const { clients, defaultClient: firstClient } = useClientsContext();
 
@@ -32,6 +40,7 @@ export default function VideoIdeaModal({ onClose, onSave, onDelete, idea = null,
   });
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("details");
+  const [showMakeOneOff, setShowMakeOneOff] = useState(false);
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -286,6 +295,15 @@ export default function VideoIdeaModal({ onClose, onSave, onDelete, idea = null,
                 Delete
               </button>
             )}
+            {isEdit && onMakeOneOff && (
+              <button
+                type="button"
+                onClick={() => setShowMakeOneOff(true)}
+                className={`${btnSecondaryClass} text-violet-200`}
+              >
+                Make one-off
+              </button>
+            )}
             <button type="button" onClick={onClose} className={`${btnSecondaryClass} min-w-0 flex-1`}>
               Cancel
             </button>
@@ -295,6 +313,19 @@ export default function VideoIdeaModal({ onClose, onSave, onDelete, idea = null,
           </div>
         </form>
       </div>
+
+      {showMakeOneOff && (
+        <MakeOneOffModal
+          initialClient={form.client || idea?.client || ""}
+          initialTitle={form.title || idea?.title || ""}
+          initialNotes={form.description || idea?.description || ""}
+          onClose={() => setShowMakeOneOff(false)}
+          onConfirm={(data) => {
+            onMakeOneOff?.(idea, data);
+            onClose();
+          }}
+        />
+      )}
     </div>,
     document.body,
   );

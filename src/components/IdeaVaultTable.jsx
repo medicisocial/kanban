@@ -23,7 +23,7 @@ import {
 const referenceInputClass = `${inputClass} !py-1.5 !text-xs min-w-[140px]`;
 const typeSelectClass = `${selectClass} w-full min-w-[96px] !py-1.5 !text-xs uppercase tracking-wider`;
 const bankRowControlClass = `${tableCellClass} align-middle`;
-const actionBtnClass = 'px-2.5 py-1.5 text-[10px]';
+const actionBtnClass = 'shrink-0 whitespace-nowrap px-2.5 py-1.5 text-[10px]';
 const mobileActionBtnClass = 'min-h-10 flex-1 px-3 py-2 text-[11px]';
 
 const BANK_TYPE_OPTIONS = [
@@ -124,6 +124,7 @@ export default function IdeaVaultTable({
   onEdit,
   onSchedule,
   onMoveToReview,
+  onMakeOneOff,
   onUpdateReference,
   onUpdateContentType,
   readOnly = false,
@@ -243,6 +244,15 @@ export default function IdeaVaultTable({
                 >
                   Move to Review
                 </button>
+                {onMakeOneOff && (
+                  <button
+                    type="button"
+                    onClick={() => onMakeOneOff(idea)}
+                    className={`${btnSecondaryClass} ${mobileActionBtnClass} text-violet-200`}
+                  >
+                    Make one-off
+                  </button>
+                )}
               </div>
               )}
               {expanded && (
@@ -291,14 +301,14 @@ export default function IdeaVaultTable({
         <table className="w-full min-w-[720px] border-collapse">
           <thead>
             <tr>
-              <th className="w-[32%]"><span className={tableHeaderClass}>Title</span></th>
+              <th className="w-[28%]"><span className={tableHeaderClass}>Title</span></th>
               <th className="w-[14%]"><span className={tableHeaderClass}>Reference</span></th>
               <th className="w-[12%]"><span className={tableHeaderClass}>Type</span></th>
               {!hideClientColumn && (
-                <th className="w-[16%]"><span className={tableHeaderClass}>Client</span></th>
+                <th className="w-[14%]"><span className={tableHeaderClass}>Client</span></th>
               )}
               {!readOnly && (
-                <th className="w-[26%]"><span className={tableHeaderClass}>Actions</span></th>
+                <th className="w-[32%]"><span className={tableHeaderClass}>Actions</span></th>
               )}
             </tr>
           </thead>
@@ -353,7 +363,7 @@ export default function IdeaVaultTable({
                   )}
                   {!readOnly && (
                   <td className={bankRowControlClass}>
-                    <div className="flex flex-wrap items-center gap-1.5">
+                    <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => onSchedule?.(idea)}
@@ -368,6 +378,15 @@ export default function IdeaVaultTable({
                       >
                         Move to Review
                       </button>
+                      {onMakeOneOff && (
+                        <button
+                          type="button"
+                          onClick={() => onMakeOneOff(idea)}
+                          className={`${btnSecondaryClass} ${actionBtnClass} text-violet-200`}
+                        >
+                          Make one-off
+                        </button>
+                      )}
                     </div>
                   </td>
                   )}
