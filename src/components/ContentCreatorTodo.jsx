@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { getContentTypeStyle } from '../constants';
 import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
@@ -9,7 +9,6 @@ import { useStaffWorkspaceScope } from '../hooks/useStaffWorkspaceScope';
 import { btnPrimaryClass, btnSecondaryClass, taskActionBtnClass } from './clientPortal/clientPortalUi';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
 import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
-import MakeOneOffModal from './MakeOneOffModal';
 
 export default function ContentCreatorTodo({
   cards,
@@ -20,10 +19,8 @@ export default function ContentCreatorTodo({
   onOpenShoot,
   onHandoff,
   onReturnToVault,
-  onConvertToOneOff,
   onNavigate,
 }) {
-  const [oneOffCard, setOneOffCard] = useState(null);
   const { getClientColor } = useClientsContext();
   const { staffName, personalTaskScope } = useStaffWorkspaceScope();
 
@@ -120,15 +117,6 @@ export default function ContentCreatorTodo({
                       Move back to Approved
                     </button>
                   )}
-                  {onConvertToOneOff && (
-                    <button
-                      type="button"
-                      onClick={() => setOneOffCard(task.card)}
-                      className={taskActionBtnClass}
-                    >
-                      Make one-off
-                    </button>
-                  )}
                   {onHandoff && (
                     <button
                       type="button"
@@ -143,22 +131,6 @@ export default function ContentCreatorTodo({
             </TeamTaskCard>
           );
         })
-      )}
-
-      {oneOffCard && (
-        <MakeOneOffModal
-          initialClient={oneOffCard.client}
-          initialTitle={oneOffCard.title}
-          initialNotes={oneOffCard.notes}
-          initialDueDate={oneOffCard.dueDate}
-          initialEditorPoints={oneOffCard.editorPoints}
-          defaultAssignee={oneOffCard.assignedTo}
-          onClose={() => setOneOffCard(null)}
-          onConfirm={(data) => {
-            onConvertToOneOff?.(oneOffCard, data);
-            setOneOffCard(null);
-          }}
-        />
       )}
     </div>
   );
