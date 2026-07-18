@@ -18,7 +18,8 @@ const shootCard = {
   contentType: 'Reel',
   columnId: 'shoot',
   status: 'To Create',
-  dueDate: '',
+  dueDate: '2026-06-20',
+  dueTime: '14:30',
   shootDate: '2026-06-12',
   shootTime: '10:00',
   shootEndTime: '10:45',
@@ -43,9 +44,11 @@ assert(converted.columnId === 'editing', 'To Create card moves into Editing');
 assert(converted.status === 'Editing', 'To Create card status becomes Editing');
 assert(converted.editorPoints === 0.5, 'conversion persists half editor point');
 assert(converted.dueDate === '2026-06-20', 'conversion keeps modal due date');
+assert(converted.dueTime === '14:30', 'conversion preserves existing post dueTime');
 assert(converted.shootDate === '2026-06-20', 'conversion aligns shootDate with dueDate');
+assert(converted.shootTime === '14:30', 'conversion aligns shootTime with dueTime');
 assert(converted.shootModels === '', 'conversion clears shoot roster fields');
-assert(converted.shootTime === '', 'conversion clears shoot time');
+assert(converted.shootEndTime === '', 'conversion clears shoot end time');
 
 const alreadyEditing = buildOneOffConversionUpdates(
   { ...shootCard, columnId: 'editing', status: 'Editing' },
