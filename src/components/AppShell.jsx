@@ -479,30 +479,6 @@ export default function AppShell({ onSignOut }) {
     [ideas, scheduleVaultIdeaOnShoot],
   );
 
-  /** Put an approved vault idea onto the To Create board column without a shoot date. */
-  const handleAddVaultIdeaToCreate = useCallback(
-    (ideaId) => {
-      const idea = ideas.find((entry) => entry.id === ideaId);
-      if (!idea) return null;
-      beginBatch();
-      let boardCardId = null;
-      try {
-        boardCardId = createCardFromIdea(
-          {
-            ...idea,
-            clientComment: idea.clientComment || '',
-          },
-          null,
-        );
-        updateIdea(idea.id, { boardCardId });
-      } finally {
-        endBatch();
-      }
-      return boardCardId;
-    },
-    [ideas, createCardFromIdea, updateIdea],
-  );
-
   const handleDeleteVaultIdea = useCallback(
     (ideaId) => {
       const idea = ideas.find((entry) => entry.id === ideaId);
@@ -1223,8 +1199,18 @@ export default function AppShell({ onSignOut }) {
           cards={cards}
           plans={plans}
           clientFilter={clientFilter}
-          onAddIdea={addIdea}
-          onAddIdeaToBank={addIdeaToBank}
+          onAddCard={() => {
+            const resolvedClient = clientFilter !== 'all' ? clientFilter : undefined;
+            const newCard = addCard('shoot', { client: resolvedClient });
+            if (newCard) setSelectedCard(newCard);
+          }}
+          onAddOneOffTask={(data) => {
+            const newCard = addOneOffProject({
+              ...data,
+              columnId: data.columnId || 'shoot',
+            });
+            if (newCard) setSelectedCard(newCard);
+          }}
           onApprove={handleApproveIdea}
           onDecline={handleDeclineIdea}
           onDeleteIdea={deleteIdea}
@@ -1241,7 +1227,6 @@ export default function AppShell({ onSignOut }) {
           }
           onReturnToApproved={handleReturnCardToVault}
           onScheduleVaultIdea={handleScheduleVaultIdea}
-          onAddVaultIdeaToCreate={handleAddVaultIdeaToCreate}
           onCreateOneOffFromIdea={(idea, data) => {
             const newCard = addOneOffProject({
               client: data.client,

@@ -58,6 +58,10 @@ assert(tasksSource.includes('{!embedded && ('), 'embedded role pages hide redund
 assert(tasksSource.includes("admin: 'Administrative Tasks'"), 'administrative page has direct title');
 assert(tasksSource.includes('onOpenShoot={onOpenShoot}'), 'Content Creator tab receives shoot navigation');
 assert(tasksSource.includes('onAddCard={onAddToCreateCard}'), 'Content Creator receives To Create add handler');
+assert(
+  tasksSource.includes('onAddOneOffTask={onAddOneOffTask}'),
+  'Content Creator receives Add one-off handler',
+);
 assert(tasksSource.includes('onAddCard={onAddEditingCard}'), 'Editors receive Needs editing add handler');
 
 const creatorSource = readFileSync(
@@ -67,6 +71,14 @@ const creatorSource = readFileSync(
 assert(creatorSource.includes('Go to shoot'), 'Content Creator cards expose Go to shoot');
 assert(creatorSource.includes('onOpenShoot(task.card)'), 'Content Creator shoot button opens the card shoot');
 assert(creatorSource.includes('+ Add card'), 'Content Creator exposes Add card control');
+assert(
+  creatorSource.includes('+ Add one-off project'),
+  'Content Creator exposes Add one-off project like Editors',
+);
+assert(
+  creatorSource.includes('AddEditorTaskModal'),
+  'Content Creator opens the shared one-off modal',
+);
 assert(
   creatorSource.includes('taskActionBtnClass'),
   'Content Creator card actions use compact team-card button styling',

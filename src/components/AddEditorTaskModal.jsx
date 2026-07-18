@@ -10,7 +10,12 @@ const START_STAGE_OPTIONS = [
   { id: 'editing', title: 'Editing' },
 ];
 
-export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) {
+export default function AddEditorTaskModal({
+  onClose,
+  onAdd,
+  defaultAssignee,
+  initialColumnId = 'editing',
+}) {
   const { clients, getMemberNamesForRole } = useClientsContext();
   const editors = getMemberNamesForRole('Editor');
   const [client, setClient] = useState(clients[0] || '');
@@ -18,7 +23,9 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [assignedTo, setAssignedTo] = useState(defaultAssignee || editors[0] || '');
-  const [columnId, setColumnId] = useState('editing');
+  const [columnId, setColumnId] = useState(
+    START_STAGE_OPTIONS.some((opt) => opt.id === initialColumnId) ? initialColumnId : 'editing',
+  );
   const [error, setError] = useState('');
 
   useEffect(() => {

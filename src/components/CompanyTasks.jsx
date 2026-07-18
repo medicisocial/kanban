@@ -127,6 +127,7 @@ export default function CompanyTasks({
           ideas={ideas}
           clientFilter={clientFilter}
           onAddCard={onAddToCreateCard}
+          onAddOneOffTask={onAddOneOffTask}
           onOpenCard={onOpenCard}
           onOpenShoot={onOpenShoot}
           onHandoff={onHandoff}

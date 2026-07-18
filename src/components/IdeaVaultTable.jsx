@@ -23,7 +23,6 @@ export default function IdeaVaultTable({
   ideas,
   onEdit,
   onSchedule,
-  onAddToCreate,
   onMoveToReview,
   readOnly = false,
   hideClientColumn = false,
@@ -181,13 +180,6 @@ export default function IdeaVaultTable({
 
                 {!readOnly && (
                   <div className={vaultRowActionsClass}>
-                    <button
-                      type="button"
-                      onClick={() => onAddToCreate?.(idea)}
-                      className={taskActionBtnClass}
-                    >
-                      Add to To Create
-                    </button>
                     <button
                       type="button"
                       onClick={() => onSchedule?.(idea)}
