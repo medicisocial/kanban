@@ -268,12 +268,12 @@ assert(
   'Approved uses team-task style content type pills',
 );
 assert(
-  approvedSource.includes("statusPipelinePillProps('approved')"),
-  'Approved rows use pipeline-style Approved status pill',
+  !approvedSource.includes("statusPipelinePillProps('approved')"),
+  'Approved rows do not show a per-card Approved status pill',
 );
 assert(
-  !approvedSource.includes('rounded-full border border-white/10 bg-white/[0.04]'),
-  'Approved script-ready chip no longer uses the old soft pill style',
+  approvedSource.includes('rounded-full border border-white/10 bg-white/[0.04]'),
+  'Approved script-ready chip uses the soft pill style',
 );
 {
   const typeIdx = approvedSource.indexOf('contentTypePipelinePillProps(typeStyle)');
