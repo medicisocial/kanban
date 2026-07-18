@@ -227,10 +227,18 @@ assert(approvedSource.includes('Add to shoot'), 'Approved rows keep Add to shoot
 assert(approvedSource.includes('Move to Review'), 'Approved rows can return ideas to Review');
 assert(approvedSource.includes('taskActionBtnClass'), 'Approved actions use compact team-card button styling');
 assert(approvedSource.includes('openIdeaFromRow(event, idea)'), 'Approved rows open idea editor');
-assert(approvedSource.includes('align-middle'), 'Approved title cell is vertically centered');
 assert(
-  approvedSource.includes('flex flex-col items-stretch gap-1.5'),
-  'Approved actions stack like editor task card actions',
+  approvedSource.includes('divide-y divide-white/[0.06]'),
+  'Approved uses To Create-style divided card list',
+);
+assert(
+  approvedSource.includes('flex shrink-0 flex-col gap-1.5 sm:items-stretch'),
+  'Approved actions stack in a narrow column like To Create',
+);
+assert(!approvedSource.includes('min-w-[720px]'), 'Approved no longer uses a wide desktop table');
+assert(
+  !approvedSource.includes('min-h-10 flex-1') && !approvedSource.includes('w-[32%]'),
+  'Approved action buttons do not stretch across a wide Actions column',
 );
 assert(approvedSource.includes('onMakeOneOff'), 'Approved rows can make a one-off from an idea');
 assert(approvedSource.includes('Make one-off'), 'Approved rows expose Make one-off action');
@@ -243,6 +251,19 @@ const reviewSource = readFileSync(
 );
 assert(reviewSource.includes('openIdeaFromRow(event, idea)'), 'Review rows open idea editor');
 assert(reviewSource.includes('taskActionBtnClass'), 'Review actions use compact team-card button styling');
+assert(
+  reviewSource.includes('divide-y divide-white/[0.06]'),
+  'Review uses To Create-style divided card list',
+);
+assert(
+  reviewSource.includes('flex shrink-0 flex-col gap-1.5 sm:items-stretch'),
+  'Review actions stack in a narrow column like To Create',
+);
+assert(!reviewSource.includes('min-w-[940px]'), 'Review no longer uses a wide desktop table');
+assert(
+  !reviewSource.includes('min-h-10 flex-1') && !reviewSource.includes('w-[17%]'),
+  'Review action buttons do not stretch across a wide Actions column',
+);
 assert(reviewSource.includes('ReferenceMusicLink'), 'Review rows show clickable music links');
 assert(reviewSource.includes('onMakeOneOff'), 'Review rows can make a one-off from an idea');
 assert(!/>\s*Edit\s*</.test(reviewSource), 'Review rows do not show a standalone Edit action');

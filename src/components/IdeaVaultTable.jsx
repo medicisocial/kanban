@@ -8,22 +8,13 @@ import PostSlidesPanel from './PostSlidesPanel';
 import { getStructuredScript, hasStructuredScript } from '../utils/scriptFields';
 import {
   inputClass,
-  mobileActionRowClass,
-  mobileCardClass,
-  mobileMetaClass,
   selectClass,
   surfacePanelClass,
-  tableCellClass,
-  tableHeaderClass,
-  tableRowClass,
   taskActionBtnClass,
 } from './clientPortal/clientPortalUi';
 
 const referenceInputClass = `${inputClass} !py-1.5 !text-xs min-w-[140px]`;
-const typeSelectClass = `${selectClass} w-full min-w-[96px] !py-1.5 !text-xs uppercase tracking-wider`;
-const bankRowControlClass = `${tableCellClass} align-middle`;
-const actionBtnClass = `${taskActionBtnClass} shrink-0 whitespace-nowrap`;
-const mobileActionBtnClass = `${taskActionBtnClass} min-h-10 flex-1`;
+const typeSelectClass = `${selectClass} w-auto min-w-[96px] !py-1.5 !text-xs uppercase tracking-wider`;
 
 const BANK_TYPE_OPTIONS = [
   { value: 'Reel', label: 'Reel' },
@@ -93,7 +84,9 @@ function IdeaContentTypeField({ ideaId, value = 'Reel', onSave, readOnly = false
 
   if (readOnly) {
     return (
-      <span className="text-xs uppercase tracking-wider text-white/55">{bankTypeLabel(value)}</span>
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-white/55">
+        {bankTypeLabel(value)}
+      </span>
     );
   }
 
@@ -133,13 +126,21 @@ export default function IdeaVaultTable({
   const [expandedId, setExpandedId] = useState(null);
 
   const openIdeaFromRow = (event, idea) => {
-    if (readOnly || event.target.closest('button, a, input, select, textarea, label')) return;
+    if (event.target.closest('button, a, input, select, textarea, label')) return;
+    if (readOnly) {
+      setExpandedId((prev) => (prev === idea.id ? null : idea.id));
+      return;
+    }
     onEdit?.(idea);
   };
 
   const handleRowKeyDown = (event, idea) => {
-    if (readOnly || (event.key !== 'Enter' && event.key !== ' ')) return;
+    if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
+    if (readOnly) {
+      setExpandedId((prev) => (prev === idea.id ? null : idea.id));
+      return;
+    }
     onEdit?.(idea);
   };
 
@@ -179,86 +180,64 @@ export default function IdeaVaultTable({
         </p>
       </div>
 
-      <div className="md:hidden">
+      <div className="divide-y divide-white/[0.06]">
         {sorted.map((idea) => {
+          const clientColor = getClientColor(idea.client);
           const expanded = expandedId === idea.id;
+          const showScriptPanel =
+            expanded &&
+            hasStructuredScript(idea) &&
+            (!(idea.contentType === 'Carousel' || idea.contentType === 'Static Post') || !readOnly);
+
           return (
-            <div
+            <article
               key={idea.id}
-              className={`${mobileCardClass} ${readOnly ? '' : 'cursor-pointer transition hover:bg-white/[0.04]'}`}
+              className={`flex flex-col gap-3 px-4 py-3 transition hover:bg-white/[0.04] sm:flex-row sm:items-center ${
+                readOnly || onEdit ? 'cursor-pointer' : ''
+              }`}
               onClick={(event) => openIdeaFromRow(event, idea)}
               onKeyDown={(event) => handleRowKeyDown(event, idea)}
-              role={readOnly ? undefined : 'button'}
-              tabIndex={readOnly ? undefined : 0}
+              role="button"
+              tabIndex={0}
             >
-              <button
-                type="button"
-                onClick={() => {
-                  if (readOnly) setExpandedId(expanded ? null : idea.id);
-                  else onEdit?.(idea);
-                }}
-                className="w-full text-left font-medium text-white"
-              >
-                {idea.title || 'Untitled idea'}
-              </button>
-              {hasStructuredScript(idea) && !expanded && (
-                <p className="mt-1 text-[10px] uppercase tracking-wider text-white/35">
-                  {contentReadyLabel(idea)}
-                </p>
-              )}
-              <div className="mt-2 space-y-1.5">
-                <IdeaReferenceField
-                  ideaId={idea.id}
-                  value={idea.referenceVideo}
-                  onSave={onUpdateReference}
-                  readOnly={readOnly}
-                  compact
-                />
-                {idea.referenceMusic?.trim() && (
-                  <ReferenceMusicLink url={idea.referenceMusic} compact />
-                )}
-              </div>
-              <div className={mobileMetaClass}>
-                <IdeaContentTypeField
-                  ideaId={idea.id}
-                  value={idea.contentType}
-                  onSave={onUpdateContentType}
-                  readOnly={readOnly}
-                />
-                {!hideClientColumn && <span className="text-white/70">{idea.client}</span>}
-              </div>
-              {!readOnly && (
-              <div className={mobileActionRowClass}>
-                <button
-                  type="button"
-                  onClick={() => onSchedule?.(idea)}
-                  className={mobileActionBtnClass}
-                >
-                  Add to shoot
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onMoveToReview?.(idea.id)}
-                  className={mobileActionBtnClass}
-                >
-                  Move to Review
-                </button>
-                {onMakeOneOff && (
-                  <button
-                    type="button"
-                    onClick={() => onMakeOneOff(idea)}
-                    className={mobileActionBtnClass}
-                  >
-                    Make one-off
-                  </button>
-                )}
-              </div>
-              )}
-              {expanded && (
-                <div className="mt-3 border border-white/10 bg-white/[0.02] p-3 text-sm text-white/70">
-                  {hasStructuredScript(idea) &&
-                    (!(idea.contentType === 'Carousel' || idea.contentType === 'Static Post') || !readOnly) && (
-                    <div>
+              <div className="flex min-w-0 flex-1 items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <IdeaContentTypeField
+                      ideaId={idea.id}
+                      value={idea.contentType}
+                      onSave={onUpdateContentType}
+                      readOnly={readOnly}
+                    />
+                    {hasStructuredScript(idea) && (
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/45">
+                        {contentReadyLabel(idea)}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="mt-1 truncate text-sm font-semibold text-white">
+                    {idea.title || 'Untitled idea'}
+                  </h3>
+                  {!hideClientColumn && (
+                    <div className="mt-1 flex items-center gap-1.5 text-[10px] text-white/45">
+                      <ClientAvatar client={idea.client} size="xs" color={clientColor} />
+                      <span className="truncate">{idea.client}</span>
+                    </div>
+                  )}
+                  <div className="mt-2 space-y-1.5">
+                    <IdeaReferenceField
+                      ideaId={idea.id}
+                      value={idea.referenceVideo}
+                      onSave={onUpdateReference}
+                      readOnly={readOnly}
+                      compact
+                    />
+                    {idea.referenceMusic?.trim() && (
+                      <ReferenceMusicLink url={idea.referenceMusic} compact />
+                    )}
+                  </div>
+                  {showScriptPanel && (
+                    <div className="mt-3 border border-white/10 bg-white/[0.02] p-3 text-sm text-white/70">
                       <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
                         {idea.contentType === 'Carousel' || idea.contentType === 'Static Post'
                           ? 'Post plan'
@@ -279,10 +258,30 @@ export default function IdeaVaultTable({
                           const script = getStructuredScript(idea);
                           return (
                             <div className="mt-1 space-y-2 text-xs text-white/65">
-                              {script.hook && <p><span className="text-white/40">Hook: </span>{script.hook}</p>}
-                              {script.body && <p className="whitespace-pre-wrap"><span className="text-white/40">Body: </span>{script.body}</p>}
-                              {script.overlays && <p className="whitespace-pre-wrap"><span className="text-white/40">Overlays: </span>{script.overlays}</p>}
-                              {script.caption && <p className="whitespace-pre-wrap"><span className="text-white/40">Caption: </span>{script.caption}</p>}
+                              {script.hook && (
+                                <p>
+                                  <span className="text-white/40">Hook: </span>
+                                  {script.hook}
+                                </p>
+                              )}
+                              {script.body && (
+                                <p className="whitespace-pre-wrap">
+                                  <span className="text-white/40">Body: </span>
+                                  {script.body}
+                                </p>
+                              )}
+                              {script.overlays && (
+                                <p className="whitespace-pre-wrap">
+                                  <span className="text-white/40">Overlays: </span>
+                                  {script.overlays}
+                                </p>
+                              )}
+                              {script.caption && (
+                                <p className="whitespace-pre-wrap">
+                                  <span className="text-white/40">Caption: </span>
+                                  {script.caption}
+                                </p>
+                              )}
                             </div>
                           );
                         })()
@@ -290,110 +289,38 @@ export default function IdeaVaultTable({
                     </div>
                   )}
                 </div>
+              </div>
+
+              {!readOnly && (
+                <div className="flex shrink-0 flex-col gap-1.5 sm:items-stretch">
+                  <button
+                    type="button"
+                    onClick={() => onSchedule?.(idea)}
+                    className={taskActionBtnClass}
+                  >
+                    Add to shoot
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onMoveToReview?.(idea.id)}
+                    className={taskActionBtnClass}
+                  >
+                    Move to Review
+                  </button>
+                  {onMakeOneOff && (
+                    <button
+                      type="button"
+                      onClick={() => onMakeOneOff(idea)}
+                      className={taskActionBtnClass}
+                    >
+                      Make one-off
+                    </button>
+                  )}
+                </div>
               )}
-            </div>
+            </article>
           );
         })}
-      </div>
-
-      <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[720px] border-collapse">
-          <thead>
-            <tr>
-              <th className="w-[28%]"><span className={tableHeaderClass}>Title</span></th>
-              <th className="w-[14%]"><span className={tableHeaderClass}>Reference</span></th>
-              <th className="w-[12%]"><span className={tableHeaderClass}>Type</span></th>
-              {!hideClientColumn && (
-                <th className="w-[14%]"><span className={tableHeaderClass}>Client</span></th>
-              )}
-              {!readOnly && (
-                <th className="w-[32%]"><span className={tableHeaderClass}>Actions</span></th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((idea) => {
-              const clientColor = getClientColor(idea.client);
-              return (
-                <tr
-                  key={idea.id}
-                  className={`${tableRowClass} ${readOnly ? '' : 'cursor-pointer'}`}
-                  onClick={(event) => openIdeaFromRow(event, idea)}
-                  onKeyDown={(event) => handleRowKeyDown(event, idea)}
-                  role={readOnly ? undefined : 'button'}
-                  tabIndex={readOnly ? undefined : 0}
-                >
-                  <td className={bankRowControlClass}>
-                    <p className="font-medium text-white">{idea.title || 'Untitled idea'}</p>
-                    {hasStructuredScript(idea) && (
-                      <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/35">
-                        {contentReadyLabel(idea)}
-                      </p>
-                    )}
-                  </td>
-                  <td className={bankRowControlClass}>
-                    <div className="space-y-1.5">
-                      <IdeaReferenceField
-                        ideaId={idea.id}
-                        value={idea.referenceVideo}
-                        onSave={onUpdateReference}
-                        readOnly={readOnly}
-                      />
-                      {idea.referenceMusic?.trim() && (
-                        <ReferenceMusicLink url={idea.referenceMusic} compact />
-                      )}
-                    </div>
-                  </td>
-                  <td className={bankRowControlClass}>
-                    <IdeaContentTypeField
-                      ideaId={idea.id}
-                      value={idea.contentType}
-                      onSave={onUpdateContentType}
-                      readOnly={readOnly}
-                    />
-                  </td>
-                  {!hideClientColumn && (
-                  <td className={bankRowControlClass}>
-                    <div className="flex items-center gap-2">
-                      <ClientAvatar client={idea.client} size="md" color={clientColor} />
-                      <span className="truncate text-xs text-white/70">{idea.client}</span>
-                    </div>
-                  </td>
-                  )}
-                  {!readOnly && (
-                  <td className={bankRowControlClass}>
-                    <div className="flex flex-col items-stretch gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onSchedule?.(idea)}
-                        className={actionBtnClass}
-                      >
-                        Add to shoot
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onMoveToReview?.(idea.id)}
-                        className={actionBtnClass}
-                      >
-                        Move to Review
-                      </button>
-                      {onMakeOneOff && (
-                        <button
-                          type="button"
-                          onClick={() => onMakeOneOff(idea)}
-                          className={actionBtnClass}
-                        >
-                          Make one-off
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
       </div>
     </div>
   );
