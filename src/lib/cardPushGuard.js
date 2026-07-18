@@ -2,10 +2,13 @@ import { fetchStaffSyncRows } from './staffSyncApi';
 import {
   PIPELINE_REGRESSION_AUTH_KEY,
   prepareCardPipelineUpsert,
-  stripPipelineInternalFields,
 } from '../utils/cardPipelineMerge';
 
-/** Merge outgoing card writes against live cloud rows so stale tabs cannot regress pipeline. */
+/**
+ * Merge outgoing card writes against live cloud rows so stale tabs cannot regress pipeline.
+ * Intentionally keeps `_allowPipelineRegression` on authorized records so staff-sync and the
+ * DB trigger can honor Editing → To Create (and other backward moves).
+ */
 export async function guardCardPushBatch(
   changed,
   orgId,
@@ -18,7 +21,7 @@ export async function guardCardPushBatch(
 
   for (const record of changed) {
     if (record?.[PIPELINE_REGRESSION_AUTH_KEY]) {
-      authorized.push(stripPipelineInternalFields(record));
+      authorized.push(record);
     } else {
       guarded.push(record);
     }
