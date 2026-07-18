@@ -57,6 +57,8 @@ const tasksSource = readFileSync(new URL('../src/components/CompanyTasks.jsx', i
 assert(tasksSource.includes('{!embedded && ('), 'embedded role pages hide redundant role tabs');
 assert(tasksSource.includes("admin: 'Administrative Tasks'"), 'administrative page has direct title');
 assert(tasksSource.includes('onOpenShoot={onOpenShoot}'), 'Content Creator tab receives shoot navigation');
+assert(tasksSource.includes('onAddCard={onAddToCreateCard}'), 'Content Creator receives To Create add handler');
+assert(tasksSource.includes('onAddCard={onAddEditingCard}'), 'Editors receive Needs editing add handler');
 
 const creatorSource = readFileSync(
   new URL('../src/components/ContentCreatorTodo.jsx', import.meta.url),
@@ -64,9 +66,14 @@ const creatorSource = readFileSync(
 );
 assert(creatorSource.includes('Go to shoot'), 'Content Creator cards expose Go to shoot');
 assert(creatorSource.includes('onOpenShoot(task.card)'), 'Content Creator shoot button opens the card shoot');
+assert(creatorSource.includes('+ Add card'), 'Content Creator exposes Add card control');
 assert(
   shellSource.includes("handleNavigate('shoot'") && shellSource.includes('onOpenShoot={(card)'),
   'AppShell wires Content Creator shoot navigation',
+);
+assert(
+  shellSource.includes("addCard('shoot'") && shellSource.includes("addCard('editing'"),
+  'AppShell wires manual add into To Create and Needs editing',
 );
 
 await vite.close();
