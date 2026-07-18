@@ -142,15 +142,7 @@ export default function AdminIdeasTable({
                     </label>
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 text-[10px] text-white/45">
-                      <ClientAvatar client={idea.client} size="xs" color={clientColor} />
-                      <span className="truncate">{idea.client}</span>
-                    </div>
-                    <h3 className="mt-1 truncate text-sm font-semibold text-white">
-                      {idea.title || 'Untitled idea'}
-                    </h3>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <StatusBadge status={idea.status} />
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                       {idea.contentType && (
                         <p
                           {...contentTypeLabelProps(
@@ -161,6 +153,16 @@ export default function AdminIdeasTable({
                           {idea.contentType}
                         </p>
                       )}
+                      <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-white/45">
+                        <ClientAvatar client={idea.client} size="xs" color={clientColor} />
+                        <span className="truncate">{idea.client}</span>
+                      </div>
+                    </div>
+                    <h3 className="mt-1 truncate text-sm font-semibold text-white">
+                      {idea.title || 'Untitled idea'}
+                    </h3>
+                    <div className="mt-1">
+                      <StatusBadge status={idea.status} />
                     </div>
                     {idea.description && (
                       <p className="mt-1 line-clamp-2 text-xs text-white/40">{idea.description}</p>

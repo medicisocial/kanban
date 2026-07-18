@@ -218,9 +218,15 @@ assert(
 );
 assert(toCreateSource.includes('contentTypeLabelProps'), 'To Create uses colored content type labels');
 assert(toCreateSource.includes('ClientAvatar'), 'To Create rows show client logo');
+assert(
+  !toCreateSource.includes('border-amber-400/20'),
+  'To Create rows no longer show a To Create status badge',
+);
 {
+  const typeIdx = toCreateSource.indexOf('contentTypeLabelProps(typeStyle');
   const clientIdx = toCreateSource.indexOf('<ClientAvatar client={card.client}');
   const titleIdx = toCreateSource.indexOf('card.title || idea.title');
+  assert(typeIdx > 0 && typeIdx < clientIdx, 'To Create shows content type left of client');
   assert(clientIdx > 0 && clientIdx < titleIdx, 'To Create shows client above title');
 }
 assert(toCreateSource.includes('onMakeOneOff'), 'To Create rows can make a one-off from a card');
@@ -255,8 +261,10 @@ assert(
   'Approved uses colored content type labels like To Create',
 );
 {
+  const typeIdx = approvedSource.indexOf('contentTypeLabelProps(typeStyle');
   const clientIdx = approvedSource.indexOf('<ClientAvatar client={idea.client}');
   const titleIdx = approvedSource.indexOf('idea.title || \'Untitled idea\'');
+  assert(typeIdx > 0 && typeIdx < clientIdx, 'Approved shows content type left of client');
   assert(clientIdx > 0 && clientIdx < titleIdx, 'Approved shows client above title');
 }
 assert(!approvedSource.includes('<select'), 'Approved content type is not a clickable select');
@@ -292,9 +300,11 @@ assert(
   'Review uses colored content type labels like To Create',
 );
 {
+  const typeIdx = reviewSource.indexOf('contentTypeLabelProps(');
   const clientIdx = reviewSource.indexOf('<ClientAvatar client={idea.client}');
   const titleIdx = reviewSource.indexOf('idea.title || \'Untitled idea\'');
   const statusIdx = reviewSource.indexOf('<StatusBadge status={idea.status} />');
+  assert(typeIdx > 0 && typeIdx < clientIdx, 'Review shows content type left of client');
   assert(clientIdx > 0 && clientIdx < titleIdx, 'Review shows client above title');
   assert(titleIdx > 0 && statusIdx > titleIdx, 'Review shows status badge below title');
 }

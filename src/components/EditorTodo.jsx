@@ -24,12 +24,6 @@ import {
 } from './clientPortal/clientPortalUi';
 import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
 
-const kindStyles = {
-  edit: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
-  approve: 'border-[#810100]/30 bg-[#a00000]/10 text-[#fecaca]',
-  oneoff: 'border-white/20 bg-white/5 text-[#f9f6f2]',
-};
-
 const interactiveProps = {
   onPointerDown: (e) => e.stopPropagation(),
   onClick: (e) => e.stopPropagation(),
@@ -74,9 +68,6 @@ function EditorTodoItem({
           className="min-w-0 flex-1 cursor-pointer rounded-lg text-left transition hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#810100]/50"
         >
           <div className="tesla-task-card-meta mb-2">
-            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${kindStyles[task.kind]}`}>
-              {task.label}
-            </span>
             {task.contentType && typeStyle && (
               <span {...contentTypePipelinePillProps(typeStyle)}>
                 {task.contentType}

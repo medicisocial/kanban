@@ -108,29 +108,25 @@ export default function IdeaVaultTable({
             >
               <div className="flex min-w-0 flex-1 items-start gap-3">
                 <div className="min-w-0 flex-1">
-                  {!hideClientColumn && (
-                    <div className="flex items-center gap-1.5 text-[10px] text-white/45">
-                      <ClientAvatar client={idea.client} size="xs" color={clientColor} />
-                      <span className="truncate">{idea.client}</span>
-                    </div>
-                  )}
-                  <h3
-                    className={`truncate text-sm font-semibold text-white ${
-                      hideClientColumn ? '' : 'mt-1'
-                    }`}
-                  >
-                    {idea.title || 'Untitled idea'}
-                  </h3>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <p {...contentTypeLabelProps(typeStyle, 'text-[10px] font-semibold uppercase')}>
                       {idea.contentType || 'Reel'}
                     </p>
-                    {hasStructuredScript(idea) && (
-                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/45">
-                        {contentReadyLabel(idea)}
-                      </span>
+                    {!hideClientColumn && (
+                      <div className="flex min-w-0 items-center gap-1.5 text-[10px] text-white/45">
+                        <ClientAvatar client={idea.client} size="xs" color={clientColor} />
+                        <span className="truncate">{idea.client}</span>
+                      </div>
                     )}
                   </div>
+                  <h3 className="mt-1 truncate text-sm font-semibold text-white">
+                    {idea.title || 'Untitled idea'}
+                  </h3>
+                  {hasStructuredScript(idea) && (
+                    <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/45">
+                      {contentReadyLabel(idea)}
+                    </span>
+                  )}
                   {(idea.referenceVideo?.trim() || idea.referenceMusic?.trim()) && (
                     <div className="mt-2 flex flex-wrap gap-3">
                       {idea.referenceVideo?.trim() && (
