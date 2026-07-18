@@ -68,6 +68,10 @@ assert(creatorSource.includes('Go to shoot'), 'Content Creator cards expose Go t
 assert(creatorSource.includes('onOpenShoot(task.card)'), 'Content Creator shoot button opens the card shoot');
 assert(creatorSource.includes('+ Add card'), 'Content Creator exposes Add card control');
 assert(
+  creatorSource.includes('taskActionBtnClass'),
+  'Content Creator card actions use compact team-card button styling',
+);
+assert(
   shellSource.includes("handleNavigate('shoot'") && shellSource.includes('onOpenShoot={(card)'),
   'AppShell wires Content Creator shoot navigation',
 );
