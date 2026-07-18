@@ -37,6 +37,7 @@ function createIdea(overrides = {}) {
     // Legacy freeform (kept for backward compatibility/display-only)
     script: "",
     contentType: "Reel",
+    editorPoints: 1,
     status: "pending",
     clientComment: "",
     boardCardId: null,

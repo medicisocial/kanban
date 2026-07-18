@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { CONTENT_TYPES, IDEA_STATUSES } from "../constants";
+import {
+  CONTENT_TYPES,
+  EDITOR_POINT_OPTIONS,
+  IDEA_STATUSES,
+  normalizeEditorPoints,
+} from "../constants";
 import { useClientsContext } from "../context/ClientsContext";
 import { normalizeLink } from "../utils/links";
 import { isSlidePostType, normalizeCaptionMode, normalizePostSlides } from "../utils/postSlides";
@@ -43,6 +48,7 @@ export default function VideoIdeaModal({
     captionMode: idea?.captionMode || "shared",
     postSlides: idea?.postSlides || [],
     contentType: idea?.contentType || "Reel",
+    editorPoints: normalizeEditorPoints(idea?.editorPoints),
   });
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("details");
@@ -85,6 +91,7 @@ export default function VideoIdeaModal({
       caption: form.caption.trim(),
       captionMode: normalizeCaptionMode(form.captionMode, form.contentType),
       postSlides: normalizePostSlides(form.postSlides, form.contentType),
+      editorPoints: normalizeEditorPoints(form.editorPoints),
     });
     onClose();
   };
@@ -198,6 +205,39 @@ export default function VideoIdeaModal({
                   </label>
                 </div>
 
+                {isEdit && onMakeOneOff && (
+                  <button
+                    type="button"
+                    onClick={() => setShowMakeOneOff(true)}
+                    className={`${btnSecondaryClass} w-full text-violet-200`}
+                  >
+                    Make one-off project
+                  </button>
+                )}
+
+                {form.contentType === "Reel" && (
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-medium text-gray-400">Editor points</span>
+                    <select
+                      value={String(normalizeEditorPoints(form.editorPoints))}
+                      onChange={(e) =>
+                        setForm({ ...form, editorPoints: Number(e.target.value) })
+                      }
+                      className={inputClass}
+                    >
+                      {EDITOR_POINT_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={String(opt.value)}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1.5 text-[10px] text-white/35">
+                      1 point = regular reel · ½ point = short / quick edit. Used for payroll and
+                      client reel quotas. Carries over when added to a shoot.
+                    </p>
+                  </label>
+                )}
+
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-medium text-gray-400">Notes</span>
                   <textarea
@@ -296,15 +336,6 @@ export default function VideoIdeaModal({
                 Delete
               </button>
             )}
-            {isEdit && onMakeOneOff && (
-              <button
-                type="button"
-                onClick={() => setShowMakeOneOff(true)}
-                className={`${btnSecondaryClass} text-violet-200`}
-              >
-                Make one-off
-              </button>
-            )}
             <button type="button" onClick={onClose} className={`${btnSecondaryClass} min-w-0 flex-1`}>
               Cancel
             </button>
@@ -320,6 +351,7 @@ export default function VideoIdeaModal({
           initialClient={form.client || idea?.client || ""}
           initialTitle={form.title || idea?.title || ""}
           initialNotes={form.description || idea?.description || ""}
+          initialEditorPoints={form.editorPoints}
           onClose={() => setShowMakeOneOff(false)}
           onConfirm={(data) => {
             onMakeOneOff?.(idea, data);

@@ -375,6 +375,20 @@ assert(ideaModalSource.includes('Task Title'), 'idea editor Details use Task Tit
 assert(ideaModalSource.includes('>Notes<') || ideaModalSource.includes('Notes</span>'), 'idea editor shows Notes on Details');
 assert(!ideaModalSource.includes('Notes for Client'), 'idea editor no longer uses Notes for Client label');
 assert(!ideaModalSource.includes('Idea Title'), 'idea editor no longer uses Idea Title label');
+assert(ideaModalSource.includes('Editor points'), 'idea editor can set editor points on Details');
+assert(ideaModalSource.includes('Make one-off project'), 'idea editor puts Make one-off project on Details');
+{
+  const makeOneOffIdx = ideaModalSource.indexOf('Make one-off project');
+  const notesIdx = ideaModalSource.indexOf('Notes</span>');
+  assert(
+    makeOneOffIdx > 0 && notesIdx > makeOneOffIdx,
+    'idea editor places Make one-off project above Notes',
+  );
+}
+assert(
+  !ideaModalSource.includes('>Make one-off<'),
+  'idea editor no longer keeps Make one-off in the footer',
+);
 assert(
   ideaModalSource.includes('["references", "References"]') || ideaModalSource.includes("['references', 'References']"),
   'idea editor has a References tab',
@@ -425,6 +439,16 @@ assert(
 assert(
   cardModalSource.includes("['editing', 'in-review', 'not-approved', 'approved', 'scheduled']"),
   'card editor gates Video File Link to post-To Create stages',
+);
+const kanbanSource = readFileSync(new URL('../src/hooks/useKanban.js', import.meta.url), 'utf8');
+assert(
+  kanbanSource.includes('editorPoints: normalizeEditorPoints(idea.editorPoints)'),
+  'scheduling an idea carries editor points onto the board card',
+);
+const ideasHookSource = readFileSync(new URL('../src/hooks/useVideoIdeas.js', import.meta.url), 'utf8');
+assert(
+  ideasHookSource.includes('editorPoints: 1'),
+  'new ideas default to 1 editor point',
 );
 const shootItemSource = readFileSync(
   new URL('../src/components/ShootDayItem.jsx', import.meta.url),

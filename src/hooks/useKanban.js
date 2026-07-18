@@ -356,6 +356,7 @@ export function useKanban() {
           notes,
           referenceMusic: idea.referenceMusic || '',
           referenceVideo: idea.referenceVideo || '',
+          editorPoints: normalizeEditorPoints(idea.editorPoints),
           dropboxLink: '',
           clientComment: '',
           sourceIdeaId: idea.id,
