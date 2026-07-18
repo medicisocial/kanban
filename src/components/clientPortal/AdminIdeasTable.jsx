@@ -5,7 +5,6 @@ import { contentTypePipelinePillProps } from '../../utils/contentTypeColors';
 import ClientAvatar from '../ClientAvatar';
 import ReferenceVideoLink, { ReferenceMusicLink } from './ReferenceVideoLink';
 import {
-  formatPortalDate,
   selectClass,
   statusBadgeClass,
   statusDotClass,
@@ -162,9 +161,6 @@ export default function AdminIdeasTable({
                     {idea.description && (
                       <p className="mt-1 line-clamp-2 text-xs text-white/40">{idea.description}</p>
                     )}
-                    <p className="mt-1 text-[10px] tabular-nums text-white/45">
-                      {formatPortalDate(idea.createdAt)}
-                    </p>
                     {(idea.referenceVideo || idea.referenceMusic) && (
                       <div className="mt-2 flex flex-wrap gap-3">
                         {idea.referenceVideo && (
