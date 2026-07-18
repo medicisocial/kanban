@@ -160,6 +160,34 @@ assert(
   'one-off projects in To Create cannot return to vault',
 );
 
+function getToCreateCards(cards = [], { client } = {}) {
+  return cards.filter((card) => {
+    if (!card || card.columnId !== 'shoot') return false;
+    if (client && client !== 'all' && card.client !== client) return false;
+    return true;
+  });
+}
+
+const oneOffShootCard = {
+  id: 'fairplay',
+  title: 'Fairplay song release',
+  client: 'Plume',
+  columnId: 'shoot',
+  contentType: 'One-off Project',
+  isOneOffProject: true,
+  shootDate: '',
+};
+assert(
+  getToCreateCards([oneOffShootCard, { id: 'edit', columnId: 'editing' }]).some(
+    (card) => card.id === 'fairplay',
+  ),
+  'Vault To Create includes one-off board cards in shoot (no vault idea required)',
+);
+assert(
+  getToCreateCards([oneOffShootCard], { client: 'Other' }).length === 0,
+  'Vault To Create respects client filter for board cards',
+);
+
 function buildBankIdeaData(ideaData = {}) {
   const now = Date.now();
   return {
@@ -198,12 +226,16 @@ const toCreateSource = readFileSync(
 );
 assert(toCreateSource.includes('Move back to Approved'), 'To Create view can restore approved ideas');
 assert(
-  toCreateSource.includes('sortIdeasByShootSchedule(ideas, cards)'),
-  'To Create view uses chronological shoot ordering',
+  toCreateSource.includes('getToCreateCards') && toCreateSource.includes('sortCardsByShootSchedule'),
+  'To Create view lists shoot board cards (including one-offs) chronologically',
+);
+assert(
+  toCreateSource.includes('canReturnCardToVault'),
+  'To Create only offers Move back to Approved for idea-linked reels',
 );
 assert(
   toCreateSource.includes('space-y-3') && toCreateSource.includes('TeamTaskCard'),
-  'To Create view renders separated team-task style cards',
+  'To Create view renders spaced team-task style cards',
 );
 assert(toCreateSource.includes('Go to shoot'), 'To Create row can navigate to its scheduled shoot');
 assert(!toCreateSource.includes('Edit idea'), 'To Create removes duplicate idea editor action');
@@ -233,10 +265,14 @@ assert(
 {
   const typeIdx = toCreateSource.indexOf('contentTypePipelinePillProps(typeStyle)');
   const clientIdx = toCreateSource.indexOf('<ClientAvatar client={card.client}');
-  const titleIdx = toCreateSource.indexOf('card.title || idea.title');
+  const titleIdx = toCreateSource.indexOf("card.title || 'Untitled'");
   assert(typeIdx > 0 && typeIdx < clientIdx, 'To Create shows content type left of client');
   assert(clientIdx > 0 && clientIdx < titleIdx, 'To Create shows client above title');
 }
+assert(
+  videoIdeasSource.includes('getToCreateCards'),
+  'Vault To Create tab counts board cards in shoot, not only vault ideas',
+);
 assert(!toCreateSource.includes('onMakeOneOff'), 'To Create rows do not expose Make one-off');
 assert(!toCreateSource.includes('Make one-off'), 'To Create rows do not show Make one-off action');
 assert(

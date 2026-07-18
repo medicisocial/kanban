@@ -45,6 +45,33 @@ export function getToCreateIdeas(ideas, cards = [], { client } = {}) {
   });
 }
 
+/**
+ * Board cards in the To Create (shoot) column — including one-offs and cards
+ * created via Add card / Add one-off that are not linked to a vault idea.
+ */
+export function getToCreateCards(cards = [], { client } = {}) {
+  return cards.filter((card) => {
+    if (!card || card.columnId !== 'shoot') return false;
+    if (!matchesClientFilter(card.client, client)) return false;
+    return true;
+  });
+}
+
+/** Earliest shoot date/time first; undated items sort last. */
+export function sortCardsByShootSchedule(cards = []) {
+  return [...cards].sort((a, b) => {
+    const aDate = String(a?.shootDate || '9999-12-31');
+    const bDate = String(b?.shootDate || '9999-12-31');
+    const dateCompare = aDate.localeCompare(bDate);
+    if (dateCompare !== 0) return dateCompare;
+    const timeCompare = String(a?.shootTime || '99:99').localeCompare(
+      String(b?.shootTime || '99:99'),
+    );
+    if (timeCompare !== 0) return timeCompare;
+    return String(a?.title || '').localeCompare(String(b?.title || ''));
+  });
+}
+
 /** Earliest shoot date/time first; legacy undated items sort last. */
 export function sortIdeasByShootSchedule(ideas, cards = []) {
   return [...ideas].sort((a, b) => {

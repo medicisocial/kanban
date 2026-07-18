@@ -7,7 +7,7 @@ import IdeaVaultTable from './IdeaVaultTable';
 import ToCreateIdeasTable from './ToCreateIdeasTable';
 import ScheduleVaultIdeaModal from './ScheduleVaultIdeaModal';
 import AddEditorTaskModal from './AddEditorTaskModal';
-import { getToCreateIdeas, getVaultIdeas } from '../utils/videoIdeas';
+import { getToCreateCards, getVaultIdeas } from '../utils/videoIdeas';
 import { matchesClientFilter } from '../utils/clients';
 import {
   btnPrimaryClass,
@@ -55,9 +55,9 @@ export default function VideoIdeas({
     () => getVaultIdeas(ideas, cards, { client: clientFilter }),
     [ideas, cards, clientFilter],
   );
-  const toCreateIdeas = useMemo(
-    () => getToCreateIdeas(ideas, cards, { client: clientFilter }),
-    [ideas, cards, clientFilter],
+  const toCreateCards = useMemo(
+    () => getToCreateCards(cards, { client: clientFilter }),
+    [cards, clientFilter],
   );
 
   const filteredByClient = useMemo(() => {
@@ -198,14 +198,14 @@ export default function VideoIdeas({
             {vaultIdeas.length} approved
           </span>
         )}
-        {toCreateIdeas.length > 0 && (
+        {toCreateCards.length > 0 && (
           <span
             {...statusPipelinePillProps(
               'create',
               `${STATUS_PIPELINE_PILL_CLASS} px-2.5 py-1.5 tracking-wider`,
             )}
           >
-            {toCreateIdeas.length} to create
+            {toCreateCards.length} to create
           </span>
         )}
       </ClientPortalSectionHeader>
@@ -221,7 +221,7 @@ export default function VideoIdeas({
             >
               {tab.label}
               {tab.id === 'approved' && vaultIdeas.length > 0 ? ` (${vaultIdeas.length})` : ''}
-              {tab.id === 'to-create' && toCreateIdeas.length > 0 ? ` (${toCreateIdeas.length})` : ''}
+              {tab.id === 'to-create' && toCreateCards.length > 0 ? ` (${toCreateCards.length})` : ''}
             </button>
           ))}
         </div>
@@ -268,8 +268,8 @@ export default function VideoIdeas({
         />
       ) : (
         <ToCreateIdeasTable
-          ideas={toCreateIdeas}
           cards={cards}
+          clientFilter={clientFilter}
           onOpenCard={onOpenCard}
           onOpenShoot={onOpenShoot}
           onReturnToApproved={onReturnToApproved}
