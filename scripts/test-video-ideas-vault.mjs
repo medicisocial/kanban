@@ -35,6 +35,20 @@ function isIdeaToCreate(idea, cards = []) {
   return Boolean(card && card.columnId === 'shoot' && String(card.shootDate || '').trim());
 }
 
+function sortIdeasByShootSchedule(ideas, cards = []) {
+  return [...ideas].sort((a, b) => {
+    const aCard = findIdeaBoardCard(a, cards);
+    const bCard = findIdeaBoardCard(b, cards);
+    const dateCompare = String(aCard?.shootDate || '9999-12-31').localeCompare(
+      String(bCard?.shootDate || '9999-12-31'),
+    );
+    if (dateCompare !== 0) return dateCompare;
+    return String(aCard?.shootTime || '99:99').localeCompare(
+      String(bCard?.shootTime || '99:99'),
+    );
+  });
+}
+
 function findIdeaForCard(card, ideas = []) {
   if (!card || card.columnId !== 'shoot') return null;
   if (card.sourceIdeaId) {
@@ -101,6 +115,25 @@ assert(
 );
 assert(!isIdeaInVault({ id: 'pending', status: 'pending' }, []), 'pending idea stays in Review');
 
+const orderedIdeas = sortIdeasByShootSchedule(
+  [
+    { id: 'late', boardCardId: 'late-card' },
+    { id: 'early-late-time', boardCardId: 'early-late-card' },
+    { id: 'undated', boardCardId: 'undated-card' },
+    { id: 'early', boardCardId: 'early-card' },
+  ],
+  [
+    { id: 'late-card', shootDate: '2026-08-20', shootTime: '09:00' },
+    { id: 'early-late-card', shootDate: '2026-08-01', shootTime: '14:00' },
+    { id: 'undated-card', shootDate: '', shootTime: '' },
+    { id: 'early-card', shootDate: '2026-08-01', shootTime: '09:00' },
+  ],
+);
+assert(
+  orderedIdeas.map((entry) => entry.id).join(',') === 'early,early-late-time,late,undated',
+  'To Create ideas sort by shoot date then time with undated items last',
+);
+
 const ideas = [
   { id: 'idea-2', status: 'approved', boardCardId: 'card-2' },
 ];
@@ -153,6 +186,14 @@ const toCreateSource = readFileSync(
   'utf8',
 );
 assert(toCreateSource.includes('Move back to Approved'), 'To Create view can restore approved ideas');
+assert(
+  toCreateSource.includes('sortIdeasByShootSchedule(ideas, cards)'),
+  'To Create view uses chronological shoot ordering',
+);
+assert(
+  toCreateSource.includes('divide-y divide-white'),
+  'To Create view renders one compact divided list',
+);
 const navSource = readFileSync(
   new URL('../src/components/clientPortal/AdminConsoleLayout.jsx', import.meta.url),
   'utf8',

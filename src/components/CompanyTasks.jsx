@@ -9,6 +9,13 @@ import ContentCreatorTodo from './ContentCreatorTodo';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import { btnPrimaryClass, glassSegmentClass } from './clientPortal/clientPortalUi';
 
+const ROLE_LABELS = {
+  creator: 'Content Creator',
+  editor: 'Editors',
+  account: 'Account Managers',
+  admin: 'Administrative Tasks',
+};
+
 export default function CompanyTasks({
   cards,
   ideas = [],
@@ -62,9 +69,11 @@ export default function CompanyTasks({
 
   useEffect(() => {
     if (!visibleCompanyTaskTabs.includes(activeRole)) {
-      setActiveRole(visibleCompanyTaskTabs[0] || 'editor');
+      const fallbackRole = visibleCompanyTaskTabs[0] || 'editor';
+      setActiveRole(fallbackRole);
+      onRoleChange?.(fallbackRole);
     }
-  }, [visibleCompanyTaskTabs, activeRole]);
+  }, [visibleCompanyTaskTabs, activeRole, onRoleChange]);
 
   const selectRole = (role) => {
     setActiveRole(role);
@@ -82,11 +91,10 @@ export default function CompanyTasks({
 
   const content = (
     <>
-      <div
-        className={`${glassSegmentClass} mb-5 flex w-fit flex-wrap gap-0.5 p-0.5 ${
-          embedded ? '' : 'mx-auto mb-6 justify-center'
-        }`}
-      >
+      {!embedded && (
+        <div
+          className={`${glassSegmentClass} mx-auto mb-6 flex w-fit flex-wrap justify-center gap-0.5 p-0.5`}
+        >
         {visibleCompanyTaskTabs.includes('creator') && (
           <button type="button" onClick={() => selectRole('creator')} className={tabClass('creator')}>
             Content creators
@@ -107,7 +115,8 @@ export default function CompanyTasks({
             Administrative
           </button>
         )}
-      </div>
+        </div>
+      )}
 
       {activeRole === 'creator' && (
         <ContentCreatorTodo
@@ -171,7 +180,7 @@ export default function CompanyTasks({
   if (embedded) {
     return (
       <section>
-        <ClientPortalSectionHeader title="Team tasks" compact />
+        <ClientPortalSectionHeader title={ROLE_LABELS[activeRole] || 'Team tasks'} compact />
         {shareError && (
           <p className="mb-4 border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-200/90">
             {shareError}

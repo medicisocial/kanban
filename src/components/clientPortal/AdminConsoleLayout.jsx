@@ -18,15 +18,33 @@ import { useWorkspaceAdmin } from '../FilterBar';
 import { useClientsContext } from '../../context/ClientsContext';
 import { INTERNAL_TEAM_CLIENT } from '../../constants';
 
-const NAV_SECTIONS_BASE = [
+function buildTaskItems(visibleTaskTabs) {
+  const visible = Array.isArray(visibleTaskTabs)
+    ? new Set(visibleTaskTabs)
+    : new Set(['creator', 'editor', 'account', 'admin']);
+  return {
+    team: [
+      visible.has('creator') && { id: 'todo-creator', label: 'Content Creator', Icon: IconTasks },
+      visible.has('editor') && { id: 'todo-editor', label: 'Editors', Icon: IconTasks },
+      visible.has('account') && { id: 'todo-account', label: 'Account Managers', Icon: IconTasks },
+    ].filter(Boolean),
+    admin: visible.has('admin')
+      ? [{ id: 'todo-admin', label: 'Administrative Tasks', Icon: IconTasks }]
+      : [],
+  };
+}
+
+function buildBaseNavSections(visibleTaskTabs) {
+  const taskItems = buildTaskItems(visibleTaskTabs);
+  return [
   {
     label: 'Production',
     items: [
       { id: 'ideas', label: 'Vault', Icon: IconIdeas },
       { id: 'shoot', label: 'Scheduled shoots', Icon: IconShoots },
-      { id: 'todo', label: 'Team tasks', Icon: IconTasks },
     ],
   },
+  ...(taskItems.team.length ? [{ label: 'Team', items: taskItems.team }] : []),
   {
     label: 'Planning',
     items: [
@@ -37,15 +55,17 @@ const NAV_SECTIONS_BASE = [
   {
     label: 'Admin',
     items: [
+      ...taskItems.admin,
       { id: 'clients', label: 'Clients', Icon: IconClients },
-      { id: 'team', label: 'Team', Icon: IconTeam },
+      { id: 'team', label: 'Staff', Icon: IconTeam },
       { id: 'finances', label: 'Finances', Icon: IconDollar },
       { id: 'settings', label: 'Settings', Icon: IconSettings },
     ],
   },
-];
+  ];
+}
 
-function buildNavSections(homeLabel, clientFilter) {
+function buildNavSections(homeLabel, clientFilter, visibleTaskTabs) {
   const clientName = clientFilter && clientFilter !== 'all' ? clientFilter : null;
   const clientSection = clientName
     ? {
@@ -60,7 +80,7 @@ function buildNavSections(homeLabel, clientFilter) {
       items: [{ id: 'home', label: homeLabel, Icon: IconHome }],
     },
     ...(clientSection ? [clientSection] : []),
-    ...NAV_SECTIONS_BASE,
+    ...buildBaseNavSections(visibleTaskTabs),
   ];
 }
 
@@ -78,14 +98,15 @@ export default function AdminConsoleLayout({
   onClientChange,
   homeNavLabel = 'Overview',
   navBadges = {},
+  visibleTaskTabs,
   canUndo = false,
   onUndo,
   children,
 }) {
   const admin = useWorkspaceAdmin({ clientFilter, onClientChange });
   const navSections = useMemo(
-    () => buildNavSections(homeNavLabel, clientFilter),
-    [homeNavLabel, clientFilter],
+    () => buildNavSections(homeNavLabel, clientFilter, visibleTaskTabs),
+    [homeNavLabel, clientFilter, visibleTaskTabs],
   );
   const { getClientColor, getClientLogo, setClientLogo } = useClientsContext();
   const teamColor = getClientColor(INTERNAL_TEAM_CLIENT);

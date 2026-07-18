@@ -1082,15 +1082,25 @@ export default function AppShell({ onSignOut }) {
     onSignOut?.();
   };
 
-  const handleNotificationNavigate = (view) => {
-    setActiveView(view);
+  const handleNotificationNavigate = (view, options = {}) => {
+    handleNavigate(view, options);
     setNotificationsOpen(false);
   };
 
+  const handleSidebarViewChange = (view) => {
+    if (view.startsWith('todo-')) {
+      handleNavigate('todo', { tasksRole: view.slice('todo-'.length) });
+      return;
+    }
+    handleNavigate(view);
+  };
+
+  const sidebarActiveView = activeView === 'todo' ? `todo-${tasksRole}` : activeView;
+
   return (
     <AdminConsoleLayout
-      activeView={activeView}
-      onViewChange={setActiveView}
+      activeView={sidebarActiveView}
+      onViewChange={handleSidebarViewChange}
       notificationCount={notificationCount}
       notificationsOpen={notificationsOpen}
       onNotificationsOpenChange={setNotificationsOpen}
@@ -1113,6 +1123,7 @@ export default function AppShell({ onSignOut }) {
       onClientChange={setClientFilter}
       homeNavLabel={companyWideView && myWorkOnly ? 'Overview' : myWorkOnly ? 'My work' : 'Overview'}
       navBadges={navBadges}
+      visibleTaskTabs={visibleCompanyTaskTabs}
       canUndo={canUndo}
       onUndo={undo}
     >

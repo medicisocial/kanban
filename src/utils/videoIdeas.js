@@ -52,6 +52,25 @@ export function getToCreateIdeas(ideas, cards = [], { client } = {}) {
   });
 }
 
+/** Earliest shoot date/time first; legacy undated items sort last. */
+export function sortIdeasByShootSchedule(ideas, cards = []) {
+  return [...ideas].sort((a, b) => {
+    const aCard = findIdeaBoardCard(a, cards);
+    const bCard = findIdeaBoardCard(b, cards);
+    const aDate = String(aCard?.shootDate || '9999-12-31');
+    const bDate = String(bCard?.shootDate || '9999-12-31');
+    const dateCompare = aDate.localeCompare(bDate);
+    if (dateCompare !== 0) return dateCompare;
+    const timeCompare = String(aCard?.shootTime || '99:99').localeCompare(
+      String(bCard?.shootTime || '99:99'),
+    );
+    if (timeCompare !== 0) return timeCompare;
+    return String(aCard?.title || a?.title || '').localeCompare(
+      String(bCard?.title || b?.title || ''),
+    );
+  });
+}
+
 /** Approved ideas that left the bank (on pipeline or finished). */
 export function isIdeaScheduled(idea, cards = []) {
   if (!idea || idea.status !== 'approved') return false;

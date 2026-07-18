@@ -349,6 +349,18 @@ export function buildWorkspaceHomeSummary({
 }
 
 export function buildNavBadgeCounts(summary, syncTotal = 0, visibleTaskTabs = null) {
+  const roleIsVisible = (role) => !visibleTaskTabs || visibleTaskTabs.includes(role);
+  const roleCounts = {
+    creator: summary.toCreateCount,
+    editor: summary.editingCount + (summary.editorInReviewCount || 0),
+    account:
+      summary.accountManagerTaskCount ??
+      summary.inReviewCount +
+        summary.needsSchedulingCount +
+        summary.needPostDateCount +
+        (summary.storiesTodayCount || 0),
+    admin: summary.openAdminTasksCount,
+  };
   const todo = visibleTaskTabs
     ? countTodoBadgeForVisibleTabs(summary, visibleTaskTabs)
     : summary.toCreateCount +
@@ -368,6 +380,18 @@ export function buildNavBadgeCounts(summary, syncTotal = 0, visibleTaskTabs = nu
   const badges = {};
   if (home > 0) badges.home = home;
   if (todo > 0) badges.todo = todo;
+  if (roleIsVisible('creator') && roleCounts.creator > 0) {
+    badges['todo-creator'] = roleCounts.creator;
+  }
+  if (roleIsVisible('editor') && roleCounts.editor > 0) {
+    badges['todo-editor'] = roleCounts.editor;
+  }
+  if (roleIsVisible('account') && roleCounts.account > 0) {
+    badges['todo-account'] = roleCounts.account;
+  }
+  if (roleIsVisible('admin') && roleCounts.admin > 0) {
+    badges['todo-admin'] = roleCounts.admin;
+  }
   if (summary.pendingIdeasCount > 0) badges.ideas = summary.pendingIdeasCount;
   return badges;
 }
