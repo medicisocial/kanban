@@ -11,7 +11,7 @@ import PostSlidesPanel from "./PostSlidesPanel";
 const inputClass =
   "select-dark w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[#f9f6f2] outline-none transition focus:border-[#810100]/50 focus:ring-1 focus:ring-[#810100]/30";
 
-export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultClient }) {
+export default function VideoIdeaModal({ onClose, onSave, onDelete, idea = null, defaultClient }) {
   const isEdit = Boolean(idea);
   const { clients, defaultClient: firstClient } = useClientsContext();
 
@@ -265,11 +265,20 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
             {error && <p className="text-sm text-red-400">{error}</p>}
           </div>
 
-          <div className="flex shrink-0 gap-2 border-t border-white/5 px-5 py-4">
-            <button type="button" onClick={onClose} className={`${btnSecondaryClass} flex-1`}>
+          <div className="flex shrink-0 flex-wrap gap-2 border-t border-white/5 px-5 py-4">
+            {isEdit && onDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(idea)}
+                className={`${btnSecondaryClass} text-rose-300/80 hover:text-rose-200`}
+              >
+                Delete
+              </button>
+            )}
+            <button type="button" onClick={onClose} className={`${btnSecondaryClass} min-w-0 flex-1`}>
               Cancel
             </button>
-            <button type="submit" className={`${btnPrimaryClass} flex-1`}>
+            <button type="submit" className={`${btnPrimaryClass} min-w-0 flex-1`}>
               {isEdit ? "Save Changes" : "Share with Client"}
             </button>
           </div>

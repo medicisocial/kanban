@@ -110,8 +110,9 @@ export default function VideoIdeas({
   const handleDeleteReviewIdea = (ideaId) => {
     const idea = ideas.find((entry) => entry.id === ideaId);
     const label = idea?.title ? `"${idea.title}"` : 'this idea';
-    if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return false;
     onDeleteIdea(ideaId);
+    return true;
   };
 
   const handleDeleteVaultIdea = (idea) => {
@@ -121,9 +122,17 @@ export default function VideoIdeas({
         `Delete ${label} from Approved? This cannot be undone.`,
       )
     ) {
-      return;
+      return false;
     }
     onDeleteVaultIdea?.(idea.id);
+    return true;
+  };
+
+  const handleDeleteIdeaFromModal = (idea) => {
+    if (!idea?.id) return;
+    const deleted =
+      idea.status === 'approved' ? handleDeleteVaultIdea(idea) : handleDeleteReviewIdea(idea.id);
+    if (deleted) setIdeaModal(null);
   };
 
   const tabClass = (tabId) =>
@@ -221,7 +230,6 @@ export default function VideoIdeas({
             ideas={vaultIdeas}
             onEdit={setIdeaModal}
             onSchedule={setScheduleIdea}
-            onDelete={handleDeleteVaultIdea}
             onMoveToReview={onMoveApprovedToReview}
             onUpdateReference={(ideaId, referenceVideo) => onUpdateIdea(ideaId, { referenceVideo })}
             onUpdateContentType={(ideaId, contentType) => onUpdateIdea(ideaId, { contentType })}
@@ -243,6 +251,7 @@ export default function VideoIdeas({
           defaultClient={clientFilter !== 'all' ? clientFilter : undefined}
           onClose={() => setIdeaModal(null)}
           onSave={(data) => onUpdateIdea(ideaModal.id, data)}
+          onDelete={handleDeleteIdeaFromModal}
         />
       )}
 

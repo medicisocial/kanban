@@ -4,8 +4,8 @@ import { IDEA_STATUSES } from '../../constants';
 import ClientAvatar from '../ClientAvatar';
 import ReferenceVideoLink from './ReferenceVideoLink';
 import {
-  btnGhostClass,
   btnPrimaryClass,
+  btnSecondaryClass,
   formatPortalDate,
   mobileActionRowClass,
   mobileCardClass,
@@ -203,10 +203,11 @@ export default function AdminIdeasTable({
                       Approve
                     </button>
                   )}
-                  <button type="button" onClick={() => onEdit(idea)} className={`${btnGhostClass} min-h-10 flex-1 text-[11px]`}>
-                    Edit
-                  </button>
-                  <button type="button" onClick={() => onDelete(idea.id)} className={`${btnGhostClass} min-h-10 flex-1 text-[11px] text-rose-300/80`}>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(idea.id)}
+                    className={`${btnSecondaryClass} min-h-10 flex-1 px-3 py-2 text-[11px] text-rose-300/80`}
+                  >
                     Delete
                   </button>
                 </div>
@@ -298,7 +299,7 @@ export default function AdminIdeasTable({
                         {formatPortalDate(idea.createdAt)}
                       </td>
                       <td className={tableCellClass}>
-                        <div className="flex flex-wrap items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           {isPending && onApprove && (
                             <button
                               type="button"
@@ -310,15 +311,8 @@ export default function AdminIdeasTable({
                           )}
                           <button
                             type="button"
-                            onClick={() => onEdit(idea)}
-                            className={`${btnGhostClass} text-[10px] uppercase tracking-wider`}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
                             onClick={() => onDelete(idea.id)}
-                            className={`${btnGhostClass} text-[10px] uppercase tracking-wider text-rose-300/80 hover:text-rose-200`}
+                            className={`${btnSecondaryClass} px-2.5 py-1.5 text-[10px] text-rose-300/80 hover:text-rose-200`}
                           >
                             Delete
                           </button>

@@ -7,8 +7,8 @@ import DebouncedField from './DebouncedField';
 import PostSlidesPanel from './PostSlidesPanel';
 import { getStructuredScript, hasStructuredScript } from '../utils/scriptFields';
 import {
-  btnGhostClass,
   btnPrimaryClass,
+  btnSecondaryClass,
   inputClass,
   mobileActionRowClass,
   mobileCardClass,
@@ -22,8 +22,9 @@ import {
 
 const referenceInputClass = `${inputClass} !py-1.5 !text-xs min-w-[140px]`;
 const typeSelectClass = `${selectClass} w-full min-w-[96px] !py-1.5 !text-xs uppercase tracking-wider`;
-const bankRowMetaClass = `${tableCellClass} align-top`;
 const bankRowControlClass = `${tableCellClass} align-middle`;
+const actionBtnClass = 'px-2.5 py-1.5 text-[10px]';
+const mobileActionBtnClass = 'min-h-10 flex-1 px-3 py-2 text-[11px]';
 
 const BANK_TYPE_OPTIONS = [
   { value: 'Reel', label: 'Reel' },
@@ -122,7 +123,6 @@ export default function IdeaVaultTable({
   ideas,
   onEdit,
   onSchedule,
-  onDelete,
   onMoveToReview,
   onUpdateReference,
   onUpdateContentType,
@@ -229,30 +229,16 @@ export default function IdeaVaultTable({
                 <button
                   type="button"
                   onClick={() => onSchedule?.(idea)}
-                  className={`${btnPrimaryClass} min-h-10 flex-1 px-3 py-2 text-[11px]`}
+                  className={`${btnPrimaryClass} ${mobileActionBtnClass}`}
                 >
                   Add to shoot
                 </button>
                 <button
                   type="button"
-                  onClick={() => onEdit?.(idea)}
-                  className={`${btnGhostClass} min-h-10 flex-1 text-[11px]`}
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
                   onClick={() => onMoveToReview?.(idea.id)}
-                  className={`${btnGhostClass} min-h-10 flex-1 text-[11px] text-amber-200`}
+                  className={`${btnSecondaryClass} ${mobileActionBtnClass} text-amber-200`}
                 >
                   Move to Review
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDelete?.(idea)}
-                  className={`${btnGhostClass} min-h-10 flex-1 text-[11px] text-rose-300/80`}
-                >
-                  Delete
                 </button>
               </div>
               )}
@@ -325,7 +311,7 @@ export default function IdeaVaultTable({
                   role={readOnly ? undefined : 'button'}
                   tabIndex={readOnly ? undefined : 0}
                 >
-                  <td className={bankRowMetaClass}>
+                  <td className={bankRowControlClass}>
                     <p className="font-medium text-white">{idea.title || 'Untitled idea'}</p>
                     {hasStructuredScript(idea) && (
                       <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/35">
@@ -359,34 +345,20 @@ export default function IdeaVaultTable({
                   )}
                   {!readOnly && (
                   <td className={bankRowControlClass}>
-                    <div className="flex flex-wrap items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => onSchedule?.(idea)}
-                        className={`${btnPrimaryClass} px-2.5 py-1.5 text-[10px]`}
+                        className={`${btnPrimaryClass} ${actionBtnClass}`}
                       >
                         Add to shoot
                       </button>
                       <button
                         type="button"
-                        onClick={() => onEdit?.(idea)}
-                        className={`${btnGhostClass} text-[10px] uppercase tracking-wider`}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => onMoveToReview?.(idea.id)}
-                        className={`${btnGhostClass} text-[10px] uppercase tracking-wider text-amber-200`}
+                        className={`${btnSecondaryClass} ${actionBtnClass} text-amber-200`}
                       >
                         Move to Review
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDelete?.(idea)}
-                        className={`${btnGhostClass} text-[10px] uppercase tracking-wider text-rose-300/80 hover:text-rose-200`}
-                      >
-                        Delete
                       </button>
                     </div>
                   </td>
