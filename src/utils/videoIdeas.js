@@ -1,4 +1,5 @@
 import { isOneOffProjectCard } from '../constants';
+import { getBoardCards } from '../utils';
 import { matchesClientFilter } from './clients';
 import {
   hasPostSlidePlan,
@@ -46,12 +47,13 @@ export function getToCreateIdeas(ideas, cards = [], { client } = {}) {
 }
 
 /**
- * Board cards in the To Create (shoot) column — including one-offs and cards
- * created via Add card / Add one-off that are not linked to a vault idea.
+ * Same board cards Content Creators see: To Create (shoot) column, including
+ * one-offs and Add card / Add one-off items that are not linked to a vault idea.
+ * Uses getBoardCards so Stories / posted / past-scheduled posts stay excluded.
  */
 export function getToCreateCards(cards = [], { client } = {}) {
-  return cards.filter((card) => {
-    if (!card || card.columnId !== 'shoot') return false;
+  return getBoardCards(cards).filter((card) => {
+    if (card.columnId !== 'shoot') return false;
     if (!matchesClientFilter(card.client, client)) return false;
     return true;
   });

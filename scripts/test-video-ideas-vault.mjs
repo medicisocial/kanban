@@ -160,32 +160,22 @@ assert(
   'one-off projects in To Create cannot return to vault',
 );
 
-function getToCreateCards(cards = [], { client } = {}) {
-  return cards.filter((card) => {
-    if (!card || card.columnId !== 'shoot') return false;
-    if (client && client !== 'all' && card.client !== client) return false;
-    return true;
-  });
-}
-
-const oneOffShootCard = {
-  id: 'fairplay',
-  title: 'Fairplay song release',
-  client: 'Plume',
-  columnId: 'shoot',
-  contentType: 'One-off Project',
-  isOneOffProject: true,
-  shootDate: '',
-};
-assert(
-  getToCreateCards([oneOffShootCard, { id: 'edit', columnId: 'editing' }]).some(
-    (card) => card.id === 'fairplay',
-  ),
-  'Vault To Create includes one-off board cards in shoot (no vault idea required)',
+const videoIdeasUtilSource = readFileSync(
+  new URL('../src/utils/videoIdeas.js', import.meta.url),
+  'utf8',
 );
 assert(
-  getToCreateCards([oneOffShootCard], { client: 'Other' }).length === 0,
-  'Vault To Create respects client filter for board cards',
+  videoIdeasUtilSource.includes('getBoardCards(cards)') &&
+    videoIdeasUtilSource.includes("card.columnId !== 'shoot'"),
+  'Vault To Create uses the same board-card shoot queue as Content Creators',
+);
+const creatorTodoSource = readFileSync(
+  new URL('../src/utils/contentCreatorTodo.js', import.meta.url),
+  'utf8',
+);
+assert(
+  creatorTodoSource.includes('getToCreateCards'),
+  'Content Creator queue is built from the shared Vault To Create card helper',
 );
 
 function buildBankIdeaData(ideaData = {}) {
