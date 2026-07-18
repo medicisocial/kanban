@@ -212,6 +212,11 @@ assert(
   toCreateSource.includes('taskActionBtnClass'),
   'To Create actions use compact team-card button styling',
 );
+assert(
+  toCreateSource.includes('vaultRowActionsClass'),
+  'To Create uses shared Vault action column width',
+);
+assert(toCreateSource.includes('contentTypeLabelProps'), 'To Create uses colored content type labels');
 assert(toCreateSource.includes('onMakeOneOff'), 'To Create rows can make a one-off from a card');
 assert(toCreateSource.includes('Make one-off'), 'To Create rows expose Make one-off action');
 assert(
@@ -221,6 +226,10 @@ assert(
 assert(
   videoIdeasSource.includes('onMakeOneOff={setOneOffCard}'),
   'To Create tab opens Make one-off against the linked board card',
+);
+assert(
+  !videoIdeasSource.includes('onUpdateReference') && !videoIdeasSource.includes('onUpdateContentType'),
+  'Approved tab no longer inline-edits reference or content type on the row',
 );
 const approvedSource = readFileSync(new URL('../src/components/IdeaVaultTable.jsx', import.meta.url), 'utf8');
 assert(approvedSource.includes('Add to shoot'), 'Approved rows keep Add to shoot primary action');
@@ -232,9 +241,16 @@ assert(
   'Approved uses To Create-style divided card list',
 );
 assert(
-  approvedSource.includes('flex shrink-0 flex-col gap-1.5 sm:items-stretch'),
-  'Approved actions stack in a narrow column like To Create',
+  approvedSource.includes('vaultRowActionsClass'),
+  'Approved uses shared Vault action column width',
 );
+assert(
+  approvedSource.includes('contentTypeLabelProps'),
+  'Approved uses colored content type labels like To Create',
+);
+assert(!approvedSource.includes('<select'), 'Approved content type is not a clickable select');
+assert(!approvedSource.includes('DebouncedField'), 'Approved row has no inline paste-link field');
+assert(!approvedSource.includes('Paste link'), 'Approved row does not show paste-link placeholder');
 assert(!approvedSource.includes('min-w-[720px]'), 'Approved no longer uses a wide desktop table');
 assert(
   !approvedSource.includes('min-h-10 flex-1') && !approvedSource.includes('w-[32%]'),
@@ -243,6 +259,7 @@ assert(
 assert(approvedSource.includes('onMakeOneOff'), 'Approved rows can make a one-off from an idea');
 assert(approvedSource.includes('Make one-off'), 'Approved rows expose Make one-off action');
 assert(approvedSource.includes('ReferenceMusicLink'), 'Approved rows show clickable music links');
+assert(approvedSource.includes('ReferenceVideoLink'), 'Approved rows show clickable video links when set');
 assert(!/>\s*Edit\s*</.test(approvedSource), 'Approved rows do not show a standalone Edit action');
 assert(!/>\s*Delete\s*</.test(approvedSource), 'Approved rows do not show a standalone Delete action');
 const reviewSource = readFileSync(
@@ -256,8 +273,12 @@ assert(
   'Review uses To Create-style divided card list',
 );
 assert(
-  reviewSource.includes('flex shrink-0 flex-col gap-1.5 sm:items-stretch'),
-  'Review actions stack in a narrow column like To Create',
+  reviewSource.includes('vaultRowActionsClass'),
+  'Review uses shared Vault action column width',
+);
+assert(
+  reviewSource.includes('contentTypeLabelProps'),
+  'Review uses colored content type labels like To Create',
 );
 assert(!reviewSource.includes('min-w-[940px]'), 'Review no longer uses a wide desktop table');
 assert(
@@ -267,6 +288,14 @@ assert(
 assert(reviewSource.includes('ReferenceMusicLink'), 'Review rows show clickable music links');
 assert(reviewSource.includes('onMakeOneOff'), 'Review rows can make a one-off from an idea');
 assert(!/>\s*Edit\s*</.test(reviewSource), 'Review rows do not show a standalone Edit action');
+const uiSource = readFileSync(
+  new URL('../src/components/clientPortal/clientPortalUi.js', import.meta.url),
+  'utf8',
+);
+assert(
+  uiSource.includes("sm:w-[9.5rem]") && uiSource.includes('vaultRowActionsClass'),
+  'shared Vault action column uses fixed To Create-matched width',
+);
 const ideaModalSource = readFileSync(
   new URL('../src/components/VideoIdeaModal.jsx', import.meta.url),
   'utf8',

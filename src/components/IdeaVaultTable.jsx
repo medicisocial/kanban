@@ -1,114 +1,21 @@
 import { useMemo, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
-import { normalizeLink } from '../utils/links';
+import { getContentTypeStyle } from '../constants';
+import { contentTypeLabelProps } from '../utils/contentTypeColors';
 import ClientAvatar from './ClientAvatar';
 import ReferenceVideoLink, { ReferenceMusicLink } from './clientPortal/ReferenceVideoLink';
-import DebouncedField from './DebouncedField';
 import PostSlidesPanel from './PostSlidesPanel';
 import { getStructuredScript, hasStructuredScript } from '../utils/scriptFields';
 import {
-  inputClass,
-  selectClass,
   surfacePanelClass,
   taskActionBtnClass,
+  vaultRowActionsClass,
 } from './clientPortal/clientPortalUi';
-
-const referenceInputClass = `${inputClass} !py-1.5 !text-xs min-w-[140px]`;
-const typeSelectClass = `${selectClass} w-auto min-w-[96px] !py-1.5 !text-xs uppercase tracking-wider`;
-
-const BANK_TYPE_OPTIONS = [
-  { value: 'Reel', label: 'Reel' },
-  { value: 'Carousel', label: 'Carousel' },
-  { value: 'Static Post', label: 'Static' },
-];
-
-function bankTypeLabel(value) {
-  return BANK_TYPE_OPTIONS.find((option) => option.value === value)?.label || value || '—';
-}
 
 function contentReadyLabel(idea) {
   return idea.contentType === 'Carousel' || idea.contentType === 'Static Post'
     ? 'Post plan ready'
     : 'Script ready';
-}
-
-function IdeaReferenceField({ ideaId, value = '', onSave, readOnly = false, compact = false }) {
-  const commitReference = (raw) => {
-    const referenceVideo = normalizeLink(String(raw || '').trim()) || '';
-    if (referenceVideo === (value || '')) return;
-    onSave?.(ideaId, referenceVideo);
-  };
-
-  const handlePaste = (event) => {
-    const pasted = event.clipboardData?.getData('text')?.trim();
-    if (!pasted) return;
-    const normalized = normalizeLink(pasted);
-    if (normalized) {
-      event.preventDefault();
-      commitReference(normalized);
-    }
-  };
-
-  if (readOnly) {
-    return <ReferenceVideoLink url={value} compact={compact} />;
-  }
-
-  return (
-    <div
-      className={`flex min-w-0 items-center gap-2 ${compact ? 'flex-wrap' : ''}`}
-      onClick={(event) => event.stopPropagation()}
-    >
-      <DebouncedField
-        value={value || ''}
-        resetKey={ideaId}
-        onCommit={commitReference}
-        commitOnBlur
-        placeholder="Paste link…"
-        className={`${referenceInputClass} min-w-0 flex-1`}
-        onPaste={handlePaste}
-      />
-      {value?.trim() ? (
-        <div className="shrink-0">
-          <ReferenceVideoLink url={value} compact />
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function IdeaContentTypeField({ ideaId, value = 'Reel', onSave, readOnly = false }) {
-  const options =
-    value && !BANK_TYPE_OPTIONS.some((option) => option.value === value)
-      ? [{ value, label: value }, ...BANK_TYPE_OPTIONS]
-      : BANK_TYPE_OPTIONS;
-
-  if (readOnly) {
-    return (
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-white/55">
-        {bankTypeLabel(value)}
-      </span>
-    );
-  }
-
-  return (
-    <select
-      value={value || 'Reel'}
-      onChange={(event) => {
-        const next = event.target.value;
-        if (next !== value) onSave?.(ideaId, next);
-      }}
-      onClick={(event) => event.stopPropagation()}
-      onPointerDown={(event) => event.stopPropagation()}
-      className={typeSelectClass}
-      aria-label="Content type"
-    >
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
-  );
 }
 
 export default function IdeaVaultTable({
@@ -117,8 +24,6 @@ export default function IdeaVaultTable({
   onSchedule,
   onMoveToReview,
   onMakeOneOff,
-  onUpdateReference,
-  onUpdateContentType,
   readOnly = false,
   hideClientColumn = false,
 }) {
@@ -183,6 +88,7 @@ export default function IdeaVaultTable({
       <div className="divide-y divide-white/[0.06]">
         {sorted.map((idea) => {
           const clientColor = getClientColor(idea.client);
+          const typeStyle = getContentTypeStyle(idea.contentType);
           const expanded = expandedId === idea.id;
           const showScriptPanel =
             expanded &&
@@ -203,12 +109,9 @@ export default function IdeaVaultTable({
               <div className="flex min-w-0 flex-1 items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <IdeaContentTypeField
-                      ideaId={idea.id}
-                      value={idea.contentType}
-                      onSave={onUpdateContentType}
-                      readOnly={readOnly}
-                    />
+                    <p {...contentTypeLabelProps(typeStyle, 'text-[10px] font-semibold uppercase')}>
+                      {idea.contentType || 'Reel'}
+                    </p>
                     {hasStructuredScript(idea) && (
                       <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/45">
                         {contentReadyLabel(idea)}
@@ -224,18 +127,16 @@ export default function IdeaVaultTable({
                       <span className="truncate">{idea.client}</span>
                     </div>
                   )}
-                  <div className="mt-2 space-y-1.5">
-                    <IdeaReferenceField
-                      ideaId={idea.id}
-                      value={idea.referenceVideo}
-                      onSave={onUpdateReference}
-                      readOnly={readOnly}
-                      compact
-                    />
-                    {idea.referenceMusic?.trim() && (
-                      <ReferenceMusicLink url={idea.referenceMusic} compact />
-                    )}
-                  </div>
+                  {(idea.referenceVideo?.trim() || idea.referenceMusic?.trim()) && (
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      {idea.referenceVideo?.trim() && (
+                        <ReferenceVideoLink url={idea.referenceVideo} compact />
+                      )}
+                      {idea.referenceMusic?.trim() && (
+                        <ReferenceMusicLink url={idea.referenceMusic} compact />
+                      )}
+                    </div>
+                  )}
                   {showScriptPanel && (
                     <div className="mt-3 border border-white/10 bg-white/[0.02] p-3 text-sm text-white/70">
                       <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
@@ -292,7 +193,7 @@ export default function IdeaVaultTable({
               </div>
 
               {!readOnly && (
-                <div className="flex shrink-0 flex-col gap-1.5 sm:items-stretch">
+                <div className={vaultRowActionsClass}>
                   <button
                     type="button"
                     onClick={() => onSchedule?.(idea)}

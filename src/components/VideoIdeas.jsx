@@ -243,8 +243,6 @@ export default function VideoIdeas({
             onSchedule={setScheduleIdea}
             onMoveToReview={onMoveApprovedToReview}
             onMakeOneOff={setOneOffIdea}
-            onUpdateReference={(ideaId, referenceVideo) => onUpdateIdea(ideaId, { referenceVideo })}
-            onUpdateContentType={(ideaId, contentType) => onUpdateIdea(ideaId, { contentType })}
           />
         </>
       ) : (
