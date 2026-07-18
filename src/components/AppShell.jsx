@@ -1293,6 +1293,12 @@ export default function AppShell({ onSignOut }) {
           onHandoff={handleHandoffRequest}
           onReturnToVault={handleReturnCardToVault}
           onNavigate={handleNavigate}
+          onOpenShoot={(card) =>
+            handleNavigate('shoot', {
+              shootDate: card.shootDate,
+              shootClient: card.client,
+            })
+          }
           onPlanPostDate={setPlanDateCard}
         />
       )}

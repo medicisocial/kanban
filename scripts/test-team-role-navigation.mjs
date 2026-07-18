@@ -56,6 +56,18 @@ assert(shellSource.includes('visibleTaskTabs={visibleCompanyTaskTabs}'), 'sideba
 const tasksSource = readFileSync(new URL('../src/components/CompanyTasks.jsx', import.meta.url), 'utf8');
 assert(tasksSource.includes('{!embedded && ('), 'embedded role pages hide redundant role tabs');
 assert(tasksSource.includes("admin: 'Administrative Tasks'"), 'administrative page has direct title');
+assert(tasksSource.includes('onOpenShoot={onOpenShoot}'), 'Content Creator tab receives shoot navigation');
+
+const creatorSource = readFileSync(
+  new URL('../src/components/ContentCreatorTodo.jsx', import.meta.url),
+  'utf8',
+);
+assert(creatorSource.includes('Go to shoot'), 'Content Creator cards expose Go to shoot');
+assert(creatorSource.includes('onOpenShoot(task.card)'), 'Content Creator shoot button opens the card shoot');
+assert(
+  shellSource.includes("handleNavigate('shoot'") && shellSource.includes('onOpenShoot={(card)'),
+  'AppShell wires Content Creator shoot navigation',
+);
 
 await vite.close();
 console.log('test-team-role-navigation: ok');
