@@ -41,6 +41,7 @@ export default function CompanyTasks({
   onHandoff,
   onReturnToVault,
   onNavigate,
+  onOpenShoot,
   onPlanPostDate,
 }) {
   const { visibleCompanyTaskTabs } = useStaffWorkspaceScope();
@@ -124,6 +125,7 @@ export default function CompanyTasks({
           ideas={ideas}
           clientFilter={clientFilter}
           onOpenCard={onOpenCard}
+          onOpenShoot={onOpenShoot}
           onHandoff={onHandoff}
           onReturnToVault={onReturnToVault}
           onNavigate={onNavigate}

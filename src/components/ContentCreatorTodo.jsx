@@ -6,7 +6,7 @@ import { formatDate, formatTime } from '../utils';
 import { buildContentCreatorTasks } from '../utils/contentCreatorTodo';
 import { canReturnCardToVault } from '../utils/videoIdeas';
 import { useStaffWorkspaceScope } from '../hooks/useStaffWorkspaceScope';
-import { btnSecondaryClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass } from './clientPortal/clientPortalUi';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
 import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
 
@@ -15,6 +15,7 @@ export default function ContentCreatorTodo({
   ideas = [],
   clientFilter,
   onOpenCard,
+  onOpenShoot,
   onHandoff,
   onReturnToVault,
   onNavigate,
@@ -80,11 +81,20 @@ export default function ContentCreatorTodo({
                 <CardLinks card={task.card} compact />
               </button>
               <div className="flex shrink-0 flex-col items-stretch gap-1.5 sm:min-w-[7.5rem]">
+                {onOpenShoot && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenShoot(task.card)}
+                    className={`${btnPrimaryClass} !px-3 !py-1.5 !text-xs !tracking-wider`}
+                  >
+                    Go to shoot
+                  </button>
+                )}
                 {onReturnToVault && canReturnCardToVault(task.card) && (
                   <button
                     type="button"
                     onClick={() => onReturnToVault(task.card)}
-                    className="rounded-lg border border-violet-500/25 bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-200 transition hover:bg-violet-500/15"
+                    className={`${btnSecondaryClass} !px-3 !py-1.5 !text-xs !tracking-wider text-violet-200`}
                   >
                     Move back to Approved
                   </button>
@@ -93,7 +103,7 @@ export default function ContentCreatorTodo({
                   <button
                     type="button"
                     onClick={() => onHandoff(task.card)}
-                    className="tesla-task-card-action"
+                    className={`${btnSecondaryClass} !px-3 !py-1.5 !text-xs !tracking-wider`}
                   >
                     Hand off
                   </button>
