@@ -249,7 +249,7 @@ export default function ShootDayTimeline({
                         className="inline-flex items-center gap-1.5 text-sm text-violet-200 transition hover:text-violet-100"
                       >
                         <span>↩</span>
-                        <span>Return to bank</span>
+                        <span>Move back to Approved</span>
                       </button>
                     )}
                   </div>
@@ -305,7 +305,7 @@ export default function ShootDayTimeline({
                     onClick={() => onReturnToVault(card)}
                     className="text-[11px] font-medium text-violet-200 hover:text-violet-100"
                   >
-                    Return to bank
+                    Move back to Approved
                   </button>
                 )}
               </li>

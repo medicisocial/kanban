@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { CONTENT_TYPES, IDEA_STATUSES } from "../constants";
 import { useClientsContext } from "../context/ClientsContext";
 import { normalizeLink } from "../utils/links";
-import { normalizeCaptionMode, normalizePostSlides } from "../utils/postSlides";
+import { isSlidePostType, normalizeCaptionMode, normalizePostSlides } from "../utils/postSlides";
 import { btnPrimaryClass, btnSecondaryClass } from "./clientPortal/clientPortalUi";
 import ScriptPanel from "./ScriptPanel";
 import PostSlidesPanel from "./PostSlidesPanel";
@@ -135,7 +135,7 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
                     : "text-gray-500 hover:bg-white/5 hover:text-gray-300"
                 }`}
               >
-                {label}
+                {id === "script" && isSlidePostType(form.contentType) ? "Slides" : label}
               </button>
             ))}
           </div>

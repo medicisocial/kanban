@@ -455,12 +455,13 @@ export default function AppShell({ onSignOut }) {
           { shootDate, shootTime, shootEndTime },
         );
         updateIdea(idea.id, { boardCardId });
+        if (boardCardId) addCardsToShootRoster(client, shootDate, [boardCardId]);
       } finally {
         endBatch();
       }
       return boardCardId;
     },
-    [createCardFromIdea, ensurePlan, updateIdea],
+    [addCardsToShootRoster, createCardFromIdea, ensurePlan, updateIdea],
   );
 
   const handleScheduleVaultIdea = useCallback(
@@ -494,7 +495,7 @@ export default function AppShell({ onSignOut }) {
       const label = idea?.title || card.title || "this reel";
       if (
         !window.confirm(
-          `Return "${label}" to the bank? The pipeline card will be removed and you can schedule it again later.`,
+          `Move "${label}" back to Approved? The To Create card will be removed and you can schedule it again later.`,
         )
       ) {
         return;
@@ -1158,7 +1159,8 @@ export default function AppShell({ onSignOut }) {
           onDeleteIdeas={deleteIdeas}
           onDeleteVaultIdea={handleDeleteVaultIdea}
           onUpdateIdea={updateIdea}
-          onGoToBoard={handleGoToBoard}
+          onOpenCard={handleCardClick}
+          onReturnToApproved={handleReturnCardToVault}
           onScheduleVaultIdea={handleScheduleVaultIdea}
         />
       )}

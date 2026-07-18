@@ -36,14 +36,20 @@ function isContractDeliverableCard(card) {
   return SCHEDULED_POST_CONTENT_TYPES.includes(card.contentType);
 }
 
-/** Cards that count toward contract quotas: Reel / Carousel / Static with dueDate that month (not one-offs). */
+/** Publish date owns quota placement; shoot date reserves the month until publish is scheduled. */
+export function getContractDeliverableMonthDate(card) {
+  if (!isContractDeliverableCard(card)) return '';
+  return String(card.dueDate || card.shootDate || '').trim();
+}
+
+/** Cards that count toward contract quotas: Reel / Carousel / Static scheduled that month. */
 export function getPlannedCardsForClientMonth(cards, client, yearMonth) {
   const referenceDate = yearMonthToReferenceDate(yearMonth);
   return (cards || []).filter(
     (card) =>
       isContractDeliverableCard(card) &&
       clientMatchesBrand(card.client, client) &&
-      isSameCalendarMonthDateKey(card.dueDate, referenceDate),
+      isSameCalendarMonthDateKey(getContractDeliverableMonthDate(card), referenceDate),
   );
 }
 
@@ -74,7 +80,10 @@ export function groupCardsByClientForMonth(cards, yearMonth) {
     const key = clientBrandNameKey(card.client);
     if (!key) continue;
 
-    if (isContractDeliverableCard(card) && isSameCalendarMonthDateKey(card.dueDate, referenceDate)) {
+    if (
+      isContractDeliverableCard(card) &&
+      isSameCalendarMonthDateKey(getContractDeliverableMonthDate(card), referenceDate)
+    ) {
       if (!planned.has(key)) planned.set(key, []);
       planned.get(key).push(card);
     }

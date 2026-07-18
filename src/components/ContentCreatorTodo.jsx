@@ -35,8 +35,8 @@ export default function ContentCreatorTodo({
     return (
       <div className="tesla-task-empty px-6 py-16 text-center">
         <p className="text-sm text-white/45">No cards in To Create right now.</p>
-        <button type="button" onClick={() => onNavigate?.('board')} className={`${btnSecondaryClass} mt-4`}>
-          Open pipeline
+        <button type="button" onClick={() => onNavigate?.('ideas')} className={`${btnSecondaryClass} mt-4`}>
+          Open vault
         </button>
       </div>
     );
@@ -86,7 +86,7 @@ export default function ContentCreatorTodo({
                     onClick={() => onReturnToVault(task.card)}
                     className="rounded-lg border border-violet-500/25 bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-200 transition hover:bg-violet-500/15"
                   >
-                    Return to bank
+                    Move back to Approved
                   </button>
                 )}
                 {onHandoff && (

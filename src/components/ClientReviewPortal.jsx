@@ -13,11 +13,11 @@ import IdeaVaultTable from './IdeaVaultTable';
 import SharePortalShell from './clientPortal/SharePortalShell';
 import { btnPrimaryClass, glassSegmentClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 import { clientMatchesBrand } from '../utils/clients';
-import { getVaultIdeas, isIdeaInVault } from '../utils/videoIdeas';
+import { getVaultIdeas } from '../utils/videoIdeas';
 
 const VAULT_TABS = [
   { id: 'review', label: 'Review' },
-  { id: 'bank', label: 'Bank' },
+  { id: 'bank', label: 'Approved' },
 ];
 
 export default function ClientReviewPortal({
@@ -57,8 +57,8 @@ export default function ClientReviewPortal({
   );
 
   const reviewIdeas = useMemo(
-    () => brandIdeas.filter((idea) => !isIdeaInVault(idea, cards)),
-    [brandIdeas, cards],
+    () => brandIdeas.filter((idea) => idea.status !== 'approved'),
+    [brandIdeas],
   );
 
   const pendingIdeas = useMemo(
@@ -285,7 +285,7 @@ export default function ClientReviewPortal({
           )}
           {vaultIdeas.length > 0 && (
             <span className="border border-violet-500/25 bg-violet-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-violet-200/90">
-              {vaultIdeas.length} in bank
+              {vaultIdeas.length} approved
             </span>
           )}
         </ClientPortalSectionHeader>
@@ -317,7 +317,7 @@ export default function ClientReviewPortal({
               onAdd={handleAddIdea}
               onAddToBank={handleAddIdeaToBank}
               submitLabel="Submit for review"
-              hint="Submit for team review, or add straight to the bank."
+              hint="Submit for team review, or add straight to Approved."
             />
 
             <ClientIdeasTable

@@ -29,6 +29,7 @@ import { canReturnCardToVault } from '../utils/videoIdeas';
 import { beginBatch, endBatch } from '../utils/undoHistory';
 import ScriptPanel from './ScriptPanel';
 import PostSlidesPanel from './PostSlidesPanel';
+import { isSlidePostType } from '../utils/postSlides';
 import DebouncedField, { DebouncedModelTagInput, DebouncedTimeInput } from './DebouncedField';
 
 const CARD_TABS = [
@@ -395,7 +396,7 @@ function CardModal({
           <div className="flex flex-wrap gap-1 border border-white/10 bg-white/[0.03] p-0.5 w-fit">
             {CARD_TABS.map((tab) => (
               <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={tabClass(tab.id)}>
-                {tab.label}
+                {tab.id === 'script' && isSlidePostType(displayCard.contentType) ? 'Slides' : tab.label}
               </button>
             ))}
           </div>
@@ -657,14 +658,14 @@ function CardModal({
                 Bank
               </p>
               <p className="mt-1 text-sm text-violet-100/80">
-                Not filming this yet? Send it back to the bank and schedule again later.
+                Not filming this yet? Move it back to Approved and schedule again later.
               </p>
               <button
                 type="button"
                 onClick={() => onReturnToVault(card)}
                 className="mt-3 rounded-lg border border-violet-500/30 bg-violet-500/15 px-3 py-2 text-sm font-medium text-violet-100 transition hover:bg-violet-500/25"
               >
-                Return to bank
+                Move back to Approved
               </button>
             </div>
           )}
@@ -768,7 +769,7 @@ function CardModal({
                       onClick={() => onReturnToVault(card)}
                       className="rounded-lg border border-violet-500/25 bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-200 hover:bg-violet-500/15"
                     >
-                      Return to bank
+                      Move back to Approved
                     </button>
                   )}
                   {onAddCardsToShoot && (

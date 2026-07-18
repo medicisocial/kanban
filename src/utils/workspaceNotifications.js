@@ -45,7 +45,8 @@ export function buildWorkspaceAlerts({
       tone: 'warning',
       title: `${overdueCreate.length} overdue to create`,
       detail: 'Shoot or plan dates have passed.',
-      view: 'board',
+      view: 'todo',
+      tasksRole: 'creator',
     });
   }
 
@@ -58,7 +59,8 @@ export function buildWorkspaceAlerts({
       tone: 'warning',
       title: `${overdueEditing.length} overdue in editing`,
       detail: 'Editing deadlines need attention.',
-      view: 'board',
+      view: 'todo',
+      tasksRole: 'editor',
     });
   }
 
@@ -69,7 +71,8 @@ export function buildWorkspaceAlerts({
       tone: 'info',
       title: `${inReview.length} awaiting client review`,
       detail: 'Share review links from Clients if needed.',
-      view: 'board',
+      view: 'todo',
+      tasksRole: 'account',
     });
   }
 

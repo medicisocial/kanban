@@ -33,6 +33,25 @@ export function getVaultIdeas(ideas, cards = [], { client } = {}) {
   });
 }
 
+/** Approved ideas currently scheduled on a shoot and waiting in To Create. */
+export function isIdeaToCreate(idea, cards = []) {
+  if (!idea || idea.status !== 'approved') return false;
+  const card = findIdeaBoardCard(idea, cards);
+  return Boolean(
+    card &&
+      card.columnId === 'shoot' &&
+      String(card.shootDate || '').trim(),
+  );
+}
+
+export function getToCreateIdeas(ideas, cards = [], { client } = {}) {
+  return ideas.filter((idea) => {
+    if (!isIdeaToCreate(idea, cards)) return false;
+    if (!matchesClientFilter(idea.client, client)) return false;
+    return true;
+  });
+}
+
 /** Approved ideas that left the bank (on pipeline or finished). */
 export function isIdeaScheduled(idea, cards = []) {
   if (!idea || idea.status !== 'approved') return false;

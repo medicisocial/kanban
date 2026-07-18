@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import {
-  IconBoard,
   IconCalendar,
   IconClients,
   IconDollar,
@@ -24,7 +23,6 @@ const NAV_SECTIONS_BASE = [
     label: 'Production',
     items: [
       { id: 'ideas', label: 'Vault', Icon: IconIdeas },
-      { id: 'board', label: 'Pipeline', Icon: IconBoard },
       { id: 'shoot', label: 'Scheduled shoots', Icon: IconShoots },
       { id: 'todo', label: 'Team tasks', Icon: IconTasks },
     ],

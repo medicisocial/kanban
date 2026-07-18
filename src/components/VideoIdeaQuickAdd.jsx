@@ -102,12 +102,12 @@ export default function VideoIdeaQuickAdd({
   const resolvedHint =
     hint ??
     (isBankVariant
-      ? 'Adds straight to the bank — no approval step.'
+      ? 'Adds straight to Approved — no approval step.'
       : onAddToBank
-        ? 'Add for review, or skip approval and put it in the bank.'
+        ? 'Add for review, or skip approval and put it in Approved.'
         : 'Press Enter to add — the idea appears in the list below.');
 
-  const primaryLabel = isBankVariant ? 'Add to bank' : submitLabel;
+  const primaryLabel = isBankVariant ? 'Add to Approved' : submitLabel;
 
   return (
     <form
@@ -115,7 +115,7 @@ export default function VideoIdeaQuickAdd({
       className={`${surfacePanelClass} mb-4 border-white/10 px-4 py-4`}
     >
       <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">
-        {isBankVariant ? 'Add to bank' : 'New idea'}
+        {isBankVariant ? 'Add to Approved' : 'New idea'}
       </p>
 
       <div
@@ -196,7 +196,7 @@ export default function VideoIdeaQuickAdd({
               onClick={submitToBank}
               className={`${btnPrimaryClass} w-full md:w-auto`}
             >
-              Add to bank
+              Add to Approved
             </button>
           )}
         </div>

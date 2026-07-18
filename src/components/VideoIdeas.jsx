@@ -5,14 +5,16 @@ import ClientSharePanel from './ClientSharePanel';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import AdminIdeasTable from './clientPortal/AdminIdeasTable';
 import IdeaVaultTable from './IdeaVaultTable';
+import ToCreateIdeasTable from './ToCreateIdeasTable';
 import ScheduleVaultIdeaModal from './ScheduleVaultIdeaModal';
-import { getVaultIdeas, isIdeaInVault, isIdeaScheduled } from '../utils/videoIdeas';
+import { getToCreateIdeas, getVaultIdeas } from '../utils/videoIdeas';
 import { matchesClientFilter } from '../utils/clients';
 import { btnPrimaryClass, btnSecondaryClass, glassSegmentClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 
 const IDEA_TABS = [
   { id: 'review', label: 'Review' },
-  { id: 'vault', label: 'Bank' },
+  { id: 'approved', label: 'Approved' },
+  { id: 'to-create', label: 'To Create' },
 ];
 
 export default function VideoIdeas({
@@ -28,7 +30,8 @@ export default function VideoIdeas({
   onDeleteIdeas,
   onDeleteVaultIdea,
   onUpdateIdea,
-  onGoToBoard,
+  onOpenCard,
+  onReturnToApproved,
   onScheduleVaultIdea,
 }) {
   const [activeTab, setActiveTab] = useState('review');
@@ -41,6 +44,10 @@ export default function VideoIdeas({
     () => getVaultIdeas(ideas, cards, { client: clientFilter }),
     [ideas, cards, clientFilter],
   );
+  const toCreateIdeas = useMemo(
+    () => getToCreateIdeas(ideas, cards, { client: clientFilter }),
+    [ideas, cards, clientFilter],
+  );
 
   const filteredByClient = useMemo(() => {
     if (!clientFilter || clientFilter === 'all') return ideas;
@@ -48,12 +55,12 @@ export default function VideoIdeas({
   }, [ideas, clientFilter]);
 
   const reviewIdeas = useMemo(
-    () => filteredByClient.filter((idea) => !isIdeaInVault(idea, cards)),
-    [filteredByClient, cards],
+    () => filteredByClient.filter((idea) => idea.status !== 'approved'),
+    [filteredByClient],
   );
 
-  const isBulkDeleteView = statusFilter === 'approved' || statusFilter === 'declined';
-  const bulkDeleteLabel = statusFilter === 'declined' ? 'passed idea' : 'approved idea';
+  const isBulkDeleteView = statusFilter === 'declined';
+  const bulkDeleteLabel = 'passed idea';
 
   useEffect(() => {
     setSelectedIds(new Set());
@@ -63,13 +70,11 @@ export default function VideoIdeas({
 
   const filteredIdeas = useMemo(() => {
     let list = reviewIdeas;
-    if (statusFilter === 'approved') {
-      list = list.filter((idea) => idea.status === 'approved' && isIdeaScheduled(idea, cards));
-    } else if (statusFilter !== 'all') {
+    if (statusFilter !== 'all') {
       list = list.filter((idea) => idea.status === statusFilter);
     }
     return list;
-  }, [reviewIdeas, statusFilter, cards]);
+  }, [reviewIdeas, statusFilter]);
 
   const allVisibleSelected =
     filteredIdeas.length > 0 && filteredIdeas.every((idea) => selectedIds.has(idea.id));
@@ -111,7 +116,7 @@ export default function VideoIdeas({
     const label = idea?.title ? `"${idea.title}"` : 'this idea';
     if (
       !window.confirm(
-        `Delete ${label} from the bank? This cannot be undone.`,
+        `Delete ${label} from Approved? This cannot be undone.`,
       )
     ) {
       return;
@@ -128,7 +133,7 @@ export default function VideoIdeas({
     <section>
       <ClientPortalSectionHeader
         title="Vault"
-        description="Collect client approvals, then schedule approved concepts from the bank when you plan a shoot."
+        description="Review ideas, keep approved concepts ready, and track what is scheduled for creation."
       >
         {pendingCount > 0 && activeTab === 'review' && (
           <span className="border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-amber-200/90">
@@ -137,7 +142,12 @@ export default function VideoIdeas({
         )}
         {vaultIdeas.length > 0 && (
           <span className="border border-white/25 bg-white/[0.08] px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-white">
-            {vaultIdeas.length} in bank
+            {vaultIdeas.length} approved
+          </span>
+        )}
+        {toCreateIdeas.length > 0 && (
+          <span className="border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-amber-100">
+            {toCreateIdeas.length} to create
           </span>
         )}
       </ClientPortalSectionHeader>
@@ -151,7 +161,8 @@ export default function VideoIdeas({
             className={tabClass(tab.id)}
           >
             {tab.label}
-            {tab.id === 'vault' && vaultIdeas.length > 0 ? ` (${vaultIdeas.length})` : ''}
+            {tab.id === 'approved' && vaultIdeas.length > 0 ? ` (${vaultIdeas.length})` : ''}
+            {tab.id === 'to-create' && toCreateIdeas.length > 0 ? ` (${toCreateIdeas.length})` : ''}
           </button>
         ))}
       </div>
@@ -194,11 +205,10 @@ export default function VideoIdeas({
             allSelected={allVisibleSelected}
             onEdit={setIdeaModal}
             onDelete={handleDeleteReviewIdea}
-            onGoToBoard={onGoToBoard}
             onApprove={onApprove}
           />
         </>
-      ) : (
+      ) : activeTab === 'approved' ? (
         <>
           <VideoIdeaQuickAdd
             clientFilter={clientFilter}
@@ -214,6 +224,14 @@ export default function VideoIdeas({
             onUpdateContentType={(ideaId, contentType) => onUpdateIdea(ideaId, { contentType })}
           />
         </>
+      ) : (
+        <ToCreateIdeasTable
+          ideas={toCreateIdeas}
+          cards={cards}
+          onEdit={setIdeaModal}
+          onOpenCard={onOpenCard}
+          onReturnToApproved={onReturnToApproved}
+        />
       )}
 
       {ideaModal && (
@@ -236,6 +254,7 @@ export default function VideoIdeas({
               client: scheduleIdea.client,
               ...schedule,
             });
+            setActiveTab('to-create');
             setScheduleIdea(null);
           }}
         />

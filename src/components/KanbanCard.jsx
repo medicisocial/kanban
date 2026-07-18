@@ -108,7 +108,7 @@ export default function KanbanCard({ card, ideas = [], onClick, onDelete, onRetu
           onPointerDown={(event) => event.stopPropagation()}
           className="mt-2 w-full rounded-lg border border-violet-500/25 bg-violet-500/10 px-2.5 py-1 text-[10px] font-medium text-violet-200 transition hover:bg-violet-500/15"
         >
-          Return to bank
+          Move back to Approved
         </button>
       )}
     </div>

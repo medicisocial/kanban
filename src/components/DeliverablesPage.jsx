@@ -13,6 +13,7 @@ import {
   shiftYearMonth,
   formatYearMonthLabel,
   buildClientDeliverableSummary,
+  getContractDeliverableMonthDate,
   groupCardsByClientForMonth,
 } from "../utils/deliverables";
 import { contentTypeLabelProps } from "../utils/contentTypeColors";
@@ -336,7 +337,9 @@ function ClientDeliverableRow({
             <ul className="divide-y divide-white/5">
               {cards
                 .slice()
-                .sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""))
+                .sort((a, b) =>
+                  getContractDeliverableMonthDate(a).localeCompare(getContractDeliverableMonthDate(b)),
+                )
                 .map((card) => {
                   const style = getContentTypeStyle(card.contentType);
                   const pts =
@@ -367,7 +370,7 @@ function ClientDeliverableRow({
                           {card.title || "Untitled"}
                         </span>
                         <span className="shrink-0 tabular-nums text-white/35">
-                          {card.dueDate || "—"}
+                          {getContractDeliverableMonthDate(card) || "—"}
                         </span>
                         <span className="hidden w-20 shrink-0 truncate text-right text-white/30 sm:block">
                           {columnTitleById[card.columnId] || card.columnId}

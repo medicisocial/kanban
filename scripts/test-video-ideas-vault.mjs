@@ -1,6 +1,8 @@
 /**
  * Idea bank (vault) rules for approved concepts.
  */
+import { readFileSync } from 'fs';
+
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
@@ -25,6 +27,12 @@ function isIdeaInVault(idea, cards = []) {
 function isIdeaScheduled(idea, cards = []) {
   if (!idea || idea.status !== 'approved') return false;
   return !isIdeaInVault(idea, cards);
+}
+
+function isIdeaToCreate(idea, cards = []) {
+  if (!idea || idea.status !== 'approved') return false;
+  const card = findIdeaBoardCard(idea, cards);
+  return Boolean(card && card.columnId === 'shoot' && String(card.shootDate || '').trim());
 }
 
 function findIdeaForCard(card, ideas = []) {
@@ -79,6 +87,19 @@ assert(
   isIdeaScheduled({ id: 'idea-2', status: 'approved', boardCardId: 'card-2' }, [scheduledCard]),
   'scheduled idea is tracked as on pipeline',
 );
+assert(
+  isIdeaToCreate({ id: 'idea-2', status: 'approved', boardCardId: 'card-2' }, [scheduledCard]),
+  'approved idea with a scheduled To Create card appears in To Create',
+);
+assert(!isIdeaToCreate(idea, []), 'approved vault-only idea does not appear in To Create');
+assert(
+  !isIdeaToCreate(
+    { id: 'idea-3', status: 'approved', boardCardId: 'card-3' },
+    [{ id: 'card-3', sourceIdeaId: 'idea-3', columnId: 'editing', shootDate: '2026-06-12' }],
+  ),
+  'idea leaves the Vault To Create tab after advancing to editing',
+);
+assert(!isIdeaInVault({ id: 'pending', status: 'pending' }, []), 'pending idea stays in Review');
 
 const ideas = [
   { id: 'idea-2', status: 'approved', boardCardId: 'card-2' },
@@ -119,5 +140,25 @@ const bankPayload = buildBankIdeaData({ title: 'Direct bank idea', client: 'Plum
 assert(bankPayload.status === 'approved', 'bank payload is approved');
 assert(bankPayload.boardCardId === null, 'bank payload has no board card');
 assert(bankPayload.reviewedAt, 'bank payload sets reviewedAt');
+
+const videoIdeasSource = readFileSync(new URL('../src/components/VideoIdeas.jsx', import.meta.url), 'utf8');
+assert(videoIdeasSource.includes("{ id: 'approved', label: 'Approved' }"), 'staff Vault has Approved tab');
+assert(videoIdeasSource.includes("{ id: 'to-create', label: 'To Create' }"), 'staff Vault has To Create tab');
+assert(
+  videoIdeasSource.includes("idea.status !== 'approved'"),
+  'staff Review excludes approved lifecycle items',
+);
+const toCreateSource = readFileSync(
+  new URL('../src/components/ToCreateIdeasTable.jsx', import.meta.url),
+  'utf8',
+);
+assert(toCreateSource.includes('Move back to Approved'), 'To Create view can restore approved ideas');
+const navSource = readFileSync(
+  new URL('../src/components/clientPortal/AdminConsoleLayout.jsx', import.meta.url),
+  'utf8',
+);
+assert(!navSource.includes("label: 'Pipeline'"), 'Pipeline is removed from primary navigation');
+const shellSource = readFileSync(new URL('../src/components/AppShell.jsx', import.meta.url), 'utf8');
+assert(shellSource.includes('activeView === "board"'), 'legacy direct board route remains supported');
 
 console.log('Video idea vault tests passed.');

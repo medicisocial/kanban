@@ -147,12 +147,12 @@ export default function IdeaVaultTable({
         <p className="text-sm text-white/45">
           {readOnly
             ? 'No approved concepts waiting for a shoot day.'
-            : 'No approved concepts in the bank yet.'}
+            : 'No approved concepts are waiting to be scheduled.'}
         </p>
         <p className="mt-2 text-xs text-white/35">
           {readOnly
             ? 'When your team approves ideas, they appear here until scheduled on a shoot.'
-            : 'When clients approve concepts, they land in the bank until you schedule them on a shoot.'}
+            : 'When clients approve concepts, they stay here until you schedule them on a shoot.'}
         </p>
       </div>
     );
@@ -163,7 +163,7 @@ export default function IdeaVaultTable({
       <div className="border-b border-white/10 px-4 py-3">
         <p className="text-xs text-white/45">
           {sorted.length} concept{sorted.length === 1 ? '' : 's'}{' '}
-          {readOnly ? 'ready to schedule' : 'in the bank'}
+          {readOnly ? 'ready to schedule' : 'approved and ready'}
         </p>
       </div>
 

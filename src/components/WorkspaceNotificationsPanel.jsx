@@ -69,10 +69,10 @@ export default function WorkspaceNotificationsPanel({
               {alert.view && onNavigate && (
                 <button
                   type="button"
-                  onClick={() => onNavigate(alert.view)}
+                  onClick={() => onNavigate(alert.view, { tasksRole: alert.tasksRole })}
                   className={`${btnSecondaryClass} mt-2 w-full py-2 text-[11px]`}
                 >
-                  Open {alert.view === 'board' ? 'pipeline' : alert.view}
+                  Open {alert.view === 'todo' ? 'team tasks' : alert.view}
                 </button>
               )}
             </li>

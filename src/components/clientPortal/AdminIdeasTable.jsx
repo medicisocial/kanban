@@ -57,7 +57,6 @@ export default function AdminIdeasTable({
   allSelected,
   onEdit,
   onDelete,
-  onGoToBoard,
   onApprove,
 }) {
   const { getClientColor } = useClientsContext();
@@ -74,13 +73,10 @@ export default function AdminIdeasTable({
     () => ({
       all: ideas.length,
       pending: ideas.filter((idea) => idea.status === 'pending').length,
-      approved: ideas.filter((idea) => idea.status === 'approved').length,
       declined: ideas.filter((idea) => idea.status === 'declined').length,
     }),
     [ideas],
   );
-
-  const approvedSubtitle = 'Scheduled on pipeline';
 
   const filtered = useMemo(() => {
     let rows = [...ideas];
@@ -113,7 +109,6 @@ export default function AdminIdeasTable({
             className={`${selectClass} min-w-[140px]`}
           >
             <option value="pending">Pending review ({statusCounts.pending})</option>
-            <option value="approved">{approvedSubtitle} ({statusCounts.approved})</option>
             <option value="declined">Passed ({statusCounts.declined})</option>
             <option value="all">All statuses ({statusCounts.all})</option>
           </select>
@@ -196,11 +191,6 @@ export default function AdminIdeasTable({
                   <button type="button" onClick={() => onEdit(idea)} className={`${btnGhostClass} min-h-10 flex-1 text-[11px]`}>
                     Edit
                   </button>
-                  {idea.boardCardId && (
-                    <button type="button" onClick={() => onGoToBoard(idea.boardCardId)} className={`${btnGhostClass} min-h-10 flex-1 text-[11px]`}>
-                      Board
-                    </button>
-                  )}
                   <button type="button" onClick={() => onDelete(idea.id)} className={`${btnGhostClass} min-h-10 flex-1 text-[11px] text-rose-300/80`}>
                     Delete
                   </button>
@@ -318,15 +308,6 @@ export default function AdminIdeasTable({
                           >
                             Edit
                           </button>
-                          {idea.boardCardId && (
-                            <button
-                              type="button"
-                              onClick={() => onGoToBoard(idea.boardCardId)}
-                              className={`${btnGhostClass} text-[10px] uppercase tracking-wider`}
-                            >
-                              Board
-                            </button>
-                          )}
                           <button
                             type="button"
                             onClick={() => onDelete(idea.id)}

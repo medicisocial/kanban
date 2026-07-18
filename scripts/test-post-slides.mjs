@@ -108,9 +108,18 @@ assert(hasStructuredScript({ contentType: 'Carousel', postSlides: carouselSlides
 
 const cardModalSource = readFileSync(new URL('../src/components/CardModal.jsx', import.meta.url), 'utf8');
 assert(cardModalSource.includes('<PostSlidesPanel'), 'card modal uses slide editor');
+assert(cardModalSource.includes("? 'Slides' : tab.label"), 'card modal labels slide-post tab as Slides');
 const ideaModalSource = readFileSync(new URL('../src/components/VideoIdeaModal.jsx', import.meta.url), 'utf8');
 assert(ideaModalSource.includes('<PostSlidesPanel'), 'bank idea modal uses slide editor');
+assert(ideaModalSource.includes('? "Slides" : label'), 'bank modal labels slide-post tab as Slides');
 assert(ideaModalSource.includes('referenceMusic'), 'bank idea modal supports music references');
+const slidesPanelSource = readFileSync(
+  new URL('../src/components/PostSlidesPanel.jsx', import.meta.url),
+  'utf8',
+);
+assert(slidesPanelSource.includes('aria-expanded={expanded}'), 'slide cards expose collapse state');
+assert(slidesPanelSource.includes('toggleSlide(index)'), 'slide cards have independent collapse controls');
+assert(slidesPanelSource.includes('const addSlide = () =>'), 'new slides use expansion-aware add flow');
 const portalSource = readFileSync(
   new URL('../src/components/ClientShootDayPortal.jsx', import.meta.url),
   'utf8',
