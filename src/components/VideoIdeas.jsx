@@ -9,7 +9,13 @@ import ToCreateIdeasTable from './ToCreateIdeasTable';
 import ScheduleVaultIdeaModal from './ScheduleVaultIdeaModal';
 import { getToCreateIdeas, getVaultIdeas } from '../utils/videoIdeas';
 import { matchesClientFilter } from '../utils/clients';
-import { btnPrimaryClass, btnSecondaryClass, glassSegmentClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import {
+  btnPrimaryClass,
+  btnSecondaryClass,
+  glassSegmentClass,
+  surfacePanelClass,
+} from './clientPortal/clientPortalUi';
+import MakeOneOffModal from './MakeOneOffModal';
 
 const IDEA_TABS = [
   { id: 'review', label: 'Review' },
@@ -35,11 +41,13 @@ export default function VideoIdeas({
   onOpenShoot,
   onReturnToApproved,
   onScheduleVaultIdea,
+  onCreateOneOffFromIdea,
 }) {
   const [activeTab, setActiveTab] = useState('review');
   const [statusFilter, setStatusFilter] = useState('pending');
   const [ideaModal, setIdeaModal] = useState(null);
   const [scheduleIdea, setScheduleIdea] = useState(null);
+  const [oneOffIdea, setOneOffIdea] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   const vaultIdeas = useMemo(
@@ -217,6 +225,7 @@ export default function VideoIdeas({
             onEdit={setIdeaModal}
             onDelete={handleDeleteReviewIdea}
             onApprove={onApprove}
+            onMakeOneOff={setOneOffIdea}
           />
         </>
       ) : activeTab === 'approved' ? (
@@ -231,6 +240,7 @@ export default function VideoIdeas({
             onEdit={setIdeaModal}
             onSchedule={setScheduleIdea}
             onMoveToReview={onMoveApprovedToReview}
+            onMakeOneOff={setOneOffIdea}
             onUpdateReference={(ideaId, referenceVideo) => onUpdateIdea(ideaId, { referenceVideo })}
             onUpdateContentType={(ideaId, contentType) => onUpdateIdea(ideaId, { contentType })}
           />
@@ -252,6 +262,10 @@ export default function VideoIdeas({
           onClose={() => setIdeaModal(null)}
           onSave={(data) => onUpdateIdea(ideaModal.id, data)}
           onDelete={handleDeleteIdeaFromModal}
+          onMakeOneOff={(idea, data) => {
+            onCreateOneOffFromIdea?.(idea, data);
+            setIdeaModal(null);
+          }}
         />
       )}
 
@@ -268,6 +282,19 @@ export default function VideoIdeas({
             });
             setActiveTab('to-create');
             setScheduleIdea(null);
+          }}
+        />
+      )}
+
+      {oneOffIdea && (
+        <MakeOneOffModal
+          initialClient={oneOffIdea.client}
+          initialTitle={oneOffIdea.title}
+          initialNotes={oneOffIdea.description}
+          onClose={() => setOneOffIdea(null)}
+          onConfirm={(data) => {
+            onCreateOneOffFromIdea?.(oneOffIdea, data);
+            setOneOffIdea(null);
           }}
         />
       )}

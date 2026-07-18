@@ -20,7 +20,8 @@ import { getDefaultShootEndTime, parseTimeToMinutes, getClientUpcomingShoots, so
 import StoryRecurrencePicker from './StoryRecurrencePicker';
 import DateInput from './DateInput';
 import ClientNameInput from './ClientNameInput';
-import { btnPrimaryClass } from './clientPortal/clientPortalUi';
+import MakeOneOffModal from './MakeOneOffModal';
+import { btnPrimaryClass, btnSecondaryClass } from './clientPortal/clientPortalUi';
 import ReferenceVideoLink, { ReferenceMusicLink } from './clientPortal/ReferenceVideoLink';
 import { CalendarSheetNoteEditor } from './CalendarSheetNote';
 import { getCalendarClientNote, hasCalendarClientNote, isContentCalendarCard } from '../utils/calendarClientNote';
@@ -43,6 +44,8 @@ const CARD_TABS = [
 /** Text fields in the modal sync to cloud only when Done / close — not while typing. */
 const SAVE_ON_CLOSE = { deferCommit: true, commitOnBlur: true };
 
+const ONE_OFF_EDITOR_COLUMNS = new Set(['editing', 'in-review', 'approved', 'finished']);
+
 function CardModal({
   card,
   cards = [],
@@ -62,6 +65,7 @@ function CardModal({
   const mouseDownOnOverlayRef = useRef(false);
   const pendingTabRef = useRef(null);
   const [activeTab, setActiveTab] = useState('details');
+  const [showMakeOneOff, setShowMakeOneOff] = useState(false);
   const {
     clients,
     getClientAccountManager,
@@ -120,7 +124,10 @@ function CardModal({
 
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === 'Escape') handleDone();
+      if (e.key === 'Escape') {
+        if (showMakeOneOff) return;
+        handleDone();
+      }
     };
     document.addEventListener('keydown', handleKey);
     document.body.style.overflow = 'hidden';
@@ -128,7 +135,7 @@ function CardModal({
       document.removeEventListener('keydown', handleKey);
       document.body.style.overflow = '';
     };
-  }, [handleDone]);
+  }, [handleDone, showMakeOneOff]);
 
   useEffect(() => {
     if (pendingTabRef.current) {
@@ -265,21 +272,36 @@ function CardModal({
     );
   };
 
+  const applyOneOffConversion = ({ client, title, notes, dueDate, assignedTo }) => {
+    const updates = {
+      contentType: 'One-off Project',
+      isOneOffProject: true,
+      client,
+      title,
+      notes: notes || displayCard.notes || '',
+      dueDate: dueDate || displayCard.dueDate || '',
+      assignedTo: assignedTo || displayCard.assignedTo || '',
+      shootDate: '',
+      shootTime: '',
+      shootEndTime: '',
+      shootModels: '',
+      shootNeeds: '',
+      dueTime: '',
+      storyRecurrenceDays: [],
+      storyEndDate: '',
+      storyOccurrenceNotes: {},
+    };
+    if (!ONE_OFF_EDITOR_COLUMNS.has(displayCard.columnId)) {
+      // Bypass shoot→editing handoff modal; one-off conversion moves straight into Editing.
+      updates.columnId = 'editing';
+      updates.status = 'Editing';
+    }
+    queueUpdate(updates);
+  };
+
   const handleChange = (field, value) => {
     if (field === 'contentType' && value === 'One-off Project') {
-      queueUpdate({
-        contentType: value,
-        isOneOffProject: true,
-        shootDate: '',
-        shootTime: '',
-        shootEndTime: '',
-        shootModels: '',
-        shootNeeds: '',
-        dueTime: '',
-        storyRecurrenceDays: [],
-        storyEndDate: '',
-        storyOccurrenceNotes: {},
-      });
+      setShowMakeOneOff(true);
       return;
     }
     if (field === 'contentType' && value === 'Story') {
@@ -478,15 +500,30 @@ function CardModal({
                   onChange={(e) => handleChange('contentType', e.target.value)}
                   className={inputClass}
                 >
-                  {CONTENT_TYPES.filter((t) => t !== 'Story' || displayCard.contentType === 'Story').map((t) => (
+                  {CONTENT_TYPES.filter(
+                    (t) =>
+                      (t !== 'Story' || displayCard.contentType === 'Story') &&
+                      t !== 'One-off Project',
+                  ).map((t) => (
                     <option key={t} value={t}>
                       {t}
                     </option>
                   ))}
+                  <option value="One-off Project">One-off Project…</option>
                 </select>
               )}
             </Field>
           </div>
+
+          {!isOneOff && (
+            <button
+              type="button"
+              onClick={() => setShowMakeOneOff(true)}
+              className={`${btnSecondaryClass} w-full text-violet-200`}
+            >
+              Make one-off project
+            </button>
+          )}
 
           {!isOneOff && displayCard.contentType === 'Reel' && (
             <Field label="Editor points">
@@ -1101,6 +1138,18 @@ function CardModal({
           </button>
         </div>
       </div>
+
+      {showMakeOneOff && (
+        <MakeOneOffModal
+          initialClient={displayCard.client}
+          initialTitle={displayCard.title}
+          initialNotes={displayCard.notes}
+          initialDueDate={displayCard.dueDate}
+          defaultAssignee={displayCard.assignedTo}
+          onClose={() => setShowMakeOneOff(false)}
+          onConfirm={applyOneOffConversion}
+        />
+      )}
     </div>,
     document.body,
   );

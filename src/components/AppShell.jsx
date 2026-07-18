@@ -1217,6 +1217,19 @@ export default function AppShell({ onSignOut }) {
           }
           onReturnToApproved={handleReturnCardToVault}
           onScheduleVaultIdea={handleScheduleVaultIdea}
+          onCreateOneOffFromIdea={(idea, data) => {
+            const newCard = addOneOffProject({
+              client: data.client,
+              title: data.title,
+              description: data.notes || data.description || idea.description || '',
+              dueDate: data.dueDate || '',
+              assignedTo: data.assignedTo,
+              sourceIdeaId: idea.id,
+              referenceVideo: idea.referenceVideo || '',
+              referenceMusic: idea.referenceMusic || '',
+            });
+            if (newCard) setSelectedCard(newCard);
+          }}
         />
       )}
 
