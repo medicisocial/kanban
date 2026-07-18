@@ -17,7 +17,7 @@ import {
 import { getEditorTaskStatusOptions } from '../utils/editorTodo';
 import NeedsEditsModal from './NeedsEditsModal';
 import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
-import { selectClass } from './clientPortal/clientPortalUi';
+import { glassSegmentClass, selectClass } from './clientPortal/clientPortalUi';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
 import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
 
@@ -370,6 +370,7 @@ export default function AccountManagerTodo({
   const todayKey = toDateKey(new Date());
   const { assigneeFilter, setAssigneeFilter, restrictAssigneeFilter } = useStaffAssigneeFilter();
   const [needsEditsCard, setNeedsEditsCard] = useState(null);
+  const [activeQueue, setActiveQueue] = useState('post-date');
 
   const storyTasksToday = useMemo(
     () => buildStoryTasksToday(cards, todayKey, clientAccountManagers),
@@ -459,8 +460,30 @@ export default function AccountManagerTodo({
         </label>
       </div>
 
-      <div className="overflow-x-auto pb-1">
-        <div className="mx-auto grid max-w-[2200px] grid-cols-1 gap-4 lg:min-w-[920px] lg:grid-cols-4 lg:items-start">
+      <div className={`${glassSegmentClass} mb-4 flex w-fit flex-wrap gap-0.5 p-0.5`}>
+        {[
+          ['post-date', 'Set post date', orderedSetPostDateTasks.length],
+          ['review', 'In review', orderedInReviewTasks.length],
+          ['stories', 'Stories to post', orderedStoryTasks.length],
+          ['posts', 'Posts & content', visiblePostsTasks.length],
+        ].map(([id, label, count]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setActiveQueue(id)}
+            className={`px-3 py-1.5 text-xs font-medium transition ${
+              activeQueue === id
+                ? 'bg-[#810100] text-white'
+                : 'text-white/45 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            {label} ({count})
+          </button>
+        ))}
+      </div>
+
+      <div>
+        {activeQueue === 'post-date' && (
         <PortalTaskSection
           title="Set post date"
           subtitle="To Create and Editing cards (plus review stages) missing a target publish date."
@@ -488,7 +511,9 @@ export default function AccountManagerTodo({
             />
           )}
         </PortalTaskSection>
+        )}
 
+        {activeQueue === 'review' && (
         <PortalTaskSection
           title="In review"
           subtitle="Approve content or send it back with revision notes."
@@ -519,7 +544,9 @@ export default function AccountManagerTodo({
             />
           )}
         </PortalTaskSection>
+        )}
 
+        {activeQueue === 'stories' && (
         <PortalTaskSection
           title="Stories · post today"
           subtitle={todayLabel}
@@ -547,7 +574,9 @@ export default function AccountManagerTodo({
             />
           )}
         </PortalTaskSection>
+        )}
 
+        {activeQueue === 'posts' && (
         <PortalTaskSection
           title="Posts & content"
           subtitle="Approved posts ready to mark scheduled."
@@ -575,7 +604,7 @@ export default function AccountManagerTodo({
             />
           )}
         </PortalTaskSection>
-        </div>
+        )}
       </div>
 
       {needsEditsCard && (

@@ -1,6 +1,8 @@
 /**
  * Account manager "Set post date" task rules.
  */
+import { readFileSync } from 'fs';
+
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
@@ -80,6 +82,35 @@ assert(
 assert(
   !tasks.some((task) => task.cardId === 'dated-card'),
   'buildSetPostDateTasks skips cards that already have a post date',
+);
+
+const editorTodoSource = readFileSync(new URL('../src/components/EditorTodo.jsx', import.meta.url), 'utf8');
+assert(editorTodoSource.includes("useState('editing')"), 'editor task tabs default to Needs editing');
+assert(
+  editorTodoSource.includes("['review', 'In review', approveCount]"),
+  'editor tasks expose In review as a tab',
+);
+assert(
+  editorTodoSource.includes("activeQueue === 'editing'"),
+  'editor renders only the selected task queue',
+);
+
+const accountTodoSource = readFileSync(
+  new URL('../src/components/AccountManagerTodo.jsx', import.meta.url),
+  'utf8',
+);
+assert(accountTodoSource.includes("useState('post-date')"), 'account manager tabs default to Set post date');
+assert(
+  accountTodoSource.includes("['review', 'In review', orderedInReviewTasks.length]"),
+  'account manager exposes In review as a tab',
+);
+assert(
+  accountTodoSource.includes("['stories', 'Stories to post', orderedStoryTasks.length]"),
+  'account manager exposes Stories to post as a tab',
+);
+assert(
+  accountTodoSource.includes("['posts', 'Posts & content', visiblePostsTasks.length]"),
+  'account manager exposes Posts & content as a tab',
 );
 
 console.log('Account manager todo tests passed.');

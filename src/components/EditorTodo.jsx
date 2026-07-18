@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getContentTypeStyle } from '../constants';
 import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import { useClientsContext } from '../context/ClientsContext';
@@ -15,7 +15,7 @@ import {
 import AddEditorTaskModal from './AddEditorTaskModal';
 import NeedsEditsModal from './NeedsEditsModal';
 import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
-import { btnPrimaryClass, selectClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, glassSegmentClass, selectClass } from './clientPortal/clientPortalUi';
 import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
 
 const taskActionBtnClass =
@@ -257,6 +257,7 @@ export default function EditorTodo({
   const [showCompleted, setShowCompleted] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [needsEditsCard, setNeedsEditsCard] = useState(null);
+  const [activeQueue, setActiveQueue] = useState('editing');
 
   const allTasks = useMemo(() => buildBoardEditorTasks(cards), [cards]);
 
@@ -284,6 +285,12 @@ export default function EditorTodo({
   const approveCount = reviewTasks.length;
   const oneOffCount = filteredTasks.filter((t) => t.isOneOffProject && !t.completed).length;
   const finishedCount = finishedTasks.length;
+
+  useEffect(() => {
+    if (activeQueue === 'finished' && finishedCount === 0) {
+      setActiveQueue('editing');
+    }
+  }, [activeQueue, finishedCount]);
 
   const itemProps = {
     onOpenCard,
@@ -370,6 +377,27 @@ export default function EditorTodo({
         </label>
       </div>
 
+      <div className={`${glassSegmentClass} mb-4 flex w-fit flex-wrap gap-0.5 p-0.5`}>
+        {[
+          ['editing', 'Needs editing', editCount],
+          ['review', 'In review', approveCount],
+          ...(finishedCount > 0 ? [['finished', 'Finished one-offs', finishedCount]] : []),
+        ].map(([id, label, count]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setActiveQueue(id)}
+            className={`px-3 py-1.5 text-xs font-medium transition ${
+              activeQueue === id
+                ? 'bg-[#810100] text-white'
+                : 'text-white/45 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            {label} ({count})
+          </button>
+        ))}
+      </div>
+
       {orderedTasks.length === 0 ? (
         <div className="border border-dashed border-white/10 px-6 py-16 text-center">
           <p className="text-sm text-white/45">Nothing on the list right now.</p>
@@ -378,7 +406,8 @@ export default function EditorTodo({
           </p>
         </div>
       ) : (
-        <div className={`grid grid-cols-1 gap-6 ${finishedCount ? 'xl:grid-cols-3' : 'xl:grid-cols-2'}`}>
+        <>
+          {activeQueue === 'editing' && (
           <EditorTaskColumn
             title="Needs editing"
             description="Cards in Editing or Not Approved — finish the cut and mark done when ready for review."
@@ -388,6 +417,8 @@ export default function EditorTodo({
             emptyMessage="No videos waiting for edits."
             itemProps={itemProps}
           />
+          )}
+          {activeQueue === 'review' && (
           <EditorTaskColumn
             title="In review"
             description="Cards in In Review — approve or send back with revision notes."
@@ -397,7 +428,8 @@ export default function EditorTodo({
             emptyMessage="No videos in review."
             itemProps={itemProps}
           />
-          {finishedCount > 0 && (
+          )}
+          {activeQueue === 'finished' && finishedCount > 0 && (
             <EditorTaskColumn
               title="Finished one-offs"
               description="Completed one-off projects stay here instead of appearing in Needs editing."
@@ -408,7 +440,7 @@ export default function EditorTodo({
               itemProps={itemProps}
             />
           )}
-        </div>
+        </>
       )}
 
       {showAddModal && (
