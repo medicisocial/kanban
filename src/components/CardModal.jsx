@@ -1128,6 +1128,7 @@ function CardModal({
           initialNotes={displayCard.notes}
           initialDueDate={displayCard.dueDate}
           initialEditorPoints={displayCard.editorPoints}
+          initialColumnId={displayCard.columnId === 'shoot' ? 'shoot' : 'editing'}
           defaultAssignee={displayCard.assignedTo}
           onClose={() => setShowMakeOneOff(false)}
           onConfirm={applyOneOffConversion}

@@ -41,6 +41,7 @@ export default function VideoIdeas({
   onOpenShoot,
   onReturnToApproved,
   onScheduleVaultIdea,
+  onAddVaultIdeaToCreate,
   onCreateOneOffFromIdea,
 }) {
   const [activeTab, setActiveTab] = useState('review');
@@ -252,6 +253,10 @@ export default function VideoIdeas({
             ideas={vaultIdeas}
             onEdit={setIdeaModal}
             onSchedule={setScheduleIdea}
+            onAddToCreate={(idea) => {
+              onAddVaultIdeaToCreate?.(idea.id);
+              setActiveTab('to-create');
+            }}
             onMoveToReview={onMoveApprovedToReview}
           />
         </>

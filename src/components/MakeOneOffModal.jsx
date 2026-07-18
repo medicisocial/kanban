@@ -6,6 +6,11 @@ import ClientNameInput from './ClientNameInput';
 import DateInput from './DateInput';
 import { btnPrimaryClass, btnSecondaryClass, inputClass } from './clientPortal/clientPortalUi';
 
+const START_STAGE_OPTIONS = [
+  { id: 'shoot', title: 'To Create' },
+  { id: 'editing', title: 'Editing' },
+];
+
 export default function MakeOneOffModal({
   onClose,
   onConfirm,
@@ -14,9 +19,10 @@ export default function MakeOneOffModal({
   initialNotes = '',
   initialDueDate = '',
   initialEditorPoints = 1,
+  initialColumnId = 'editing',
   defaultAssignee = '',
   heading = 'Make one-off project',
-  description = 'Confirm the client name (existing or custom) and project details. Moves the card to Editing — find it under Team Tasks → Editors (not To Create or Content Creator).',
+  description = 'Confirm the client name (existing or custom) and project details. Choose To Create for production planning, or Editing for editor work.',
   confirmLabel = 'Make one-off',
 }) {
   const { clients, getMemberNamesForRole } = useClientsContext();
@@ -27,6 +33,9 @@ export default function MakeOneOffModal({
   const [dueDate, setDueDate] = useState(initialDueDate || '');
   const [assignedTo, setAssignedTo] = useState(defaultAssignee || editors[0] || '');
   const [editorPoints, setEditorPoints] = useState(normalizeEditorPoints(initialEditorPoints));
+  const [columnId, setColumnId] = useState(
+    START_STAGE_OPTIONS.some((opt) => opt.id === initialColumnId) ? initialColumnId : 'editing',
+  );
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -58,6 +67,7 @@ export default function MakeOneOffModal({
       dueDate,
       assignedTo,
       editorPoints: normalizeEditorPoints(editorPoints),
+      columnId,
     });
     onClose();
   };
@@ -122,6 +132,25 @@ export default function MakeOneOffModal({
                 rows={3}
                 className={`${inputClass} resize-y`}
               />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-gray-400">Start in</span>
+              <select
+                value={columnId}
+                onChange={(e) => setColumnId(e.target.value)}
+                className={inputClass}
+                aria-label="Start pipeline stage"
+              >
+                {START_STAGE_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.title}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1.5 text-[10px] text-white/35">
+                To Create keeps it on the production queue. Editing sends it to Team Tasks → Editors.
+              </p>
             </label>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -16,13 +16,10 @@ export function findIdeaBoardCard(idea, cards = []) {
   return cards.find((card) => card.sourceIdeaId === idea.id) || null;
 }
 
-/** Idea is in the bank when approved and not yet on a shoot day. */
+/** Idea is in the bank when approved and not yet linked to a board card. */
 export function isIdeaInVault(idea, cards = []) {
   if (!idea || idea.status !== 'approved') return false;
-  const card = findIdeaBoardCard(idea, cards);
-  if (!card) return true;
-  if (card.columnId !== 'shoot') return false;
-  return !String(card.shootDate || '').trim();
+  return !findIdeaBoardCard(idea, cards);
 }
 
 export function getVaultIdeas(ideas, cards = [], { client } = {}) {
@@ -33,15 +30,11 @@ export function getVaultIdeas(ideas, cards = [], { client } = {}) {
   });
 }
 
-/** Approved ideas currently scheduled on a shoot and waiting in To Create. */
+/** Approved ideas with a To Create board card (dated shoot or undated queue). */
 export function isIdeaToCreate(idea, cards = []) {
   if (!idea || idea.status !== 'approved') return false;
   const card = findIdeaBoardCard(idea, cards);
-  return Boolean(
-    card &&
-      card.columnId === 'shoot' &&
-      String(card.shootDate || '').trim(),
-  );
+  return Boolean(card && card.columnId === 'shoot');
 }
 
 export function getToCreateIdeas(ideas, cards = [], { client } = {}) {

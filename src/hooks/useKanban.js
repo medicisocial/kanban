@@ -578,11 +578,15 @@ export function useKanban() {
       dueDate = '',
       assignedTo,
       editorPoints,
+      columnId: requestedColumnId = 'editing',
       sourceIdeaId = null,
       referenceVideo = '',
       referenceMusic = '',
     } = {}) => {
       notifyMutation();
+      const columnId = ONE_OFF_ALLOWED_COLUMNS.includes(requestedColumnId)
+        ? requestedColumnId
+        : 'editing';
       const card = normalizeCard(
         createCard({
           client,
@@ -593,8 +597,10 @@ export function useKanban() {
           editorPoints: normalizeEditorPoints(editorPoints),
           contentType: 'One-off Project',
           isOneOffProject: true,
-          columnId: 'editing',
-          status: 'Editing',
+          columnId,
+          status: getStatusForColumn(columnId),
+          contentCreator:
+            columnId === 'shoot' ? getDefaultAssigneeForRole('Content Creator') : '',
           sourceIdeaId: sourceIdeaId || null,
           referenceVideo: referenceVideo || '',
           referenceMusic: referenceMusic || '',

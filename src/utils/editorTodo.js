@@ -24,6 +24,7 @@ export const REGULAR_EDITOR_STATUS_COLUMN_IDS = [
 ];
 
 export const ONE_OFF_STATUS_COLUMN_IDS = [
+  'shoot',
   'editing',
   'in-review',
   'approved',
