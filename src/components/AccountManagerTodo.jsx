@@ -71,20 +71,20 @@ function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate, ani
 
           <CardLinks card={task.card} compact />
 
-          <div className="mt-3">
-            <button
-              type="button"
-              onClick={() => onPlanDate?.(task.card)}
-              className={taskActionBtnClass}
-            >
-              Set post date
-            </button>
-          </div>
-
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
             {task.contentCreator && <span>Creator: {task.contentCreator}</span>}
             {task.accountManager && <span>AM: {task.accountManager}</span>}
           </div>
+        </div>
+
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <button
+            type="button"
+            onClick={() => onPlanDate?.(task.card)}
+            className={taskActionBtnClass}
+          >
+            Set post date
+          </button>
         </div>
       </div>
     </TeamTaskCard>
