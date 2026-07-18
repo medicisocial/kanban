@@ -1327,10 +1327,6 @@ export default function AppShell({ onSignOut }) {
           onMoveTask={handleMoveEditorTask}
           onHandoff={handleHandoffRequest}
           onReturnToVault={handleReturnCardToVault}
-          onConvertCardToOneOff={(card, data) => {
-            if (!card?.id) return;
-            updateCard(card.id, buildOneOffConversionUpdates(card, data), { immediateSync: true });
-          }}
           onNavigate={handleNavigate}
           onOpenShoot={(card) =>
             handleNavigate('shoot', {

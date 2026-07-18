@@ -71,18 +71,15 @@ assert(
   creatorSource.includes('taskActionBtnClass'),
   'Content Creator card actions use compact team-card button styling',
 );
-assert(creatorSource.includes('Make one-off'), 'Content Creator cards expose Make one-off');
+assert(!creatorSource.includes('Make one-off'), 'Content Creator cards do not expose Make one-off');
+assert(!creatorSource.includes('onConvertToOneOff'), 'Content Creator does not wire one-off conversion');
 assert(
-  creatorSource.includes('onConvertToOneOff'),
-  'Content Creator wires in-place one-off conversion',
-);
-assert(
-  tasksSource.includes('onConvertToOneOff={onConvertCardToOneOff}'),
-  'CompanyTasks passes convert-to-one-off into Content Creator',
+  !tasksSource.includes('onConvertToOneOff'),
+  'CompanyTasks does not pass convert-to-one-off into Content Creator',
 );
 assert(
   shellSource.includes('onConvertCardToOneOff') && shellSource.includes('buildOneOffConversionUpdates'),
-  'AppShell converts To Create cards to one-offs in place',
+  'AppShell still converts Vault To Create cards to one-offs in place',
 );
 assert(
   shellSource.includes("handleNavigate('shoot'") && shellSource.includes('onOpenShoot={(card)'),
