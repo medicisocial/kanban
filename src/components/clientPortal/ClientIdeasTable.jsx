@@ -334,9 +334,6 @@ export default function ClientIdeasTable({
                                   <ReferenceVideoLink url={idea.referenceVideo} />
                                 </p>
                               )}
-                              {idea.clientComment && (
-                                <p className="mt-2 text-xs text-white/50">Your note: {idea.clientComment}</p>
-                              )}
                             </div>
                             {declining && (
                               <div className="min-w-[260px] border border-white/10 bg-[#0d0d0d] p-3">

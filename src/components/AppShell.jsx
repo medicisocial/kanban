@@ -489,6 +489,37 @@ export default function AppShell({ onSignOut }) {
     [ideas, cards, deleteCard, deleteIdea],
   );
 
+  const handleMoveApprovedIdeaToReview = useCallback(
+    (ideaId) => {
+      const idea = ideas.find((entry) => entry.id === ideaId);
+      if (!idea || idea.status !== "approved") return;
+      const label = idea.title || "this idea";
+      if (!window.confirm(`Move "${label}" back to Review for approval again?`)) return;
+      beginBatch();
+      try {
+        const linkedCard = findIdeaBoardCard(idea, cards);
+        if (linkedCard) {
+          deleteCard(linkedCard.id);
+          if (linkedCard.shootDate) {
+            removeCardFromShootRoster(
+              linkedCard.client,
+              linkedCard.shootDate,
+              linkedCard.id,
+            );
+          }
+        }
+        updateIdea(idea.id, {
+          status: "pending",
+          reviewedAt: null,
+          boardCardId: null,
+        });
+      } finally {
+        endBatch();
+      }
+    },
+    [ideas, cards, deleteCard, removeCardFromShootRoster, updateIdea],
+  );
+
   const handleReturnCardToVault = useCallback(
     (card) => {
       const idea = findIdeaForCard(card, ideas);
@@ -1169,8 +1200,15 @@ export default function AppShell({ onSignOut }) {
           onDeleteIdea={deleteIdea}
           onDeleteIdeas={deleteIdeas}
           onDeleteVaultIdea={handleDeleteVaultIdea}
+          onMoveApprovedToReview={handleMoveApprovedIdeaToReview}
           onUpdateIdea={updateIdea}
           onOpenCard={handleCardClick}
+          onOpenShoot={(card) =>
+            handleNavigate('shoot', {
+              shootDate: card.shootDate,
+              shootClient: card.client,
+            })
+          }
           onReturnToApproved={handleReturnCardToVault}
           onScheduleVaultIdea={handleScheduleVaultIdea}
         />

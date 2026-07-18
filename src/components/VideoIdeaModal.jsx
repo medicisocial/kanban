@@ -28,7 +28,6 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
     captionMode: idea?.captionMode || "shared",
     postSlides: idea?.postSlides || [],
     contentType: idea?.contentType || "Reel",
-    clientComment: idea?.clientComment || "",
   });
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("details");
@@ -70,7 +69,6 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
       caption: form.caption.trim(),
       captionMode: normalizeCaptionMode(form.captionMode, form.contentType),
       postSlides: normalizePostSlides(form.postSlides, form.contentType),
-      clientComment: form.clientComment.trim(),
     });
     onClose();
   };
@@ -228,16 +226,6 @@ export default function VideoIdeaModal({ onClose, onSave, idea = null, defaultCl
               </label>
             )}
 
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-gray-400">Client Comment</span>
-              <textarea
-                value={form.clientComment}
-                onChange={(e) => setForm({ ...form, clientComment: e.target.value })}
-                rows={2}
-                placeholder="Client feedback on this idea..."
-                className={`${inputClass} resize-y`}
-              />
-            </label>
               </>
             )}
 

@@ -61,7 +61,17 @@ export default function AdminIdeasTable({
 }) {
   const { getClientColor } = useClientsContext();
   const [sort, setSort] = useState({ key: 'createdAt', dir: 'desc' });
-  const [expandedId, setExpandedId] = useState(null);
+
+  const openIdeaFromRow = (event, idea) => {
+    if (event.target.closest('button, a, input, select, textarea, label')) return;
+    onEdit?.(idea);
+  };
+
+  const handleRowKeyDown = (event, idea) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    onEdit?.(idea);
+  };
 
   const handleSort = (key) => {
     setSort((prev) =>
@@ -142,10 +152,15 @@ export default function AdminIdeasTable({
           </p>
         ) : (
           filtered.map((idea) => {
-            const expanded = expandedId === idea.id;
-
             return (
-              <div key={idea.id} className={mobileCardClass}>
+              <div
+                key={idea.id}
+                className={`${mobileCardClass} cursor-pointer transition hover:bg-white/[0.04]`}
+                onClick={(event) => openIdeaFromRow(event, idea)}
+                onKeyDown={(event) => handleRowKeyDown(event, idea)}
+                role="button"
+                tabIndex={0}
+              >
                 {selectable && (
                   <label className="mb-2 flex items-center gap-2 text-xs text-white/55">
                     <input
@@ -159,12 +174,12 @@ export default function AdminIdeasTable({
                 )}
                 <button
                   type="button"
-                  onClick={() => setExpandedId(expanded ? null : idea.id)}
+                  onClick={() => onEdit?.(idea)}
                   className="w-full text-left font-medium text-white"
                 >
                   {idea.title || 'Untitled idea'}
                 </button>
-                {idea.description && !expanded && (
+                {idea.description && (
                   <p className="mt-1 line-clamp-2 text-xs text-white/40">{idea.description}</p>
                 )}
                 {idea.referenceVideo && (
@@ -195,19 +210,6 @@ export default function AdminIdeasTable({
                     Delete
                   </button>
                 </div>
-                {expanded && (
-                  <div className="mt-3 border border-white/10 bg-white/[0.02] p-3 text-sm text-white/70">
-                    {idea.description && <p>{idea.description}</p>}
-                    {idea.referenceVideo && (
-                      <p className="mt-2">
-                        <ReferenceVideoLink url={idea.referenceVideo} />
-                      </p>
-                    )}
-                    {idea.clientComment && (
-                      <p className="mt-2 text-xs text-white/50">Client note: {idea.clientComment}</p>
-                    )}
-                  </div>
-                )}
               </div>
             );
           })
@@ -244,12 +246,17 @@ export default function AdminIdeasTable({
             ) : (
               filtered.map((idea) => {
                 const clientColor = getClientColor(idea.client);
-                const expanded = expandedId === idea.id;
                 const isPending = idea.status === 'pending';
 
                 return (
                   <Fragment key={idea.id}>
-                    <tr className={tableRowClass}>
+                    <tr
+                      className={`${tableRowClass} cursor-pointer`}
+                      onClick={(event) => openIdeaFromRow(event, idea)}
+                      onKeyDown={(event) => handleRowKeyDown(event, idea)}
+                      role="button"
+                      tabIndex={0}
+                    >
                       {selectable && (
                         <td className={`${tableCellClass} w-[40px]`}>
                           <input
@@ -263,7 +270,7 @@ export default function AdminIdeasTable({
                       <td className={tableCellClass}>
                         <button
                           type="button"
-                          onClick={() => setExpandedId(expanded ? null : idea.id)}
+                          onClick={() => onEdit?.(idea)}
                           className="max-w-full text-left font-medium text-white transition-colors hover:text-[#c88]"
                         >
                           {idea.title || 'Untitled idea'}
@@ -318,23 +325,6 @@ export default function AdminIdeasTable({
                         </div>
                       </td>
                     </tr>
-                    {expanded && (
-                      <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                        <td colSpan={selectable ? 8 : 7} className="px-4 py-4">
-                          <div className="text-sm text-white/70">
-                            {idea.description && <p>{idea.description}</p>}
-                            {idea.referenceVideo && (
-                              <p className="mt-2">
-                                <ReferenceVideoLink url={idea.referenceVideo} />
-                              </p>
-                            )}
-                            {idea.clientComment && (
-                              <p className="mt-2 text-xs text-white/50">Client note: {idea.clientComment}</p>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
                   </Fragment>
                 );
               })

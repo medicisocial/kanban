@@ -29,8 +29,10 @@ export default function VideoIdeas({
   onDeleteIdea,
   onDeleteIdeas,
   onDeleteVaultIdea,
+  onMoveApprovedToReview,
   onUpdateIdea,
   onOpenCard,
+  onOpenShoot,
   onReturnToApproved,
   onScheduleVaultIdea,
 }) {
@@ -220,6 +222,7 @@ export default function VideoIdeas({
             onEdit={setIdeaModal}
             onSchedule={setScheduleIdea}
             onDelete={handleDeleteVaultIdea}
+            onMoveToReview={onMoveApprovedToReview}
             onUpdateReference={(ideaId, referenceVideo) => onUpdateIdea(ideaId, { referenceVideo })}
             onUpdateContentType={(ideaId, contentType) => onUpdateIdea(ideaId, { contentType })}
           />
@@ -228,8 +231,8 @@ export default function VideoIdeas({
         <ToCreateIdeasTable
           ideas={toCreateIdeas}
           cards={cards}
-          onEdit={setIdeaModal}
           onOpenCard={onOpenCard}
+          onOpenShoot={onOpenShoot}
           onReturnToApproved={onReturnToApproved}
         />
       )}

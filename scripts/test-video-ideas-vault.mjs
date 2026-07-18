@@ -174,6 +174,16 @@ assert(bankPayload.status === 'approved', 'bank payload is approved');
 assert(bankPayload.boardCardId === null, 'bank payload has no board card');
 assert(bankPayload.reviewedAt, 'bank payload sets reviewedAt');
 
+const returnedToReview = {
+  ...bankPayload,
+  status: 'pending',
+  reviewedAt: null,
+  boardCardId: null,
+};
+assert(returnedToReview.status === 'pending', 'approved idea can return to Review');
+assert(returnedToReview.reviewedAt === null, 'returning to Review clears approval timestamp');
+assert(returnedToReview.title === bankPayload.title, 'returning to Review preserves idea content');
+
 const videoIdeasSource = readFileSync(new URL('../src/components/VideoIdeas.jsx', import.meta.url), 'utf8');
 assert(videoIdeasSource.includes("{ id: 'approved', label: 'Approved' }"), 'staff Vault has Approved tab');
 assert(videoIdeasSource.includes("{ id: 'to-create', label: 'To Create' }"), 'staff Vault has To Create tab');
@@ -194,6 +204,23 @@ assert(
   toCreateSource.includes('divide-y divide-white'),
   'To Create view renders one compact divided list',
 );
+assert(toCreateSource.includes('Go to shoot'), 'To Create row can navigate to its scheduled shoot');
+assert(!toCreateSource.includes('Edit idea'), 'To Create removes duplicate idea editor action');
+assert(!toCreateSource.includes('Open card'), 'To Create opens cards from the full row instead');
+assert(toCreateSource.includes('openCardFromRow(event, card)'), 'To Create rows open linked cards');
+const approvedSource = readFileSync(new URL('../src/components/IdeaVaultTable.jsx', import.meta.url), 'utf8');
+assert(approvedSource.includes('Move to Review'), 'Approved rows can return ideas to Review');
+assert(approvedSource.includes('openIdeaFromRow(event, idea)'), 'Approved rows open idea editor');
+const reviewSource = readFileSync(
+  new URL('../src/components/clientPortal/AdminIdeasTable.jsx', import.meta.url),
+  'utf8',
+);
+assert(reviewSource.includes('openIdeaFromRow(event, idea)'), 'Review rows open idea editor');
+const ideaModalSource = readFileSync(
+  new URL('../src/components/VideoIdeaModal.jsx', import.meta.url),
+  'utf8',
+);
+assert(!ideaModalSource.includes('Client Comment'), 'idea editor hides client comments');
 const navSource = readFileSync(
   new URL('../src/components/clientPortal/AdminConsoleLayout.jsx', import.meta.url),
   'utf8',
@@ -201,5 +228,13 @@ const navSource = readFileSync(
 assert(!navSource.includes("label: 'Pipeline'"), 'Pipeline is removed from primary navigation');
 const shellSource = readFileSync(new URL('../src/components/AppShell.jsx', import.meta.url), 'utf8');
 assert(shellSource.includes('activeView === "board"'), 'legacy direct board route remains supported');
+assert(
+  shellSource.includes('handleMoveApprovedIdeaToReview'),
+  'AppShell wires Approved-to-Review lifecycle handler',
+);
+assert(
+  shellSource.includes("handleNavigate('shoot'"),
+  'AppShell wires To Create shoot navigation',
+);
 
 console.log('Video idea vault tests passed.');

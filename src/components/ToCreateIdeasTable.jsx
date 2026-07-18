@@ -13,8 +13,8 @@ import {
 export default function ToCreateIdeasTable({
   ideas,
   cards,
-  onEdit,
   onOpenCard,
+  onOpenShoot,
   onReturnToApproved,
 }) {
   const { getClientColor } = useClientsContext();
@@ -34,6 +34,17 @@ export default function ToCreateIdeasTable({
     .map((idea) => ({ idea, card: findIdeaBoardCard(idea, cards) }))
     .filter(({ card }) => card);
 
+  const openCardFromRow = (event, card) => {
+    if (event.target.closest('button, a, input, select, textarea, label')) return;
+    onOpenCard?.(card);
+  };
+
+  const handleRowKeyDown = (event, card) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    onOpenCard?.(card);
+  };
+
   return (
     <div className={`${surfacePanelClass} divide-y divide-white/[0.06] overflow-hidden`}>
       {scheduledIdeas.map(({ idea, card }) => {
@@ -42,7 +53,11 @@ export default function ToCreateIdeasTable({
         return (
           <article
             key={idea.id}
-            className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center"
+            className="flex cursor-pointer flex-col gap-3 px-4 py-3 transition hover:bg-white/[0.04] sm:flex-row sm:items-center"
+            onClick={(event) => openCardFromRow(event, card)}
+            onKeyDown={(event) => handleRowKeyDown(event, card)}
+            role="button"
+            tabIndex={0}
           >
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <div className="w-[6.75rem] shrink-0">
@@ -76,17 +91,10 @@ export default function ToCreateIdeasTable({
             <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
               <button
                 type="button"
-                onClick={() => onOpenCard?.(card)}
+                onClick={() => onOpenShoot?.(card)}
                 className={`${btnPrimaryClass} px-2.5 py-1.5 text-[10px]`}
               >
-                Open card
-              </button>
-              <button
-                type="button"
-                onClick={() => onEdit?.(idea)}
-                className={`${btnGhostClass} px-2.5 py-1.5 text-[10px]`}
-              >
-                Edit idea
+                Go to shoot
               </button>
               <button
                 type="button"

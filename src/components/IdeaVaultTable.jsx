@@ -123,6 +123,7 @@ export default function IdeaVaultTable({
   onEdit,
   onSchedule,
   onDelete,
+  onMoveToReview,
   onUpdateReference,
   onUpdateContentType,
   readOnly = false,
@@ -130,6 +131,17 @@ export default function IdeaVaultTable({
 }) {
   const { getClientColor } = useClientsContext();
   const [expandedId, setExpandedId] = useState(null);
+
+  const openIdeaFromRow = (event, idea) => {
+    if (readOnly || event.target.closest('button, a, input, select, textarea, label')) return;
+    onEdit?.(idea);
+  };
+
+  const handleRowKeyDown = (event, idea) => {
+    if (readOnly || (event.key !== 'Enter' && event.key !== ' ')) return;
+    event.preventDefault();
+    onEdit?.(idea);
+  };
 
   const sorted = useMemo(
     () =>
@@ -171,10 +183,20 @@ export default function IdeaVaultTable({
         {sorted.map((idea) => {
           const expanded = expandedId === idea.id;
           return (
-            <div key={idea.id} className={mobileCardClass}>
+            <div
+              key={idea.id}
+              className={`${mobileCardClass} ${readOnly ? '' : 'cursor-pointer transition hover:bg-white/[0.04]'}`}
+              onClick={(event) => openIdeaFromRow(event, idea)}
+              onKeyDown={(event) => handleRowKeyDown(event, idea)}
+              role={readOnly ? undefined : 'button'}
+              tabIndex={readOnly ? undefined : 0}
+            >
               <button
                 type="button"
-                onClick={() => setExpandedId(expanded ? null : idea.id)}
+                onClick={() => {
+                  if (readOnly) setExpandedId(expanded ? null : idea.id);
+                  else onEdit?.(idea);
+                }}
                 className="w-full text-left font-medium text-white"
               >
                 {idea.title || 'Untitled idea'}
@@ -220,6 +242,13 @@ export default function IdeaVaultTable({
                 </button>
                 <button
                   type="button"
+                  onClick={() => onMoveToReview?.(idea.id)}
+                  className={`${btnGhostClass} min-h-10 flex-1 text-[11px] text-amber-200`}
+                >
+                  Move to Review
+                </button>
+                <button
+                  type="button"
                   onClick={() => onDelete?.(idea)}
                   className={`${btnGhostClass} min-h-10 flex-1 text-[11px] text-rose-300/80`}
                 >
@@ -262,9 +291,6 @@ export default function IdeaVaultTable({
                       )}
                     </div>
                   )}
-                  {idea.clientComment && (
-                    <p className="mt-2 text-xs text-white/50">Client note: {idea.clientComment}</p>
-                  )}
                 </div>
               )}
             </div>
@@ -291,7 +317,14 @@ export default function IdeaVaultTable({
             {sorted.map((idea) => {
               const clientColor = getClientColor(idea.client);
               return (
-                <tr key={idea.id} className={tableRowClass}>
+                <tr
+                  key={idea.id}
+                  className={`${tableRowClass} ${readOnly ? '' : 'cursor-pointer'}`}
+                  onClick={(event) => openIdeaFromRow(event, idea)}
+                  onKeyDown={(event) => handleRowKeyDown(event, idea)}
+                  role={readOnly ? undefined : 'button'}
+                  tabIndex={readOnly ? undefined : 0}
+                >
                   <td className={bankRowMetaClass}>
                     <p className="font-medium text-white">{idea.title || 'Untitled idea'}</p>
                     {hasStructuredScript(idea) && (
@@ -340,6 +373,13 @@ export default function IdeaVaultTable({
                         className={`${btnGhostClass} text-[10px] uppercase tracking-wider`}
                       >
                         Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onMoveToReview?.(idea.id)}
+                        className={`${btnGhostClass} text-[10px] uppercase tracking-wider text-amber-200`}
+                      >
+                        Move to Review
                       </button>
                       <button
                         type="button"
