@@ -5,7 +5,17 @@ import ClientNameInput from './ClientNameInput';
 import DateInput from './DateInput';
 import { btnPrimaryClass, btnSecondaryClass, inputClass } from './clientPortal/clientPortalUi';
 
-export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) {
+const START_STAGE_OPTIONS = [
+  { id: 'shoot', title: 'To Create' },
+  { id: 'editing', title: 'Editing' },
+];
+
+export default function AddEditorTaskModal({
+  onClose,
+  onAdd,
+  defaultAssignee,
+  initialColumnId = 'editing',
+}) {
   const { clients, getMemberNamesForRole } = useClientsContext();
   const editors = getMemberNamesForRole('Editor');
   const [client, setClient] = useState(clients[0] || '');
@@ -13,6 +23,9 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [assignedTo, setAssignedTo] = useState(defaultAssignee || editors[0] || '');
+  const [columnId, setColumnId] = useState(
+    START_STAGE_OPTIONS.some((opt) => opt.id === initialColumnId) ? initialColumnId : 'editing',
+  );
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -42,6 +55,7 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
       description: description.trim(),
       dueDate,
       assignedTo,
+      columnId,
     });
     onClose();
   };
@@ -72,7 +86,8 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
               Add one-off project
             </h2>
             <p className="mt-1 text-sm text-gray-400">
-              Creates a card on the board in Editing — goes through review and approval like other content.
+              Creates a board card. Start in To Create for production planning, or Editing for
+              editor review.
             </p>
           </div>
 
@@ -108,6 +123,22 @@ export default function AddEditorTaskModal({ onClose, onAdd, defaultAssignee }) 
                 rows={3}
                 className={`${inputClass} resize-y`}
               />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-gray-400">Start in</span>
+              <select
+                value={columnId}
+                onChange={(e) => setColumnId(e.target.value)}
+                className={inputClass}
+                aria-label="Start pipeline stage"
+              >
+                {START_STAGE_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.title}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -23,9 +23,9 @@ export default function ToCreateIdeasTable({
   if (!ideas.length) {
     return (
       <div className={`${surfacePanelClass} px-4 py-16 text-center`}>
-        <p className="text-sm text-white/45">No approved ideas are scheduled for a shoot.</p>
+        <p className="text-sm text-white/45">No ideas are in To Create yet.</p>
         <p className="mt-2 text-xs text-white/35">
-          Schedule an idea from Approved to create its To Create card.
+          From Approved, use Add to To Create or Add to shoot to put a card here.
         </p>
       </div>
     );
@@ -51,11 +51,14 @@ export default function ToCreateIdeasTable({
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <div className="w-[6.75rem] shrink-0">
                   <p className="text-xs font-medium tabular-nums text-white/80">
-                    {formatDate(card.shootDate)}
+                    {card.shootDate ? formatDate(card.shootDate) : 'No shoot date'}
                   </p>
                   <p className="mt-0.5 text-[10px] tabular-nums text-white/35">
-                    {card.shootTime ? formatTime(card.shootTime) : 'Time not set'}
-                    {card.shootEndTime ? ` – ${formatTime(card.shootEndTime)}` : ''}
+                    {card.shootDate
+                      ? `${card.shootTime ? formatTime(card.shootTime) : 'Time not set'}${
+                          card.shootEndTime ? ` – ${formatTime(card.shootEndTime)}` : ''
+                        }`
+                      : 'Add a date on the card or via Add to shoot'}
                   </p>
                 </div>
                 <div className="min-w-0 flex-1">
@@ -75,13 +78,15 @@ export default function ToCreateIdeasTable({
               </div>
 
               <div className={vaultRowActionsClass}>
-                <button
-                  type="button"
-                  onClick={() => onOpenShoot?.(card)}
-                  className={taskActionBtnClass}
-                >
-                  Go to shoot
-                </button>
+                {card.shootDate ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpenShoot?.(card)}
+                    className={taskActionBtnClass}
+                  >
+                    Go to shoot
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => onReturnToApproved?.(card)}

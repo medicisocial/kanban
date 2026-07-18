@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import VideoIdeaModal from './VideoIdeaModal';
-import VideoIdeaQuickAdd from './VideoIdeaQuickAdd';
 import ClientSharePanel from './ClientSharePanel';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import AdminIdeasTable from './clientPortal/AdminIdeasTable';
 import IdeaVaultTable from './IdeaVaultTable';
 import ToCreateIdeasTable from './ToCreateIdeasTable';
 import ScheduleVaultIdeaModal from './ScheduleVaultIdeaModal';
+import AddEditorTaskModal from './AddEditorTaskModal';
 import { getToCreateIdeas, getVaultIdeas } from '../utils/videoIdeas';
 import { matchesClientFilter } from '../utils/clients';
 import {
@@ -17,6 +17,7 @@ import {
   statusPipelinePillProps,
   surfacePanelClass,
 } from './clientPortal/clientPortalUi';
+
 const IDEA_TABS = [
   { id: 'review', label: 'Review' },
   { id: 'approved', label: 'Approved' },
@@ -28,8 +29,8 @@ export default function VideoIdeas({
   cards,
   plans = {},
   clientFilter,
-  onAddIdea,
-  onAddIdeaToBank,
+  onAddCard,
+  onAddOneOffTask,
   onApprove,
   onDecline,
   onDeleteIdea,
@@ -47,6 +48,7 @@ export default function VideoIdeas({
   const [statusFilter, setStatusFilter] = useState('pending');
   const [ideaModal, setIdeaModal] = useState(null);
   const [scheduleIdea, setScheduleIdea] = useState(null);
+  const [showAddOneOff, setShowAddOneOff] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   const vaultIdeas = useMemo(
@@ -147,6 +149,29 @@ export default function VideoIdeas({
       ? `${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`
       : `${btnSecondaryClass} !px-4 !py-1.5 !text-xs !tracking-wider !border-transparent !text-white/45 hover:!text-white`;
 
+  const addActions = (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {onAddCard && (
+        <button
+          type="button"
+          onClick={() => onAddCard()}
+          className={`${btnPrimaryClass} py-1.5 text-[10px]`}
+        >
+          + Add card
+        </button>
+      )}
+      {onAddOneOffTask && (
+        <button
+          type="button"
+          onClick={() => setShowAddOneOff(true)}
+          className={`${btnSecondaryClass} py-1.5 text-[10px]`}
+        >
+          + Add one-off project
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <section>
       <ClientPortalSectionHeader
@@ -185,34 +210,27 @@ export default function VideoIdeas({
         )}
       </ClientPortalSectionHeader>
 
-      <div className={`${glassSegmentClass} mb-5 flex w-fit gap-0.5 p-0.5`}>
-        {IDEA_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={tabClass(tab.id)}
-          >
-            {tab.label}
-            {tab.id === 'approved' && vaultIdeas.length > 0 ? ` (${vaultIdeas.length})` : ''}
-            {tab.id === 'to-create' && toCreateIdeas.length > 0 ? ` (${toCreateIdeas.length})` : ''}
-          </button>
-        ))}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className={`${glassSegmentClass} flex w-fit gap-0.5 p-0.5`}>
+          {IDEA_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={tabClass(tab.id)}
+            >
+              {tab.label}
+              {tab.id === 'approved' && vaultIdeas.length > 0 ? ` (${vaultIdeas.length})` : ''}
+              {tab.id === 'to-create' && toCreateIdeas.length > 0 ? ` (${toCreateIdeas.length})` : ''}
+            </button>
+          ))}
+        </div>
+        {addActions}
       </div>
 
       {activeTab === 'review' ? (
         <>
           <ClientSharePanel ideas={ideas} clientFilter={clientFilter} />
-
-          <VideoIdeaQuickAdd
-            clientFilter={clientFilter}
-            onAdd={onAddIdea}
-            onAddToBank={onAddIdeaToBank}
-            onAdded={() => {
-              setActiveTab('review');
-              setStatusFilter('pending');
-            }}
-          />
 
           {isBulkDeleteView && filteredIdeas.length > 0 && selectedIds.size > 0 && (
             <div className={`${surfacePanelClass} mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3`}>
@@ -242,19 +260,12 @@ export default function VideoIdeas({
           />
         </>
       ) : activeTab === 'approved' ? (
-        <>
-          <VideoIdeaQuickAdd
-            clientFilter={clientFilter}
-            variant="bank"
-            onAddToBank={onAddIdeaToBank}
-          />
-          <IdeaVaultTable
-            ideas={vaultIdeas}
-            onEdit={setIdeaModal}
-            onSchedule={setScheduleIdea}
-            onMoveToReview={onMoveApprovedToReview}
-          />
-        </>
+        <IdeaVaultTable
+          ideas={vaultIdeas}
+          onEdit={setIdeaModal}
+          onSchedule={setScheduleIdea}
+          onMoveToReview={onMoveApprovedToReview}
+        />
       ) : (
         <ToCreateIdeasTable
           ideas={toCreateIdeas}
@@ -296,6 +307,13 @@ export default function VideoIdeas({
         />
       )}
 
+      {showAddOneOff && onAddOneOffTask && (
+        <AddEditorTaskModal
+          onClose={() => setShowAddOneOff(false)}
+          onAdd={onAddOneOffTask}
+          initialColumnId="shoot"
+        />
+      )}
     </section>
   );
 }

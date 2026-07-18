@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { getContentTypeStyle } from '../constants';
 import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
@@ -9,12 +9,14 @@ import { useStaffWorkspaceScope } from '../hooks/useStaffWorkspaceScope';
 import { btnPrimaryClass, btnSecondaryClass, taskActionBtnClass } from './clientPortal/clientPortalUi';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
 import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
+import AddEditorTaskModal from './AddEditorTaskModal';
 
 export default function ContentCreatorTodo({
   cards,
   ideas = [],
   clientFilter,
   onAddCard,
+  onAddOneOffTask,
   onOpenCard,
   onOpenShoot,
   onHandoff,
@@ -23,6 +25,7 @@ export default function ContentCreatorTodo({
 }) {
   const { getClientColor } = useClientsContext();
   const { staffName, personalTaskScope } = useStaffWorkspaceScope();
+  const [showAddOneOff, setShowAddOneOff] = useState(false);
 
   const tasks = useMemo(
     () =>
@@ -45,6 +48,15 @@ export default function ContentCreatorTodo({
             + Add card
           </button>
         )}
+        {onAddOneOffTask && (
+          <button
+            type="button"
+            onClick={() => setShowAddOneOff(true)}
+            className={`${btnSecondaryClass} py-1.5 text-[10px]`}
+          >
+            + Add one-off project
+          </button>
+        )}
       </div>
 
       {personalTaskScope && staffName && (
@@ -60,6 +72,15 @@ export default function ContentCreatorTodo({
             {onAddCard && (
               <button type="button" onClick={() => onAddCard()} className={btnPrimaryClass}>
                 + Add card
+              </button>
+            )}
+            {onAddOneOffTask && (
+              <button
+                type="button"
+                onClick={() => setShowAddOneOff(true)}
+                className={btnSecondaryClass}
+              >
+                + Add one-off project
               </button>
             )}
             <button type="button" onClick={() => onNavigate?.('ideas')} className={btnSecondaryClass}>
@@ -131,6 +152,14 @@ export default function ContentCreatorTodo({
             </TeamTaskCard>
           );
         })
+      )}
+
+      {showAddOneOff && onAddOneOffTask && (
+        <AddEditorTaskModal
+          onClose={() => setShowAddOneOff(false)}
+          onAdd={onAddOneOffTask}
+          initialColumnId="shoot"
+        />
       )}
     </div>
   );

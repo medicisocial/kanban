@@ -1199,8 +1199,18 @@ export default function AppShell({ onSignOut }) {
           cards={cards}
           plans={plans}
           clientFilter={clientFilter}
-          onAddIdea={addIdea}
-          onAddIdeaToBank={addIdeaToBank}
+          onAddCard={() => {
+            const resolvedClient = clientFilter !== 'all' ? clientFilter : undefined;
+            const newCard = addCard('shoot', { client: resolvedClient });
+            if (newCard) setSelectedCard(newCard);
+          }}
+          onAddOneOffTask={(data) => {
+            const newCard = addOneOffProject({
+              ...data,
+              columnId: data.columnId || 'shoot',
+            });
+            if (newCard) setSelectedCard(newCard);
+          }}
           onApprove={handleApproveIdea}
           onDecline={handleDeclineIdea}
           onDeleteIdea={deleteIdea}
@@ -1225,6 +1235,7 @@ export default function AppShell({ onSignOut }) {
               dueDate: data.dueDate || '',
               assignedTo: data.assignedTo,
               editorPoints: data.editorPoints,
+              columnId: data.columnId || 'editing',
               sourceIdeaId: idea.id,
               referenceVideo: idea.referenceVideo || '',
               referenceMusic: idea.referenceMusic || '',

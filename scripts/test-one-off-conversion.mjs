@@ -40,8 +40,8 @@ const converted = buildOneOffConversionUpdates(shootCard, {
 
 assert(converted.contentType === 'One-off Project', 'conversion sets One-off Project type');
 assert(converted.isOneOffProject === true, 'conversion sets isOneOffProject');
-assert(converted.columnId === 'editing', 'To Create card moves into Editing');
-assert(converted.status === 'Editing', 'To Create card status becomes Editing');
+assert(converted.columnId === 'editing', 'To Create card moves into Editing by default');
+assert(converted.status === 'Editing', 'To Create card status becomes Editing by default');
 assert(converted.editorPoints === 0.5, 'conversion persists half editor point');
 assert(converted.dueDate === '2026-06-20', 'conversion keeps modal due date');
 assert(converted.dueTime === '14:30', 'conversion preserves existing post dueTime');
@@ -49,6 +49,23 @@ assert(converted.shootDate === '2026-06-20', 'conversion aligns shootDate with d
 assert(converted.shootTime === '14:30', 'conversion aligns shootTime with dueTime');
 assert(converted.shootModels === '', 'conversion clears shoot roster fields');
 assert(converted.shootEndTime === '', 'conversion clears shoot end time');
+
+const stayInToCreate = buildOneOffConversionUpdates(
+  { ...shootCard, dueDate: '', dueTime: '' },
+  {
+    client: 'Plume',
+    title: 'Fairplay song release',
+    notes: 'Keep planning',
+    columnId: 'shoot',
+    editorPoints: 1,
+  },
+);
+assert(stayInToCreate.columnId === 'shoot', 'explicit To Create choice keeps shoot column');
+assert(stayInToCreate.status === 'To Create', 'explicit To Create choice keeps To Create status');
+assert(
+  stayInToCreate.shootDate === '2026-06-12',
+  'staying in To Create without due date keeps existing shoot date',
+);
 
 const alreadyEditing = buildOneOffConversionUpdates(
   { ...shootCard, columnId: 'editing', status: 'Editing' },

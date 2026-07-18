@@ -18,10 +18,7 @@ function findIdeaBoardCard(idea, cards = []) {
 
 function isIdeaInVault(idea, cards = []) {
   if (!idea || idea.status !== 'approved') return false;
-  const card = findIdeaBoardCard(idea, cards);
-  if (!card) return true;
-  if (card.columnId !== 'shoot') return false;
-  return !String(card.shootDate || '').trim();
+  return !findIdeaBoardCard(idea, cards);
 }
 
 function isIdeaScheduled(idea, cards = []) {
@@ -32,7 +29,7 @@ function isIdeaScheduled(idea, cards = []) {
 function isIdeaToCreate(idea, cards = []) {
   if (!idea || idea.status !== 'approved') return false;
   const card = findIdeaBoardCard(idea, cards);
-  return Boolean(card && card.columnId === 'shoot' && String(card.shootDate || '').trim());
+  return Boolean(card && card.columnId === 'shoot');
 }
 
 function sortIdeasByShootSchedule(ideas, cards = []) {
@@ -83,8 +80,12 @@ const unscheduledCard = {
   shootDate: '',
 };
 assert(
-  isIdeaInVault({ ...idea, boardCardId: 'card-1' }, [unscheduledCard]),
-  'legacy board card in To Create without shoot date counts as vault',
+  !isIdeaInVault({ ...idea, boardCardId: 'card-1' }, [unscheduledCard]),
+  'To Create board card leaves Approved even without a shoot date',
+);
+assert(
+  isIdeaToCreate({ ...idea, boardCardId: 'card-1' }, [unscheduledCard]),
+  'undated To Create board card appears on the Vault To Create tab',
 );
 
 const scheduledCard = {
@@ -251,8 +252,40 @@ assert(
   'Approved tab no longer inline-edits reference or content type on the row',
 );
 const approvedSource = readFileSync(new URL('../src/components/IdeaVaultTable.jsx', import.meta.url), 'utf8');
-assert(approvedSource.includes('Add to shoot'), 'Approved rows keep Add to shoot primary action');
+assert(approvedSource.includes('Add to shoot'), 'Approved rows keep Add to shoot action');
 assert(approvedSource.includes('Move to Review'), 'Approved rows can return ideas to Review');
+assert(
+  !approvedSource.includes('Add to To Create'),
+  'Approved rows do not use Add to To Create row action',
+);
+assert(
+  videoIdeasSource.includes('+ Add card') && videoIdeasSource.includes('+ Add one-off project'),
+  'Vault tabs expose Add card and Add one-off like Editors',
+);
+assert(
+  !videoIdeasSource.includes('VideoIdeaQuickAdd'),
+  'Vault no longer shows Review/Approved quick-add idea UI',
+);
+assert(
+  videoIdeasSource.includes('AddEditorTaskModal') && videoIdeasSource.includes('onAddOneOffTask'),
+  'Vault wires Add one-off project modal',
+);
+const makeOneOffModalSource = readFileSync(
+  new URL('../src/components/MakeOneOffModal.jsx', import.meta.url),
+  'utf8',
+);
+assert(
+  makeOneOffModalSource.includes("id: 'shoot'") && makeOneOffModalSource.includes('Start in'),
+  'Make one-off modal lets users start in To Create',
+);
+const addEditorModalSource = readFileSync(
+  new URL('../src/components/AddEditorTaskModal.jsx', import.meta.url),
+  'utf8',
+);
+assert(
+  addEditorModalSource.includes("id: 'shoot'") && addEditorModalSource.includes('Start in'),
+  'Add one-off modal lets users start in To Create',
+);
 assert(approvedSource.includes('taskActionBtnClass'), 'Approved actions use compact team-card button styling');
 assert(approvedSource.includes('TeamTaskCard'), 'Approved rows use team-task separated cards');
 assert(
@@ -442,8 +475,8 @@ assert(
   'Make one-off points copy is editor-pay only',
 );
 assert(
-  makeOneOffSource.includes('Team Tasks → Editors'),
-  'Make one-off modal tells users where converted cards appear',
+  makeOneOffSource.includes('Team Tasks → Editors') || makeOneOffSource.includes('Start in'),
+  'Make one-off modal explains Editing vs To Create placement',
 );
 const cardModalSource = readFileSync(new URL('../src/components/CardModal.jsx', import.meta.url), 'utf8');
 assert(cardModalSource.includes('Make one-off project'), 'card editor exposes Make one-off project');
@@ -491,11 +524,6 @@ const kanbanCardSource = readFileSync(
   'utf8',
 );
 assert(kanbanCardSource.includes('ReferenceMusicLink'), 'board cards show clickable music links');
-const quickAddSource = readFileSync(
-  new URL('../src/components/VideoIdeaQuickAdd.jsx', import.meta.url),
-  'utf8',
-);
-assert(quickAddSource.includes('ReferenceVideoLink'), 'quick add shows clickable reference video links');
 const videoIdeasUiSource = readFileSync(
   new URL('../src/components/VideoIdeas.jsx', import.meta.url),
   'utf8',
@@ -507,6 +535,10 @@ assert(
 assert(
   videoIdeasUiSource.includes('onCreateOneOffFromIdea'),
   'Vault wires create one-off from idea',
+);
+assert(
+  videoIdeasUiSource.includes('onAddCard') && videoIdeasUiSource.includes('onAddOneOffTask'),
+  'Vault accepts Add card and Add one-off handlers',
 );
 const navSource = readFileSync(
   new URL('../src/components/clientPortal/AdminConsoleLayout.jsx', import.meta.url),
@@ -522,6 +554,14 @@ assert(
 assert(
   shellSource.includes('onCreateOneOffFromIdea') && shellSource.includes('addOneOffProject'),
   'AppShell creates one-off board cards from vault ideas',
+);
+assert(
+  shellSource.includes('onAddCard={() =>') && shellSource.includes("addCard('shoot'"),
+  'AppShell wires Vault Add card into To Create',
+);
+assert(
+  shellSource.includes('onAddOneOffTask={(data)') || shellSource.includes('onAddOneOffTask={'),
+  'AppShell wires Vault Add one-off project',
 );
 assert(
   shellSource.includes("handleNavigate('shoot'"),
