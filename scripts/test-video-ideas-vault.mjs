@@ -371,10 +371,31 @@ const ideaModalSource = readFileSync(
 assert(!ideaModalSource.includes('Client Comment'), 'idea editor hides client comments');
 assert(ideaModalSource.includes('onDelete'), 'idea editor accepts Delete handler');
 assert(ideaModalSource.includes('>Delete<') || ideaModalSource.includes('Delete\n'), 'idea editor exposes Delete for existing ideas');
+assert(ideaModalSource.includes('Task Title'), 'idea editor Details use Task Title like calendar cards');
+assert(ideaModalSource.includes('>Notes<') || ideaModalSource.includes('Notes</span>'), 'idea editor shows Notes on Details');
+assert(!ideaModalSource.includes('Notes for Client'), 'idea editor no longer uses Notes for Client label');
+assert(!ideaModalSource.includes('Idea Title'), 'idea editor no longer uses Idea Title label');
+assert(
+  ideaModalSource.includes('["references", "References"]') || ideaModalSource.includes("['references', 'References']"),
+  'idea editor has a References tab',
+);
+assert(
+  ideaModalSource.includes('activeTab === "references"') || ideaModalSource.includes("activeTab === 'references'"),
+  'idea editor renders References tab content',
+);
 assert(
   ideaModalSource.includes('<ReferenceVideoLink') && ideaModalSource.includes('<ReferenceMusicLink'),
   'idea editor exposes clickable reference video and music links',
 );
+{
+  const detailsIdx = ideaModalSource.indexOf('activeTab === "details"');
+  const refsIdx = ideaModalSource.indexOf('activeTab === "references"');
+  const refVideoInDetails =
+    detailsIdx > 0 &&
+    refsIdx > detailsIdx &&
+    ideaModalSource.slice(detailsIdx, refsIdx).includes('Reference Video');
+  assert(!refVideoInDetails, 'idea editor keeps reference video off Details');
+}
 assert(ideaModalSource.includes('MakeOneOffModal'), 'idea editor can open Make one-off modal');
 const makeOneOffSource = readFileSync(
   new URL('../src/components/MakeOneOffModal.jsx', import.meta.url),
@@ -400,6 +421,10 @@ assert(
 assert(
   cardModalSource.includes('isOneOff || displayCard.contentType === \'Reel\''),
   'card editor shows editor points for one-offs and reels',
+);
+assert(
+  cardModalSource.includes("['editing', 'in-review', 'not-approved', 'approved', 'scheduled']"),
+  'card editor gates Video File Link to post-To Create stages',
 );
 const shootItemSource = readFileSync(
   new URL('../src/components/ShootDayItem.jsx', import.meta.url),
