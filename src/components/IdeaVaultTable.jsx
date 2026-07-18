@@ -7,8 +7,6 @@ import DebouncedField from './DebouncedField';
 import PostSlidesPanel from './PostSlidesPanel';
 import { getStructuredScript, hasStructuredScript } from '../utils/scriptFields';
 import {
-  btnPrimaryClass,
-  btnSecondaryClass,
   inputClass,
   mobileActionRowClass,
   mobileCardClass,
@@ -18,13 +16,14 @@ import {
   tableCellClass,
   tableHeaderClass,
   tableRowClass,
+  taskActionBtnClass,
 } from './clientPortal/clientPortalUi';
 
 const referenceInputClass = `${inputClass} !py-1.5 !text-xs min-w-[140px]`;
 const typeSelectClass = `${selectClass} w-full min-w-[96px] !py-1.5 !text-xs uppercase tracking-wider`;
 const bankRowControlClass = `${tableCellClass} align-middle`;
-const actionBtnClass = 'shrink-0 whitespace-nowrap px-2.5 py-1.5 text-[10px]';
-const mobileActionBtnClass = 'min-h-10 flex-1 px-3 py-2 text-[11px]';
+const actionBtnClass = `${taskActionBtnClass} shrink-0 whitespace-nowrap`;
+const mobileActionBtnClass = `${taskActionBtnClass} min-h-10 flex-1`;
 
 const BANK_TYPE_OPTIONS = [
   { value: 'Reel', label: 'Reel' },
@@ -233,14 +232,14 @@ export default function IdeaVaultTable({
                 <button
                   type="button"
                   onClick={() => onSchedule?.(idea)}
-                  className={`${btnPrimaryClass} ${mobileActionBtnClass}`}
+                  className={mobileActionBtnClass}
                 >
                   Add to shoot
                 </button>
                 <button
                   type="button"
                   onClick={() => onMoveToReview?.(idea.id)}
-                  className={`${btnSecondaryClass} ${mobileActionBtnClass} text-amber-200`}
+                  className={mobileActionBtnClass}
                 >
                   Move to Review
                 </button>
@@ -248,7 +247,7 @@ export default function IdeaVaultTable({
                   <button
                     type="button"
                     onClick={() => onMakeOneOff(idea)}
-                    className={`${btnSecondaryClass} ${mobileActionBtnClass} text-violet-200`}
+                    className={mobileActionBtnClass}
                   >
                     Make one-off
                   </button>
@@ -363,18 +362,18 @@ export default function IdeaVaultTable({
                   )}
                   {!readOnly && (
                   <td className={bankRowControlClass}>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-col items-stretch gap-1.5">
                       <button
                         type="button"
                         onClick={() => onSchedule?.(idea)}
-                        className={`${btnPrimaryClass} ${actionBtnClass}`}
+                        className={actionBtnClass}
                       >
                         Add to shoot
                       </button>
                       <button
                         type="button"
                         onClick={() => onMoveToReview?.(idea.id)}
-                        className={`${btnSecondaryClass} ${actionBtnClass} text-amber-200`}
+                        className={actionBtnClass}
                       >
                         Move to Review
                       </button>
@@ -382,7 +381,7 @@ export default function IdeaVaultTable({
                         <button
                           type="button"
                           onClick={() => onMakeOneOff(idea)}
-                          className={`${btnSecondaryClass} ${actionBtnClass} text-violet-200`}
+                          className={actionBtnClass}
                         >
                           Make one-off
                         </button>

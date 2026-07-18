@@ -6,7 +6,7 @@ import { formatDate, formatTime } from '../utils';
 import { buildContentCreatorTasks } from '../utils/contentCreatorTodo';
 import { canReturnCardToVault } from '../utils/videoIdeas';
 import { useStaffWorkspaceScope } from '../hooks/useStaffWorkspaceScope';
-import { btnPrimaryClass, btnSecondaryClass } from './clientPortal/clientPortalUi';
+import { btnPrimaryClass, btnSecondaryClass, taskActionBtnClass } from './clientPortal/clientPortalUi';
 import { CardLinks } from './clientPortal/ReferenceVideoLink';
 import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
 
@@ -103,7 +103,7 @@ export default function ContentCreatorTodo({
                     <button
                       type="button"
                       onClick={() => onOpenShoot(task.card)}
-                      className={`${btnPrimaryClass} !px-3 !py-1.5 !text-xs !tracking-wider`}
+                      className={taskActionBtnClass}
                     >
                       Go to shoot
                     </button>
@@ -112,7 +112,7 @@ export default function ContentCreatorTodo({
                     <button
                       type="button"
                       onClick={() => onReturnToVault(task.card)}
-                      className={`${btnSecondaryClass} !px-3 !py-1.5 !text-xs !tracking-wider text-violet-200`}
+                      className={taskActionBtnClass}
                     >
                       Move back to Approved
                     </button>
@@ -121,7 +121,7 @@ export default function ContentCreatorTodo({
                     <button
                       type="button"
                       onClick={() => onHandoff(task.card)}
-                      className={`${btnSecondaryClass} !px-3 !py-1.5 !text-xs !tracking-wider`}
+                      className={taskActionBtnClass}
                     >
                       Hand off
                     </button>

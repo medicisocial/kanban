@@ -20,11 +20,9 @@ import {
   btnSecondaryClass,
   glassSegmentClass,
   selectClass,
+  taskActionBtnClass,
 } from './clientPortal/clientPortalUi';
 import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
-
-const taskActionBtnClass =
-  'inline-flex items-center justify-center rounded-sm bg-white px-3 py-1.5 text-[10px] font-medium normal-case tracking-normal text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40';
 
 const kindStyles = {
   edit: 'border-amber-500/30 bg-amber-500/10 text-amber-200',

@@ -209,23 +209,18 @@ assert(!toCreateSource.includes('Edit idea'), 'To Create removes duplicate idea 
 assert(!toCreateSource.includes('Open card'), 'To Create opens cards from the full row instead');
 assert(toCreateSource.includes('openCardFromRow(event, card)'), 'To Create rows open linked cards');
 assert(
-  toCreateSource.includes('btnSecondaryClass'),
-  'To Create secondary action uses bordered secondary styling',
+  toCreateSource.includes('taskActionBtnClass'),
+  'To Create actions use compact team-card button styling',
 );
 const approvedSource = readFileSync(new URL('../src/components/IdeaVaultTable.jsx', import.meta.url), 'utf8');
 assert(approvedSource.includes('Add to shoot'), 'Approved rows keep Add to shoot primary action');
 assert(approvedSource.includes('Move to Review'), 'Approved rows can return ideas to Review');
-assert(approvedSource.includes('btnSecondaryClass'), 'Approved secondary action uses bordered styling');
+assert(approvedSource.includes('taskActionBtnClass'), 'Approved actions use compact team-card button styling');
 assert(approvedSource.includes('openIdeaFromRow(event, idea)'), 'Approved rows open idea editor');
 assert(approvedSource.includes('align-middle'), 'Approved title cell is vertically centered');
 assert(
-  approvedSource.includes('flex items-center gap-1.5') &&
-    !approvedSource.includes('flex flex-wrap items-center gap-1.5'),
-  'Approved actions stay side by side without wrapping',
-);
-assert(
-  approvedSource.includes('whitespace-nowrap') && approvedSource.includes('align-middle'),
-  'Approved action buttons stay on one line and vertically centered',
+  approvedSource.includes('flex flex-col items-stretch gap-1.5'),
+  'Approved actions stack like editor task card actions',
 );
 assert(approvedSource.includes('onMakeOneOff'), 'Approved rows can make a one-off from an idea');
 assert(approvedSource.includes('Make one-off'), 'Approved rows expose Make one-off action');
@@ -237,7 +232,7 @@ const reviewSource = readFileSync(
   'utf8',
 );
 assert(reviewSource.includes('openIdeaFromRow(event, idea)'), 'Review rows open idea editor');
-assert(reviewSource.includes('btnSecondaryClass'), 'Review Delete uses bordered secondary styling');
+assert(reviewSource.includes('taskActionBtnClass'), 'Review actions use compact team-card button styling');
 assert(reviewSource.includes('ReferenceMusicLink'), 'Review rows show clickable music links');
 assert(reviewSource.includes('onMakeOneOff'), 'Review rows can make a one-off from an idea');
 assert(!/>\s*Edit\s*</.test(reviewSource), 'Review rows do not show a standalone Edit action');
