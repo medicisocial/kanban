@@ -16,6 +16,10 @@ export const btnSecondaryClass =
 export const btnGhostClass =
   'inline-flex items-center justify-center rounded-sm border border-transparent px-3 py-2 text-[11px] font-medium uppercase tracking-[0.18em] text-white/55 transition-all duration-300 hover:bg-white/[0.04] hover:text-white/90';
 
+/** Compact white action buttons used on team task cards and Vault row actions. */
+export const taskActionBtnClass =
+  'inline-flex items-center justify-center rounded-sm bg-white px-3 py-1.5 text-[10px] font-medium normal-case tracking-normal text-black transition-opacity duration-300 hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-40';
+
 export const selectClass =
   'select-dark appearance-none rounded-sm border border-white/10 bg-white/[0.04] px-3 py-2.5 pr-8 text-xs text-white/90 outline-none transition-[border-color,background-color] duration-300 hover:border-white/20 focus:border-white/30 focus:bg-white/[0.06]';
 

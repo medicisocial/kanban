@@ -5,9 +5,8 @@ import { findIdeaBoardCard, sortIdeasByShootSchedule } from '../utils/videoIdeas
 import { contentTypeLabelProps } from '../utils/contentTypeColors';
 import ClientAvatar from './ClientAvatar';
 import {
-  btnPrimaryClass,
-  btnSecondaryClass,
   surfacePanelClass,
+  taskActionBtnClass,
 } from './clientPortal/clientPortalUi';
 
 export default function ToCreateIdeasTable({
@@ -88,18 +87,18 @@ export default function ToCreateIdeasTable({
               </div>
             </div>
 
-            <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
+            <div className="flex shrink-0 flex-col gap-1.5 sm:items-stretch">
               <button
                 type="button"
                 onClick={() => onOpenShoot?.(card)}
-                className={`${btnPrimaryClass} px-2.5 py-1.5 text-[10px]`}
+                className={taskActionBtnClass}
               >
                 Go to shoot
               </button>
               <button
                 type="button"
                 onClick={() => onReturnToApproved?.(card)}
-                className={`${btnSecondaryClass} px-2.5 py-1.5 text-[10px] text-violet-200`}
+                className={taskActionBtnClass}
               >
                 Move back to Approved
               </button>

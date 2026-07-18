@@ -4,8 +4,6 @@ import { IDEA_STATUSES } from '../../constants';
 import ClientAvatar from '../ClientAvatar';
 import ReferenceVideoLink, { ReferenceMusicLink } from './ReferenceVideoLink';
 import {
-  btnPrimaryClass,
-  btnSecondaryClass,
   formatPortalDate,
   mobileActionRowClass,
   mobileCardClass,
@@ -17,6 +15,7 @@ import {
   tableCellClass,
   tableHeaderClass,
   tableRowClass,
+  taskActionBtnClass,
 } from './clientPortalUi';
 
 function SortHeader({ label, sortKey, sort, onSort }) {
@@ -204,7 +203,7 @@ export default function AdminIdeasTable({
                     <button
                       type="button"
                       onClick={() => onApprove(idea.id, idea.clientComment || '')}
-                      className={`${btnPrimaryClass} min-h-10 flex-1 px-3 py-2 text-[11px]`}
+                      className={`${taskActionBtnClass} min-h-10 flex-1`}
                     >
                       Approve
                     </button>
@@ -213,7 +212,7 @@ export default function AdminIdeasTable({
                     <button
                       type="button"
                       onClick={() => onMakeOneOff(idea)}
-                      className={`${btnSecondaryClass} min-h-10 flex-1 px-3 py-2 text-[11px] text-violet-200`}
+                      className={`${taskActionBtnClass} min-h-10 flex-1`}
                     >
                       Make one-off
                     </button>
@@ -221,7 +220,7 @@ export default function AdminIdeasTable({
                   <button
                     type="button"
                     onClick={() => onDelete(idea.id)}
-                    className={`${btnSecondaryClass} min-h-10 flex-1 px-3 py-2 text-[11px] text-rose-300/80`}
+                    className={`${taskActionBtnClass} min-h-10 flex-1`}
                   >
                     Delete
                   </button>
@@ -319,12 +318,12 @@ export default function AdminIdeasTable({
                         {formatPortalDate(idea.createdAt)}
                       </td>
                       <td className={tableCellClass}>
-                        <div className="flex flex-wrap items-center gap-1.5">
+                        <div className="flex flex-col items-stretch gap-1.5">
                           {isPending && onApprove && (
                             <button
                               type="button"
                               onClick={() => onApprove(idea.id, idea.clientComment || '')}
-                              className={`${btnPrimaryClass} px-2.5 py-1.5 text-[10px]`}
+                              className={taskActionBtnClass}
                             >
                               Approve
                             </button>
@@ -333,7 +332,7 @@ export default function AdminIdeasTable({
                             <button
                               type="button"
                               onClick={() => onMakeOneOff(idea)}
-                              className={`${btnSecondaryClass} px-2.5 py-1.5 text-[10px] text-violet-200`}
+                              className={taskActionBtnClass}
                             >
                               Make one-off
                             </button>
@@ -341,7 +340,7 @@ export default function AdminIdeasTable({
                           <button
                             type="button"
                             onClick={() => onDelete(idea.id)}
-                            className={`${btnSecondaryClass} px-2.5 py-1.5 text-[10px] text-rose-300/80 hover:text-rose-200`}
+                            className={taskActionBtnClass}
                           >
                             Delete
                           </button>
