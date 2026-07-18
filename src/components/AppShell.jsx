@@ -24,7 +24,6 @@ import { getCalendarPortalClient } from "../utils/calendarShare";
 import { withStoryOccurrence, parseStoryOccurrenceNotes } from "../utils/calendar";
 import { createCard, COLUMNS } from "../constants";
 import { buildSendBackForEditingUpdates } from "../utils/editorTodo";
-import { buildOneOffConversionUpdates } from "../utils/oneOffConversion";
 import { useFinances } from "../hooks/useFinances";
 import { useAdminTasks } from "../hooks/useAdminTasks";
 import { useEvents } from "../hooks/useEvents";
@@ -1231,10 +1230,6 @@ export default function AppShell({ onSignOut }) {
               referenceMusic: idea.referenceMusic || '',
             });
             if (newCard) setSelectedCard(newCard);
-          }}
-          onConvertCardToOneOff={(card, data) => {
-            if (!card?.id) return;
-            updateCard(card.id, buildOneOffConversionUpdates(card, data), { immediateSync: true });
           }}
         />
       )}
