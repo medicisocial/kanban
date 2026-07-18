@@ -222,8 +222,8 @@ assert(
 );
 assert(toCreateSource.includes('ClientAvatar'), 'To Create rows show client logo');
 assert(
-  toCreateSource.includes("statusPipelinePillProps('create')"),
-  'To Create rows use pipeline-style To create status pill',
+  !toCreateSource.includes("statusPipelinePillProps('create')"),
+  'To Create rows do not show a To create status pill',
 );
 assert(
   !toCreateSource.includes('border-amber-400/20'),
@@ -315,8 +315,12 @@ assert(
   'Review uses team-task style content type pills',
 );
 assert(
-  reviewSource.includes('statusPipelinePillProps'),
-  'Review status badge uses pipeline-style status pills',
+  reviewSource.includes('rounded-full border border-white/10 bg-white/[0.04]'),
+  'Review status badge uses Script ready soft pill style',
+);
+assert(
+  !reviewSource.includes('statusPipelinePillProps'),
+  'Review status badge no longer uses pipeline-style status pills',
 );
 assert(
   videoIdeasSource.includes('statusPipelinePillProps'),
