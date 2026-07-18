@@ -355,7 +355,11 @@ export function buildEditorCompletedCount(
 }
 
 export function getCardEditorPoints(card) {
-  if (card?.contentType !== 'Reel') return 0;
+  if (!card) return 0;
+  // One-off points count for editor pay only (not deliverables / AM).
+  if (card.contentType !== 'Reel' && !card.isOneOffProject && card.contentType !== 'One-off Project') {
+    return 0;
+  }
   return normalizeEditorPoints(card.editorPoints);
 }
 

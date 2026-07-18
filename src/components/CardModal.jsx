@@ -27,6 +27,7 @@ import { CalendarSheetNoteEditor } from './CalendarSheetNote';
 import { getCalendarClientNote, hasCalendarClientNote, isContentCalendarCard } from '../utils/calendarClientNote';
 import { buildCalendarNoteDeletePatch } from '../utils/calendarNote';
 import { canReturnCardToVault } from '../utils/videoIdeas';
+import { buildOneOffConversionUpdates } from '../utils/oneOffConversion';
 import { beginBatch, endBatch } from '../utils/undoHistory';
 import ScriptPanel from './ScriptPanel';
 import PostSlidesPanel from './PostSlidesPanel';
@@ -43,8 +44,6 @@ const CARD_TABS = [
 
 /** Text fields in the modal sync to cloud only when Done / close — not while typing. */
 const SAVE_ON_CLOSE = { deferCommit: true, commitOnBlur: true };
-
-const ONE_OFF_EDITOR_COLUMNS = new Set(['editing', 'in-review', 'approved', 'finished']);
 
 function CardModal({
   card,
@@ -272,31 +271,8 @@ function CardModal({
     );
   };
 
-  const applyOneOffConversion = ({ client, title, notes, dueDate, assignedTo }) => {
-    const updates = {
-      contentType: 'One-off Project',
-      isOneOffProject: true,
-      client,
-      title,
-      notes: notes || displayCard.notes || '',
-      dueDate: dueDate || displayCard.dueDate || '',
-      assignedTo: assignedTo || displayCard.assignedTo || '',
-      shootDate: '',
-      shootTime: '',
-      shootEndTime: '',
-      shootModels: '',
-      shootNeeds: '',
-      dueTime: '',
-      storyRecurrenceDays: [],
-      storyEndDate: '',
-      storyOccurrenceNotes: {},
-    };
-    if (!ONE_OFF_EDITOR_COLUMNS.has(displayCard.columnId)) {
-      // Bypass shoot→editing handoff modal; one-off conversion moves straight into Editing.
-      updates.columnId = 'editing';
-      updates.status = 'Editing';
-    }
-    queueUpdate(updates);
+  const applyOneOffConversion = (form) => {
+    queueUpdate(buildOneOffConversionUpdates(displayCard, form));
   };
 
   const handleChange = (field, value) => {
@@ -525,7 +501,7 @@ function CardModal({
             </button>
           )}
 
-          {!isOneOff && displayCard.contentType === 'Reel' && (
+          {(isOneOff || displayCard.contentType === 'Reel') && (
             <Field label="Editor points">
               <select
                 value={String(normalizeEditorPoints(displayCard.editorPoints))}
@@ -539,7 +515,9 @@ function CardModal({
                 ))}
               </select>
               <p className="mt-1.5 text-[10px] text-white/35">
-                1 point = regular reel · ½ point = short / quick edit. Used for payroll and client reel quotas.
+                {isOneOff
+                  ? 'For editor payroll only — not deliverable quotas or account manager pay.'
+                  : '1 point = regular reel · ½ point = short / quick edit. Used for payroll and client reel quotas.'}
               </p>
             </Field>
           )}
@@ -1145,6 +1123,7 @@ function CardModal({
           initialTitle={displayCard.title}
           initialNotes={displayCard.notes}
           initialDueDate={displayCard.dueDate}
+          initialEditorPoints={displayCard.editorPoints}
           defaultAssignee={displayCard.assignedTo}
           onClose={() => setShowMakeOneOff(false)}
           onConfirm={applyOneOffConversion}
