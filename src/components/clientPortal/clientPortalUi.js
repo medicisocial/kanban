@@ -13,16 +13,6 @@ export const btnPrimaryClass =
 export const btnSecondaryClass =
   'inline-flex items-center justify-center rounded-sm border border-white/20 bg-transparent px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.2em] text-white/75 transition-all duration-300 hover:border-white/35 hover:bg-white/[0.04] hover:text-white disabled:cursor-not-allowed disabled:opacity-40';
 
-/** Shell for Vault-style segment tab groups (Team queues, Vault filters). */
-export const segmentTabShellClass = `${glassSegmentClass} flex w-fit flex-wrap gap-1 p-1`;
-
-/** Active/inactive segment tab button — larger than default compact controls. */
-export function segmentTabClass(active) {
-  return active
-    ? `${btnPrimaryClass} !px-5 !py-2.5 !text-sm !tracking-wider`
-    : `${btnSecondaryClass} !border-transparent !px-5 !py-2.5 !text-sm !tracking-wider !text-white/45 hover:!text-white`;
-}
-
 export const btnGhostClass =
   'inline-flex items-center justify-center rounded-sm border border-transparent px-3 py-2 text-[11px] font-medium uppercase tracking-[0.18em] text-white/55 transition-all duration-300 hover:bg-white/[0.04] hover:text-white/90';
 

@@ -17,9 +17,9 @@ import NeedsEditsModal from './NeedsEditsModal';
 import TeamTaskCard, { TeamTaskClientLabel } from './TeamTaskCard';
 import {
   btnPrimaryClass,
+  btnSecondaryClass,
+  glassSegmentClass,
   selectClass,
-  segmentTabClass,
-  segmentTabShellClass,
 } from './clientPortal/clientPortalUi';
 import { PortalTaskSection } from './clientPortal/PortalOverviewPanels';
 
@@ -382,7 +382,7 @@ export default function EditorTodo({
         </label>
       </div>
 
-      <div className={`${segmentTabShellClass} mb-4`}>
+      <div className={`${glassSegmentClass} mb-4 flex w-fit flex-wrap gap-0.5 p-0.5`}>
         {[
           ['editing', 'Needs editing', editCount],
           ['review', 'In review', approveCount],
@@ -392,7 +392,11 @@ export default function EditorTodo({
             key={id}
             type="button"
             onClick={() => setActiveQueue(id)}
-            className={segmentTabClass(activeQueue === id)}
+            className={
+              activeQueue === id
+                ? `${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`
+                : `${btnSecondaryClass} !border-transparent !px-4 !py-1.5 !text-xs !tracking-wider !text-white/45 hover:!text-white`
+            }
           >
             {label} ({count})
           </button>

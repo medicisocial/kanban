@@ -188,11 +188,6 @@ const videoIdeasSource = readFileSync(new URL('../src/components/VideoIdeas.jsx'
 assert(videoIdeasSource.includes("{ id: 'approved', label: 'Approved' }"), 'staff Vault has Approved tab');
 assert(videoIdeasSource.includes("{ id: 'to-create', label: 'To Create' }"), 'staff Vault has To Create tab');
 assert(
-  videoIdeasSource.includes('segmentTabClass(activeTab === tab.id)'),
-  'Vault tabs use shared segment tab sizing',
-);
-assert(videoIdeasSource.includes('segmentTabShellClass'), 'Vault tabs use shared segment tab shell');
-assert(
   videoIdeasSource.includes("idea.status !== 'approved'"),
   'staff Review excludes approved lifecycle items',
 );
