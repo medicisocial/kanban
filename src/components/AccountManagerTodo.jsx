@@ -42,10 +42,10 @@ function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate, ani
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const clientColor = getClientColor(task.client);
   const pipelineStage = COLUMNS.find((col) => col.id === task.columnId)?.title;
-  const openCard = () => onOpenCard(task.card);
+  const openCard = () => onOpenCard?.(task.card);
 
   return (
-    <TeamTaskCard accentColor={clientColor} animationDelay={animationDelay}>
+    <TeamTaskCard accentColor={clientColor} animationDelay={animationDelay} onOpen={openCard}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="tesla-task-card-meta mb-2">
@@ -67,9 +67,7 @@ function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate, ani
             <TeamTaskClientLabel client={task.client} color={clientColor} />
           </div>
 
-          <button type="button" onClick={openCard} className="text-left hover:text-[#fca5a5]">
-            <h3 className="text-sm font-semibold text-white">{task.title}</h3>
-          </button>
+          <h3 className="text-sm font-semibold text-white">{task.title}</h3>
 
           <CardLinks card={task.card} compact />
 
@@ -87,12 +85,6 @@ function SetPostDateTaskCard({ task, getClientColor, onOpenCard, onPlanDate, ani
             {task.contentCreator && <span>Creator: {task.contentCreator}</span>}
             {task.accountManager && <span>AM: {task.accountManager}</span>}
           </div>
-        </div>
-
-        <div className="flex shrink-0 flex-col gap-1.5">
-          <button type="button" onClick={openCard} className={taskActionBtnClass}>
-            Edit
-          </button>
         </div>
       </div>
     </TeamTaskCard>
@@ -113,20 +105,16 @@ function InReviewTaskCard({
   const clientColor = getClientColor(task.client);
   const statusOptions = getEditorTaskStatusOptions(task.isOneOffProject);
 
-  const openCard = () => onOpenCard(task.card);
+  const openCard = () => onOpenCard?.(task.card);
 
   return (
-    <TeamTaskCard accentColor={clientColor} animationDelay={animationDelay}>
+    <TeamTaskCard accentColor={clientColor} animationDelay={animationDelay} onOpen={openCard}>
       <div className="flex flex-wrap items-start gap-3">
         <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] text-gray-400">
           →
         </span>
 
-        <button
-          type="button"
-          onClick={openCard}
-          className="min-w-0 flex-1 cursor-pointer rounded-lg text-left transition hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#810100]/50"
-        >
+        <div className="min-w-0 flex-1 text-left">
           <div className="tesla-task-card-meta mb-2">
             <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${inReviewKindStyle}`}>
               {task.label}
@@ -162,7 +150,7 @@ function InReviewTaskCard({
             {task.assignedTo && <span>Assigned to {task.assignedTo}</span>}
             <span>On board · {task.columnId.replace('-', ' ')}</span>
           </div>
-        </button>
+        </div>
 
         <div className="flex shrink-0 flex-col gap-1.5">
           <label className="block">
@@ -182,9 +170,6 @@ function InReviewTaskCard({
               ))}
             </select>
           </label>
-          <button type="button" onClick={openCard} className={taskActionBtnClass}>
-            Edit
-          </button>
           <button
             type="button"
             onClick={(e) => {
@@ -216,10 +201,10 @@ function ApprovedScheduleTaskCard({
 }) {
   const typeStyle = task.contentType ? getContentTypeStyle(task.contentType) : null;
   const clientColor = getClientColor(task.client);
-  const openCard = () => onOpenCard(task.card);
+  const openCard = () => onOpenCard?.(task.card);
 
   return (
-    <TeamTaskCard accentColor={clientColor} animationDelay={animationDelay}>
+    <TeamTaskCard accentColor={clientColor} animationDelay={animationDelay} onOpen={openCard}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="tesla-task-card-meta mb-2">
@@ -236,14 +221,12 @@ function ApprovedScheduleTaskCard({
             <TeamTaskClientLabel client={task.client} color={clientColor} />
           </div>
 
-          <button type="button" onClick={openCard} className="text-left hover:text-[#fca5a5]">
-            <div className="flex flex-wrap items-baseline gap-2">
-              <h3 className="text-sm font-semibold text-white">{task.title}</h3>
-              {task.dueDate && (
-                <TaskPostSchedule postDate={task.dueDate} dueTime={task.dueTime} />
-              )}
-            </div>
-          </button>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <h3 className="text-sm font-semibold text-white">{task.title}</h3>
+            {task.dueDate && (
+              <TaskPostSchedule postDate={task.dueDate} dueTime={task.dueTime} />
+            )}
+          </div>
 
           {task.notes && (
             <p className="mt-2 line-clamp-2 text-xs text-gray-400">{task.notes}</p>
@@ -259,9 +242,6 @@ function ApprovedScheduleTaskCard({
         </div>
 
         <div className="flex shrink-0 flex-col gap-1.5">
-          <button type="button" onClick={openCard} className={taskActionBtnClass}>
-            Edit
-          </button>
           <button type="button" onClick={() => onMarkScheduled(task.cardId)} className={taskActionBtnClass}>
             Scheduled
           </button>
@@ -277,10 +257,10 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted, animationDel
   const canMarkPosted = task.kind === 'publish' || task.kind === 'post-story';
   const clientColor = getClientColor(task.client);
 
-  const openCard = () => onOpenCard(task.card);
+  const openCard = () => onOpenCard?.(task.card);
 
   return (
-    <TeamTaskCard accentColor={clientColor} animationDelay={animationDelay}>
+    <TeamTaskCard accentColor={clientColor} animationDelay={animationDelay} onOpen={openCard}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="tesla-task-card-meta mb-2">
@@ -297,18 +277,12 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted, animationDel
             <TeamTaskClientLabel client={task.client} color={clientColor} />
           </div>
 
-          <button
-            type="button"
-            onClick={openCard}
-            className="text-left hover:text-[#fca5a5]"
-          >
-            <div className="flex flex-wrap items-baseline gap-2">
-              <h3 className="text-sm font-semibold text-white">{task.title}</h3>
-              {task.dueDate && (
-                <TaskPostSchedule postDate={task.dueDate} dueTime={task.dueTime} />
-              )}
-            </div>
-          </button>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <h3 className="text-sm font-semibold text-white">{task.title}</h3>
+            {task.dueDate && (
+              <TaskPostSchedule postDate={task.dueDate} dueTime={task.dueTime} />
+            )}
+          </div>
 
           {task.notes && (
             <p className="mt-2 line-clamp-2 text-xs text-gray-400">{task.notes}</p>
@@ -326,9 +300,6 @@ function TaskCard({ task, getClientColor, onOpenCard, onMarkPosted, animationDel
         </div>
 
         <div className="flex shrink-0 flex-col gap-1.5">
-          <button type="button" onClick={openCard} className={taskActionBtnClass}>
-            Edit
-          </button>
           {canMarkPosted && (
             <button
               type="button"
