@@ -6,22 +6,25 @@ import {
   normalizeCaptionMode,
   normalizePostSlides,
 } from '../src/utils/postSlides.js';
-import {
-  buildBankIdeaData,
-  buildIdeaReturnFromCard,
-  resolveShootScriptsFromIdea,
-} from '../src/utils/videoIdeas.js';
-import { hasStructuredScript } from '../src/utils/scriptFields.js';
-import {
-  applyShootSubmission,
-  buildShootShareUrl,
-  buildShootSubmission,
-  parseShootShareHash,
-} from '../src/utils/shootShare.js';
+import { createServer } from 'vite';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
+
+const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
+const {
+  buildBankIdeaData,
+  buildIdeaReturnFromCard,
+  resolveShootScriptsFromIdea,
+} = await vite.ssrLoadModule('/src/utils/videoIdeas.js');
+const { hasStructuredScript } = await vite.ssrLoadModule('/src/utils/scriptFields.js');
+const {
+  applyShootSubmission,
+  buildShootShareUrl,
+  buildShootSubmission,
+  parseShootShareHash,
+} = await vite.ssrLoadModule('/src/utils/shootShare.js');
 
 const carouselSlides = normalizePostSlides(
   [
@@ -162,4 +165,5 @@ const portalSource = readFileSync(
 );
 assert(portalSource.includes('hideSlidePostPlans'), 'client shoot portal hides internal slide plans');
 
+await vite.close();
 console.log('test-post-slides: ok');
