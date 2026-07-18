@@ -87,9 +87,9 @@ export default function CalendarWeekView({
                       onRemove={onRemoveFromCalendar}
                       onMove={onMoveCalendarPost}
                       onChangeStage={onChangeCardStage}
+                      compact
                       hideClient={hideClient}
                       clientPortal={clientPortal}
-                      relaxed
                     />
                   ))
                 )}

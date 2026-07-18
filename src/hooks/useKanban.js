@@ -16,6 +16,7 @@ import { normalizeCaptionMode, normalizePostSlides } from '../utils/postSlides';
 const getCardId = (card) => card.id;
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
 import { buildEditorCompletionStampUpdates } from '../utils/editorTodo';
+import { findCardsDueForAutoPost } from '../utils/scheduleTime';
 import {
   toDateKey,
   parseRecurrenceDays,
@@ -23,6 +24,8 @@ import {
   parseStoryPostedDates,
   shouldArchiveStoryAfterPost,
 } from '../utils/calendar';
+
+const AUTO_POST_INTERVAL_MS = 60_000;
 
 const LEGACY_COLUMN_MAP = {
   briefing: 'shoot',
@@ -222,6 +225,32 @@ export function useKanban() {
     }, 400);
     return () => clearTimeout(persistTimerRef.current);
   }, [cards, syncLoaded]);
+
+  const applyAutoPostedCards = useCallback(() => {
+    const due = findCardsDueForAutoPost(cardsRef.current);
+    if (!due.length) return;
+    const stampedAt = Date.now();
+    const updated = due
+      .filter((card) => !card.postedAt)
+      .map((card) => normalizeCard({ ...card, postedAt: stampedAt, updatedAt: stampedAt }));
+    if (!updated.length) return;
+    const byId = new Map(updated.map((card) => [card.id, card]));
+    setCards((prev) => prev.map((card) => byId.get(card.id) || card));
+    for (const card of updated) {
+      pushCardNow(card);
+    }
+  }, [pushCardNow]);
+
+  useEffect(() => {
+    if (!syncLoaded) return;
+    applyAutoPostedCards();
+  }, [syncLoaded, applyAutoPostedCards, cards]);
+
+  useEffect(() => {
+    if (!syncLoaded) return;
+    const timer = setInterval(applyAutoPostedCards, AUTO_POST_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [syncLoaded, applyAutoPostedCards]);
 
   const replaceCards = useCallback((next) => {
     setCards(next.map(normalizeCard));

@@ -35,6 +35,7 @@ function isEmptyBrandField(field, value) {
   if (
     field === 'clientColor' ||
     field === 'photoGalleryLink' ||
+    field === 'website' ||
     field === 'businessType' ||
     field === 'accountManager' ||
     field === 'videographer' ||
@@ -125,6 +126,7 @@ export function brandProfilePatchFromWorkspaceBrand(client, workspace = {}) {
     companyFiles: resolveClientMapValue(client, workspace.companyFiles) || [],
     specialMenus: resolveClientMapValue(client, workspace.specialMenus) || [],
     photoGalleryLink: resolveClientMapValue(client, workspace.photoGalleryLinks) || '',
+    website: resolveClientMapValue(client, workspace.websites) || '',
     businessType: resolveClientMapValue(client, workspace.businessTypes) || '',
     accountManager: resolveClientMapValue(client, workspace.accountManagers) || '',
     videographer: resolveClientMapValue(client, workspace.videographers) || '',
@@ -158,6 +160,7 @@ export function mergeClientRecordRowsIntoWorkspace(workspace = {}, rows = []) {
     applyRemoteBrandField(next, 'companyFiles', 'companyFiles', client, row.company_files);
     applyRemoteBrandField(next, 'specialMenus', 'specialMenus', client, row.special_menus);
     applyRemoteBrandField(next, 'photoGalleryLink', 'photoGalleryLinks', client, row.photo_gallery_link || '');
+    applyRemoteBrandField(next, 'website', 'websites', client, row.website || '');
     applyRemoteBrandField(next, 'businessType', 'businessTypes', client, row.business_type || '');
     applyRemoteBrandField(next, 'accountManager', 'accountManagers', client, row.account_manager || '');
     applyRemoteBrandField(next, 'videographer', 'videographers', client, row.videographer || '');

@@ -19,6 +19,7 @@ export const CLIENTS_BLOB_DEPRECATED_BRAND_KEYS = [
   'companyFiles',
   'specialMenus',
   'photoGalleryLinks',
+  'websites',
   'portalPasswordVault',
   'ideas',
   'notes',

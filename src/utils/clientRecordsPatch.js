@@ -14,6 +14,9 @@ export function patchToRecordColumns(patch = {}) {
   if (patch.photoGalleryLink !== undefined) {
     columns.photo_gallery_link = patch.photoGalleryLink || '';
   }
+  if (patch.website !== undefined) {
+    columns.website = patch.website || '';
+  }
   if (patch.businessType !== undefined) columns.business_type = patch.businessType || '';
   if (patch.accountManager !== undefined) columns.account_manager = patch.accountManager || '';
   if (patch.videographer !== undefined) columns.videographer = patch.videographer || '';

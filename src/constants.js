@@ -5,7 +5,7 @@ export const COLUMNS = [
   { id: 'not-approved', title: 'Not Approved' },
   { id: 'approved', title: 'Approved' },
   { id: 'scheduled', title: 'Scheduled' },
-  { id: 'finished', title: 'Finished' },
+  { id: 'finished', title: 'Posted' },
 ];
 
 /** Visual groupings for the pipeline board (column ids unchanged). */

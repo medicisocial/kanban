@@ -340,6 +340,12 @@ export default function AppShell({ onSignOut }) {
       setHandoffCard(card);
       return;
     }
+    // "Posted" in the stage picker is column id `finished`. Normal content marks
+    // postedAt; one-offs still archive into the finished column.
+    if (targetColumnId === "finished" && card && !card.isOneOffProject) {
+      markAsPosted(cardId);
+      return;
+    }
     moveCard(cardId, targetColumnId);
   };
 

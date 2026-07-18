@@ -1,5 +1,6 @@
 import { isUpcomingShootDateKey } from './shootDay';
 import { toDateKey } from './calendar';
+import { parseScheduledDateTime } from './scheduleTime';
 import {
   clearClientSignedOut,
   markClientSignedOut,
@@ -213,23 +214,13 @@ export const CLIENT_PIPELINE_COLUMNS = [
   { id: 'posted', title: 'Posted' },
 ];
 
-function parseScheduledDateTime(dueDate, dueTime) {
-  const scheduledAt = new Date(`${dueDate}T00:00:00`);
-  if (dueTime) {
-    const [hours, minutes] = dueTime.split(':').map(Number);
-    scheduledAt.setHours(hours, minutes, 0, 0);
-    return scheduledAt;
-  }
-  scheduledAt.setHours(23, 59, 59, 999);
-  return scheduledAt;
-}
-
 /** Client portal only — scheduled reels past their post time (or marked posted). */
 export function isClientPortalPosted(card, now = new Date()) {
   if (card.contentType === 'Story') return false;
   if (card.postedAt) return true;
   if (card.columnId !== 'scheduled' || !card.dueDate) return false;
-  return now >= parseScheduledDateTime(card.dueDate, card.dueTime);
+  const scheduledAt = parseScheduledDateTime(card.dueDate, card.dueTime);
+  return Boolean(scheduledAt && now >= scheduledAt);
 }
 
 export function getClientPipelineDisplayColumn(card) {
