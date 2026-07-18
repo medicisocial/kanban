@@ -120,5 +120,16 @@ assert(
   accountTodoSource.includes('`${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`'),
   'account tabs reuse Vault selected styling',
 );
+assert(
+  (accountTodoSource.match(/onOpen=\{openCard\}/g) || []).length >= 4,
+  'all account manager task card types open from the full card',
+);
+
+const teamCardSource = readFileSync(new URL('../src/components/TeamTaskCard.jsx', import.meta.url), 'utf8');
+assert(teamCardSource.includes('openFromTaskCard'), 'shared team cards support row-open clicks');
+assert(
+  teamCardSource.includes("closest('button, a, input, select, textarea, label')"),
+  'row-open ignores interactive controls',
+);
 
 console.log('Account manager todo tests passed.');
