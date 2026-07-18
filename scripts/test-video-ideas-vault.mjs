@@ -236,15 +236,15 @@ assert(
   assert(typeIdx > 0 && typeIdx < clientIdx, 'To Create shows content type left of client');
   assert(clientIdx > 0 && clientIdx < titleIdx, 'To Create shows client above title');
 }
-assert(toCreateSource.includes('onMakeOneOff'), 'To Create rows can make a one-off from a card');
-assert(toCreateSource.includes('Make one-off'), 'To Create rows expose Make one-off action');
+assert(!toCreateSource.includes('onMakeOneOff'), 'To Create rows do not expose Make one-off');
+assert(!toCreateSource.includes('Make one-off'), 'To Create rows do not show Make one-off action');
 assert(
-  videoIdeasSource.includes('onConvertCardToOneOff'),
-  'Vault wires in-place To Create card → one-off conversion',
+  !videoIdeasSource.includes('onConvertCardToOneOff'),
+  'Vault no longer wires row-level To Create card → one-off conversion',
 );
 assert(
-  videoIdeasSource.includes('onMakeOneOff={setOneOffCard}'),
-  'To Create tab opens Make one-off against the linked board card',
+  !videoIdeasSource.includes('onMakeOneOff={setOneOffCard}'),
+  'To Create tab does not open Make one-off from the row',
 );
 assert(
   !videoIdeasSource.includes('onUpdateReference') && !videoIdeasSource.includes('onUpdateContentType'),
@@ -290,8 +290,8 @@ assert(
   !approvedSource.includes('min-h-10 flex-1') && !approvedSource.includes('w-[32%]'),
   'Approved action buttons do not stretch across a wide Actions column',
 );
-assert(approvedSource.includes('onMakeOneOff'), 'Approved rows can make a one-off from an idea');
-assert(approvedSource.includes('Make one-off'), 'Approved rows expose Make one-off action');
+assert(!approvedSource.includes('onMakeOneOff'), 'Approved rows do not expose Make one-off');
+assert(!approvedSource.includes('Make one-off'), 'Approved rows do not show Make one-off action');
 assert(approvedSource.includes('ReferenceMusicLink'), 'Approved rows show clickable music links');
 assert(approvedSource.includes('ReferenceVideoLink'), 'Approved rows show clickable video links when set');
 assert(!/>\s*Edit\s*</.test(approvedSource), 'Approved rows do not show a standalone Edit action');
@@ -345,7 +345,12 @@ assert(
   'Review action buttons do not stretch across a wide Actions column',
 );
 assert(reviewSource.includes('ReferenceMusicLink'), 'Review rows show clickable music links');
-assert(reviewSource.includes('onMakeOneOff'), 'Review rows can make a one-off from an idea');
+assert(!reviewSource.includes('onMakeOneOff'), 'Review rows do not expose Make one-off');
+assert(!reviewSource.includes('Make one-off'), 'Review rows do not show Make one-off action');
+assert(
+  videoIdeasSource.includes('onMakeOneOff={(idea, data)'),
+  'Vault idea editor still supports Make one-off',
+);
 assert(!/>\s*Edit\s*</.test(reviewSource), 'Review rows do not show a standalone Edit action');
 const uiSource = readFileSync(
   new URL('../src/components/clientPortal/clientPortalUi.js', import.meta.url),

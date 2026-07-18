@@ -23,7 +23,6 @@ export default function IdeaVaultTable({
   onEdit,
   onSchedule,
   onMoveToReview,
-  onMakeOneOff,
   readOnly = false,
   hideClientColumn = false,
 }) {
@@ -208,15 +207,6 @@ export default function IdeaVaultTable({
                   >
                     Move to Review
                   </button>
-                  {onMakeOneOff && (
-                    <button
-                      type="button"
-                      onClick={() => onMakeOneOff(idea)}
-                      className={taskActionBtnClass}
-                    >
-                      Make one-off
-                    </button>
-                  )}
                 </div>
               )}
             </article>

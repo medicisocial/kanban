@@ -31,7 +31,6 @@ export default function AdminIdeasTable({
   onEdit,
   onDelete,
   onApprove,
-  onMakeOneOff,
 }) {
   const { getClientColor } = useClientsContext();
 
@@ -178,15 +177,6 @@ export default function AdminIdeasTable({
                       className={taskActionBtnClass}
                     >
                       Approve
-                    </button>
-                  )}
-                  {onMakeOneOff && (
-                    <button
-                      type="button"
-                      onClick={() => onMakeOneOff(idea)}
-                      className={taskActionBtnClass}
-                    >
-                      Make one-off
                     </button>
                   )}
                   <button

@@ -1232,10 +1232,6 @@ export default function AppShell({ onSignOut }) {
             });
             if (newCard) setSelectedCard(newCard);
           }}
-          onConvertCardToOneOff={(card, data) => {
-            if (!card?.id) return;
-            updateCard(card.id, buildOneOffConversionUpdates(card, data), { immediateSync: true });
-          }}
         />
       )}
 
