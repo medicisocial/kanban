@@ -218,6 +218,7 @@ assert(approvedSource.includes('Move to Review'), 'Approved rows can return idea
 assert(approvedSource.includes('btnSecondaryClass'), 'Approved secondary action uses bordered styling');
 assert(approvedSource.includes('openIdeaFromRow(event, idea)'), 'Approved rows open idea editor');
 assert(approvedSource.includes('align-middle'), 'Approved title cell is vertically centered');
+assert(approvedSource.includes('ReferenceMusicLink'), 'Approved rows show clickable music links');
 assert(!/>\s*Edit\s*</.test(approvedSource), 'Approved rows do not show a standalone Edit action');
 assert(!/>\s*Delete\s*</.test(approvedSource), 'Approved rows do not show a standalone Delete action');
 const reviewSource = readFileSync(
@@ -226,6 +227,7 @@ const reviewSource = readFileSync(
 );
 assert(reviewSource.includes('openIdeaFromRow(event, idea)'), 'Review rows open idea editor');
 assert(reviewSource.includes('btnSecondaryClass'), 'Review Delete uses bordered secondary styling');
+assert(reviewSource.includes('ReferenceMusicLink'), 'Review rows show clickable music links');
 assert(!/>\s*Edit\s*</.test(reviewSource), 'Review rows do not show a standalone Edit action');
 const ideaModalSource = readFileSync(
   new URL('../src/components/VideoIdeaModal.jsx', import.meta.url),
@@ -234,6 +236,28 @@ const ideaModalSource = readFileSync(
 assert(!ideaModalSource.includes('Client Comment'), 'idea editor hides client comments');
 assert(ideaModalSource.includes('onDelete'), 'idea editor accepts Delete handler');
 assert(ideaModalSource.includes('>Delete<') || ideaModalSource.includes('Delete\n'), 'idea editor exposes Delete for existing ideas');
+assert(
+  ideaModalSource.includes('<ReferenceVideoLink') && ideaModalSource.includes('<ReferenceMusicLink'),
+  'idea editor exposes clickable reference video and music links',
+);
+const shootItemSource = readFileSync(
+  new URL('../src/components/ShootDayItem.jsx', import.meta.url),
+  'utf8',
+);
+assert(
+  shootItemSource.includes('ReferenceMusicLink') && !shootItemSource.includes('Music ref'),
+  'shoot day items open music references as links',
+);
+const kanbanCardSource = readFileSync(
+  new URL('../src/components/KanbanCard.jsx', import.meta.url),
+  'utf8',
+);
+assert(kanbanCardSource.includes('ReferenceMusicLink'), 'board cards show clickable music links');
+const quickAddSource = readFileSync(
+  new URL('../src/components/VideoIdeaQuickAdd.jsx', import.meta.url),
+  'utf8',
+);
+assert(quickAddSource.includes('ReferenceVideoLink'), 'quick add shows clickable reference video links');
 const videoIdeasUiSource = readFileSync(
   new URL('../src/components/VideoIdeas.jsx', import.meta.url),
   'utf8',

@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { getContentTypeStyle } from "../constants";
 import { contentTypeLabelProps } from "../utils/contentTypeColors";
-import { normalizeLink } from "../utils/links";
 import {
   getShootWindow,
   buildHourMarkers,
@@ -14,6 +13,7 @@ import ShootScriptModal from "./ShootScriptModal";
 import { hasStructuredScript } from "../utils/scriptFields";
 import { canReturnCardToVault } from "../utils/videoIdeas";
 import { isSlidePostType } from "../utils/postSlides";
+import ReferenceVideoLink, { ReferenceMusicLink } from "./clientPortal/ReferenceVideoLink";
 
 const LANE_HEIGHT = 104;
 /** Minimum timeline width (% of track) so short slots stay visible without overlapping neighbors. */
@@ -214,16 +214,10 @@ export default function ShootDayTimeline({
                   <p className="text-base font-medium text-white">{entry.card.title}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                     {entry.card.referenceVideo && (
-                      <a
-                        href={normalizeLink(entry.card.referenceVideo)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1.5 text-sm text-[#fca5a5] transition hover:text-[#fecaca]"
-                      >
-                        <span>🎬</span>
-                        <span>Reference video ↗</span>
-                      </a>
+                      <ReferenceVideoLink url={entry.card.referenceVideo} />
+                    )}
+                    {entry.card.referenceMusic && (
+                      <ReferenceMusicLink url={entry.card.referenceMusic} />
                     )}
                     {(hasStructuredScript(entry.card) || canEditScript) &&
                       !(hideSlidePostPlans && isSlidePostType(entry.card.contentType)) && (

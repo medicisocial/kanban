@@ -7,7 +7,7 @@ import {
 import { contentTypePipelinePillProps, contentTypeCardStyle } from '../utils/contentTypeColors';
 import { formatDate, formatScheduledDateTime, isOverdue } from '../utils';
 import CardTitleLink from './CardTitleLink';
-import ReferenceVideoLink from './clientPortal/ReferenceVideoLink';
+import ReferenceVideoLink, { ReferenceMusicLink } from './clientPortal/ReferenceVideoLink';
 import { canReturnCardToVault } from '../utils/videoIdeas';
 
 export default function KanbanCard({ card, ideas = [], onClick, onDelete, onReturnToVault }) {
@@ -86,9 +86,14 @@ export default function KanbanCard({ card, ideas = [], onClick, onDelete, onRetu
         )}
       </div>
 
-      {card.referenceVideo?.trim() && (
-        <div className="mt-2">
-          <ReferenceVideoLink url={card.referenceVideo} compact />
+      {(card.referenceVideo?.trim() || card.referenceMusic?.trim()) && (
+        <div className="mt-2 flex flex-wrap gap-3">
+          {card.referenceMusic?.trim() && (
+            <ReferenceMusicLink url={card.referenceMusic} compact />
+          )}
+          {card.referenceVideo?.trim() && (
+            <ReferenceVideoLink url={card.referenceVideo} compact />
+          )}
         </div>
       )}
 

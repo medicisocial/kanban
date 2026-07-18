@@ -113,6 +113,10 @@ const ideaModalSource = readFileSync(new URL('../src/components/VideoIdeaModal.j
 assert(ideaModalSource.includes('<PostSlidesPanel'), 'bank idea modal uses slide editor');
 assert(ideaModalSource.includes('? "Slides" : label'), 'bank modal labels slide-post tab as Slides');
 assert(ideaModalSource.includes('referenceMusic'), 'bank idea modal supports music references');
+assert(
+  ideaModalSource.includes('ReferenceVideoLink') && ideaModalSource.includes('ReferenceMusicLink'),
+  'bank idea modal renders clickable reference video and music links',
+);
 const slidesPanelSource = readFileSync(
   new URL('../src/components/PostSlidesPanel.jsx', import.meta.url),
   'utf8',

@@ -5,6 +5,7 @@ import { useClientsContext } from "../context/ClientsContext";
 import { normalizeLink } from "../utils/links";
 import { isSlidePostType, normalizeCaptionMode, normalizePostSlides } from "../utils/postSlides";
 import { btnPrimaryClass, btnSecondaryClass } from "./clientPortal/clientPortalUi";
+import ReferenceVideoLink, { ReferenceMusicLink } from "./clientPortal/ReferenceVideoLink";
 import ScriptPanel from "./ScriptPanel";
 import PostSlidesPanel from "./PostSlidesPanel";
 
@@ -197,6 +198,11 @@ export default function VideoIdeaModal({ onClose, onSave, onDelete, idea = null,
               <p className="mt-1 text-[10px] text-gray-500">
                 Paste any video URL — https:// is added automatically if needed.
               </p>
+              {form.referenceVideo?.trim() && (
+                <div className="mt-2">
+                  <ReferenceVideoLink url={form.referenceVideo} />
+                </div>
+              )}
             </label>
 
             <label className="block">
@@ -210,6 +216,11 @@ export default function VideoIdeaModal({ onClose, onSave, onDelete, idea = null,
                 placeholder="Paste Spotify, YouTube, or audio link..."
                 className={inputClass}
               />
+              {form.referenceMusic?.trim() && (
+                <div className="mt-2">
+                  <ReferenceMusicLink url={form.referenceMusic} />
+                </div>
+              )}
             </label>
 
             {/* Hide Notes for Client when editing an approved bank idea */}

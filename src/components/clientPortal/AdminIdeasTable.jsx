@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { useClientsContext } from '../../context/ClientsContext';
 import { IDEA_STATUSES } from '../../constants';
 import ClientAvatar from '../ClientAvatar';
-import ReferenceVideoLink from './ReferenceVideoLink';
+import ReferenceVideoLink, { ReferenceMusicLink } from './ReferenceVideoLink';
 import {
   btnPrimaryClass,
   btnSecondaryClass,
@@ -182,9 +182,14 @@ export default function AdminIdeasTable({
                 {idea.description && (
                   <p className="mt-1 line-clamp-2 text-xs text-white/40">{idea.description}</p>
                 )}
-                {idea.referenceVideo && (
-                  <div className="mt-2">
-                    <ReferenceVideoLink url={idea.referenceVideo} compact />
+                {(idea.referenceVideo || idea.referenceMusic) && (
+                  <div className="mt-2 flex flex-wrap gap-3">
+                    {idea.referenceMusic && (
+                      <ReferenceMusicLink url={idea.referenceMusic} compact />
+                    )}
+                    {idea.referenceVideo && (
+                      <ReferenceVideoLink url={idea.referenceVideo} compact />
+                    )}
                   </div>
                 )}
                 <div className={mobileMetaClass}>
@@ -281,7 +286,12 @@ export default function AdminIdeasTable({
                         )}
                       </td>
                       <td className={tableCellClass}>
-                        <ReferenceVideoLink url={idea.referenceVideo} />
+                        <div className="flex flex-col gap-1.5">
+                          <ReferenceVideoLink url={idea.referenceVideo} />
+                          {idea.referenceMusic?.trim() && (
+                            <ReferenceMusicLink url={idea.referenceMusic} compact />
+                          )}
+                        </div>
                       </td>
                       <td className={tableCellClass}>
                         <StatusBadge status={idea.status} />
