@@ -1,7 +1,12 @@
+import { useMemo } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { getContentTypeStyle } from '../constants';
 import { formatDate, formatTime } from '../utils';
-import { findIdeaBoardCard, sortIdeasByShootSchedule } from '../utils/videoIdeas';
+import {
+  canReturnCardToVault,
+  getToCreateCards,
+  sortCardsByShootSchedule,
+} from '../utils/videoIdeas';
 import { contentTypePipelinePillProps } from '../utils/contentTypeColors';
 import ClientAvatar from './ClientAvatar';
 import TeamTaskCard from './TeamTaskCard';
@@ -12,37 +17,39 @@ import {
 } from './clientPortal/clientPortalUi';
 
 export default function ToCreateIdeasTable({
-  ideas,
-  cards,
+  cards = [],
+  clientFilter,
   onOpenCard,
   onOpenShoot,
   onReturnToApproved,
 }) {
   const { getClientColor } = useClientsContext();
 
-  if (!ideas.length) {
+  const toCreateCards = useMemo(
+    () => sortCardsByShootSchedule(getToCreateCards(cards, { client: clientFilter })),
+    [cards, clientFilter],
+  );
+
+  if (!toCreateCards.length) {
     return (
       <div className={`${surfacePanelClass} px-4 py-16 text-center`}>
-        <p className="text-sm text-white/45">No ideas are in To Create yet.</p>
+        <p className="text-sm text-white/45">No cards are in To Create yet.</p>
         <p className="mt-2 text-xs text-white/35">
-          From Approved, use Add to To Create or Add to shoot to put a card here.
+          Use Add card or Add one-off project, or schedule an Approved idea onto a shoot.
         </p>
       </div>
     );
   }
 
-  const scheduledIdeas = sortIdeasByShootSchedule(ideas, cards)
-    .map((idea) => ({ idea, card: findIdeaBoardCard(idea, cards) }))
-    .filter(({ card }) => card);
-
   return (
     <div className="space-y-3">
-      {scheduledIdeas.map(({ idea, card }, index) => {
+      {toCreateCards.map((card, index) => {
         const typeStyle = getContentTypeStyle(card.contentType);
         const clientColor = getClientColor(card.client);
+        const canReturn = canReturnCardToVault(card);
         return (
           <TeamTaskCard
-            key={idea.id}
+            key={card.id}
             accentColor={clientColor}
             animationDelay={`${0.08 + index * 0.05}s`}
             onOpen={() => onOpenCard?.(card)}
@@ -72,7 +79,7 @@ export default function ToCreateIdeasTable({
                     </div>
                   </div>
                   <h3 className="truncate text-sm font-semibold text-white">
-                    {card.title || idea.title || 'Untitled idea'}
+                    {card.title || 'Untitled'}
                   </h3>
                 </div>
               </div>
@@ -87,13 +94,15 @@ export default function ToCreateIdeasTable({
                     Go to shoot
                   </button>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={() => onReturnToApproved?.(card)}
-                  className={taskActionBtnClass}
-                >
-                  Move back to Approved
-                </button>
+                {canReturn ? (
+                  <button
+                    type="button"
+                    onClick={() => onReturnToApproved?.(card)}
+                    className={taskActionBtnClass}
+                  >
+                    Move back to Approved
+                  </button>
+                ) : null}
               </div>
             </div>
           </TeamTaskCard>

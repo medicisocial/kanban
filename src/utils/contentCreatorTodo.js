@@ -1,4 +1,5 @@
-import { filterCards, getBoardCards } from '../utils';
+import { filterCards } from '../utils';
+import { getToCreateCards } from './videoIdeas';
 
 export function cardIsAssignedToContentCreator(card, staffName) {
   if (!staffName) return true;
@@ -7,9 +8,9 @@ export function cardIsAssignedToContentCreator(card, staffName) {
   return creator === staffName.trim().toLowerCase();
 }
 
+/** Content Creator queue — same shoot cards as Vault → To Create, optionally scoped to a creator. */
 export function getToCreateQueueCards(cards, { staffName = '', personalScope = false } = {}) {
-  return getBoardCards(cards).filter((card) => {
-    if (card.columnId !== 'shoot') return false;
+  return getToCreateCards(cards).filter((card) => {
     if (personalScope && staffName) {
       return cardIsAssignedToContentCreator(card, staffName);
     }
