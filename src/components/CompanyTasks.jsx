@@ -26,6 +26,8 @@ export default function CompanyTasks({
   onRoleChange,
   onAddOneOffTask,
   onDeleteOneOffTask,
+  onAddToCreateCard,
+  onAddEditingCard,
   onAddAdminTask,
   onUpdateAdminTask,
   onToggleAdminTaskComplete,
@@ -124,6 +126,7 @@ export default function CompanyTasks({
           cards={cards}
           ideas={ideas}
           clientFilter={clientFilter}
+          onAddCard={onAddToCreateCard}
           onOpenCard={onOpenCard}
           onOpenShoot={onOpenShoot}
           onHandoff={onHandoff}
@@ -137,6 +140,7 @@ export default function CompanyTasks({
           embedded
           cards={cards}
           clientFilter={clientFilter}
+          onAddCard={onAddEditingCard}
           onAddOneOffTask={onAddOneOffTask}
           onDeleteOneOffTask={onDeleteOneOffTask}
           onOpenCard={onOpenCard}

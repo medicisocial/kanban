@@ -98,6 +98,8 @@ assert(
   editorTodoSource.includes('`${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`'),
   'editor tabs reuse Vault selected styling',
 );
+assert(editorTodoSource.includes('onAddCard'), 'editor supports manual board card add');
+assert(editorTodoSource.includes('+ Add card'), 'editor exposes Add card control');
 
 const accountTodoSource = readFileSync(
   new URL('../src/components/AccountManagerTodo.jsx', import.meta.url),

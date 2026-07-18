@@ -1284,6 +1284,16 @@ export default function AppShell({ onSignOut }) {
           onRoleChange={setTasksRole}
           onAddOneOffTask={addOneOffProject}
           onDeleteOneOffTask={handleDeleteOneOffProject}
+          onAddToCreateCard={() => {
+            const resolvedClient = clientFilter !== 'all' ? clientFilter : undefined;
+            const newCard = addCard('shoot', { client: resolvedClient });
+            if (newCard) setSelectedCard(newCard);
+          }}
+          onAddEditingCard={() => {
+            const resolvedClient = clientFilter !== 'all' ? clientFilter : undefined;
+            const newCard = addCard('editing', { client: resolvedClient });
+            if (newCard) setSelectedCard(newCard);
+          }}
           onAddAdminTask={addAdminTask}
           onUpdateAdminTask={updateAdminTask}
           onToggleAdminTaskComplete={toggleAdminTaskComplete}

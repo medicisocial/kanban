@@ -247,6 +247,7 @@ export default function EditorTodo({
   embedded = false,
   cards,
   clientFilter,
+  onAddCard,
   onAddOneOffTask,
   onDeleteOneOffTask,
   onOpenCard,
@@ -344,13 +345,24 @@ export default function EditorTodo({
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={() => setShowAddModal(true)}
-          className={`${btnPrimaryClass} ${embedded ? 'ml-auto py-1.5 text-[10px]' : ''}`}
-        >
-          + Add one-off project
-        </button>
+        <div className={`flex flex-wrap items-center gap-2 ${embedded ? 'ml-auto' : ''}`}>
+          {onAddCard && (
+            <button
+              type="button"
+              onClick={() => onAddCard()}
+              className={`${btnPrimaryClass} ${embedded ? 'py-1.5 text-[10px]' : ''}`}
+            >
+              + Add card
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className={`${btnSecondaryClass} ${embedded ? 'py-1.5 text-[10px]' : ''}`}
+          >
+            + Add one-off project
+          </button>
+        </div>
       </div>
 
       <div className={`flex flex-wrap items-center gap-3 ${embedded ? 'mb-4' : 'mb-6'}`}>
