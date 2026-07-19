@@ -56,6 +56,7 @@ import AddShootDayModal from "./AddShootDayModal";
 import AddExistingToShootModal from "./AddExistingToShootModal";
 import CardModal from "./CardModal";
 import { useStaffAuth } from "../context/StaffAuthContext";
+import { stopImpersonating } from "../utils/superAdminAuth";
 import { useClientsContext } from "../context/ClientsContext";
 import { getDefaultWorkspaceView } from "../utils/getDefaultWorkspaceView";
 import {
@@ -1124,6 +1125,26 @@ export default function AppShell({ onSignOut }) {
       canUndo={canUndo}
       onUndo={undo}
     >
+      {session?.impersonated && (
+        <div className="mb-6 p-4 rounded bg-red-950/60 border border-red-700/50 text-red-200 text-sm flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+            <span>
+              <strong>Impersonation Mode:</strong> You are currently viewing the workspace of{' '}
+              <strong>{org?.name || 'this organization'}</strong>.
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              stopImpersonating();
+              window.location.href = window.location.pathname + '?admin=1';
+            }}
+            className="text-xs bg-red-600 hover:bg-red-500 text-white font-semibold px-3 py-1.5 rounded transition cursor-pointer"
+          >
+            Exit Impersonation
+          </button>
+        </div>
+      )}
       <Suspense fallback={<PageLoadingFallback />}>
       {activeView === "home" && (
         <WorkspaceHomePage

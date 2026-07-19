@@ -1,4 +1,6 @@
 import { getSessionFromRequest, isStaffSessionValid } from './staffAuth.mjs';
+import { isSuperAdminSessionValid } from './superAdminAuth.mjs';
+
 
 const LEGACY_ORG_ID = (process.env.ORG_ID || process.env.VITE_ORG_ID || 'medici').trim();
 
@@ -74,6 +76,11 @@ export function getDefaultOrgId() {
  * null rather than accepting the legacy fallback.
  */
 export async function resolveAuthorizedOrgId(req) {
+  const adminSession = getSessionFromRequest(req);
+  if (isSuperAdminSessionValid(adminSession)) {
+    return '__super_admin__';
+  }
+
   const staffSession = getSessionFromRequest(req);
   if (isStaffSessionValid(staffSession)) {
     return LEGACY_ORG_ID;
@@ -101,6 +108,14 @@ export async function assertAuthorizedOrgId(req, requestedOrgId) {
   const authorized = await resolveAuthorizedOrgId(req);
   if (!authorized) {
     return { ok: false, orgId: null, error: 'Unauthorized.' };
+  }
+
+  if (authorized === '__super_admin__') {
+    const target =
+      typeof requestedOrgId === 'string' && requestedOrgId.trim()
+        ? requestedOrgId.trim()
+        : 'medici';
+    return { ok: true, orgId: target };
   }
 
   const target =

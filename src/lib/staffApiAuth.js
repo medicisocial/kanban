@@ -29,6 +29,15 @@ async function supabaseJwtHeaders() {
 
 async function legacyStaffHeaders() {
   const session = loadStaffSession();
+  if (session?.impersonated && session?.adminSession) {
+    const { isSuperAdminSessionValid } = await import('../utils/superAdminAuth');
+    if (isSuperAdminSessionValid(session.adminSession)) {
+      return {
+        Authorization: `Bearer ${btoa(JSON.stringify(session.adminSession))}`,
+        'Content-Type': 'application/json',
+      };
+    }
+  }
   if (session?.username && session?.signature && (await isStaffSessionValid(session))) {
     return {
       Authorization: `Bearer ${btoa(JSON.stringify(session))}`,

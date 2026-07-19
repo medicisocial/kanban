@@ -150,6 +150,22 @@ export function StaffAuthProvider({ children }) {
 
     (async () => {
       const stored = loadStaffSession();
+      if (stored?.impersonated && stored?.adminSession) {
+        const { isSuperAdminSessionValid } = await import('../utils/superAdminAuth');
+        if (isSuperAdminSessionValid(stored.adminSession)) {
+          if (!cancelled) {
+            setSession(stored);
+            setOrg(stored.org);
+            setOrgSession(stored.org.id, true);
+            if (SUPABASE_ENABLED) {
+              clearSyncedWorkspaceCache(stored.org.id);
+            }
+          }
+          if (!cancelled) setReady(true);
+          return;
+        }
+      }
+
       if (stored && !shouldSuppressStaffAutoRestore() && (await isStaffSessionValid(stored))) {
         if (!cancelled) {
           setSession(stored);

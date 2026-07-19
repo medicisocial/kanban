@@ -45,6 +45,16 @@ import {
 import { buildCalendarNoteResponse, buildCalendarNoteDeletePatch } from '../src/utils/calendarNote.js';
 import { getCalendarClientNote } from '../src/utils/calendarClientNote.js';
 
+if (typeof localStorage === 'undefined' || typeof localStorage.setItem !== 'function') {
+  const store = {};
+  globalThis.localStorage = {
+    getItem: (key) => store[key] || null,
+    setItem: (key, val) => { store[key] = String(val); },
+    removeItem: (key) => { delete store[key]; },
+    clear: () => { for (const k in store) delete store[k]; }
+  };
+}
+
 function filterIdsFromCompanyFiles(files, deletedIds) {
   const deleted =
     deletedIds instanceof Set ? deletedIds : new Set((deletedIds || []).map((id) => String(id)));

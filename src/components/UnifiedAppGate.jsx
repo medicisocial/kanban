@@ -8,6 +8,10 @@ import { WorkspaceSyncProvider } from '../context/WorkspaceSyncContext';
 import UnifiedLogin from './UnifiedLogin';
 import MarketingLandingPage from './MarketingLandingPage';
 import PricingPage from './PricingPage';
+import { loadSuperAdminSession, isSuperAdminSessionValid, clearSuperAdminSession } from '../utils/superAdminAuth';
+
+const SuperAdminConsole = lazyWithRetry(() => import('./SuperAdminConsole'));
+
 
 const AppShell = lazyWithRetry(() => import('./AppShell'));
 const ClientPortalApp = lazyWithRetry(() => import('../ClientPortalApp'));
@@ -20,6 +24,9 @@ function GateLoading() {
 
 function parseGateView() {
   const params = new URLSearchParams(window.location.search);
+  if (params.get('admin') === '1') {
+    return { view: 'admin-login', plan: null, clientLogin: false, clientResetToken: '', agencyRecovery: false };
+  }
   if (params.get('pricing') === '1') {
     return { view: 'pricing', plan: null, clientLogin: false, clientResetToken: '', agencyRecovery: false };
   }
@@ -53,6 +60,7 @@ function gateToUrl({
   agencyRecovery = false,
 }) {
   const path = window.location.pathname;
+  if (view === 'admin-login') return `${path}?admin=1`;
   if (view === 'landing') return path;
   if (view === 'pricing') return `${path}?pricing=1`;
   if (view === 'signup') return `${path}?signup=1&plan=${plan}`;
@@ -78,9 +86,14 @@ function StaffConsoleApp({ onSignOut }) {
 function UnifiedAppGateInner() {
   const { ready, session } = useStaffAuth();
   const initialGate = useMemo(() => parseGateView(), []);
-  const [mode, setMode] = useState(() =>
-    initialGate.view === 'login' || initialGate.view === 'signup' ? 'login' : 'loading',
-  );
+  const [mode, setMode] = useState(() => {
+    const adminSession = loadSuperAdminSession();
+    if (adminSession && isSuperAdminSessionValid(adminSession)) {
+      return 'admin';
+    }
+    if (initialGate.view === 'admin-login') return 'admin-login';
+    return initialGate.view === 'login' || initialGate.view === 'signup' ? 'login' : 'loading';
+  });
   const [gateView, setGateView] = useState(initialGate.view);
   const [selectedPlan, setSelectedPlan] = useState(initialGate.plan || 'starter');
   const [clientLogin, setClientLogin] = useState(initialGate.clientLogin);
@@ -126,6 +139,17 @@ function UnifiedAppGateInner() {
   useEffect(() => {
     if (!ready) return;
 
+    const adminSession = loadSuperAdminSession();
+    if (adminSession && isSuperAdminSessionValid(adminSession)) {
+      setMode('admin');
+      return;
+    }
+
+    if (gateView === 'admin-login') {
+      setMode('admin-login');
+      return;
+    }
+
     if (preferredAuthMode === 'client') {
       const client = loadUsableClientSession();
       if (client?.brand) {
@@ -153,9 +177,10 @@ function UnifiedAppGateInner() {
     }
 
     setMode('login');
-  }, [ready, session, preferredAuthMode]);
+  }, [ready, session, preferredAuthMode, gateView]);
 
   const handleSignOut = useCallback(() => {
+    clearSuperAdminSession();
     setPreferredAuthMode(null);
     markClientSignedOut();
     clearClientSession();
@@ -222,6 +247,14 @@ function UnifiedAppGateInner() {
     openSignup('starter');
   }, [openSignup]);
 
+  if (mode === 'admin') {
+    return (
+      <Suspense fallback={<GateLoading />}>
+        <SuperAdminConsole onSignOut={handleSignOut} />
+      </Suspense>
+    );
+  }
+
   if (mode === 'staff' && (ready || session)) {
     return <StaffConsoleApp onSignOut={handleSignOut} />;
   }
@@ -261,8 +294,12 @@ function UnifiedAppGateInner() {
   return (
     <UnifiedLogin
       onAuthenticated={(authMode) => {
-        setPreferredAuthMode(authMode);
-        setMode(authMode);
+        if (authMode === 'admin') {
+          setMode('admin');
+        } else {
+          setPreferredAuthMode(authMode);
+          setMode(authMode);
+        }
       }}
       checking={!ready}
       signupMode={gateView === 'signup'}
@@ -274,6 +311,7 @@ function UnifiedAppGateInner() {
       initialClientMode={clientLogin}
       initialClientResetToken={clientResetToken}
       initialAgencyRecovery={agencyRecovery}
+      adminMode={gateView === 'admin-login'}
     />
   );
 }
