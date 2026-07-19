@@ -118,7 +118,11 @@ export function resolveCardPipelineStage(...records) {
   }, null);
 }
 
-/** Merge content from one card with the pipeline stage from the most advanced copy. */
+/**
+ * Merge content from one card with the pipeline stage from the most advanced copy.
+ * Exception: when the newest copy carries `_allowPipelineRegression`, keep its stage
+ * so intentional send-backs / backward moves are not snapped forward on pull.
+ */
 export function mergeCardRecords(...records) {
   const defined = records.filter(Boolean);
   if (!defined.length) return null;
@@ -133,6 +137,19 @@ export function mergeCardRecords(...records) {
     latest.sourceIdeaId ||
     defined.find((record) => record.sourceIdeaId)?.sourceIdeaId ||
     latest.sourceIdeaId;
+
+  // Intentional regression: trust the newest authorized copy's stage.
+  if (latest?.[PIPELINE_REGRESSION_AUTH_KEY]) {
+    const authorized = sourceIdeaId ? { ...latest, sourceIdeaId } : { ...latest };
+    // Cloud caught up to the same stage (flag already stripped there) — drop local flag.
+    const confirmed = defined.some(
+      (record) =>
+        record !== latest &&
+        record?.columnId === latest.columnId &&
+        !record[PIPELINE_REGRESSION_AUTH_KEY],
+    );
+    return confirmed ? stripPipelineInternalFields(authorized) : authorized;
+  }
 
   if (!stage) return sourceIdeaId ? { ...latest, sourceIdeaId } : latest;
   return {

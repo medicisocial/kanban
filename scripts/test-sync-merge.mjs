@@ -1,6 +1,7 @@
 import {
   mergeRemoteListWithLocalPending,
   mergeRemoteMapWithLocalPending,
+  mergeRemoteRecordWithLocal,
   mergePortalCredentialValue,
   filterProtectedSyncRemovals,
   filterProtectedSyncUpserts,
@@ -16,6 +17,7 @@ import {
 } from '../src/lib/syncHelpers.js';
 import {
   mergeCardPipelineFields,
+  mergeCardRecords,
   prepareCardPipelineUpsert,
   PIPELINE_REGRESSION_AUTH_KEY,
 } from '../src/utils/cardPipelineMerge.js';
@@ -258,6 +260,125 @@ const getId = (record) => record.id;
   );
   assert(merged.columnId === 'editing', 'authorized regression should still apply');
   assert(merged.sourceIdeaId === 'idea-2', 'authorized regression must keep idea link');
+}
+
+// Pull merge: Needs edits / send-back must not snap back to In Review.
+{
+  const merged = mergeCardRecords(
+    { id: 'c1', columnId: 'in-review', status: 'In Review', updatedAt: 100 },
+    {
+      id: 'c1',
+      columnId: 'editing',
+      status: 'Editing',
+      editorCompletedAt: null,
+      [PIPELINE_REGRESSION_AUTH_KEY]: true,
+      updatedAt: 300,
+    },
+  );
+  assert(merged.columnId === 'editing', 'pull merge must keep authorized send-back to editing');
+  assert(merged.status === 'Editing', 'pull merge must keep Editing status on send-back');
+  assert(
+    merged[PIPELINE_REGRESSION_AUTH_KEY] === true,
+    'auth flag stays until cloud confirms the same stage',
+  );
+}
+
+{
+  const local = {
+    id: 'c1',
+    columnId: 'editing',
+    status: 'Editing',
+    [PIPELINE_REGRESSION_AUTH_KEY]: true,
+    updatedAt: 300,
+  };
+  const remote = { id: 'c1', columnId: 'in-review', status: 'In Review', updatedAt: 100 };
+  const syncedStr = JSON.stringify({
+    id: 'c1',
+    columnId: 'in-review',
+    status: 'In Review',
+    updatedAt: 100,
+  });
+  const merged = mergeRemoteRecordWithLocal({ remote, local, syncedStr });
+  assert(
+    merged.columnId === 'editing',
+    'three-way merge must keep authorized In Review → Needs editing',
+  );
+}
+
+// Pull merge: Editing → To Create authorized regression sticks.
+{
+  const merged = mergeCardRecords(
+    { id: 'c2', columnId: 'editing', status: 'Editing', updatedAt: 100 },
+    {
+      id: 'c2',
+      columnId: 'shoot',
+      status: 'To Create',
+      [PIPELINE_REGRESSION_AUTH_KEY]: true,
+      updatedAt: 300,
+    },
+  );
+  assert(merged.columnId === 'shoot', 'pull merge must keep authorized Editing → To Create');
+}
+
+// Pull merge: scheduled → editing authorized regression sticks.
+{
+  const merged = mergeCardRecords(
+    { id: 'c3', columnId: 'scheduled', status: 'Scheduled', updatedAt: 100 },
+    {
+      id: 'c3',
+      columnId: 'editing',
+      status: 'Editing',
+      [PIPELINE_REGRESSION_AUTH_KEY]: true,
+      updatedAt: 300,
+    },
+  );
+  assert(merged.columnId === 'editing', 'pull merge must keep authorized scheduled → editing');
+}
+
+// Stale tab without auth flag: furthest stage still wins.
+{
+  const merged = mergeCardRecords(
+    { id: 'c4', columnId: 'scheduled', status: 'Scheduled', updatedAt: 100 },
+    { id: 'c4', columnId: 'editing', status: 'Editing', notes: 'stale', updatedAt: 999 },
+  );
+  assert(
+    merged.columnId === 'scheduled',
+    'stale local editing without auth flag must not beat scheduled on pull',
+  );
+  assert(merged.notes === 'stale', 'stale-tab pull merge should still accept newer field edits');
+}
+
+// Once cloud confirms the regression stage, drop the ephemeral auth flag.
+{
+  const merged = mergeCardRecords(
+    { id: 'c5', columnId: 'editing', status: 'Editing', notes: 'from cloud', updatedAt: 310 },
+    {
+      id: 'c5',
+      columnId: 'editing',
+      status: 'Editing',
+      notes: 'local',
+      [PIPELINE_REGRESSION_AUTH_KEY]: true,
+      updatedAt: 320,
+    },
+  );
+  assert(merged.columnId === 'editing', 'confirmed regression stage stays editing');
+  assert(merged.notes === 'local', 'confirmed merge still prefers newest field content');
+  assert(
+    merged[PIPELINE_REGRESSION_AUTH_KEY] === undefined,
+    'auth flag clears after cloud confirms matching stage',
+  );
+}
+
+// pushCardNow must not strip the auth flag immediately after HTTP success.
+{
+  const kanbanSource = readFileSync(
+    fileURLToPath(new URL('../src/hooks/useKanban.js', import.meta.url)),
+    'utf8',
+  );
+  assert(
+    !kanbanSource.includes('stripPipelineInternalFields(entry)'),
+    'pushCardNow must not strip _allowPipelineRegression before pull confirms stage',
+  );
 }
 
 // Map merge should ignore stale local-only keys.
