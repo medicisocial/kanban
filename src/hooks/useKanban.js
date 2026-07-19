@@ -11,8 +11,6 @@ import { markRecentlyPushed } from '../lib/syncEchoGuard';
 import { reportSyncIssue } from '../lib/workspaceSyncHealth';
 import {
   applyVaultIdeaShootSchedule,
-  PIPELINE_REGRESSION_AUTH_KEY,
-  stripPipelineInternalFields,
   withPipelineRegressionAuthorization,
 } from '../utils/cardPipelineMerge';
 import { resolveShootScriptsFromIdea } from '../utils/videoIdeas';
@@ -188,14 +186,9 @@ export function useKanban() {
       .then((ok) => {
         if (ok) {
           markRecentlyPushed('cards', [card.id]);
-          // Ephemeral auth flag only needs to ride the cloud write; drop it locally after.
-          if (card[PIPELINE_REGRESSION_AUTH_KEY]) {
-            setCards((prev) =>
-              prev.map((entry) =>
-                entry.id === card.id ? stripPipelineInternalFields(entry) : entry,
-              ),
-            );
-          }
+          // Keep `_allowPipelineRegression` on local state until pull merge confirms the
+          // cloud stage matches (see mergeCardRecords). Stripping here lets a brief
+          // stale refetch snap the card back to the further pipeline stage.
         } else {
           reportSyncIssue({
             level: 'warn',
