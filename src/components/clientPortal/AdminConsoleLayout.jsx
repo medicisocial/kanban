@@ -9,6 +9,7 @@ import {
   IconSettings,
   IconShoots,
   IconTarget,
+  IconEye,
   IconTasks,
   IconTeam,
 } from './ClientPortalIcons';
@@ -50,6 +51,7 @@ function buildBaseNavSections(visibleTaskTabs) {
     items: [
       { id: 'calendars', label: 'Calendars', Icon: IconCalendar },
       { id: 'deliverables', label: 'Deliverables', Icon: IconTarget },
+      { id: 'metrics', label: 'Metrics', Icon: IconEye },
     ],
   },
   {

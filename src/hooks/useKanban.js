@@ -15,6 +15,7 @@ import {
 } from '../utils/cardPipelineMerge';
 import { resolveShootScriptsFromIdea } from '../utils/videoIdeas';
 import { normalizeCaptionMode, normalizePostSlides } from '../utils/postSlides';
+import { normalizeCardMetrics } from '../utils/cardMetrics';
 
 const getCardId = (card) => card.id;
 import { getDefaultAssigneeForRole } from '../utils/teamMembers';
@@ -97,6 +98,7 @@ function normalizeCard(card) {
     postedAt,
     editorCompletedAt: card.editorCompletedAt || null,
     editorPoints: normalizeEditorPoints(card.editorPoints),
+    metrics: normalizeCardMetrics(card),
     clientComment: card.clientComment || '',
     sourceIdeaId: card.sourceIdeaId || null,
     dueDate,
