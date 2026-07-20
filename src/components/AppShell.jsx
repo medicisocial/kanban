@@ -50,6 +50,7 @@ const ClientFilesWorkspacePage = lazy(() => import("./ClientFilesWorkspacePage")
 const TeamManagementPage = lazy(() => import("./TeamManagementPage"));
 const FinancesPage = lazy(() => import("./FinancesPage"));
 const DeliverablesPage = lazy(() => import("./DeliverablesPage"));
+const MetricsPage = lazy(() => import("./MetricsPage"));
 import PlanPostDateModal from "./PlanPostDateModal";
 import PlanShootDateModal from "./PlanShootDateModal";
 import AddShootDayModal from "./AddShootDayModal";
@@ -175,6 +176,7 @@ export default function AppShell({ onSignOut }) {
   });
 
   const [selectedCard, setSelectedCard] = useState(null);
+  const [cardModalInitialTab, setCardModalInitialTab] = useState("details");
   const [clientFilter, setClientFilterState] = useState("all");
   const setClientFilter = useCallback((next) => {
     startTransition(() => setClientFilterState(next));
@@ -200,7 +202,8 @@ export default function AppShell({ onSignOut }) {
     () => loadShootResponses().length,
   );
 
-  const handleCardClick = (card) => {
+  const handleCardClick = (card, options = {}) => {
+    setCardModalInitialTab(options?.tab || "details");
     const stored = cards.find((c) => c.id === card.id) || card;
     if (card.occurrenceDate && stored.contentType === "Story") {
       setSelectedCard(withStoryOccurrence(stored, card.occurrenceDate));
@@ -1415,6 +1418,14 @@ export default function AppShell({ onSignOut }) {
           }}
         />
       )}
+
+      {activeView === "metrics" && (
+        <MetricsPage
+          cards={cards}
+          clientFilter={clientFilter}
+          onOpenCard={handleCardClick}
+        />
+      )}
       </Suspense>
 
       {selectedCard && (
@@ -1423,7 +1434,11 @@ export default function AppShell({ onSignOut }) {
           cards={cards}
           ideas={ideas}
           plans={plans}
-          onClose={() => setSelectedCard(null)}
+          initialTab={cardModalInitialTab}
+          onClose={() => {
+            setSelectedCard(null);
+            setCardModalInitialTab("details");
+          }}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
           onPlanPostDate={setPlanDateCard}

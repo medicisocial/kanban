@@ -33,6 +33,12 @@ import ScriptPanel from './ScriptPanel';
 import PostSlidesPanel from './PostSlidesPanel';
 import { isSlidePostType } from '../utils/postSlides';
 import DebouncedField, { DebouncedModelTagInput, DebouncedTimeInput } from './DebouncedField';
+import {
+  METRIC_FIELDS,
+  METRIC_FIELD_LABELS,
+  normalizeCardMetrics,
+  patchCardMetrics,
+} from '../utils/cardMetrics';
 
 const CARD_TABS = [
   { id: 'details', label: 'Details' },
@@ -40,6 +46,7 @@ const CARD_TABS = [
   { id: 'production', label: 'Production' },
   { id: 'schedule', label: 'Schedule' },
   { id: 'references', label: 'References' },
+  { id: 'metrics', label: 'Metrics' },
 ];
 
 /** Text fields in the modal sync to cloud only when Save Changes / close — not while typing. */
@@ -50,6 +57,7 @@ function CardModal({
   cards = [],
   ideas = [],
   plans = {},
+  initialTab = 'details',
   onClose,
   onUpdate,
   onDelete,
@@ -63,7 +71,7 @@ function CardModal({
   const overlayRef = useRef(null);
   const mouseDownOnOverlayRef = useRef(false);
   const pendingTabRef = useRef(null);
-  const [activeTab, setActiveTab] = useState('details');
+  const [activeTab, setActiveTab] = useState(initialTab || 'details');
   const [showMakeOneOff, setShowMakeOneOff] = useState(false);
   const {
     clients,
@@ -141,9 +149,9 @@ function CardModal({
       setActiveTab(pendingTabRef.current);
       pendingTabRef.current = null;
     } else {
-      setActiveTab('details');
+      setActiveTab(initialTab || 'details');
     }
-  }, [card?.id]);
+  }, [card?.id, initialTab]);
 
   const shootDayCards = useMemo(() => {
     const merged = { ...card, ...draftDisplay };
@@ -170,6 +178,15 @@ function CardModal({
       queueUpdate({ [field]: value });
     },
     [queueUpdate],
+  );
+
+  const commitMetricField = useCallback(
+    (field, value) => {
+      if (!card) return;
+      const merged = { ...card, ...draftDisplay };
+      queueUpdate({ metrics: patchCardMetrics(merged, field, value) });
+    },
+    [card, draftDisplay, queueUpdate],
   );
 
   const commitNotes = useCallback(
@@ -1098,6 +1115,31 @@ function CardModal({
               )}
             </Field>
             </div>
+          )}
+
+          {activeTab === 'metrics' && (
+            <>
+              <p className="text-sm text-white/45">
+                Enter post-publish analytics. Totals roll into the monthly Metrics page by publish date.
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {METRIC_FIELDS.map((field) => (
+                  <Field key={field} label={METRIC_FIELD_LABELS[field]}>
+                    <DebouncedField
+                      {...SAVE_ON_CLOSE}
+                      resetKey={`${card.id}-metrics-${field}`}
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputMode="numeric"
+                      value={String(normalizeCardMetrics(displayCard)[field] || 0)}
+                      onCommit={(value) => commitMetricField(field, value)}
+                      className={inputClass}
+                    />
+                  </Field>
+                ))}
+              </div>
+            </>
           )}
         </div>
 

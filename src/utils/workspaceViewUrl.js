@@ -6,6 +6,7 @@ const WORKSPACE_VIEWS = new Set([
   'todo',
   'calendars',
   'deliverables',
+  'metrics',
   'clients',
   'team',
   'finances',
