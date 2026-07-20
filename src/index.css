@@ -39,6 +39,10 @@ body {
   min-height: 100vh;
 }
 
+button {
+  cursor: pointer;
+}
+
 select,
 select option {
   background-color: #1a1a1a;

@@ -76,6 +76,7 @@ export default function UnifiedLogin({
   initialClientMode = false,
   initialClientResetToken = '',
   initialAgencyRecovery = false,
+  adminMode = false,
 }) {
   const { login, signup, requestPasswordReset, completePasswordReset } = useStaffAuth();
   const [agencyMode, setAgencyMode] = useState(
@@ -97,6 +98,27 @@ export default function UnifiedLogin({
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const handleAdminSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    setInfo('');
+    setSubmitting(true);
+    try {
+      const { verifySuperAdminCredentials, saveSuperAdminSession } = await import('../utils/superAdminAuth');
+      const session = await verifySuperAdminCredentials(username, password);
+      if (session) {
+        saveSuperAdminSession(session);
+        onAuthenticated('admin');
+      } else {
+        setError('Invalid super admin credentials.');
+      }
+    } catch (err) {
+      setError(err?.message || 'Admin authentication failed.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const saasSignupEnabled = SUPABASE_ENABLED;
   const selectedPlanInfo = getPlan(planType);
@@ -351,6 +373,7 @@ export default function UnifiedLogin({
   };
 
   const heading = (() => {
+    if (adminMode) return 'Super Admin Console';
     if (isSignup) return 'Create your workspace';
     if (isForgot) return 'Forgot your password?';
     if (isAgencyReset) return 'Choose a new password';
@@ -359,6 +382,7 @@ export default function UnifiedLogin({
   })();
 
   const subheading = (() => {
+    if (adminMode) return 'Sign in to access global system stats, organizations, and brand portals.';
     if (isSignup) return null;
     if (isForgot) {
       return agencyMode
@@ -372,9 +396,9 @@ export default function UnifiedLogin({
       : 'Sign in to review ideas, approve content, and view your shoot schedule.';
   })();
 
-  const showAccountSwitch = authView === 'signin';
-  const showForgotLink = authView === 'signin';
-  const showCreateAccount = authView === 'signin' && agencyMode && saasSignupEnabled;
+  const showAccountSwitch = authView === 'signin' && !adminMode;
+  const showForgotLink = authView === 'signin' && !adminMode;
+  const showCreateAccount = authView === 'signin' && agencyMode && saasSignupEnabled && !adminMode;
 
   return (
     <main className="relative flex min-h-[100dvh] flex-col bg-black text-white">
@@ -507,7 +531,7 @@ export default function UnifiedLogin({
               ) : null}
             </form>
           ) : (
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            <form onSubmit={adminMode ? handleAdminSubmit : handleSubmit} className="mt-8 space-y-5">
               {isSignup && (
                 <label className="block">
                   <span className={labelClass}>Workspace name</span>
@@ -526,13 +550,13 @@ export default function UnifiedLogin({
 
               <label className="block">
                 <span className={labelClass}>
-                  {agencyMode ? 'Email' : 'Username'}
+                  {adminMode ? 'Admin email' : agencyMode ? 'Email' : 'Username'}
                 </span>
                 <input
-                  type={agencyMode ? 'email' : 'text'}
+                  type={adminMode || agencyMode ? 'email' : 'text'}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  autoComplete={agencyMode ? 'email' : 'username'}
+                  autoComplete={adminMode || agencyMode ? 'email' : 'username'}
                   className={inputClass}
                   autoFocus={!checking}
                   disabled={submitting}
@@ -610,7 +634,7 @@ export default function UnifiedLogin({
             </form>
           )}
 
-          {(isStaffAuthConfigured() || saasSignupEnabled) && authView === 'signin' && (
+          {(isStaffAuthConfigured() || saasSignupEnabled) && authView === 'signin' && !adminMode && (
             <div className="mt-8 space-y-4 border-t border-white/[0.06] pt-6">
               {onBackToHome && (
                 <button
