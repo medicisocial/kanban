@@ -37,7 +37,7 @@ import {
   METRIC_FIELDS,
   METRIC_FIELD_LABELS,
   normalizeCardMetrics,
-  patchCardMetrics,
+  buildCardMetricsUpdate,
 } from '../utils/cardMetrics';
 
 const CARD_TABS = [
@@ -184,7 +184,8 @@ function CardModal({
     (field, value) => {
       if (!card) return;
       const merged = { ...card, ...draftDisplay };
-      queueUpdate({ metrics: patchCardMetrics(merged, field, value) });
+      // Metrics-only — do not spread the card or touch columnId/status.
+      queueUpdate(buildCardMetricsUpdate(merged, field, value));
     },
     [card, draftDisplay, queueUpdate],
   );

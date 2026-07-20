@@ -120,3 +120,12 @@ export function patchCardMetrics(card, field, value) {
     [field]: toNonNegativeInt(value),
   };
 }
+
+/**
+ * Build a metrics-only card update. Never includes columnId/status/postedAt —
+ * those must stay out of metrics writes so intentional pipeline regressions
+ * (and `_allowPipelineRegression`) are not disturbed by analytics edits.
+ */
+export function buildCardMetricsUpdate(card, field, value) {
+  return { metrics: patchCardMetrics(card, field, value) };
+}

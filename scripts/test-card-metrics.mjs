@@ -121,9 +121,117 @@ assert(totals.follows === 4, 'engagement sum follows');
 assert(buildMetricsPdfFilename('2026-07') === 'metrics-2026-07.pdf', 'pdf helper filename');
 assert(typeof downloadMetricsPdf === 'function', 'downloadMetricsPdf exported');
 
+// Pipeline regression safety: metrics writes must never touch stage fields.
+{
+  const { buildCardMetricsUpdate: buildMetricsUpdate } = await vite.ssrLoadModule(
+    '/src/utils/cardMetrics.js',
+  );
+  const {
+    prepareCardPipelineUpsert,
+    mergeCardRecords,
+    PIPELINE_REGRESSION_AUTH_KEY,
+  } = await vite.ssrLoadModule('/src/utils/cardPipelineMerge.js');
+
+  const metricsPatch = buildMetricsUpdate(
+    {
+      columnId: 'scheduled',
+      status: 'Scheduled',
+      metrics: { views: 1 },
+      [PIPELINE_REGRESSION_AUTH_KEY]: true,
+    },
+    'views',
+    50,
+  );
+  assert(
+    Object.keys(metricsPatch).length === 1 && metricsPatch.metrics,
+    'metrics update payload is metrics-only',
+  );
+  assert(
+    !('columnId' in metricsPatch) &&
+      !('status' in metricsPatch) &&
+      !(PIPELINE_REGRESSION_AUTH_KEY in metricsPatch),
+    'metrics update must not include columnId, status, or regression auth',
+  );
+  assert(
+    Object.keys(metricsPatch.metrics).every((key) =>
+      ['views', 'likes', 'shares', 'saves', 'comments', 'follows'].includes(key),
+    ),
+    'metrics object only contains engagement fields',
+  );
+
+  const afterMetricsUpsert = prepareCardPipelineUpsert(
+    {
+      id: 'm1',
+      columnId: 'scheduled',
+      status: 'Scheduled',
+      metrics: { views: 1 },
+      updatedAt: 100,
+    },
+    {
+      id: 'm1',
+      columnId: 'scheduled',
+      status: 'Scheduled',
+      ...metricsPatch,
+      updatedAt: 200,
+    },
+  );
+  assert(afterMetricsUpsert.columnId === 'scheduled', 'metrics upsert keeps scheduled stage');
+  assert(afterMetricsUpsert.metrics.views === 50, 'metrics upsert still applies views');
+
+  // Stale full-record shape with metrics must not regress scheduled → editing.
+  const staleWithMetrics = prepareCardPipelineUpsert(
+    {
+      id: 'm2',
+      columnId: 'scheduled',
+      status: 'Scheduled',
+      metrics: { views: 10 },
+      updatedAt: 100,
+    },
+    {
+      id: 'm2',
+      columnId: 'editing',
+      status: 'Editing',
+      metrics: { views: 99 },
+      updatedAt: 9999,
+    },
+  );
+  assert(
+    staleWithMetrics.columnId === 'scheduled',
+    'stale metrics-bearing upsert must not regress scheduled → editing',
+  );
+  assert(staleWithMetrics.metrics.views === 99, 'stale upsert still accepts newer metrics');
+
+  // Authorized send-back + newer metrics edit must keep editing and the auth flag.
+  const mergedRegression = mergeCardRecords(
+    { id: 'm3', columnId: 'in-review', status: 'In Review', metrics: { views: 1 }, updatedAt: 100 },
+    {
+      id: 'm3',
+      columnId: 'editing',
+      status: 'Editing',
+      metrics: { views: 40 },
+      [PIPELINE_REGRESSION_AUTH_KEY]: true,
+      updatedAt: 400,
+    },
+  );
+  assert(
+    mergedRegression.columnId === 'editing',
+    'pull merge keeps authorized regression when metrics also changed',
+  );
+  assert(mergedRegression.metrics.views === 40, 'pull merge keeps newest metrics with regression');
+  assert(
+    mergedRegression[PIPELINE_REGRESSION_AUTH_KEY] === true,
+    'metrics-bearing authorized copy must retain regression auth until cloud confirms',
+  );
+}
+
 const modalSource = readFileSync(new URL('../src/components/CardModal.jsx', import.meta.url), 'utf8');
 assert(modalSource.includes("{ id: 'metrics', label: 'Metrics' }"), 'CardModal has Metrics tab');
 assert(modalSource.includes('commitMetricField'), 'CardModal commits metric fields');
+assert(modalSource.includes('buildCardMetricsUpdate'), 'CardModal uses metrics-only update builder');
+assert(
+  !modalSource.includes('queueUpdate({ metrics: patchCardMetrics'),
+  'CardModal does not hand-roll metrics patches that could grow into full-card writes',
+);
 assert(modalSource.includes("activeTab === 'metrics'"), 'CardModal renders metrics panel');
 
 const pageSource = readFileSync(new URL('../src/components/MetricsPage.jsx', import.meta.url), 'utf8');
@@ -132,6 +240,8 @@ assert(pageSource.includes('Engagement overview'), 'Metrics page has engagement 
 assert(pageSource.includes('Each post broken down'), 'Metrics page has per-post breakdown');
 assert(pageSource.includes('Download PDF'), 'Metrics page has PDF download');
 assert(pageSource.includes("tab: 'metrics'"), 'Metrics page opens cards on Metrics tab');
+assert(!pageSource.includes('onUpdate'), 'Metrics page is read-only (no card updates)');
+assert(!pageSource.includes('updateCard'), 'Metrics page never writes cards');
 
 const pdfSource = readFileSync(new URL('../src/utils/metricsPdf.js', import.meta.url), 'utf8');
 assert(pdfSource.includes('Monthly Metrics'), 'PDF titled Monthly Metrics');
@@ -139,6 +249,7 @@ assert(pdfSource.includes('This month overview — content mix'), 'PDF content o
 assert(pdfSource.includes('Engagement overview'), 'PDF engagement section');
 assert(pdfSource.includes('Each post broken down'), 'PDF per-post section');
 assert(pdfSource.includes("orientation: 'landscape'"), 'PDF is landscape A4');
+assert(!pdfSource.includes('columnId:'), 'PDF helper does not write pipeline fields');
 
 const navSource = readFileSync(
   new URL('../src/components/clientPortal/AdminConsoleLayout.jsx', import.meta.url),
@@ -159,6 +270,14 @@ assert(constantsSource.includes('metrics:'), 'createCard defaults metrics');
 
 const kanbanSource = readFileSync(new URL('../src/hooks/useKanban.js', import.meta.url), 'utf8');
 assert(kanbanSource.includes('normalizeCardMetrics'), 'useKanban normalizes metrics');
+assert(
+  kanbanSource.includes('metrics: normalizeCardMetrics(card)'),
+  'normalizeCard nests metrics without replacing columnId via metrics spread',
+);
+assert(
+  !kanbanSource.includes('stripPipelineInternalFields'),
+  'useKanban must not strip regression auth (metrics saves go through the same path)',
+);
 
 await vite.close();
 console.log('test-card-metrics: ok');
