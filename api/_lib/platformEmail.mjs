@@ -134,11 +134,21 @@ export function buildNotificationEmail({ shareType, client, agencyName, shareUrl
   };
 }
 
-export async function sendPlatformEmail({ to, subject, html, text }) {
+export async function sendPlatformEmail({ to, subject, html, text, replyTo }) {
   const apiKey = (process.env.RESEND_API_KEY || '').trim();
   if (!apiKey) {
     throw new Error('Email is not configured. Add RESEND_API_KEY in Vercel environment variables.');
   }
+
+  const recipients = (Array.isArray(to) ? to : [to])
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean);
+  if (!recipients.length) {
+    throw new Error('At least one email recipient is required.');
+  }
+
+  const resolvedReplyTo =
+    replyTo === undefined ? getReplyTo() : String(replyTo || '').trim() || undefined;
 
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -148,8 +158,8 @@ export async function sendPlatformEmail({ to, subject, html, text }) {
     },
     body: JSON.stringify({
       from: getFromAddress(),
-      reply_to: getReplyTo(),
-      to: [to],
+      ...(resolvedReplyTo ? { reply_to: resolvedReplyTo } : {}),
+      to: recipients,
       subject,
       html,
       text,

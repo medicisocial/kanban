@@ -21,6 +21,7 @@ export default function ClientPortalHome({
   socialLogins,
   clientLogo,
   clientColor,
+  showSpotlight = false,
   onNavigate,
   onOpenMeeting,
   onOpenShoot,
@@ -93,6 +94,26 @@ export default function ClientPortalHome({
         title="Your tasks"
         description="Everything waiting on you — idea approvals, content reviews, and profile setup."
       />
+
+      {showSpotlight && (
+        <div className={`${surfacePanelClass} mb-6 flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between`}>
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/40">
+              Business Spotlight
+            </p>
+            <p className="mt-1 text-sm text-white/70">
+              Email the branding-video questionnaire to a member business.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate('spotlight')}
+            className={`${btnPrimaryClass} shrink-0 px-3 py-2 text-[10px]`}
+          >
+            Invite a business
+          </button>
+        </div>
+      )}
 
       <div className="overview-pipeline-row overview-pipeline-row-wide mb-8">
         {glanceCards.map((item) => (

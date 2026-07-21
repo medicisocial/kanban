@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   IconBoard,
   IconCalendar,
@@ -8,35 +9,41 @@ import {
   IconShoots,
   IconTasks,
   IconRefresh,
+  IconTarget,
 } from './ClientPortalIcons';
 import EnterprisePortalLayout from './EnterprisePortalLayout';
 
-const NAV_SECTIONS = [
-  {
-    label: 'Overview',
-    items: [{ id: 'home', label: 'Your tasks', Icon: IconHome }],
-  },
-  {
-    label: 'Production',
-    items: [
-      { id: 'ideas', label: 'Vault', Icon: IconIdeas },
-      { id: 'pipeline', label: 'Board', Icon: IconBoard },
-      { id: 'review', label: 'Content review', Icon: IconTasks },
-      { id: 'shoots', label: 'Shoot Schedule', Icon: IconShoots },
-    ],
-  },
-  {
-    label: 'Planning',
-    items: [{ id: 'calendar', label: 'Calendar', Icon: IconCalendar }],
-  },
-  {
-    label: 'Resources',
-    items: [
-      { id: 'files', label: 'Brand assets', Icon: IconFiles },
-      { id: 'photos', label: 'Content Library', Icon: IconPhotos },
-    ],
-  },
-];
+function buildNavSections(showSpotlight) {
+  return [
+    {
+      label: 'Overview',
+      items: [{ id: 'home', label: 'Your tasks', Icon: IconHome }],
+    },
+    {
+      label: 'Production',
+      items: [
+        { id: 'ideas', label: 'Vault', Icon: IconIdeas },
+        { id: 'pipeline', label: 'Board', Icon: IconBoard },
+        { id: 'review', label: 'Content review', Icon: IconTasks },
+        { id: 'shoots', label: 'Shoot Schedule', Icon: IconShoots },
+      ],
+    },
+    {
+      label: 'Planning',
+      items: [{ id: 'calendar', label: 'Calendar', Icon: IconCalendar }],
+    },
+    {
+      label: 'Resources',
+      items: [
+        { id: 'files', label: 'Brand assets', Icon: IconFiles },
+        { id: 'photos', label: 'Content Library', Icon: IconPhotos },
+        ...(showSpotlight
+          ? [{ id: 'spotlight', label: 'Business Spotlight', Icon: IconTarget }]
+          : []),
+      ],
+    },
+  ];
+}
 
 export default function ClientPortalLayout({
   client,
@@ -52,8 +59,11 @@ export default function ClientPortalLayout({
   notificationsOpen,
   onNotificationsOpenChange,
   navBadges = {},
+  showSpotlight = false,
   children,
 }) {
+  const navSections = useMemo(() => buildNavSections(showSpotlight), [showSpotlight]);
+
   return (
     <EnterprisePortalLayout
       brandLayout
@@ -63,7 +73,7 @@ export default function ClientPortalLayout({
       profileLabel={userDisplayName || client}
       profileColor={clientColor}
       subtitle="Client workspace"
-      navSections={NAV_SECTIONS}
+      navSections={navSections}
       navBadges={navBadges}
       activeTab={activeTab}
       onTabChange={onTabChange}
