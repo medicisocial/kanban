@@ -3,6 +3,7 @@ import { getContentTypeStyle } from '../constants';
 import { contentTypeLabelProps } from '../utils/contentTypeColors';
 import ScriptPanel from './ScriptPanel';
 import PostSlidesPanel from './PostSlidesPanel';
+import ScriptPdfButton from './ScriptPdfButton';
 import { getStructuredScript } from '../utils/scriptFields';
 
 export default function ShootScriptModal({ card, onClose, onSave, readOnly = false }) {
@@ -66,7 +67,21 @@ export default function ShootScriptModal({ card, onClose, onSave, readOnly = fal
           </button>
         </div>
 
-        <div className="px-5 py-4">
+        <div className="space-y-4 px-5 py-4">
+          <div className="flex justify-end">
+            <ScriptPdfButton
+              card={{
+                ...card,
+                shootScriptHook: draft.hook,
+                shootScriptBody: draft.body,
+                shootTextOverlays: draft.overlays,
+                caption: draft.caption,
+                captionMode: draft.captionMode,
+                postSlides: draft.postSlides,
+                shootScript: draft.body,
+              }}
+            />
+          </div>
           {card.contentType === 'Carousel' || card.contentType === 'Static Post' ? (
             <PostSlidesPanel
               contentType={card.contentType}
