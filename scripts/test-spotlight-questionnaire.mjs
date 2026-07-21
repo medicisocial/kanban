@@ -81,10 +81,10 @@ const answers = normalizeSpotlightAnswers({
   businessHistory: 'Family business since 2010',
   specialHook: 'Handmade goods',
   coreOffer: 'Custom gifts',
-  logoAttached: 'yes',
+  logoAttached: 'Yes — email separately',
   website: 'https://example.com',
 });
-assert(answers.logoAttached === 'Yes', 'logoAttached normalizes yes');
+assert(answers.logoAttached === 'Yes — email separately', 'logoAttached keeps free-text answer');
 validateSpotlightAnswers(answers);
 
 let missingCaught = false;
@@ -105,8 +105,12 @@ assert(/Business Spotlight/i.test(inviteEmail.subject), 'invite subject mentions
 assert(inviteEmail.html.includes('https://example.test/?spotlight='), 'invite includes form URL');
 assert(inviteEmail.html.includes('Looking forward to filming'), 'invite includes note');
 assert(
-  /becoming a member of the Fulshear Regional Chamber For Commerce/i.test(inviteEmail.html),
-  'invite uses Chamber For Commerce membership copy',
+  /joining the Fulshear Regional Chamber FOR Commerce/i.test(inviteEmail.html),
+  'invite uses Chamber FOR Commerce membership copy',
+);
+assert(
+  /Business Spotlight - Branding Video/i.test(inviteEmail.html),
+  'invite mentions Business Spotlight - Branding Video',
 );
 assert(!/Sent by/i.test(inviteEmail.html) && !/Sent by/i.test(inviteEmail.text), 'invite omits Sent by line');
 assert(
