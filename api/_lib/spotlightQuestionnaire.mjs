@@ -269,7 +269,7 @@ export function buildSpotlightInviteEmail({
       <p style="margin:16px 0 8px;font-size:12px;line-height:1.6;color:#777;">Link:</p>
       <p style="margin:0 0 24px;font-size:12px;line-height:1.6;word-break:break-all;"><a href="${escapeHtml(formUrl)}" style="color:#c88;">${escapeHtml(formUrl)}</a></p>
       <hr style="border:none;border-top:1px solid #222;margin:24px 0;" />
-      <p style="margin:0;font-size:11px;line-height:1.6;color:#666;">Sent via ${escapeHtml(agency)}. Reply to this email to reach Marina at the Chamber.</p>
+      <p style="margin:0;font-size:11px;line-height:1.6;color:#666;">Sent via ${escapeHtml(agency)}. Please use the button above to complete the form — do not reply to this email.</p>
     </div>
   </body>
 </html>`;
@@ -282,6 +282,8 @@ export function buildSpotlightInviteEmail({
     note ? `Note: ${note}` : '',
     '',
     `Open questionnaire: ${formUrl}`,
+    '',
+    'Please complete the form at the link above — do not reply to this email.',
     '',
     `— ${agency}`,
   ]

@@ -105,6 +105,10 @@ const inviteEmail = buildSpotlightInviteEmail({
 assert(/Business Spotlight/i.test(inviteEmail.subject), 'invite subject mentions spotlight');
 assert(inviteEmail.html.includes('https://example.test/?spotlight='), 'invite includes form URL');
 assert(inviteEmail.html.includes('Looking forward to filming'), 'invite includes note');
+assert(
+  /do not reply/i.test(inviteEmail.html) && /do not reply/i.test(inviteEmail.text),
+  'invite tells recipients not to reply',
+);
 
 const submission = buildSpotlightSubmissionEmail({ invite: verified, answers });
 assert(submission.subject.includes('Example Co'), 'submission subject includes business');
@@ -150,7 +154,11 @@ const inviteApi = readFileSync(
 );
 assert(inviteApi.includes('isClientSessionValid'), 'invite API requires client session');
 assert(inviteApi.includes('canSendSpotlightInvite'), 'invite API checks chamber brand');
-assert(inviteApi.includes('SPOTLIGHT_MARINA_EMAIL'), 'invite reply-to is Marina');
+assert(inviteApi.includes("replyTo: ''"), 'invite email has no Reply-To (form only, no reply)');
+assert(
+  !inviteApi.includes('SPOTLIGHT_MARINA_EMAIL'),
+  'invite API does not set Marina as Reply-To',
+);
 
 const submitApi = readFileSync(
   new URL('../api/spotlight-questionnaire-submit.js', import.meta.url),

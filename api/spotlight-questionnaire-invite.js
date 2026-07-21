@@ -4,7 +4,6 @@ import {
 } from './_lib/clientPortalAuth.mjs';
 import { isEmailConfigured, sendPlatformEmail } from './_lib/platformEmail.mjs';
 import {
-  SPOTLIGHT_MARINA_EMAIL,
   buildSpotlightFormUrl,
   buildSpotlightInviteEmail,
   canSendSpotlightInvite,
@@ -81,7 +80,8 @@ export default async function handler(req, res) {
       subject: email.subject,
       html: email.html,
       text: email.text,
-      replyTo: SPOTLIGHT_MARINA_EMAIL,
+      // No Reply-To — recipients should fill the form, not email back.
+      replyTo: '',
     });
 
     return res.status(200).json({
