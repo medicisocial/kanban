@@ -199,8 +199,7 @@ export function normalizeSpotlightAnswers(raw = {}) {
   for (const field of SPOTLIGHT_QUESTION_FIELDS) {
     const value = raw[field.key];
     if (field.key === 'logoAttached') {
-      const normalized = String(value || '').trim().toLowerCase();
-      answers[field.key] = normalized === 'yes' || normalized === 'true' ? 'Yes' : normalized === 'no' || normalized === 'false' ? 'No' : '';
+      answers[field.key] = String(value ?? '').trim();
       continue;
     }
     answers[field.key] = String(value ?? '').trim();
@@ -249,7 +248,7 @@ export function buildSpotlightInviteEmail({
     ? `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#ccc;"><em>${escapeHtml(note)}</em></p>`
     : '';
   const intro =
-    'Congratulations on becoming a member of the Fulshear Regional Chamber For Commerce! Your Business Spotlight branding video is produced in partnership with Medici Social. Please complete this short questionnaire so we can write your script and prepare for filming.';
+    'Congratulations on joining the Fulshear Regional Chamber FOR Commerce! Your Business Spotlight - Branding Video is produced in partnership with Medici Social. Please complete this questionnaire so we can write your script and prepare for filming.';
 
   const html = `<!DOCTYPE html>
 <html lang="en">

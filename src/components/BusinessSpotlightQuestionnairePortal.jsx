@@ -1,57 +1,105 @@
 import { useMemo, useState } from 'react';
 import {
-  SPOTLIGHT_PARTS,
-  SPOTLIGHT_QUESTION_FIELDS,
   emptySpotlightAnswers,
   peekSpotlightTokenClient,
   readSpotlightTokenFromUrl,
   submitSpotlightQuestionnaire,
 } from '../utils/spotlightQuestionnaire';
 
-const fieldClass =
-  'bsq-field w-full rounded border border-[#d8d3cc] bg-white px-3 py-2.5 text-sm text-[#1a1a1a] outline-none transition';
-const labelClass = 'mb-1.5 block text-sm font-medium text-[#1a1a1a]';
+const FIELD_STYLE = {
+  width: '100%',
+  boxSizing: 'border-box',
+  border: 'none',
+  borderBottom: '1px solid #b9b3a9',
+  padding: '8px 2px',
+  fontSize: 15,
+  fontFamily: 'Arial, Helvetica, sans-serif',
+  color: '#1a1a1a',
+  background: 'transparent',
+};
 
-function FieldInput({ field, value, onChange }) {
-  if (field.type === 'yesno') {
-    return (
-      <div className="flex flex-wrap gap-3">
-        {['Yes', 'No'].map((option) => (
-          <label key={option} className="inline-flex items-center gap-2 text-sm text-[#1a1a1a]">
-            <input
-              type="radio"
-              name={field.key}
-              value={option}
-              checked={value === option}
-              onChange={() => onChange(option)}
-            />
-            {option}
-          </label>
-        ))}
-      </div>
-    );
-  }
+const AREA_STYLE = {
+  ...FIELD_STYLE,
+  resize: 'vertical',
+  border: '1px solid #d8d3cc',
+  borderRadius: 2,
+  padding: '8px 10px',
+};
 
-  if (field.type === 'textarea') {
-    return (
-      <textarea
-        className={`${fieldClass} min-h-[6rem] resize-y`}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={field.required}
-        rows={4}
-      />
-    );
-  }
+const sectionTitle = (extra = {}) => ({
+  fontWeight: 800,
+  color: '#a3151d',
+  fontSize: 14,
+  letterSpacing: '0.03em',
+  ...extra,
+});
 
+const labelStyle = (first = false) => ({
+  display: 'block',
+  fontWeight: 'bold',
+  fontSize: 14,
+  marginBottom: 4,
+  ...(first ? {} : { marginTop: 16 }),
+});
+
+const optionalSpan = {
+  fontWeight: 'normal',
+  color: '#6b6b6b',
+};
+
+const partBanner = (marginTop) => ({
+  background: '#a3151d',
+  color: '#ffffff',
+  textAlign: 'center',
+  fontWeight: 800,
+  fontSize: 18,
+  letterSpacing: '0.04em',
+  padding: 12,
+  margin: `${marginTop}px 0 24px`,
+});
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  optional,
+  hint,
+  first = false,
+  multiline = false,
+  rows = 2,
+  required = false,
+  type = 'text',
+}) {
   return (
-    <input
-      type={field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : field.type === 'url' ? 'url' : 'text'}
-      className={fieldClass}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      required={field.required}
-    />
+    <>
+      <label style={labelStyle(first)}>
+        {label}
+        {optional ? <span style={optionalSpan}> (optional)</span> : null}
+        {hint ? <span style={optionalSpan}> {hint}</span> : null}
+        {required ? <span style={{ color: '#a3151d' }}> *</span> : null}
+      </label>
+      {multiline ? (
+        <textarea
+          className="bsq-field"
+          rows={rows}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required={required}
+          style={AREA_STYLE}
+        />
+      ) : (
+        <input
+          className="bsq-field"
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          required={required}
+          style={FIELD_STYLE}
+        />
+      )}
+    </>
   );
 }
 
@@ -65,18 +113,7 @@ export default function BusinessSpotlightQuestionnairePortal() {
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
 
-  const fieldsBySection = useMemo(() => {
-    const map = new Map();
-    for (const field of SPOTLIGHT_QUESTION_FIELDS) {
-      if (!map.has(field.section)) map.set(field.section, []);
-      map.get(field.section).push(field);
-    }
-    return map;
-  }, []);
-
-  const handleChange = (key, value) => {
-    setAnswers((prev) => ({ ...prev, [key]: value }));
-  };
+  const set = (key) => (value) => setAnswers((prev) => ({ ...prev, [key]: value }));
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -94,10 +131,19 @@ export default function BusinessSpotlightQuestionnairePortal() {
 
   if (!token || !invite || invite.expired) {
     return (
-      <div className="min-h-[100dvh] bg-[#ece7e0] px-4 py-16">
-        <div className="mx-auto max-w-xl bg-white px-8 py-10 text-center shadow-sm">
-          <h1 className="text-xl font-semibold text-[#1a1a1a]">Questionnaire unavailable</h1>
-          <p className="mt-3 text-sm leading-relaxed text-[#555]">
+      <div style={{ minHeight: '100vh', background: '#ece7e0', padding: '64px 16px' }}>
+        <div
+          style={{
+            maxWidth: 560,
+            margin: '0 auto',
+            background: '#fff',
+            padding: '40px 32px',
+            fontFamily: 'Arial, Helvetica, sans-serif',
+            textAlign: 'center',
+          }}
+        >
+          <h1 style={{ fontSize: 22, margin: '0 0 12px' }}>Questionnaire unavailable</h1>
+          <p style={{ margin: 0, color: '#555', lineHeight: 1.6 }}>
             {invite?.expired
               ? 'This questionnaire link has expired. Please ask the Chamber for a new invite.'
               : 'This Business Spotlight link is missing or invalid.'}
@@ -109,13 +155,22 @@ export default function BusinessSpotlightQuestionnairePortal() {
 
   if (done) {
     return (
-      <div className="min-h-[100dvh] bg-[#ece7e0] px-4 py-16">
-        <div className="mx-auto max-w-xl bg-white px-8 py-10 text-center shadow-sm">
-          <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#a3151d]">
-            Fulshear Regional Chamber
+      <div style={{ minHeight: '100vh', background: '#ece7e0', padding: '64px 16px' }}>
+        <div
+          style={{
+            maxWidth: 560,
+            margin: '0 auto',
+            background: '#fff',
+            padding: '40px 32px',
+            fontFamily: 'Arial, Helvetica, sans-serif',
+            textAlign: 'center',
+          }}
+        >
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 'bold', letterSpacing: '0.06em', color: '#a3151d' }}>
+            FULSHEAR REGIONAL CHAMBER
           </p>
-          <h1 className="mt-3 text-2xl font-semibold text-[#1a1a1a]">Thank you</h1>
-          <p className="mt-3 text-sm leading-relaxed text-[#555]">
+          <h1 style={{ fontSize: 26, margin: '12px 0' }}>Thank you</h1>
+          <p style={{ margin: 0, color: '#555', lineHeight: 1.6 }}>
             Your Business Spotlight questionnaire was submitted. Answers were emailed to the Chamber and
             Medici Social. We’ll be in touch about scripting and filming.
           </p>
@@ -125,115 +180,354 @@ export default function BusinessSpotlightQuestionnairePortal() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-[#ece7e0] px-3 py-8 sm:px-6 sm:py-12">
-      <form
-        onSubmit={handleSubmit}
-        className="mx-auto max-w-[900px] bg-white px-5 py-8 shadow-sm sm:px-12 sm:py-14"
+    <div style={{ minHeight: '100vh', background: '#ece7e0' }}>
+      <style>{`
+        .bsq-field::placeholder { color: #adaaa5; }
+        .bsq-field:focus { outline: none; border-color: #a3151d !important; }
+        .bsq-submit:hover { background: #861118 !important; }
+        @media (max-width: 720px) {
+          .bsq-card { padding: 28px 20px 40px !important; }
+          .bsq-header { flex-direction: column !important; }
+          .bsq-row { flex-direction: column !important; }
+        }
+      `}</style>
+      <form className="bsq-card" onSubmit={handleSubmit} style={{
+        maxWidth: 900,
+        margin: '0 auto',
+        background: '#ffffff',
+        padding: '56px 64px 72px',
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        color: '#1a1a1a',
+      }}
       >
-        <header className="flex flex-col gap-4 border-b border-[#d8d3cc] pb-5 sm:flex-row sm:items-start sm:justify-between">
+        <div
+          className="bsq-header"
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 24,
+            paddingBottom: 20,
+            borderBottom: '1px solid #d8d3cc',
+          }}
+        >
+          <img
+            src="/fulshear-chamber-logo.png"
+            alt="Fulshear Regional Chamber FOR Commerce"
+            style={{ height: 83, width: 256, objectFit: 'contain' }}
+          />
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#a3151d]">
-              Video production partner
-            </p>
-            <h1 className="mt-2 font-serif text-3xl text-[#1a1a1a] sm:text-4xl">Business Spotlight</h1>
-            <p className="mt-1 text-sm uppercase tracking-[0.18em] text-[#666]">Questionnaire</p>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 'bold',
+                letterSpacing: '0.06em',
+                color: '#6b6b6b',
+                marginBottom: 6,
+              }}
+            >
+              VIDEO PRODUCTION PARTNER
+            </div>
+            <img
+              src="/medici-social-logo.png"
+              alt="Medici Social"
+              style={{ height: 39, width: 135, paddingLeft: 16, paddingRight: 16, objectFit: 'contain' }}
+            />
           </div>
-          <div className="text-left text-sm text-[#555] sm:max-w-xs sm:text-right">
-            <p className="font-medium text-[#1a1a1a]">{invite.brand || 'Fulshear Regional'}</p>
-            <p className="mt-1">Tell your story. Build your brand. Connect with the community.</p>
-          </div>
-        </header>
+        </div>
 
-        <p className="mt-6 text-sm leading-relaxed text-[#444]">
-          Congratulations on becoming a member of the Fulshear Regional Chamber For Commerce! Your
-          Business Spotlight branding video is produced in partnership with Medici Social. Please complete
-          this short questionnaire so we can write your script and prepare for filming.
+        <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '0.01em', margin: '32px 0 2px' }}>
+          BUSINESS SPOTLIGHT
+        </h1>
+        <h2 style={{ fontSize: 26, fontWeight: 800, color: '#a3151d', margin: '0 0 20px', letterSpacing: '0.02em' }}>
+          - QUESTIONNAIRE -
+        </h2>
+        <p style={{ fontStyle: 'italic', fontSize: 17, margin: '0 0 20px' }}>
+          Tell Your Story. Build Your Brand. Connect with the Community.
         </p>
-        <p className="mt-3 text-sm text-[#666]">
-          On submit, answers are emailed to <strong>Marina@fulshearregional.com</strong> and{' '}
-          <strong>info@medicisocial.com</strong>.
-        </p>
+
+        <div
+          style={{
+            background: '#f5f0ea',
+            border: '1px solid #e2dcd2',
+            padding: '20px 24px',
+            fontSize: 15,
+            lineHeight: 1.6,
+          }}
+        >
+          <p style={{ margin: '0 0 12px' }}>
+            Congratulations on joining the Fulshear Regional Chamber FOR Commerce! Your Business Spotlight -
+            Branding Video is produced in partnership with Medici Social. Please complete this questionnaire
+            so we can write your script and prepare for filming.
+          </p>
+          <p style={{ margin: 0, fontWeight: 'bold' }}>
+            When you submit, answers are emailed to BOTH: Marina@fulshearregional.com and
+            info@medicisocial.com
+          </p>
+        </div>
 
         {invite.note ? (
-          <p className="mt-4 border-l-2 border-[#a3151d] bg-[#faf7f4] px-4 py-3 text-sm italic text-[#444]">
+          <p
+            style={{
+              margin: '16px 0 0',
+              padding: '12px 16px',
+              borderLeft: '3px solid #a3151d',
+              background: '#faf7f4',
+              fontStyle: 'italic',
+              fontSize: 14,
+            }}
+          >
             {invite.note}
           </p>
         ) : null}
 
-        <div className="mt-10 space-y-10">
-          {SPOTLIGHT_PARTS.map((part) => (
-            <section key={part.id}>
-              <h2 className="mb-6 text-xs font-semibold uppercase tracking-[0.2em] text-[#a3151d]">
-                {part.title}
-              </h2>
-              <div className="space-y-8">
-                {part.sections.map((section) => {
-                  const fields = fieldsBySection.get(section) || [];
-                  const sectionHint = fields.find((f) => f.sectionHint)?.sectionHint;
-                  return (
-                    <div key={section}>
-                      <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#777]">
-                        {section}
-                      </h3>
-                      {sectionHint ? (
-                        <p className="mb-3 text-xs text-[#888]">{sectionHint}</p>
-                      ) : (
-                        <div className="mb-3" />
-                      )}
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        {fields.map((field) => (
-                          <label
-                            key={field.key}
-                            className={`block ${field.type === 'textarea' ? 'sm:col-span-2' : ''}`}
-                          >
-                            <span className={labelClass}>
-                              {field.label}
-                              {field.required ? (
-                                <span className="text-[#a3151d]"> *</span>
-                              ) : field.optionalHint ? (
-                                <span className="font-normal text-[#999]"> (optional)</span>
-                              ) : null}
-                            </span>
-                            <FieldInput
-                              field={field}
-                              value={answers[field.key] || ''}
-                              onChange={(value) => handleChange(field.key, value)}
-                            />
-                            {field.hint ? (
-                              <span className="mt-1 block text-xs text-[#888]">{field.hint}</span>
-                            ) : null}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+        <div style={partBanner(32)}>PART 1 — INFORMATION FOR YOUR VIDEO</div>
+
+        <div style={sectionTitle({ marginBottom: 12 })}>BUSINESS INFORMATION</div>
+        <Field label="Business name" value={answers.businessName} onChange={set('businessName')} first required />
+        <Field
+          label="Instagram handle"
+          value={answers.instagramHandle}
+          onChange={set('instagramHandle')}
+          placeholder="@yourbusiness"
+        />
+        <Field label="Facebook page" value={answers.facebookPage} onChange={set('facebookPage')} optional />
+        <Field label="Website" value={answers.website} onChange={set('website')} optional />
+        <Field
+          label="High-resolution logo attached?"
+          value={answers.logoAttached}
+          onChange={set('logoAttached')}
+          hint="(PNG, AI, EPS, or SVG preferred)"
+          placeholder="Yes / No — how you'll send it"
+        />
+
+        <div style={sectionTitle({ margin: '28px 0 12px' })}>SOCIAL MEDIA CONTACT</div>
+        <div className="bsq-row" style={{ display: 'flex', gap: 24 }}>
+          <div style={{ flex: 1.4 }}>
+            <Field
+              label="Full name"
+              value={answers.socialContactName}
+              onChange={set('socialContactName')}
+              first
+              required
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <Field
+              label="Phone number"
+              value={answers.socialContactPhone}
+              onChange={set('socialContactPhone')}
+              first
+            />
+          </div>
+        </div>
+        <Field
+          label="Email address"
+          value={answers.socialContactEmail}
+          onChange={set('socialContactEmail')}
+          type="email"
+          required
+        />
+
+        <div style={sectionTitle({ margin: '28px 0 12px' })}>GIVEAWAY INFORMATION</div>
+        <Field label="Giveaway prize" value={answers.giveawayPrize} onChange={set('giveawayPrize')} first />
+        <div className="bsq-row" style={{ display: 'flex', gap: 24, marginTop: 16 }}>
+          <div style={{ flex: 1 }}>
+            <Field
+              label="Approximate value"
+              value={answers.giveawayValue}
+              onChange={set('giveawayValue')}
+              first
+            />
+          </div>
+          <div style={{ flex: 1.4 }}>
+            <Field
+              label="Restrictions or expiration dates"
+              value={answers.giveawayRestrictions}
+              onChange={set('giveawayRestrictions')}
+              first
+            />
+          </div>
         </div>
 
-        <p className="mt-8 text-xs leading-relaxed text-[#777]">
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '28px 0 12px' }}>
+          <div style={sectionTitle()}>GIVEAWAY CONTACT</div>
+          <div style={{ fontSize: 12, color: '#6b6b6b' }}>(if different from social media contact)</div>
+        </div>
+        <div className="bsq-row" style={{ display: 'flex', gap: 24 }}>
+          <div style={{ flex: 1.4 }}>
+            <Field
+              label="Full name"
+              value={answers.giveawayContactName}
+              onChange={set('giveawayContactName')}
+              first
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <Field
+              label="Phone number"
+              value={answers.giveawayContactPhone}
+              onChange={set('giveawayContactPhone')}
+              first
+            />
+          </div>
+        </div>
+        <Field
+          label="Email address"
+          value={answers.giveawayContactEmail}
+          onChange={set('giveawayContactEmail')}
+          type="email"
+        />
+
+        <div style={sectionTitle({ margin: '28px 0 12px' })}>FILMING INFORMATION</div>
+        <Field
+          label="Full name(s) of anyone appearing in the video"
+          value={answers.filmingNames}
+          onChange={set('filmingNames')}
+          first
+          multiline
+          rows={2}
+        />
+
+        <div style={partBanner(40)}>PART 2 — TELL US YOUR STORY</div>
+
+        <div style={sectionTitle({ marginBottom: 12 })}>BUSINESS HISTORY & OWNERSHIP</div>
+        <Field
+          label="Tell us about the history of the business and who owns/runs it"
+          value={answers.businessHistory}
+          onChange={set('businessHistory')}
+          first
+          multiline
+          rows={3}
+          required
+        />
+        <Field
+          label="How long has the business (or owner) been doing this work?"
+          value={answers.yearsInBusiness}
+          onChange={set('yearsInBusiness')}
+        />
+
+        <div style={sectionTitle({ margin: '28px 0 12px' })}>THE &quot;SPECIAL&quot; HOOK</div>
+        <Field
+          label="What's the ONE thing that makes your business special or different?"
+          value={answers.specialHook}
+          onChange={set('specialHook')}
+          first
+          multiline
+          rows={2}
+          required
+        />
+        <Field
+          label="Do you have a signature product, service, or specialty? Describe it"
+          value={answers.signatureSpecialty}
+          onChange={set('signatureSpecialty')}
+          multiline
+          rows={2}
+        />
+        <Field
+          label="Is there a personal story behind the business (why you started it, a tradition, a passion)?"
+          value={answers.personalStory}
+          onChange={set('personalStory')}
+          multiline
+          rows={3}
+        />
+
+        <div style={sectionTitle({ margin: '28px 0 12px' })}>THE OFFER</div>
+        <Field
+          label="What's the core offer or value proposition for new customers?"
+          value={answers.coreOffer}
+          onChange={set('coreOffer')}
+          first
+          multiline
+          rows={2}
+          required
+        />
+        <Field
+          label="Any specific pricing, packages, or details you want mentioned?"
+          value={answers.pricingDetails}
+          onChange={set('pricingDetails')}
+          multiline
+          rows={2}
+        />
+
+        <div style={sectionTitle({ margin: '28px 0 12px' })}>SCRIPT PREFERENCES</div>
+        <Field
+          label="Any specific quotes, phrases, or taglines you'd like included?"
+          value={answers.scriptQuotes}
+          onChange={set('scriptQuotes')}
+          first
+          multiline
+          rows={2}
+        />
+        <Field
+          label="Anything you do NOT want mentioned or shown in the video?"
+          value={answers.scriptExclusions}
+          onChange={set('scriptExclusions')}
+          multiline
+          rows={2}
+        />
+
+        <p
+          style={{
+            fontSize: 12,
+            color: '#6b6b6b',
+            fontStyle: 'italic',
+            lineHeight: 1.6,
+            margin: '28px 0 0',
+            borderTop: '1px solid #d8d3cc',
+            paddingTop: 20,
+          }}
+        >
           Note: Photos and additional footage will be requested separately once the script is finalized. Your
           video is yours to use as your own year-round branding content.
         </p>
 
-        {error ? (
-          <p className="mt-4 border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</p>
-        ) : null}
-
-        <button
-          type="submit"
-          disabled={busy}
-          className="bsq-submit mt-6 inline-flex items-center justify-center bg-[#a3151d] px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-white transition disabled:opacity-50"
+        <div
+          style={{
+            marginTop: 32,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 12,
+            background: '#f5f0ea',
+            border: '1px solid #e2dcd2',
+            padding: 24,
+          }}
         >
-          {busy ? 'Submitting…' : 'Submit questionnaire'}
-        </button>
+          <div style={{ fontSize: 14, color: '#1a1a1a', textAlign: 'center' }}>
+            Ready to submit? Your answers will be emailed to Marina@fulshearregional.com and
+            info@medicisocial.com.
+          </div>
+          <button
+            type="submit"
+            className="bsq-submit"
+            disabled={busy}
+            style={{
+              display: 'inline-block',
+              background: '#a3151d',
+              color: '#ffffff',
+              fontWeight: 800,
+              fontSize: 15,
+              letterSpacing: '0.03em',
+              padding: '14px 32px',
+              textDecoration: 'none',
+              border: 'none',
+              cursor: busy ? 'wait' : 'pointer',
+              opacity: busy ? 0.7 : 1,
+              fontFamily: 'Arial, Helvetica, sans-serif',
+            }}
+          >
+            {busy ? 'SUBMITTING…' : 'SUBMIT QUESTIONNAIRE'}
+          </button>
+          {error ? (
+            <div style={{ fontSize: 13, color: '#861118', textAlign: 'center' }}>{error}</div>
+          ) : null}
+        </div>
 
-        <footer className="mt-10 border-t border-[#d8d3cc] pt-5 text-xs leading-relaxed text-[#777]">
+        <p style={{ textAlign: 'center', fontSize: 12, color: '#6b6b6b', margin: '28px 0 0' }}>
           Marina Pallatt, Director of Business Development & Memberships | (832) 600-3221 |
           Marina@fulshearregional.com — Medici Social | info@medicisocial.com | @medicisocial
-        </footer>
+        </p>
       </form>
     </div>
   );
