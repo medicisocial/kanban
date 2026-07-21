@@ -1,6 +1,7 @@
 import { isEmailConfigured, sendPlatformEmail } from './_lib/platformEmail.mjs';
 import {
   buildSpotlightSubmissionEmail,
+  buildSpotlightSubmissionPdf,
   getSpotlightNotifyRecipients,
   normalizeSpotlightAnswers,
   validateSpotlightAnswers,
@@ -42,6 +43,7 @@ export default async function handler(req, res) {
 
   try {
     const email = buildSpotlightSubmissionEmail({ invite, answers });
+    const pdf = await buildSpotlightSubmissionPdf({ invite, answers });
     const recipients = getSpotlightNotifyRecipients();
     await sendPlatformEmail({
       to: recipients,
@@ -49,12 +51,14 @@ export default async function handler(req, res) {
       html: email.html,
       text: email.text,
       replyTo: invite.to,
+      attachments: [pdf],
     });
 
     return res.status(200).json({
       ok: true,
       notified: recipients,
       businessName: answers.businessName,
+      attachment: pdf.filename,
     });
   } catch (error) {
     console.error('[spotlight-questionnaire-submit] failed:', error?.message || error);

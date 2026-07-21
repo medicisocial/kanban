@@ -306,6 +306,9 @@ export function buildSpotlightSubmissionEmail({ invite, answers }) {
       <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#aaa;">
         Invited: ${escapeHtml(invite.to)} · Brand: ${escapeHtml(invite.brand)}
       </p>
+      <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#ccc;">
+        Full answers are attached as a PDF.
+      </p>
       <table style="width:100%;border-collapse:collapse;background:#111;border:1px solid #222;">${rows}</table>
       <p style="margin:24px 0 0;font-size:11px;line-height:1.6;color:#666;">Sent automatically via Medici Social Portal.</p>
     </div>
@@ -317,8 +320,104 @@ export function buildSpotlightSubmissionEmail({ invite, answers }) {
     `Invited: ${invite.to}`,
     `Brand: ${invite.brand}`,
     '',
+    'Full answers are attached as a PDF.',
+    '',
     ...SPOTLIGHT_QUESTION_FIELDS.map((field) => `${field.label}: ${answers[field.key] || '—'}`),
   ];
 
   return { subject, html, text: textLines.join('\n') };
+}
+
+function sanitizePdfFilenamePart(value) {
+  return String(value || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+}
+
+export function buildSpotlightSubmissionPdfFilename(businessName) {
+  const slug = sanitizePdfFilenamePart(businessName) || 'business';
+  return `business-spotlight-${slug}.pdf`;
+}
+
+/** Build a PDF attachment (base64) of the submitted questionnaire answers. */
+export async function buildSpotlightSubmissionPdf({ invite, answers }) {
+  const { jsPDF } = await import('jspdf');
+  const { autoTable } = await import('jspdf-autotable');
+
+  const businessName = answers.businessName || invite.businessName || 'Business';
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+  const margin = 14;
+  const pageW = doc.internal.pageSize.getWidth();
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(163, 21, 29);
+  doc.text('FULSHEAR REGIONAL CHAMBER FOR COMMERCE', margin, 16);
+
+  doc.setTextColor(26, 26, 26);
+  doc.setFontSize(16);
+  doc.text('Business Spotlight Questionnaire', margin, 26);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(80, 80, 80);
+  doc.text(`Business: ${businessName}`, margin, 34);
+  doc.text(`Submitted by: ${invite.to || '—'}`, margin, 40);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, margin, 46);
+
+  const body = SPOTLIGHT_QUESTION_FIELDS.map((field) => [
+    field.label,
+    answers[field.key] || '—',
+  ]);
+
+  autoTable(doc, {
+    startY: 52,
+    head: [['Question', 'Answer']],
+    body,
+    theme: 'grid',
+    styles: {
+      font: 'helvetica',
+      fontSize: 9,
+      cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+      overflow: 'linebreak',
+      valign: 'top',
+      textColor: [26, 26, 26],
+      lineColor: [200, 200, 200],
+      lineWidth: 0.1,
+    },
+    headStyles: {
+      fillColor: [163, 21, 29],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 9,
+    },
+    alternateRowStyles: { fillColor: [250, 247, 244] },
+    columnStyles: {
+      0: { cellWidth: pageW * 0.38, fontStyle: 'bold', textColor: [80, 80, 80] },
+      1: { cellWidth: pageW * 0.48 },
+    },
+    margin: { left: margin, right: margin, bottom: 16 },
+  });
+
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i += 1) {
+    doc.setPage(i);
+    const pageH = doc.internal.pageSize.getHeight();
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    doc.text('Medici Social · Business Spotlight', margin, pageH - 8);
+    doc.text(`Page ${i} of ${totalPages}`, pageW - margin, pageH - 8, { align: 'right' });
+  }
+
+  const arrayBuffer = doc.output('arraybuffer');
+  const content = Buffer.from(arrayBuffer).toString('base64');
+  return {
+    filename: buildSpotlightSubmissionPdfFilename(businessName),
+    content,
+    contentType: 'application/pdf',
+  };
 }
