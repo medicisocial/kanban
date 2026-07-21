@@ -17,6 +17,8 @@ const {
   validateSpotlightAnswers,
   buildSpotlightInviteEmail,
   buildSpotlightSubmissionEmail,
+  buildSpotlightSubmissionPdf,
+  buildSpotlightSubmissionPdfFilename,
   buildSpotlightFormUrl,
   SPOTLIGHT_MEDICI_EMAIL,
   SPOTLIGHT_MARINA_EMAIL,
@@ -125,6 +127,18 @@ const submission = buildSpotlightSubmissionEmail({ invite: verified, answers });
 assert(submission.subject.includes('Example Co'), 'submission subject includes business');
 assert(submission.html.includes('Handmade goods'), 'submission includes answers');
 assert(submission.text.includes(SPOTLIGHT_QUESTION_FIELDS[0].label), 'text includes field labels');
+assert(/attached as a PDF/i.test(submission.html), 'submission email mentions PDF attachment');
+
+assert(
+  buildSpotlightSubmissionPdfFilename('Example Co!') === 'business-spotlight-Example-Co.pdf',
+  'pdf filename sanitizes business name',
+);
+
+const pdf = await buildSpotlightSubmissionPdf({ invite: verified, answers });
+assert(pdf.filename === 'business-spotlight-Example-Co.pdf', 'pdf attachment filename');
+assert(pdf.contentType === 'application/pdf', 'pdf content type');
+assert(typeof pdf.content === 'string' && pdf.content.length > 100, 'pdf has base64 content');
+assert(Buffer.from(pdf.content, 'base64').subarray(0, 4).toString() === '%PDF', 'pdf bytes start with %PDF');
 
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
 const clientUtils = await vite.ssrLoadModule('/src/utils/spotlightQuestionnaire.js');
@@ -177,9 +191,12 @@ const submitApi = readFileSync(
 );
 assert(submitApi.includes('getSpotlightNotifyRecipients'), 'submit API emails notify list');
 assert(submitApi.includes('verifySpotlightToken'), 'submit API verifies token');
+assert(submitApi.includes('buildSpotlightSubmissionPdf'), 'submit API builds PDF attachment');
+assert(submitApi.includes('attachments: [pdf]'), 'submit API attaches PDF to notify email');
 
 const platformEmail = readFileSync(new URL('../api/_lib/platformEmail.mjs', import.meta.url), 'utf8');
 assert(platformEmail.includes('Array.isArray(to)'), 'sendPlatformEmail supports multiple recipients');
+assert(platformEmail.includes('attachments'), 'sendPlatformEmail supports attachments');
 
 await vite.close();
 console.log('test-spotlight-questionnaire: ok');
