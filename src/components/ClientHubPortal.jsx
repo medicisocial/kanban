@@ -12,11 +12,14 @@ import ClientPortalHome from './ClientPortalHome';
 import ClientUnifiedCalendarsPortal from './ClientUnifiedCalendarsPortal';
 import ClientPortalLayout from './clientPortal/ClientPortalLayout';
 import ClientPortalNotificationsPanel from './clientPortal/ClientPortalNotificationsPanel';
+import BusinessSpotlightInvite from './clientPortal/BusinessSpotlightInvite';
 import { filterEvents } from '../utils/eventsCalendar';
 import { clientMatchesBrand } from '../utils/clients';
 import { createEvent, createMeeting } from '../constants';
 import { stripInternalCardsForClientPortal } from '../utils/clientPortalAuth';
 import { buildClientPortalTasks } from '../utils/clientPortalTasks';
+import { isChamberSpotlightBrand } from '../utils/spotlightQuestionnaire';
+import { DEFAULT_CLIENT_BUSINESS_TYPES } from '../utils/eventFormSchemas';
 
 export default function ClientHubPortal({ onSignOut }) {
   const { brand, session, portalData, loadingData, dataError, logout, queueCloudResponse, refreshPortalData, savePortalProfile } =
@@ -43,7 +46,9 @@ export default function ClientHubPortal({ onSignOut }) {
 
   const clientColor = portalData?.clientColor || getClientColor(brand);
   const clientLogo = portalData?.clientLogo || getClientLogo(brand);
-  const businessType = portalData?.businessType || '';
+  const businessType =
+    portalData?.businessType || DEFAULT_CLIENT_BUSINESS_TYPES[brand] || '';
+  const showSpotlight = isChamberSpotlightBrand(businessType);
   const profileContacts = portalData?.contacts || [];
   const profileSocialLogins = portalData?.socialLogins || {};
   const profileCompanyFiles = useMemo(
@@ -188,6 +193,7 @@ export default function ClientHubPortal({ onSignOut }) {
         />
       }
       navBadges={navBadges}
+      showSpotlight={showSpotlight}
     >
       {loadingData && !portalData && (
         <p className="py-12 text-center text-sm text-white/45">Loading your workspace…</p>
@@ -208,6 +214,7 @@ export default function ClientHubPortal({ onSignOut }) {
           socialLogins={profileSocialLogins}
           clientLogo={clientLogo}
           clientColor={clientColor}
+          showSpotlight={showSpotlight}
           onNavigate={handleTabChange}
           onOpenMeeting={() => handleTabChange('meetings')}
           onOpenShoot={() => setActiveTab('shoots')}
@@ -285,6 +292,14 @@ export default function ClientHubPortal({ onSignOut }) {
           photoGalleryLink={photoGalleryLink}
           brand={brand}
           embedded
+        />
+      )}
+
+      {portalData && showSpotlight && activeTab === 'spotlight' && (
+        <BusinessSpotlightInvite
+          brand={brand}
+          session={session}
+          userDisplayName={portalData?.userDisplayName || ''}
         />
       )}
 
