@@ -667,12 +667,7 @@ function CardModal({
 
           {activeTab === 'script' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm text-white/45">
-                  {isSlidePostType(displayCard.contentType)
-                    ? 'Export the slide plan as a printable PDF.'
-                    : 'Export the shoot script as a printable PDF.'}
-                </p>
+              <div className="flex justify-end">
                 <ScriptPdfButton card={displayCard} />
               </div>
               {displayCard.contentType === 'Carousel' || displayCard.contentType === 'Static Post' ? (
