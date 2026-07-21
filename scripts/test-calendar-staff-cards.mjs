@@ -1,6 +1,7 @@
 /**
  * Staff content calendar includes To Create cards that already have a publish date,
  * and dated one-offs in editor pipeline columns.
+ * Shoot days (dueDate === shootDate while still in To Create) stay on Shoots only.
  * Mirrors isStaffCalendarCard / getCalendarPosts rules from src/utils/calendar.js.
  */
 import { readFileSync } from 'node:fs';
@@ -28,12 +29,14 @@ function isStaffCalendarCard(card) {
 }
 
 function getCalendarPosts(cards) {
-  return cards.filter(
-    (c) =>
-      isStaffCalendarCard(c) &&
-      c.dueDate &&
-      (SCHEDULED_POST_CONTENT_TYPES.includes(c.contentType) || isOneOffProjectCard(c)),
-  );
+  return cards.filter((c) => {
+    if (!isStaffCalendarCard(c) || !c.dueDate) return false;
+    if (!(SCHEDULED_POST_CONTENT_TYPES.includes(c.contentType) || isOneOffProjectCard(c))) {
+      return false;
+    }
+    if (c.columnId === 'shoot' && c.shootDate && c.dueDate === c.shootDate) return false;
+    return true;
+  });
 }
 
 function getCalendarStories(cards) {
@@ -43,13 +46,24 @@ function getCalendarStories(cards) {
   });
 }
 
-const shootWithDate = {
+const shootWithPublishDate = {
   id: 'c1',
   client: 'Plume',
   title: 'Reel draft',
   contentType: 'Reel',
   columnId: 'shoot',
+  dueDate: '2026-06-20',
+  shootDate: '2026-06-10',
+};
+
+const shootDayOnly = {
+  id: 'c1b',
+  client: 'Plume',
+  title: 'Shoot day reel',
+  contentType: 'Reel',
+  columnId: 'shoot',
   dueDate: '2026-06-10',
+  shootDate: '2026-06-10',
 };
 
 const shootNoDate = {
@@ -80,14 +94,22 @@ const editingOneOffWithDate = {
   dueTime: '14:00',
 };
 
-assert(isStaffCalendarCard(shootWithDate), 'To Create with dueDate is a calendar card');
+assert(isStaffCalendarCard(shootWithPublishDate), 'To Create with dueDate is a calendar card');
+assert(isStaffCalendarCard(shootDayOnly), 'To Create shoot-day card still qualifies as staff card');
 assert(!isStaffCalendarCard(shootNoDate), 'To Create without dueDate stays off calendar');
 assert(isStaffCalendarCard(editingWithDate), 'Editing cards still qualify');
 assert(isStaffCalendarCard(editingOneOffWithDate), 'dated Editing one-off qualifies for calendar');
 
-const posts = getCalendarPosts([shootWithDate, shootNoDate, editingWithDate, editingOneOffWithDate]);
-assert(posts.length === 3, 'posts include dated To Create, Editing reel, and Editing one-off');
-assert(posts.some((card) => card.id === 'c1'), 'dated To Create post appears');
+const posts = getCalendarPosts([
+  shootWithPublishDate,
+  shootDayOnly,
+  shootNoDate,
+  editingWithDate,
+  editingOneOffWithDate,
+]);
+assert(posts.length === 3, 'posts include publish≠shoot To Create, Editing reel, and Editing one-off');
+assert(posts.some((card) => card.id === 'c1'), 'dated To Create post appears when publish ≠ shoot');
+assert(!posts.some((card) => card.id === 'c1b'), 'shoot-day To Create stays off content calendar');
 assert(!posts.some((card) => card.id === 'c2'), 'undated To Create post excluded');
 assert(posts.some((card) => card.id === 'c4'), 'dated Editing one-off appears on content calendar');
 
@@ -124,6 +146,10 @@ assert(
   calendarSource.includes('applyPendingCalendarMoves'),
   'calendar renders pending drag positions optimistically',
 );
+assert(
+  calendarSource.includes('groupCardsByDate'),
+  'content calendar groups by publish date without shoot-session collapse',
+);
 
 const kanbanSource = readFileSync(new URL('../src/hooks/useKanban.js', import.meta.url), 'utf8');
 assert(
@@ -135,6 +161,10 @@ const calendarUtilSource = readFileSync(new URL('../src/utils/calendar.js', impo
 assert(
   calendarUtilSource.includes('isOneOffProjectCard(c)'),
   'getCalendarPosts includes dated one-offs',
+);
+assert(
+  calendarUtilSource.includes('c.dueDate === c.shootDate'),
+  'getCalendarPosts excludes shoot-day To Create items',
 );
 
 console.log('Calendar staff card tests passed.');

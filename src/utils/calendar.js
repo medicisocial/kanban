@@ -442,12 +442,14 @@ export function getCalendarCards(cards) {
 }
 
 export function getCalendarPosts(cards) {
-  return cards.filter(
-    (c) =>
-      isStaffCalendarCard(c) &&
-      c.dueDate &&
-      (isScheduledPostType(c.contentType) || isOneOffProjectCard(c)),
-  );
+  return cards.filter((c) => {
+    if (!isStaffCalendarCard(c) || !c.dueDate) return false;
+    if (!(isScheduledPostType(c.contentType) || isOneOffProjectCard(c))) return false;
+    // Shoot days belong on Shoots — not the content calendar.
+    // Keep To Create items that have a real publish date different from the shoot date.
+    if (c.columnId === 'shoot' && c.shootDate && c.dueDate === c.shootDate) return false;
+    return true;
+  });
 }
 
 export function getCalendarStories(cards) {

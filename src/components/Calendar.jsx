@@ -3,7 +3,7 @@ import {
   getDefaultCalendarDate,
   addWeeks,
   addMonths,
-  groupCalendarCardsByDate,
+  groupCardsByDate,
   getCalendarPosts,
   getCalendarStories,
   buildStoryCalendarByDate,
@@ -23,9 +23,7 @@ import { btnPrimaryClass, btnSecondaryClass, surfacePanelClass, glassSegmentClas
 export default function Calendar({
   cards,
   clientFilter,
-  getPlan,
   onCardClick,
-  onShootSessionClick,
   onAddCalendarPost,
   onRemoveFromCalendar,
   onMoveCalendarPost,
@@ -56,8 +54,9 @@ export default function Calendar({
     if (isStories) {
       return buildStoryCalendarByDate(optimisticCards, focusDate, viewMode);
     }
-    return groupCalendarCardsByDate(optimisticCards, getPlan);
-  }, [optimisticCards, isStories, focusDate, viewMode, getPlan]);
+    // Content calendar is publish dates only — do not collapse shoot sessions here.
+    return groupCardsByDate(optimisticCards);
+  }, [optimisticCards, isStories, focusDate, viewMode]);
 
   // Keep the optimistic date through brief stale cloud renders. Once canonical
   // state remains on the requested date, release the override after a settle window.
@@ -90,10 +89,6 @@ export default function Calendar({
   );
 
   const handleCalendarClick = (entry) => {
-    if (entry?.isShootSession) {
-      onShootSessionClick?.(entry);
-      return;
-    }
     onCardClick?.(entry);
   };
 
