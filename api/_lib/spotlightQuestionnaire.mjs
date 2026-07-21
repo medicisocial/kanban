@@ -239,11 +239,8 @@ export function buildSpotlightInviteEmail({
   formUrl,
 }) {
   const agency = 'Medici Social';
-  const chamber = String(brand || 'Fulshear Regional').trim();
   const biz = String(businessName || '').trim();
-  const subject = biz
-    ? `${chamber} — Business Spotlight questionnaire for ${biz}`
-    : `${chamber} — Business Spotlight questionnaire`;
+  const subject = 'Fulshear Regional Chamber FOR Commerce - Business Spotlight Questionnaire';
   const noteBlock = note
     ? `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#ccc;"><em>${escapeHtml(note)}</em></p>`
     : '';
@@ -254,8 +251,8 @@ export function buildSpotlightInviteEmail({
 <html lang="en">
   <body style="margin:0;padding:0;background:#0a0a0a;font-family:Inter,Segoe UI,sans-serif;color:#f5f5f5;">
     <div style="max-width:560px;margin:0 auto;padding:32px 24px;">
-      <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#888;">${escapeHtml(chamber)}</p>
-      <h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;font-weight:600;color:#fff;">Business Spotlight questionnaire</h1>
+      <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#888;">Fulshear Regional Chamber FOR Commerce</p>
+      <h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;font-weight:600;color:#fff;">Business Spotlight Questionnaire</h1>
       <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#ccc;">
         ${escapeHtml(intro)}
       </p>
@@ -271,10 +268,11 @@ export function buildSpotlightInviteEmail({
 </html>`;
 
   const text = [
-    'Business Spotlight questionnaire',
+    'Fulshear Regional Chamber FOR Commerce - Business Spotlight Questionnaire',
     '',
     intro,
     note ? `Note: ${note}` : '',
+    biz ? `Business: ${biz}` : '',
     '',
     `Open questionnaire: ${formUrl}`,
     '',
