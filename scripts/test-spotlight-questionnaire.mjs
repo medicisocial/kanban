@@ -101,7 +101,10 @@ const inviteEmail = buildSpotlightInviteEmail({
   note: 'Looking forward to filming',
   formUrl: buildSpotlightFormUrl(token, 'https://example.test'),
 });
-assert(/Business Spotlight/i.test(inviteEmail.subject), 'invite subject mentions spotlight');
+assert(
+  inviteEmail.subject === 'Fulshear Regional Chamber FOR Commerce - Business Spotlight Questionnaire',
+  'invite subject uses Chamber FOR Commerce title',
+);
 assert(inviteEmail.html.includes('https://example.test/?spotlight='), 'invite includes form URL');
 assert(inviteEmail.html.includes('Looking forward to filming'), 'invite includes note');
 assert(
