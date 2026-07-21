@@ -72,7 +72,6 @@ export default async function handler(req, res) {
       businessName,
       note,
       formUrl,
-      invitedBy,
     });
 
     await sendPlatformEmail({

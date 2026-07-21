@@ -100,11 +100,15 @@ const inviteEmail = buildSpotlightInviteEmail({
   businessName: 'Example Co',
   note: 'Looking forward to filming',
   formUrl: buildSpotlightFormUrl(token, 'https://example.test'),
-  invitedBy: 'Marina',
 });
 assert(/Business Spotlight/i.test(inviteEmail.subject), 'invite subject mentions spotlight');
 assert(inviteEmail.html.includes('https://example.test/?spotlight='), 'invite includes form URL');
 assert(inviteEmail.html.includes('Looking forward to filming'), 'invite includes note');
+assert(
+  /becoming a member of the Fulshear Regional Chamber For Commerce/i.test(inviteEmail.html),
+  'invite uses Chamber For Commerce membership copy',
+);
+assert(!/Sent by/i.test(inviteEmail.html) && !/Sent by/i.test(inviteEmail.text), 'invite omits Sent by line');
 assert(
   /do not reply/i.test(inviteEmail.html) && /do not reply/i.test(inviteEmail.text),
   'invite tells recipients not to reply',
