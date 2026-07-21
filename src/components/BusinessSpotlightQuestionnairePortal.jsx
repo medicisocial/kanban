@@ -216,7 +216,7 @@ export default function BusinessSpotlightQuestionnairePortal() {
             alt="Fulshear Regional Chamber FOR Commerce"
             style={{ height: 83, width: 256, objectFit: 'contain' }}
           />
-          <div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div
               style={{
                 fontSize: 11,
@@ -224,6 +224,7 @@ export default function BusinessSpotlightQuestionnairePortal() {
                 letterSpacing: '0.06em',
                 color: '#6b6b6b',
                 marginBottom: 6,
+                textAlign: 'center',
               }}
             >
               VIDEO PRODUCTION PARTNER
@@ -231,7 +232,7 @@ export default function BusinessSpotlightQuestionnairePortal() {
             <img
               src="/medici-social-logo.png"
               alt="Medici Social"
-              style={{ height: 39, width: 135, paddingLeft: 16, paddingRight: 16, objectFit: 'contain' }}
+              style={{ height: 39, width: 135, objectFit: 'contain' }}
             />
           </div>
         </div>
