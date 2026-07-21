@@ -238,7 +238,6 @@ export function buildSpotlightInviteEmail({
   businessName,
   note,
   formUrl,
-  invitedBy,
 }) {
   const agency = 'Medici Social';
   const chamber = String(brand || 'Fulshear Regional').trim();
@@ -249,9 +248,8 @@ export function buildSpotlightInviteEmail({
   const noteBlock = note
     ? `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#ccc;"><em>${escapeHtml(note)}</em></p>`
     : '';
-  const invitedLine = invitedBy
-    ? `<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#aaa;">Sent by ${escapeHtml(invitedBy)} at ${escapeHtml(chamber)}.</p>`
-    : '';
+  const intro =
+    'Congratulations on becoming a member of the Fulshear Regional Chamber For Commerce! Your Business Spotlight branding video is produced in partnership with Medici Social. Please complete this short questionnaire so we can write your script and prepare for filming.';
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -260,9 +258,8 @@ export function buildSpotlightInviteEmail({
       <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#888;">${escapeHtml(chamber)}</p>
       <h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;font-weight:600;color:#fff;">Business Spotlight questionnaire</h1>
       <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#ccc;">
-        Congratulations on joining the ${escapeHtml(chamber)}! Your Business Spotlight branding video is produced in partnership with ${escapeHtml(agency)}. Please complete this short questionnaire so we can write your script and prepare for filming.
+        ${escapeHtml(intro)}
       </p>
-      ${invitedLine}
       ${noteBlock}
       <a href="${escapeHtml(formUrl)}" style="display:inline-block;margin:8px 0 20px;padding:12px 24px;background:#810100;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;border-radius:2px;">Open questionnaire</a>
       <p style="margin:0 0 16px;font-size:13px;line-height:1.6;color:#999;">No sign-in required. Your answers are emailed to the Chamber and Medici Social when you submit.</p>
@@ -277,8 +274,7 @@ export function buildSpotlightInviteEmail({
   const text = [
     'Business Spotlight questionnaire',
     '',
-    `Congratulations on joining the ${chamber}! Complete this questionnaire for your Business Spotlight branding video (produced with ${agency}).`,
-    invitedBy ? `Sent by ${invitedBy} at ${chamber}.` : '',
+    intro,
     note ? `Note: ${note}` : '',
     '',
     `Open questionnaire: ${formUrl}`,

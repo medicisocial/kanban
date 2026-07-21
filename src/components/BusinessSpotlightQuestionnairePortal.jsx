@@ -145,9 +145,9 @@ export default function BusinessSpotlightQuestionnairePortal() {
         </header>
 
         <p className="mt-6 text-sm leading-relaxed text-[#444]">
-          Congratulations on joining the Fulshear Regional Chamber FOR Commerce! Your Business Spotlight —
-          Branding Video is produced in partnership with Medici Social. Please complete this questionnaire
-          so we can write your script and prepare for filming.
+          Congratulations on becoming a member of the Fulshear Regional Chamber For Commerce! Your
+          Business Spotlight branding video is produced in partnership with Medici Social. Please complete
+          this short questionnaire so we can write your script and prepare for filming.
         </p>
         <p className="mt-3 text-sm text-[#666]">
           On submit, answers are emailed to <strong>Marina@fulshearregional.com</strong> and{' '}
