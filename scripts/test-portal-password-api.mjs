@@ -11,21 +11,25 @@ import { loadEnv } from 'vite';
 const baseUrl = (process.argv[2] || 'https://portal.medicisocial.com').replace(/\/$/, '');
 const brand = process.argv[3] || 'ZZ_VaultTest';
 const STAFF_USER = 'info@medicisocial.com';
-const STAFF_HASH = '288a74dd35327615ef98b375a2445d9ebd4c570a5e5d413181986ebf127f45e1';
-
-function staffBearer() {
-  const expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
-  const signature = createHash('sha256')
-    .update(`${STAFF_USER}:${expires}:${STAFF_HASH}`)
-    .digest('hex');
-  return Buffer.from(JSON.stringify({ username: STAFF_USER, expires, signature }), 'utf8').toString(
-    'base64',
-  );
-}
 
 const env = loadEnv('development', process.cwd(), '');
 for (const [key, value] of Object.entries(env)) {
   if (value && process.env[key] === undefined) process.env[key] = value;
+}
+
+const STAFF_SESSION_SECRET = (process.env.STAFF_SESSION_SECRET || '').trim();
+
+function staffBearer() {
+  if (!STAFF_SESSION_SECRET) {
+    throw new Error('STAFF_SESSION_SECRET is required to mint staff sessions in e2e tests.');
+  }
+  const expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
+  const signature = createHash('sha256')
+    .update(`${STAFF_USER}:${expires}:${STAFF_SESSION_SECRET}`)
+    .digest('hex');
+  return Buffer.from(JSON.stringify({ username: STAFF_USER, expires, signature }), 'utf8').toString(
+    'base64',
+  );
 }
 
 const testPassword = `TestSave${Date.now().toString(36)}`;

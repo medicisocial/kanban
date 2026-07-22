@@ -36,10 +36,35 @@ assert(superAdminAuth.includes('hasSuperAdminSessionShape'), 'shape check must b
 assert(!staffSupabase.includes('VITE_SUPABASE_STAFF_PASSWORD'), 'staffSupabaseAuth must not read bundled staff password');
 
 assert(!serverStaff.includes(KNOWN_STAFF_HASH), 'server staffAuth must not hardcode password hash');
+assert(!serverStaff.includes('VITE_STAFF_PASSWORD_HASH'), 'server staffAuth must not fall back to VITE_STAFF_PASSWORD_HASH');
+assert(serverStaff.includes('isStaffPasswordConfigured'), 'server exports isStaffPasswordConfigured');
 assert(serverStaff.includes('getStaffSessionSecret'), 'server staff sessions use dedicated MAC secret');
 assert(!serverSuper.includes(ADMIN_PASSWORD_HASH), 'server must not default super-admin password to admin');
+assert(
+  !serverSuper.includes('VITE_SUPER_ADMIN_PASSWORD_HASH'),
+  'server superAdminAuth must not fall back to VITE_SUPER_ADMIN_PASSWORD_HASH',
+);
 assert(serverSuper.includes('isSuperAdminConfigured'), 'super-admin requires configured password hash');
 
+const staffAuthApi = readFileSync(resolve(root, 'api/staff-auth.js'), 'utf8');
+assert(staffAuthApi.includes('isStaffPasswordConfigured'), 'staff-auth checks password hash config');
+assert(staffAuthApi.includes('unavailable'), 'staff-auth returns 503 when misconfigured');
+
+const apiTree = [
+  'api/_lib/staffAuth.mjs',
+  'api/_lib/superAdminAuth.mjs',
+  'api/_lib/sessionSecrets.mjs',
+  'api/_lib/clientPortalAuth.mjs',
+  'api/_lib/spotlightQuestionnaire.mjs',
+  'api/staff-auth.js',
+  'api/admin-auth.js',
+];
+for (const rel of apiTree) {
+  const source = readFileSync(resolve(root, rel), 'utf8');
+  assert(!source.includes('VITE_STAFF_PASSWORD_HASH'), `${rel} must not reference VITE_STAFF_PASSWORD_HASH`);
+  assert(!source.includes('VITE_SUPER_ADMIN_PASSWORD_HASH'), `${rel} must not reference VITE_SUPER_ADMIN_PASSWORD_HASH`);
+  assert(!source.includes('VITE_SUPABASE_STAFF_PASSWORD'), `${rel} must not reference VITE_SUPABASE_STAFF_PASSWORD`);
+}
 assert(sessionSecrets.includes('STAFF_SESSION_SECRET'), 'sessionSecrets requires STAFF_SESSION_SECRET');
 assert(sessionSecrets.includes('SUPER_ADMIN_SESSION_SECRET'), 'sessionSecrets requires SUPER_ADMIN_SESSION_SECRET');
 assert(sessionSecrets.includes('CLIENT_PORTAL_SESSION_SECRET'), 'sessionSecrets requires CLIENT_PORTAL_SESSION_SECRET');

@@ -15,6 +15,12 @@ import {
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
+    if (!(process.env.SUPER_ADMIN_SESSION_SECRET || '').trim()) {
+      return unavailable(
+        res,
+        'Super admin sessions are not configured. Set SUPER_ADMIN_SESSION_SECRET in Vercel (server-only).',
+      );
+    }
     const session = getSessionFromRequest(req);
     if (!isSuperAdminSessionValid(session)) {
       return unauthorized(res, 'Invalid or expired super admin session.');
@@ -30,6 +36,13 @@ export default async function handler(req, res) {
     return unavailable(
       res,
       'Super admin login is not configured. Set SUPER_ADMIN_PASSWORD_HASH in Vercel (server-only).',
+    );
+  }
+
+  if (!(process.env.SUPER_ADMIN_SESSION_SECRET || '').trim()) {
+    return unavailable(
+      res,
+      'Super admin sessions are not configured. Set SUPER_ADMIN_SESSION_SECRET in Vercel (server-only).',
     );
   }
 

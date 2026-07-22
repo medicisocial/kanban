@@ -2,6 +2,7 @@ import {
   createStaffSession,
   getSessionFromRequest,
   isOpsStaffEmail,
+  isStaffPasswordConfigured,
   isStaffSessionValid,
   verifyStaffPassword,
 } from './_lib/staffAuth.mjs';
@@ -10,10 +11,21 @@ import {
   methodNotAllowed,
   ok,
   unauthorized,
+  unavailable,
 } from './_lib/apiResponse.mjs';
+
+function staffSessionSecretConfigured() {
+  return Boolean((process.env.STAFF_SESSION_SECRET || '').trim());
+}
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
+    if (!staffSessionSecretConfigured()) {
+      return unavailable(
+        res,
+        'Staff sessions are not configured. Set STAFF_SESSION_SECRET in Vercel (server-only).',
+      );
+    }
     const session = getSessionFromRequest(req);
     if (!isStaffSessionValid(session)) {
       return unauthorized(res, 'Invalid or expired staff session.');
@@ -23,6 +35,20 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') {
     return methodNotAllowed(res, ['GET', 'POST']);
+  }
+
+  if (!isStaffPasswordConfigured()) {
+    return unavailable(
+      res,
+      'Staff login is not configured. Set STAFF_PASSWORD_HASH in Vercel (server-only).',
+    );
+  }
+
+  if (!staffSessionSecretConfigured()) {
+    return unavailable(
+      res,
+      'Staff sessions are not configured. Set STAFF_SESSION_SECRET in Vercel (server-only).',
+    );
   }
 
   const username = String(req.body?.username || '').trim();
@@ -40,6 +66,6 @@ export default async function handler(req, res) {
     return ok(res, { ok: true, session });
   } catch (error) {
     console.error('[staff-auth] session create failed', error);
-    return unauthorized(res, 'Staff login is temporarily unavailable.');
+    return unavailable(res, 'Staff login is temporarily unavailable.');
   }
 }

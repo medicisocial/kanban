@@ -7,10 +7,14 @@ for (const [key, value] of Object.entries(env)) {
 }
 
 const BASE = process.argv[2] || 'http://localhost:5173';
-const user = (env.VITE_STAFF_USERNAME || 'info@medicisocial.com').trim();
+const user = (env.VITE_STAFF_USERNAME || env.STAFF_USERNAME || 'info@medicisocial.com').trim();
+const sessionSecret = (env.STAFF_SESSION_SECRET || process.env.STAFF_SESSION_SECRET || '').trim();
+if (!sessionSecret) {
+  throw new Error('STAFF_SESSION_SECRET is required to mint staff sessions in e2e tests.');
+}
 const exp = Date.now() + 7 * 86400000;
 const sig = createHash('sha256')
-  .update(`${user}:${exp}:${env.VITE_STAFF_PASSWORD_HASH}`)
+  .update(`${user}:${exp}:${sessionSecret}`)
   .digest('hex');
 const auth = `Bearer ${Buffer.from(JSON.stringify({ username: user, expires: exp, signature: sig })).toString('base64')}`;
 
