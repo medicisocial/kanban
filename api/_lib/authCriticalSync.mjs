@@ -1,6 +1,26 @@
 import { normalizeBrandUsers, hashValue } from './clientPortalAuth.mjs';
 import { mergeClientsWorkspaceData, mergeSlimClientsWorkspace } from './clientsWorkspaceMerge.mjs';
-import { fetchCollectionMap, fetchRecord, getPortalPasswordVault, upsertRecord } from './supabase.mjs';
+import { hashPassword } from './passwordHash.mjs';
+import {
+  fetchCollectionMap,
+  fetchRecord,
+  fetchStaffAccountPasswordHash,
+  getPortalPasswordVault,
+  upsertRecord,
+  upsertStaffAccountPasswordHash,
+} from './supabase.mjs';
+
+/** Strip secrets from the team_members jsonb blob — hashes live on staff_accounts only. */
+function scrubTeamMemberSecrets(data) {
+  if (!data || typeof data !== 'object') return data;
+  const {
+    password: _password,
+    password_hash: _passwordHashSnake,
+    passwordHash: _passwordHashCamel,
+    ...rest
+  } = data;
+  return rest;
+}
 
 export const AUTH_CRITICAL_SYNC_TABLES = new Set([
   'client_portal_credentials',
@@ -173,11 +193,9 @@ export async function sanitizeAuthCriticalUpserts(
         existingMap?.[row.id] && typeof existingMap[row.id] === 'object'
           ? existingMap[row.id]
           : {};
-      const merged = { ...existing, ...incoming, name };
+      const plainPassword = String(incoming.password || '').trim();
+      const merged = scrubTeamMemberSecrets({ ...existing, ...incoming, name });
 
-      if (!merged.password && existing.password) {
-        merged.password = existing.password;
-      }
       if (!merged.roles?.length && existing.roles?.length) {
         merged.roles = existing.roles;
       }
@@ -191,7 +209,24 @@ export async function sanitizeAuthCriticalUpserts(
         merged.username = merged.email || existing.username;
       }
 
-      sanitized.push({ id: row.id, data: merged });
+      try {
+        if (plainPassword) {
+          const passwordHash = await hashPassword(plainPassword);
+          await upsertStaffAccountPasswordHash(orgId, row.id, passwordHash);
+          merged.hasPassword = true;
+        } else {
+          const existingHash = await fetchStaffAccountPasswordHash(orgId, row.id);
+          merged.hasPassword = Boolean(existingHash) || existing.hasPassword === true;
+        }
+      } catch (error) {
+        console.error(
+          `[auth-critical] team member password hash update failed for ${row.id}:`,
+          error?.message || error,
+        );
+        throw error;
+      }
+
+      sanitized.push({ id: row.id, data: scrubTeamMemberSecrets(merged) });
     }
     return sanitized;
   }

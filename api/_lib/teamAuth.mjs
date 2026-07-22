@@ -1,3 +1,5 @@
+import { verifyPasswordHash } from './passwordHash.mjs';
+
 const TEAM_STORAGE_KEY = 'medici-social-team';
 
 function normalizeTeamMember(member) {
@@ -9,12 +11,19 @@ function normalizeTeamMember(member) {
     email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
       ? email
       : (member.username?.trim() || email).toLowerCase();
+  const passwordHash =
+    typeof member.passwordHash === 'string'
+      ? member.passwordHash
+      : typeof member.password_hash === 'string'
+        ? member.password_hash
+        : '';
   return {
     id: member.id || '',
     name,
     username,
     email,
-    password: typeof member.password === 'string' ? member.password : '',
+    passwordHash,
+    hasPassword: Boolean(passwordHash) || member.hasPassword === true,
     roles: Array.isArray(member.roles) ? member.roles : [],
   };
 }
@@ -38,7 +47,8 @@ export function findTeamMember(workspace, username) {
   );
 }
 
-export function verifyTeamMemberPassword(member, password) {
-  if (!member?.password || !password) return false;
-  return member.password === password;
+/** bcrypt verify against staff_accounts.password_hash (or in-memory hash). */
+export async function verifyTeamMemberPassword(member, password) {
+  if (!member || !password) return false;
+  return verifyPasswordHash(member.passwordHash, password);
 }

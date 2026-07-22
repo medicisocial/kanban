@@ -1,6 +1,6 @@
-import { findTeamMember, verifyTeamMemberPassword } from './_lib/teamAuth.mjs';
+import { verifyTeamMemberPassword } from './_lib/teamAuth.mjs';
 import { createStaffSession } from './_lib/staffAuth.mjs';
-import { canUseSupabaseForAuth, fetchRowsAcrossOrgs, getSupabaseUrl, resolveAuthReadKey } from './_lib/supabase.mjs';
+import { getSupabaseUrl } from './_lib/supabase.mjs';
 import { checkRateLimit, rateLimitKeyFromRequest } from './_lib/rateLimit.mjs';
 import {
   badRequest,
@@ -12,69 +12,67 @@ import {
   unavailable,
 } from './_lib/apiResponse.mjs';
 
-const TEAM_STORAGE_KEY = 'medici-social-team';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function getServiceRoleKey() {
+  return (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+}
+
+function canUseTeamAuth() {
+  return Boolean(getSupabaseUrl() && getServiceRoleKey());
+}
+
 async function fetchStaffAccountRows() {
-  const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-  const key = serviceRole || resolveAuthReadKey();
+  const key = getServiceRoleKey();
   const url = getSupabaseUrl();
   if (!url || !key) return null;
 
-  const response = await fetch(`${url}/rest/v1/staff_accounts?select=member_id,org_id,username,email,password,name,roles`, {
-    headers: { apikey: key, Authorization: `Bearer ${key}` },
-  });
+  const response = await fetch(
+    `${url}/rest/v1/staff_accounts?select=member_id,org_id,username,email,password_hash,name,roles`,
+    {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    },
+  );
   if (!response.ok) return null;
   return response.json();
 }
 
 /**
- * Load team members across all orgs via Supabase.
+ * Load team login rows across all orgs via service-role only.
  */
 async function resolveTeamLogin(username) {
-  if (!canUseSupabaseForAuth()) {
-    return { member: null, orgId: null, unavailable: true };
+  if (!canUseTeamAuth()) {
+    return { member: null, orgId: null, misconfigured: true };
   }
 
   try {
     const staffRows = await fetchStaffAccountRows();
-    if (staffRows?.length) {
-      const key = username.trim().toLowerCase();
-      for (const row of staffRows) {
-        const member = {
-          id: row.member_id,
-          username: row.username,
-          email: row.email,
-          password: row.password,
-          name: row.name,
-          roles: Array.isArray(row.roles) ? row.roles : [],
-        };
-        if (
-          member.username?.trim().toLowerCase() === key ||
-          member.email?.trim().toLowerCase() === key
-        ) {
-          return { member, orgId: row.org_id };
-        }
-      }
+    if (!staffRows) {
+      return { member: null, orgId: null, misconfigured: true };
     }
 
-    const rows = await fetchRowsAcrossOrgs('team_members');
-    if (rows) {
-      for (const row of rows) {
-        const member = findTeamMember(
-          { data: { [TEAM_STORAGE_KEY]: [row.data] } },
-          username,
-        );
-        if (member) return { member, orgId: row.org_id };
+    const key = username.trim().toLowerCase();
+    for (const row of staffRows) {
+      const member = {
+        id: row.member_id,
+        username: row.username,
+        email: row.email,
+        passwordHash: row.password_hash || '',
+        name: row.name,
+        roles: Array.isArray(row.roles) ? row.roles : [],
+      };
+      if (
+        member.username?.trim().toLowerCase() === key ||
+        member.email?.trim().toLowerCase() === key
+      ) {
+        return { member, orgId: row.org_id };
       }
-      return { member: null, orgId: null };
     }
+    return { member: null, orgId: null };
   } catch (error) {
     console.error('[team-auth] Supabase fetch failed:', error?.message || error);
     return { member: null, orgId: null, misconfigured: true };
   }
-
-  return { member: null, orgId: null, misconfigured: true };
 }
 
 export default async function handler(req, res) {
@@ -100,16 +98,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { member, orgId, unavailable: isUnavailable, misconfigured: isMisconfigured } =
-      await resolveTeamLogin(username);
-    if (isUnavailable) {
-      return unavailable(res, 'Team login requires cloud sync. Connect Supabase in Vercel, then redeploy.');
-    }
+    const { member, orgId, misconfigured: isMisconfigured } = await resolveTeamLogin(username);
     if (isMisconfigured) {
-      return unavailable(res, 'Team login is misconfigured. Add SUPABASE_SERVICE_ROLE_KEY in Vercel (server-only, no VITE_ prefix), then redeploy.');
+      return unavailable(
+        res,
+        'Team login is misconfigured. Add SUPABASE_SERVICE_ROLE_KEY in Vercel (server-only, no VITE_ prefix), then redeploy.',
+      );
     }
 
-    if (!member || !verifyTeamMemberPassword(member, password)) {
+    if (!member || !(await verifyTeamMemberPassword(member, password))) {
       return unauthorized(res, 'Invalid email or password.');
     }
 

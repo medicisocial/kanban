@@ -519,9 +519,9 @@ export function useCollectionSync({
       }
 
       try {
-        const routeCardsThroughStaffSync = table === 'cards';
+        const routeThroughStaffSync = table === 'cards' || table === 'team_members';
 
-        if (canWrite && !routeCardsThroughStaffSync) {
+        if (canWrite && !routeThroughStaffSync) {
           if (changed.length) {
             await store.upsertRecords(changed.map((r) => ({ id: getId(r), data: r })));
           }
@@ -530,7 +530,7 @@ export function useCollectionSync({
           }
         } else {
           let outgoing = changed;
-          if (routeCardsThroughStaffSync && changed.length) {
+          if (table === 'cards' && changed.length) {
             outgoing = await guardCardPushBatch(changed, orgId, { getId });
           }
           const ok = await pushStaffSync({
@@ -538,7 +538,7 @@ export function useCollectionSync({
             changed: outgoing,
             removed,
             orgId,
-            skipCardGuard: routeCardsThroughStaffSync,
+            skipCardGuard: table === 'cards',
           });
           if (!ok) {
             pendingWriteRef.current = true;
@@ -550,7 +550,7 @@ export function useCollectionSync({
             });
             return;
           }
-          if (routeCardsThroughStaffSync && changed.length) {
+          if (table === 'cards' && changed.length) {
             syncedRef.current = new Map(next);
             for (const record of outgoing) {
               syncedRef.current.set(String(getId(record)), JSON.stringify(record));
@@ -565,7 +565,7 @@ export function useCollectionSync({
           }
           savePendingRemoved(orgId, table, pendingRemovedRef.current);
           savePendingCreates(orgId, table, pendingLocalCreatesRef.current);
-          if (!(routeCardsThroughStaffSync && changed.length)) {
+          if (!(table === 'cards' && changed.length)) {
             syncedRef.current = next;
           }
           pendingWriteRef.current = false;
