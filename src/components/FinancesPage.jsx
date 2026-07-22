@@ -810,6 +810,7 @@ export default function FinancesPage({
     ensureRecurringMonth,
     setPayroll,
     addPayrollStaff,
+    ensurePayrollPlanAssignees,
     updatePayrollStaff,
     deletePayrollStaff,
     setMonthlyRetainer,
@@ -1053,11 +1054,13 @@ export default function FinancesPage({
     const amPayByName = {};
     const videographerPayByName = {};
     const photographerPayByName = {};
+    const assigneeNames = {};
     for (const [key, entry] of Object.entries(byName)) {
       planPayByName[key] = entry.planPay || 0;
       amPayByName[key] = entry.amPay || 0;
       videographerPayByName[key] = entry.videographerPay || 0;
       photographerPayByName[key] = entry.photographerPay || 0;
+      assigneeNames[key] = entry.name || key;
     }
     return {
       planPayByName,
@@ -1065,6 +1068,7 @@ export default function FinancesPage({
       videographerPayByName,
       photographerPayByName,
       assigneeKeys: Object.keys(byName),
+      assigneeNames,
     };
   }, [
     activePayrollClients,
@@ -1178,26 +1182,38 @@ export default function FinancesPage({
 
   const planAssigneeKey = planPayMaps.assigneeKeys.slice().sort().join('|');
 
+  // Auto-add (or upgrade custom→team) anyone earning plan pay this month.
+  // ensurePayrollPlanAssignees no-ops when the roster is already correct, so
+  // this does not loop: planAssigneeKey is unchanged by roster writes.
   useEffect(() => {
-    if (!planAssigneeKey) return;
-    const needed = new Set(planAssigneeKey.split('|').filter(Boolean));
-    const onRoster = new Set(
-      (snapshot.payrollStaff || []).map((person) => String(person.name || '').trim().toLowerCase()),
-    );
-    for (const member of teamMembers || []) {
-      const name = String(member?.name || '').trim();
-      const key = name.toLowerCase();
-      if (!name || !needed.has(key) || onRoster.has(key)) continue;
-      addPayrollStaff(selectedMonth, {
-        name,
-        kind: 'team',
-        teamMemberId: member.id || null,
-        extraFields: [],
-      });
-      onRoster.add(key);
-    }
+    if (!planAssigneeKey || typeof ensurePayrollPlanAssignees !== 'function') return;
+    const needed = planAssigneeKey.split('|').filter(Boolean);
+    if (!needed.length) return;
+
+    const people = needed.map((key) => {
+      const member = (teamMembers || []).find(
+        (item) => String(item?.name || '').trim().toLowerCase() === key,
+      );
+      const displayName =
+        (member && String(member.name || '').trim()) ||
+        planPayMaps.assigneeNames?.[key] ||
+        key;
+      return {
+        name: displayName,
+        teamMemberId: member?.id || null,
+      };
+    });
+
+    ensurePayrollPlanAssignees(selectedMonth, people);
+    // Intentionally omit snapshot.payrollStaff: roster writes must not re-trigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addPayrollStaff, planAssigneeKey, selectedMonth, teamMembers]);
+  }, [
+    ensurePayrollPlanAssignees,
+    planAssigneeKey,
+    selectedMonth,
+    teamMembers,
+    planPayMaps.assigneeNames,
+  ]);
 
   // Keep Charles and Michael on the monthly roster under Extras.
   useEffect(() => {

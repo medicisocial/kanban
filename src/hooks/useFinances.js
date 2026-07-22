@@ -16,6 +16,7 @@ import {
   resolveClientMonthAssignee,
   resolveClientMonthAssignees,
 } from '../utils/monthAssignees';
+import { ensurePlanAssigneesOnStaffList } from '../utils/payrollPlanAssignees';
 
 /** Return the current month as "YYYY-MM". */
 function currentYearMonth() {
@@ -742,6 +743,76 @@ export function useFinances() {
     });
   }, [resolvePayrollMonth]);
 
+  /**
+   * Ensure plan-pay people are on the month roster as kind: 'team'.
+   * Upgrades same-name custom rows; appends when missing. No-ops (returns
+   * previous state) when nothing changes — safe for effect auto-sync.
+   */
+  const ensurePayrollPlanAssignees = useCallback((yearMonth, people) => {
+    if (!yearMonth || !Array.isArray(people) || people.length === 0) return;
+    notifyMutation();
+    setFinances((prev) => {
+      const record = prev.find((r) => r.id === 'payroll');
+      const rest = prev.filter((r) => r.id !== 'payroll');
+      const data = record?.data ? { ...record.data } : {};
+      const month = resolvePayrollMonth(data, yearMonth);
+      const { staff, changed } = ensurePlanAssigneesOnStaffList(
+        month.staff,
+        people,
+        createPayrollStaff,
+      );
+      if (!changed) return prev;
+      data[yearMonth] = writePayrollMonth({
+        staff,
+        ownerComp: month.ownerComp,
+        legacyTotal: month.legacyTotal,
+      });
+      return [...rest, { id: 'payroll', data }];
+    });
+  }, [resolvePayrollMonth]);
+
+  /**
+   * Upgrade the first same-name payroll row to kind: 'team' (for plan pay).
+   * Returns without writing when no match or already team with same id.
+   */
+  const upgradePayrollStaffToTeam = useCallback((yearMonth, name, teamMemberId = null) => {
+    const nameKey = String(name || '').trim().toLowerCase();
+    if (!yearMonth || !nameKey) return;
+    notifyMutation();
+    setFinances((prev) => {
+      const record = prev.find((r) => r.id === 'payroll');
+      const rest = prev.filter((r) => r.id !== 'payroll');
+      const data = record?.data ? { ...record.data } : {};
+      const month = resolvePayrollMonth(data, yearMonth);
+      let changed = false;
+      const staff = month.staff.map((item) => {
+        if (changed) return item;
+        if (String(item.name || '').trim().toLowerCase() !== nameKey) return item;
+        if (
+          item.kind === 'team' &&
+          (!teamMemberId || item.teamMemberId === teamMemberId)
+        ) {
+          return item;
+        }
+        changed = true;
+        return createPayrollStaff({
+          ...item,
+          kind: 'team',
+          teamMemberId: teamMemberId || item.teamMemberId || null,
+          id: item.id,
+          extraFields: item.extraFields,
+        });
+      });
+      if (!changed) return prev;
+      data[yearMonth] = writePayrollMonth({
+        staff,
+        ownerComp: month.ownerComp,
+        legacyTotal: month.legacyTotal,
+      });
+      return [...rest, { id: 'payroll', data }];
+    });
+  }, [resolvePayrollMonth]);
+
   const updatePayrollStaff = useCallback((yearMonth, staffId, updates) => {
     notifyMutation();
     setFinances((prev) => {
@@ -1185,6 +1256,8 @@ export function useFinances() {
     deleteOneOffProject,
     setPayroll,
     addPayrollStaff,
+    ensurePayrollPlanAssignees,
+    upgradePayrollStaffToTeam,
     updatePayrollStaff,
     deletePayrollStaff,
     setOwnerComp,
