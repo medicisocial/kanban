@@ -15,15 +15,18 @@ import { createHash } from 'crypto';
 const url = process.argv[2] || 'https://portal.medicisocial.com/';
 const brand = process.argv[3] || 'ZZ_VaultTest';
 const STAFF_USER = 'info@medicisocial.com';
-const STAFF_HASH = '288a74dd35327615ef98b375a2445d9ebd4c570a5e5d413181986ebf127f45e1';
+const STAFF_SESSION_SECRET = (process.env.STAFF_SESSION_SECRET || '').trim();
 
 const testUsername = `vaulttest${Date.now().toString(36)}`;
 const testPassword = `VaultPersist${Date.now().toString(36)}`;
 
 function staffSession() {
+  if (!STAFF_SESSION_SECRET) {
+    throw new Error('STAFF_SESSION_SECRET is required to mint staff sessions in e2e tests.');
+  }
   const expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
   const signature = createHash('sha256')
-    .update(`${STAFF_USER}:${expires}:${STAFF_HASH}`)
+    .update(`${STAFF_USER}:${expires}:${STAFF_SESSION_SECRET}`)
     .digest('hex');
   return { username: STAFF_USER, expires, signature };
 }

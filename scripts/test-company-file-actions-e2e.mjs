@@ -20,16 +20,17 @@ if (IS_PRODUCTION && process.env.ALLOW_PRODUCTION_E2E !== '1') {
 }
 
 const STAFF_USERNAME = (process.env.STAFF_USERNAME || process.env.VITE_STAFF_USERNAME || 'info@medicisocial.com').trim();
-const STAFF_PASSWORD_HASH = (
-  process.env.STAFF_PASSWORD_HASH || process.env.VITE_STAFF_PASSWORD_HASH || ''
-).trim().toLowerCase();
+const STAFF_SESSION_SECRET = (process.env.STAFF_SESSION_SECRET || '').trim();
 
 function hashPassword(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 
 function createSessionSignature(username, expires) {
-  return hashPassword(`${username}:${expires}:${STAFF_PASSWORD_HASH}`);
+  if (!STAFF_SESSION_SECRET) {
+    throw new Error('STAFF_SESSION_SECRET is required to mint staff sessions in e2e tests.');
+  }
+  return hashPassword(`${username}:${expires}:${STAFF_SESSION_SECRET}`);
 }
 
 function buildStaffSession() {

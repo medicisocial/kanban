@@ -10,13 +10,11 @@ function getConfiguredUsername() {
 
 /** Password verifier material — server env only. Never used as a session MAC secret. */
 function getConfiguredPasswordHash() {
-  return (
-    process.env.STAFF_PASSWORD_HASH ||
-    process.env.VITE_STAFF_PASSWORD_HASH ||
-    ''
-  )
-    .trim()
-    .toLowerCase();
+  return (process.env.STAFF_PASSWORD_HASH || '').trim().toLowerCase();
+}
+
+export function isStaffPasswordConfigured() {
+  return Boolean(getConfiguredPasswordHash());
 }
 
 function hashPassword(password) {

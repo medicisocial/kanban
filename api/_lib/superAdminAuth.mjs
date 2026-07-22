@@ -16,13 +16,7 @@ function getSuperAdminUsername() {
  * password (the previous default was the literal password "admin").
  */
 function getSuperAdminPasswordHash() {
-  return (
-    process.env.SUPER_ADMIN_PASSWORD_HASH ||
-    process.env.VITE_SUPER_ADMIN_PASSWORD_HASH ||
-    ''
-  )
-    .trim()
-    .toLowerCase();
+  return (process.env.SUPER_ADMIN_PASSWORD_HASH || '').trim().toLowerCase();
 }
 
 function hashValue(val) {
