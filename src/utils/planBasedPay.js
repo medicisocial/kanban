@@ -1,5 +1,10 @@
 import { normalizePayRates } from '../constants/clientPlans.js';
-import { normalizeReelPointsTarget } from '../constants.js';
+
+function normalizeReelPointsTarget(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) return 0;
+  return Math.round(num * 2) / 2;
+}
 
 export {
   carouselStaticPointsFromCounts,
@@ -141,6 +146,9 @@ function emptyAssignee(name) {
     amClients: 0,
     videographerClients: 0,
     photographerClients: 0,
+    amBreakdown: [],
+    videographerBreakdown: [],
+    photographerBreakdown: [],
   };
 }
 
@@ -185,6 +193,14 @@ export function buildPlanBasedPayByAssignee({
       am.amPay += pay.amPay;
       am.planPay += pay.amPay;
       am.amClients += 1;
+      if (pay.amPay > 0) {
+        am.amBreakdown.push({
+          client,
+          amount: pay.amPay,
+          reelPoints: pay.reelPoints,
+          carouselStaticPoints: pay.carouselStaticPoints,
+        });
+      }
     }
 
     const videographer = ensure(getClientVideographer?.(client));
@@ -192,6 +208,13 @@ export function buildPlanBasedPayByAssignee({
       videographer.videographerPay += pay.videographerPay;
       videographer.planPay += pay.videographerPay;
       videographer.videographerClients += 1;
+      if (pay.videographerPay > 0) {
+        videographer.videographerBreakdown.push({
+          client,
+          amount: pay.videographerPay,
+          shootHours: pay.shootHours,
+        });
+      }
     }
 
     const photographer = ensure(getClientPhotographer?.(client));
@@ -199,6 +222,13 @@ export function buildPlanBasedPayByAssignee({
       photographer.photographerPay += pay.photographerPay;
       photographer.planPay += pay.photographerPay;
       photographer.photographerClients += 1;
+      if (pay.photographerPay > 0) {
+        photographer.photographerBreakdown.push({
+          client,
+          amount: pay.photographerPay,
+          shootHours: pay.shootHours,
+        });
+      }
     }
   }
 

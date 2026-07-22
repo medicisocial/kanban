@@ -16,6 +16,7 @@ import { isSharedOperationsLogin } from '../utils/staffAuth';
 import { staffHasLeadershipWorkspaceAccess } from '../utils/staffMembers';
 import { buildEditorReelPointsByAssignee, buildEditorCompletedCards, getEditorCompletedStatusLabel } from '../utils/editorTodo';
 import { buildPlanBasedPayByAssignee } from '../utils/planBasedPay';
+import { buildPayBreakdownLines } from '../utils/payBreakdownLines';
 import { sortClientNamesAlphabetically } from '../utils/clients';
 import { contentTypeLabelProps } from '../utils/contentTypeColors';
 import {
@@ -234,40 +235,58 @@ function RateSection({ title, children }) {
   );
 }
 
-function payBreakdownLines(person, rates) {
-  const reelRate = rates?.reelPointRate ?? DEFAULT_PAY_RATES.reelPointRate;
-  const carouselRate = rates?.carouselRate ?? DEFAULT_PAY_RATES.carouselRate;
-  const staticRate = rates?.staticPostRate ?? DEFAULT_PAY_RATES.staticPostRate;
-  const lines = [];
-  if ((person.amPay || 0) > 0) lines.push({ label: 'Account manager', amount: person.amPay });
-  if ((person.videographerPay || 0) > 0) {
-    lines.push({ label: 'Videographer', amount: person.videographerPay });
+function PayBreakdownLine({ line }) {
+  const children = Array.isArray(line.children) ? line.children : [];
+  const [open, setOpen] = useState(false);
+  const canExpand = children.length > 0;
+
+  if (!canExpand) {
+    return (
+      <li className="flex items-center justify-between gap-3">
+        <span>
+          {line.label}
+          {line.hint ? <span className="text-white/30"> · {line.hint}</span> : null}
+        </span>
+        <span className="tabular-nums text-white/90">{fmt$(line.amount)}</span>
+      </li>
+    );
   }
-  if ((person.photographerPay || 0) > 0) {
-    lines.push({ label: 'Photographer', amount: person.photographerPay });
-  }
-  if ((person.points || 0) > 0 || (person.reelPay || 0) > 0) {
-    lines.push({
-      label: `Reels · ${person.points || 0} pts`,
-      amount: person.reelPay ?? (person.points || 0) * reelRate,
-      hint: `$${reelRate}/pt`,
-    });
-  }
-  if ((person.carousels || 0) > 0 || (person.carouselPay || 0) > 0) {
-    lines.push({
-      label: `Carousels · ${person.carousels || 0}`,
-      amount: person.carouselPay || 0,
-      hint: `$${carouselRate}`,
-    });
-  }
-  if ((person.statics || 0) > 0 || (person.staticPay || 0) > 0) {
-    lines.push({
-      label: `Statics · ${person.statics || 0}`,
-      amount: person.staticPay || 0,
-      hint: `$${staticRate}`,
-    });
-  }
-  return lines;
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 text-left transition hover:text-white"
+      >
+        <span className="min-w-0">
+          <span className="mr-1.5 inline-block w-3 text-[10px] text-white/35">
+            {open ? '▾' : '▸'}
+          </span>
+          {line.label}
+          {line.hint ? <span className="text-white/30"> · {line.hint}</span> : null}
+          <span className="text-white/30"> · {children.length}</span>
+        </span>
+        <span className="shrink-0 tabular-nums text-white/90">{fmt$(line.amount)}</span>
+      </button>
+      {open ? (
+        <ul className="mt-1.5 space-y-1 border-l border-white/10 pl-4 text-[11px] text-white/50">
+          {children.map((child, index) => (
+            <li
+              key={`${child.label}-${index}`}
+              className="flex items-center justify-between gap-3"
+            >
+              <span className="min-w-0 truncate">
+                {child.label}
+                {child.hint ? <span className="text-white/30"> · {child.hint}</span> : null}
+              </span>
+              <span className="shrink-0 tabular-nums text-white/70">{fmt$(child.amount)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
 }
 
 function fieldsFingerprint(list) {
@@ -287,13 +306,17 @@ function PayrollPersonRow({
   onRemove,
   forceOpen = false,
   hideHeader = false,
+  completedCards = [],
 }) {
   const [open, setOpen] = useState(forceOpen);
   const persistedFields = Array.isArray(person.extraFields) ? person.extraFields : [];
   const [fields, setFields] = useState(persistedFields);
   const labelFocusIdRef = useRef(null);
   const persistedFp = fieldsFingerprint(persistedFields);
-  const lines = person.kind === 'team' ? payBreakdownLines(person, rates) : [];
+  const lines =
+    person.kind === 'team'
+      ? buildPayBreakdownLines(person, rates, { completedCards })
+      : [];
   const isOpen = forceOpen || open;
 
   // Keep local drafts while typing; only sync from store when not editing a label.
@@ -416,15 +439,9 @@ function PayrollPersonRow({
       {isOpen && (
         <div className="space-y-3 border-t border-white/10 px-3 py-3">
           {lines.length > 0 && (
-            <ul className="space-y-1 text-xs text-white/55">
+            <ul className="space-y-1.5 text-xs text-white/55">
               {lines.map((line) => (
-                <li key={line.label} className="flex items-center justify-between gap-3">
-                  <span>
-                    {line.label}
-                    {line.hint ? <span className="text-white/30"> · {line.hint}</span> : null}
-                  </span>
-                  <span className="tabular-nums text-white/75">{fmt$(line.amount)}</span>
-                </li>
+                <PayBreakdownLine key={line.id || line.label} line={line} />
               ))}
             </ul>
           )}
@@ -559,7 +576,18 @@ function PersonPayDetail({
   compact = false,
   showCompletedWork = true,
 }) {
-  const lines = person.kind === 'team' ? payBreakdownLines(person, rates) : [];
+  const completedCards = useMemo(
+    () =>
+      buildEditorCompletedCards(cards || [], {
+        assignee: person.name,
+        referenceDate: monthDate,
+      }),
+    [cards, person.name, monthDate],
+  );
+  const lines =
+    person.kind === 'team'
+      ? buildPayBreakdownLines(person, rates, { completedCards })
+      : [];
   const fields = Array.isArray(person.extraFields) ? person.extraFields : [];
   const roleHint =
     resolveAgencyOpsRole(person.name)?.roleHint ||
@@ -603,13 +631,7 @@ function PersonPayDetail({
           ) : (
             <ul className="space-y-1.5 text-xs text-white/70">
               {lines.map((line) => (
-                <li key={line.label} className="flex items-center justify-between gap-3">
-                  <span>
-                    {line.label}
-                    {line.hint ? <span className="text-white/30"> · {line.hint}</span> : null}
-                  </span>
-                  <span className="tabular-nums text-white/90">{fmt$(line.amount)}</span>
-                </li>
+                <PayBreakdownLine key={line.id || line.label} line={line} />
               ))}
               {fields.map((field) => (
                 <li key={field.id} className="flex items-center justify-between gap-3">
@@ -632,6 +654,7 @@ function PersonPayDetail({
           onUpdate={onUpdate}
           onRemove={onRemove}
           hideHeader
+          completedCards={completedCards}
         />
       </div>
 
@@ -1054,12 +1077,18 @@ export default function FinancesPage({
     const amPayByName = {};
     const videographerPayByName = {};
     const photographerPayByName = {};
+    const amBreakdownByName = {};
+    const videographerBreakdownByName = {};
+    const photographerBreakdownByName = {};
     const assigneeNames = {};
     for (const [key, entry] of Object.entries(byName)) {
       planPayByName[key] = entry.planPay || 0;
       amPayByName[key] = entry.amPay || 0;
       videographerPayByName[key] = entry.videographerPay || 0;
       photographerPayByName[key] = entry.photographerPay || 0;
+      amBreakdownByName[key] = entry.amBreakdown || [];
+      videographerBreakdownByName[key] = entry.videographerBreakdown || [];
+      photographerBreakdownByName[key] = entry.photographerBreakdown || [];
       assigneeNames[key] = entry.name || key;
     }
     return {
@@ -1067,6 +1096,9 @@ export default function FinancesPage({
       amPayByName,
       videographerPayByName,
       photographerPayByName,
+      amBreakdownByName,
+      videographerBreakdownByName,
+      photographerBreakdownByName,
       assigneeKeys: Object.keys(byName),
       assigneeNames,
     };

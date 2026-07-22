@@ -1048,6 +1048,9 @@ export function useFinances() {
       const amPayByName = options.amPayByName || {};
       const videographerPayByName = options.videographerPayByName || {};
       const photographerPayByName = options.photographerPayByName || {};
+      const amBreakdownByName = options.amBreakdownByName || {};
+      const videographerBreakdownByName = options.videographerBreakdownByName || {};
+      const photographerBreakdownByName = options.photographerBreakdownByName || {};
       const payrollStaff = payrollMonth.staff.map((person) => {
         const nameKey = String(person.name || '').trim().toLowerCase();
         const points = Number(pointsByName[nameKey]) || 0;
@@ -1076,6 +1079,9 @@ export function useFinances() {
           amPay,
           videographerPay,
           photographerPay,
+          amBreakdown: amBreakdownByName[nameKey] || [],
+          videographerBreakdown: videographerBreakdownByName[nameKey] || [],
+          photographerBreakdown: photographerBreakdownByName[nameKey] || [],
           planPay,
           pointsPay,
           extraTotal,

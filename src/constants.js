@@ -134,7 +134,7 @@ export const DEFAULT_SHOOT_DURATIONS = {
 import {
   buildContentTypeStyle,
   DEFAULT_CONTENT_TYPE_COLORS,
-} from './utils/contentTypeColors';
+} from './utils/contentTypeColors.js';
 
 export { DEFAULT_CONTENT_TYPE_COLORS };
 
