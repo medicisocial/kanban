@@ -147,7 +147,10 @@ export default function AdminIdeasTable({
                         <StatusBadge status={idea.status} />
                       </div>
                       {idea.description && (
-                        <p className="mt-1 line-clamp-2 text-xs text-white/40">{idea.description}</p>
+                        <p className="mt-1 line-clamp-2 text-xs text-sky-200/70">
+                          <span className="font-medium text-sky-200/90">Client notes: </span>
+                          {idea.description}
+                        </p>
                       )}
                       {(idea.referenceVideo || idea.referenceMusic) && (
                         <div className="mt-2 flex flex-wrap gap-3">

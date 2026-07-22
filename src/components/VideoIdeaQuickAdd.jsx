@@ -30,6 +30,7 @@ export default function VideoIdeaQuickAdd({
     client: clientOnly || clientFromFilter(clientFilter, firstClient),
     title: '',
     referenceVideo: '',
+    description: '',
     contentType: 'Reel',
   }));
   const [error, setError] = useState('');
@@ -46,6 +47,7 @@ export default function VideoIdeaQuickAdd({
       client: clientOnly || clientFromFilter(clientFilter, firstClient),
       title: '',
       referenceVideo: '',
+      description: '',
       contentType: 'Reel',
     });
     setError('');
@@ -65,7 +67,7 @@ export default function VideoIdeaQuickAdd({
       client: form.client,
       title,
       referenceVideo: referenceVideo || '',
-      description: '',
+      description: form.description.trim(),
       contentType: form.contentType,
       clientComment: '',
     };
@@ -154,6 +156,17 @@ export default function VideoIdeaQuickAdd({
               <ReferenceVideoLink url={form.referenceVideo} />
             </div>
           )}
+        </label>
+
+        <label className="block min-w-0 md:col-span-full">
+          <span className="mb-1.5 block text-xs text-white/45">Notes</span>
+          <textarea
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            rows={2}
+            placeholder="Optional notes for your production team…"
+            className={`${inputClass} resize-y`}
+          />
         </label>
 
         {!hideClientField && (

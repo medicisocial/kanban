@@ -10,6 +10,7 @@ import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader'
 import ClientIdeasTable from './clientPortal/ClientIdeasTable';
 import VideoIdeaQuickAdd from './VideoIdeaQuickAdd';
 import IdeaVaultTable from './IdeaVaultTable';
+import ClientIdeaDetailModal from './ClientIdeaDetailModal';
 import SharePortalShell from './clientPortal/SharePortalShell';
 import { btnPrimaryClass, glassSegmentClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 import { clientMatchesBrand } from '../utils/clients';
@@ -41,6 +42,8 @@ export default function ClientReviewPortal({
   const [actionError, setActionError] = useState('');
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('review');
+  const [detailIdeaId, setDetailIdeaId] = useState(null);
+  const [detailSaving, setDetailSaving] = useState(false);
 
   const clientColor = getClientColor(client);
   const clientLogo = getClientLogo(client);
@@ -262,6 +265,34 @@ export default function ClientReviewPortal({
     }
   };
 
+  const detailIdea =
+    (detailIdeaId &&
+      (vaultIdeas.find((idea) => idea.id === detailIdeaId) ||
+        reviewIdeas.find((idea) => idea.id === detailIdeaId) ||
+        brandIdeas.find((idea) => idea.id === detailIdeaId) ||
+        localIdeas.find((idea) => idea.id === detailIdeaId))) ||
+    null;
+
+  const handleUpdateIdeaDetails = async (ideaId, updates) => {
+    setDetailSaving(true);
+    setActionError('');
+    try {
+      if (useCloudSync && onCloudQueueResponse) {
+        await onCloudQueueResponse({
+          action: 'update',
+          ideaId,
+          updates,
+          client,
+          timestamp: Date.now(),
+        });
+        return;
+      }
+      throw new Error('Could not save your notes.');
+    } finally {
+      setDetailSaving(false);
+    }
+  };
+
   const pendingCount = pendingIdeas.length;
 
   const tabClass = (tabId) =>
@@ -327,6 +358,7 @@ export default function ClientReviewPortal({
               clientLogo={clientLogo}
               onApprove={handleApprove}
               onDecline={handleDecline}
+              onOpenIdea={(idea) => setDetailIdeaId(idea.id)}
               busyIds={busyIds}
             />
           </>
@@ -337,8 +369,25 @@ export default function ClientReviewPortal({
               variant="bank"
               onAddToBank={handleAddIdeaToBank}
             />
-            <IdeaVaultTable ideas={vaultIdeas} readOnly hideClientColumn />
+            <IdeaVaultTable
+              ideas={vaultIdeas}
+              readOnly
+              hideClientColumn
+              onOpenIdea={(idea) => setDetailIdeaId(idea.id)}
+            />
           </>
+        )}
+
+        {detailIdea && (
+          <ClientIdeaDetailModal
+            idea={detailIdea}
+            onClose={() => setDetailIdeaId(null)}
+            onSave={handleUpdateIdeaDetails}
+            onApprove={handleApprove}
+            onDecline={handleDecline}
+            canDecide={detailIdea.status === 'pending'}
+            saving={detailSaving || busyIds.has(detailIdea.id)}
+          />
         )}
       </section>
     );

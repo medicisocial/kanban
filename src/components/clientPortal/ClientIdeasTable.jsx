@@ -56,6 +56,7 @@ export default function ClientIdeasTable({
   clientLogo,
   onApprove,
   onDecline,
+  onOpenIdea,
   busyIds = new Set(),
 }) {
   const [statusFilter, setStatusFilter] = useState('pending');
@@ -132,7 +133,7 @@ export default function ClientIdeasTable({
               <div key={idea.id} className={mobileCardClass}>
                 <button
                   type="button"
-                  onClick={() => setExpandedId(expanded ? null : idea.id)}
+                  onClick={() => (onOpenIdea ? onOpenIdea(idea) : setExpandedId(expanded ? null : idea.id))}
                   className="w-full text-left font-medium text-white"
                 >
                   {idea.title || 'Untitled idea'}
@@ -264,7 +265,9 @@ export default function ClientIdeasTable({
                       <td className={tableCellClass}>
                         <button
                           type="button"
-                          onClick={() => setExpandedId(expanded ? null : idea.id)}
+                          onClick={() =>
+                            onOpenIdea ? onOpenIdea(idea) : setExpandedId(expanded ? null : idea.id)
+                          }
                           className="max-w-full text-left font-medium text-white transition-colors hover:text-[#c88]"
                         >
                           {idea.title || 'Untitled idea'}
@@ -322,7 +325,9 @@ export default function ClientIdeasTable({
                         ) : (
                           <button
                             type="button"
-                            onClick={() => setExpandedId(expanded ? null : idea.id)}
+                            onClick={() =>
+                              onOpenIdea ? onOpenIdea(idea) : setExpandedId(expanded ? null : idea.id)
+                            }
                             className={`${btnGhostClass} text-[10px] uppercase tracking-wider`}
                           >
                             View

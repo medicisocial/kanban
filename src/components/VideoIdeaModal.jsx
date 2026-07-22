@@ -20,6 +20,7 @@ const inputClass =
 
 const IDEA_TABS = [
   ["details", "Details"],
+  ["notes", "Notes"],
   ["script", "Script"],
   ["references", "References"],
 ];
@@ -285,18 +286,25 @@ export default function VideoIdeaModal({
                     </p>
                   </label>
                 )}
-
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-medium text-gray-400">Notes</span>
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    rows={4}
-                    placeholder="Add notes..."
-                    className={`${inputClass} resize-y`}
-                  />
-                </label>
               </>
+            )}
+
+            {activeTab === "notes" && (
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-medium text-gray-400">
+                  Client notes
+                </span>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  rows={10}
+                  placeholder="Notes from the client or production team…"
+                  className={`${inputClass} resize-y`}
+                />
+                <p className="mt-1.5 text-[10px] text-white/35">
+                  Clients can leave these from their portal when submitting or reviewing ideas.
+                </p>
+              </label>
             )}
 
             {activeTab === "script" && (

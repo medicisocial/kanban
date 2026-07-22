@@ -270,6 +270,36 @@ export async function handleIdeaPortalResponse(orgId, sessionBrand, response = {
     return { ok: true, ideaId: idea.id };
   }
 
+  if (action === 'update') {
+    const ideaId = String(response.ideaId || response.idea?.id || '').trim();
+    const updates = response.updates && typeof response.updates === 'object' ? response.updates : null;
+    if (!ideaId || !updates) {
+      throw new Error('Missing idea update payload.');
+    }
+
+    const existing = await loadIdea(orgId, ideaId);
+    if (!existing) {
+      throw new Error('Idea not found.');
+    }
+    if (!itemMatchesSessionBrand(existing.client, sessionBrand, brandContext)) {
+      throw new Error('You do not have access to this idea.');
+    }
+
+    // Client sessions may only write notes (description). Script fields in the
+    // payload are intentionally ignored — reads still return existing script.
+    const next = {
+      ...existing,
+      description:
+        updates.description !== undefined
+          ? String(updates.description || '').trim()
+          : existing.description,
+      updatedAt: Date.now(),
+    };
+
+    await saveIdea(orgId, ideaId, next);
+    return { ok: true, ideaId, updated: true };
+  }
+
   const ideaId = String(response.ideaId || response.idea?.id || '').trim();
   if (!ideaId || !action) {
     throw new Error('Missing idea response.');

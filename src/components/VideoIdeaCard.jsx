@@ -105,7 +105,14 @@ export default function VideoIdeaCard({
           <p className="mb-3 text-xs text-gray-500">No reference links</p>
         )}
 
-        {idea.description && <p className="mb-3 text-sm text-gray-400">{idea.description}</p>}
+        {idea.description && (
+          <div className="mb-3 rounded-lg border border-sky-500/20 bg-sky-500/10 px-3 py-2">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-sky-200/80">
+              Client notes
+            </p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-sky-50/90">{idea.description}</p>
+          </div>
+        )}
 
         {!isPending && (
           <div className="mb-3 rounded-lg bg-white/5 px-3 py-2">

@@ -24,6 +24,7 @@ export default function IdeaVaultTable({
   onEdit,
   onSchedule,
   onMoveToReview,
+  onOpenIdea,
   readOnly = false,
   hideClientColumn = false,
 }) {
@@ -31,6 +32,10 @@ export default function IdeaVaultTable({
   const [expandedId, setExpandedId] = useState(null);
 
   const openIdea = (idea) => {
+    if (onOpenIdea) {
+      onOpenIdea(idea);
+      return;
+    }
     if (readOnly) {
       setExpandedId((prev) => (prev === idea.id ? null : idea.id));
       return;
@@ -89,7 +94,7 @@ export default function IdeaVaultTable({
               key={idea.id}
               accentColor={clientColor}
               animationDelay={`${0.08 + index * 0.05}s`}
-              onOpen={readOnly || onEdit ? () => openIdea(idea) : undefined}
+              onOpen={onOpenIdea || readOnly || onEdit ? () => openIdea(idea) : undefined}
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -108,6 +113,12 @@ export default function IdeaVaultTable({
                     <h3 className="truncate text-sm font-semibold text-white">
                       {idea.title || 'Untitled idea'}
                     </h3>
+                    {idea.description?.trim() && (
+                      <p className="mt-1 line-clamp-2 text-xs text-sky-200/70">
+                        <span className="font-medium text-sky-200/90">Client notes: </span>
+                        {idea.description}
+                      </p>
+                    )}
                     {hasStructuredScript(idea) && (
                       <span className="mt-1 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/45">
                         {contentReadyLabel(idea)}
