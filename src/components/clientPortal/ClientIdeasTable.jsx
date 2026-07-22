@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { clientMatchesBrand } from '../../utils/clients';
 import { IDEA_STATUSES } from '../../constants';
+import { isRejectedIdeaStatus } from '../../utils/videoIdeas';
 import ClientAvatar from '../ClientAvatar';
 import ReferenceVideoLink, { ReferenceMusicLink } from './ReferenceVideoLink';
 import {
@@ -45,7 +46,11 @@ function SortHeader({ label, sortKey, sort, onSort }) {
 }
 
 function StatusBadge({ status }) {
-  const tone = status === 'approved' ? 'approved' : status === 'declined' ? 'declined' : 'pending';
+  const tone = status === 'approved'
+    ? 'approved'
+    : isRejectedIdeaStatus(status)
+      ? 'rejected'
+      : 'pending';
   return <span {...statusPipelinePillProps(tone)}>{IDEA_STATUSES[status] || status}</span>;
 }
 
@@ -74,7 +79,9 @@ export default function ClientIdeasTable({
   const filtered = useMemo(() => {
     let rows = ideas.filter((idea) => clientMatchesBrand(idea.client, client));
 
-    if (statusFilter !== 'all') {
+    if (statusFilter === 'rejected') {
+      rows = rows.filter((idea) => isRejectedIdeaStatus(idea.status));
+    } else if (statusFilter !== 'all') {
       rows = rows.filter((idea) => idea.status === statusFilter);
     }
 
@@ -90,10 +97,21 @@ export default function ClientIdeasTable({
   }, [ideas, client, statusFilter, sort]);
 
   const submitDecline = (ideaId) => {
-    onDecline?.(ideaId, comment.trim());
+    const trimmed = comment.trim();
+    if (!trimmed) return;
+    onDecline?.(ideaId, trimmed);
     setDeclineId(null);
     setComment('');
     setExpandedId(null);
+  };
+
+  const startReject = (idea) => {
+    if (onOpenIdea) {
+      onOpenIdea(idea);
+      return;
+    }
+    setDeclineId(idea.id);
+    setExpandedId(idea.id);
   };
 
   return (
@@ -110,7 +128,7 @@ export default function ClientIdeasTable({
           >
             <option value="pending">Pending review</option>
             <option value="approved">Approved</option>
-            <option value="declined">Declined</option>
+            <option value="rejected">Rejected</option>
             <option value="all">All statuses</option>
           </select>
           <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-white/35">
@@ -168,14 +186,11 @@ export default function ClientIdeasTable({
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        setDeclineId(idea.id);
-                        setExpandedId(idea.id);
-                      }}
+                      onClick={() => startReject(idea)}
                       disabled={isBusy}
                       className={`${btnSecondaryClass} min-h-10 flex-1 px-3 py-2 text-[11px] disabled:opacity-40`}
                     >
-                      Decline
+                      Reject
                     </button>
                   </div>
                 )}
@@ -200,7 +215,7 @@ export default function ClientIdeasTable({
                           value={comment}
                           onChange={(e) => setComment(e.target.value)}
                           rows={3}
-                          placeholder="What should we change?"
+                          placeholder="Explain your feedback (required)"
                           className={`${inputClass} resize-y text-xs`}
                         />
                         <div className="flex gap-2">
@@ -217,9 +232,10 @@ export default function ClientIdeasTable({
                           <button
                             type="button"
                             onClick={() => submitDecline(idea.id)}
-                            className={`${btnSecondaryClass} min-h-10 flex-1 text-[11px]`}
+                            disabled={!comment.trim()}
+                            className={`${btnSecondaryClass} min-h-10 flex-1 text-[11px] disabled:opacity-40`}
                           >
-                            Submit decline
+                            Submit reject
                           </button>
                         </div>
                       </>
@@ -312,14 +328,11 @@ export default function ClientIdeasTable({
                             </button>
                             <button
                               type="button"
-                              onClick={() => {
-                                setDeclineId(idea.id);
-                                setExpandedId(idea.id);
-                              }}
+                              onClick={() => startReject(idea)}
                               disabled={isBusy}
                               className={`${btnSecondaryClass} px-2.5 py-1.5 text-[10px] disabled:opacity-40`}
                             >
-                              Decline
+                              Reject
                             </button>
                           </div>
                         ) : (
@@ -357,13 +370,13 @@ export default function ClientIdeasTable({
                             {declining && (
                               <div className="min-w-[260px] border border-white/10 bg-[#0d0d0d] p-3">
                                 <p className="text-[10px] font-medium uppercase tracking-wider text-white/45">
-                                  Decline with feedback
+                                  Reject with feedback
                                 </p>
                                 <textarea
                                   value={comment}
                                   onChange={(e) => setComment(e.target.value)}
                                   rows={3}
-                                  placeholder="What should we change?"
+                                  placeholder="Explain your feedback (required)"
                                   className={`${inputClass} mt-2 resize-y text-xs`}
                                 />
                                 <div className="mt-2 flex justify-end gap-2">
@@ -380,9 +393,10 @@ export default function ClientIdeasTable({
                                   <button
                                     type="button"
                                     onClick={() => submitDecline(idea.id)}
-                                    className={`${btnSecondaryClass} px-3 py-1.5 text-[10px]`}
+                                    disabled={!comment.trim()}
+                                    className={`${btnPrimaryClass} px-3 py-1.5 text-[10px] uppercase tracking-wider disabled:opacity-40`}
                                   >
-                                    Submit decline
+                                    Submit reject
                                   </button>
                                 </div>
                               </div>

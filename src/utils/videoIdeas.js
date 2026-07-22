@@ -7,6 +7,16 @@ import {
   normalizePostSlides,
 } from './postSlides';
 
+/** Client rejected an idea (canonical) or legacy Pass (`declined`). */
+export function isRejectedIdeaStatus(status) {
+  return status === 'rejected' || status === 'declined';
+}
+
+/** Ideas still in the Review queue (not approved bank, not rejected). */
+export function isReviewQueueIdeaStatus(status) {
+  return Boolean(status) && status !== 'approved' && !isRejectedIdeaStatus(status);
+}
+
 /** Approved ideas waiting to be scheduled on a shoot day. */
 export function findIdeaBoardCard(idea, cards = []) {
   if (!idea) return null;

@@ -14,7 +14,7 @@ import ClientIdeaDetailModal from './ClientIdeaDetailModal';
 import SharePortalShell from './clientPortal/SharePortalShell';
 import { btnPrimaryClass, glassSegmentClass, surfacePanelClass } from './clientPortal/clientPortalUi';
 import { clientMatchesBrand } from '../utils/clients';
-import { getVaultIdeas } from '../utils/videoIdeas';
+import { getVaultIdeas, isReviewQueueIdeaStatus } from '../utils/videoIdeas';
 
 const VAULT_TABS = [
   { id: 'review', label: 'Review' },
@@ -60,7 +60,7 @@ export default function ClientReviewPortal({
   );
 
   const reviewIdeas = useMemo(
-    () => brandIdeas.filter((idea) => idea.status !== 'approved'),
+    () => brandIdeas.filter((idea) => isReviewQueueIdeaStatus(idea.status)),
     [brandIdeas],
   );
 
@@ -108,7 +108,7 @@ export default function ClientReviewPortal({
     if (canSyncLocally) {
       if (response.action === 'approved') {
         onApprove?.(response.ideaId, response.comment, response.idea);
-      } else if (response.action === 'declined') {
+      } else if (response.action === 'declined' || response.action === 'rejected') {
         onDecline?.(response.ideaId, response.comment, response.idea);
       }
     }
@@ -220,13 +220,19 @@ export default function ClientReviewPortal({
   };
 
   const handleDecline = async (ideaId, comment) => {
+    const trimmed = String(comment || '').trim();
+    if (!trimmed) {
+      setActionError('Please add a note explaining your feedback before rejecting.');
+      return;
+    }
+
     const idea = pendingIdeas.find((i) => i.id === ideaId) || ideas.find((i) => i.id === ideaId);
     if (!idea || idea.status !== 'pending') return;
 
     const response = {
       ideaId,
-      action: 'declined',
-      comment,
+      action: 'rejected',
+      comment: trimmed,
       client,
       idea,
       timestamp: Date.now(),

@@ -205,10 +205,20 @@ assert(returnedToReview.title === bankPayload.title, 'returning to Review preser
 
 const videoIdeasSource = readFileSync(new URL('../src/components/VideoIdeas.jsx', import.meta.url), 'utf8');
 assert(videoIdeasSource.includes("{ id: 'approved', label: 'Approved' }"), 'staff Vault has Approved tab');
+assert(videoIdeasSource.includes("{ id: 'rejected', label: 'Rejected' }"), 'staff Vault has Rejected tab');
 assert(videoIdeasSource.includes("{ id: 'to-create', label: 'To Create' }"), 'staff Vault has To Create tab');
 assert(
-  videoIdeasSource.includes("idea.status !== 'approved'"),
-  'staff Review excludes approved lifecycle items',
+  videoIdeasSource.includes('isReviewQueueIdeaStatus') &&
+    videoIdeasSource.includes('isRejectedIdeaStatus'),
+  'staff Review/Rejected tabs use shared status helpers',
+);
+assert(
+  videoIdeasSource.includes('Delete ${label} from Rejected? This cannot be undone.'),
+  'Rejected tab delete requires window.confirm',
+);
+assert(
+  videoIdeasSource.includes('showRejectionNote'),
+  'Rejected tab surfaces client rejection notes',
 );
 const toCreateSource = readFileSync(
   new URL('../src/components/ToCreateIdeasTable.jsx', import.meta.url),

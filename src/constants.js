@@ -259,7 +259,9 @@ export const CLIENT_PORTAL_PASSWORD_VAULT_KEY = 'medici-client-portal-password-v
 export const IDEA_STATUSES = {
   pending: 'Pending Review',
   approved: 'Approved',
-  declined: 'Declined',
+  rejected: 'Rejected',
+  // Legacy Pass status — display as Rejected; still matched by isRejectedIdeaStatus
+  declined: 'Rejected',
 };
 
 export function createEvent(overrides = {}) {

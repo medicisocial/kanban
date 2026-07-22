@@ -24,6 +24,8 @@ export default function AdminIdeasTable({
   ideas,
   statusFilter,
   onStatusFilterChange,
+  hideStatusFilter = false,
+  showRejectionNote = false,
   selectable = false,
   selectedIds,
   onToggleSelect,
@@ -39,7 +41,6 @@ export default function AdminIdeasTable({
     () => ({
       all: ideas.length,
       pending: ideas.filter((idea) => idea.status === 'pending').length,
-      declined: ideas.filter((idea) => idea.status === 'declined').length,
     }),
     [ideas],
   );
@@ -66,20 +67,21 @@ export default function AdminIdeasTable({
           <p className="text-xs text-white/45">
             {filtered.length} record{filtered.length === 1 ? '' : 's'}
           </p>
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(e) => onStatusFilterChange(e.target.value)}
-              className={`${selectClass} min-w-[140px]`}
-            >
-              <option value="pending">Pending review ({statusCounts.pending})</option>
-              <option value="declined">Passed ({statusCounts.declined})</option>
-              <option value="all">All statuses ({statusCounts.all})</option>
-            </select>
-            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-white/35">
-              ▾
-            </span>
-          </div>
+          {!hideStatusFilter && (
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => onStatusFilterChange(e.target.value)}
+                className={`${selectClass} min-w-[140px]`}
+              >
+                <option value="pending">Pending review ({statusCounts.pending})</option>
+                <option value="all">All statuses ({statusCounts.all})</option>
+              </select>
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-white/35">
+                ▾
+              </span>
+            </div>
+          )}
         </div>
 
         {selectable && filtered.length > 0 && (
@@ -107,6 +109,7 @@ export default function AdminIdeasTable({
           {filtered.map((idea, index) => {
             const clientColor = getClientColor(idea.client);
             const isPending = idea.status === 'pending';
+            const rejectionNote = String(idea.clientComment || '').trim();
 
             return (
               <TeamTaskCard
@@ -146,12 +149,18 @@ export default function AdminIdeasTable({
                       <div className="mt-1">
                         <StatusBadge status={idea.status} />
                       </div>
-                      {idea.description && (
+                      {showRejectionNote && rejectionNote ? (
+                        <p className="mt-1 line-clamp-3 text-xs text-rose-200/80">
+                          <span className="font-medium text-rose-200/90">Rejection note: </span>
+                          {rejectionNote}
+                        </p>
+                      ) : null}
+                      {!showRejectionNote && idea.description ? (
                         <p className="mt-1 line-clamp-2 text-xs text-sky-200/70">
                           <span className="font-medium text-sky-200/90">Client notes: </span>
                           {idea.description}
                         </p>
-                      )}
+                      ) : null}
                       {(idea.referenceVideo || idea.referenceMusic) && (
                         <div className="mt-2 flex flex-wrap gap-3">
                           {idea.referenceVideo && (

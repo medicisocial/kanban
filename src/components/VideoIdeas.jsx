@@ -7,7 +7,12 @@ import IdeaVaultTable from './IdeaVaultTable';
 import ToCreateIdeasTable from './ToCreateIdeasTable';
 import ScheduleVaultIdeaModal from './ScheduleVaultIdeaModal';
 import AddEditorTaskModal from './AddEditorTaskModal';
-import { getToCreateCards, getVaultIdeas } from '../utils/videoIdeas';
+import {
+  getToCreateCards,
+  getVaultIdeas,
+  isRejectedIdeaStatus,
+  isReviewQueueIdeaStatus,
+} from '../utils/videoIdeas';
 import { matchesClientFilter } from '../utils/clients';
 import {
   btnPrimaryClass,
@@ -21,6 +26,7 @@ import {
 const IDEA_TABS = [
   { id: 'review', label: 'Review' },
   { id: 'approved', label: 'Approved' },
+  { id: 'rejected', label: 'Rejected' },
   { id: 'to-create', label: 'To Create' },
 ];
 
@@ -66,12 +72,14 @@ export default function VideoIdeas({
   }, [ideas, clientFilter]);
 
   const reviewIdeas = useMemo(
-    () => filteredByClient.filter((idea) => idea.status !== 'approved'),
+    () => filteredByClient.filter((idea) => isReviewQueueIdeaStatus(idea.status)),
     [filteredByClient],
   );
 
-  const isBulkDeleteView = statusFilter === 'declined';
-  const bulkDeleteLabel = 'passed idea';
+  const rejectedIdeas = useMemo(
+    () => filteredByClient.filter((idea) => isRejectedIdeaStatus(idea.status)),
+    [filteredByClient],
+  );
 
   useEffect(() => {
     setSelectedIds(new Set());
@@ -88,7 +96,9 @@ export default function VideoIdeas({
   }, [reviewIdeas, statusFilter]);
 
   const allVisibleSelected =
-    filteredIdeas.length > 0 && filteredIdeas.every((idea) => selectedIds.has(idea.id));
+    activeTab === 'rejected'
+      ? rejectedIdeas.length > 0 && rejectedIdeas.every((idea) => selectedIds.has(idea.id))
+      : filteredIdeas.length > 0 && filteredIdeas.every((idea) => selectedIds.has(idea.id));
 
   const toggleSelected = (id) => {
     setSelectedIds((prev) => {
@@ -100,17 +110,20 @@ export default function VideoIdeas({
   };
 
   const handleSelectAll = () => {
+    const pool = activeTab === 'rejected' ? rejectedIdeas : filteredIdeas;
     if (allVisibleSelected) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredIdeas.map((idea) => idea.id)));
+      setSelectedIds(new Set(pool.map((idea) => idea.id)));
     }
   };
 
   const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
     const label =
-      selectedIds.size === 1 ? `1 ${bulkDeleteLabel}` : `${selectedIds.size} ${bulkDeleteLabel}s`;
+      selectedIds.size === 1
+        ? '1 rejected idea'
+        : `${selectedIds.size} rejected ideas`;
     if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return;
     onDeleteIdeas([...selectedIds]);
     setSelectedIds(new Set());
@@ -120,6 +133,16 @@ export default function VideoIdeas({
     const idea = ideas.find((entry) => entry.id === ideaId);
     const label = idea?.title ? `"${idea.title}"` : 'this idea';
     if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return false;
+    onDeleteIdea(ideaId);
+    return true;
+  };
+
+  const handleDeleteRejectedIdea = (ideaId) => {
+    const idea = ideas.find((entry) => entry.id === ideaId);
+    const label = idea?.title ? `"${idea.title}"` : 'this idea';
+    if (!window.confirm(`Delete ${label} from Rejected? This cannot be undone.`)) {
+      return false;
+    }
     onDeleteIdea(ideaId);
     return true;
   };
@@ -139,8 +162,14 @@ export default function VideoIdeas({
 
   const handleDeleteIdeaFromModal = (idea) => {
     if (!idea?.id) return;
-    const deleted =
-      idea.status === 'approved' ? handleDeleteVaultIdea(idea) : handleDeleteReviewIdea(idea.id);
+    let deleted = false;
+    if (idea.status === 'approved') {
+      deleted = handleDeleteVaultIdea(idea);
+    } else if (isRejectedIdeaStatus(idea.status)) {
+      deleted = handleDeleteRejectedIdea(idea.id);
+    } else {
+      deleted = handleDeleteReviewIdea(idea.id);
+    }
     if (deleted) setIdeaModal(null);
   };
 
@@ -198,6 +227,16 @@ export default function VideoIdeas({
             {vaultIdeas.length} approved
           </span>
         )}
+        {rejectedIdeas.length > 0 && (
+          <span
+            {...statusPipelinePillProps(
+              'rejected',
+              `${STATUS_PIPELINE_PILL_CLASS} px-2.5 py-1.5 tracking-wider`,
+            )}
+          >
+            {rejectedIdeas.length} rejected
+          </span>
+        )}
         {toCreateCards.length > 0 && (
           <span
             {...statusPipelinePillProps(
@@ -221,6 +260,7 @@ export default function VideoIdeas({
             >
               {tab.label}
               {tab.id === 'approved' && vaultIdeas.length > 0 ? ` (${vaultIdeas.length})` : ''}
+              {tab.id === 'rejected' && rejectedIdeas.length > 0 ? ` (${rejectedIdeas.length})` : ''}
               {tab.id === 'to-create' && toCreateCards.length > 0 ? ` (${toCreateCards.length})` : ''}
             </button>
           ))}
@@ -232,28 +272,10 @@ export default function VideoIdeas({
         <>
           <ClientSharePanel ideas={ideas} clientFilter={clientFilter} />
 
-          {isBulkDeleteView && filteredIdeas.length > 0 && selectedIds.size > 0 && (
-            <div className={`${surfacePanelClass} mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3`}>
-              <p className="text-sm text-white/55">{selectedIds.size} selected</p>
-              <button
-                type="button"
-                onClick={handleBulkDelete}
-                className={`${btnSecondaryClass} border-rose-500/30 bg-rose-500/10 text-rose-200/90 hover:bg-rose-500/15`}
-              >
-                Delete selected
-              </button>
-            </div>
-          )}
-
           <AdminIdeasTable
             ideas={reviewIdeas}
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
-            selectable={isBulkDeleteView}
-            selectedIds={selectedIds}
-            onToggleSelect={toggleSelected}
-            onSelectAll={handleSelectAll}
-            allSelected={allVisibleSelected}
             onEdit={setIdeaModal}
             onDelete={handleDeleteReviewIdea}
             onApprove={onApprove}
@@ -266,6 +288,35 @@ export default function VideoIdeas({
           onSchedule={setScheduleIdea}
           onMoveToReview={onMoveApprovedToReview}
         />
+      ) : activeTab === 'rejected' ? (
+        <>
+          {rejectedIdeas.length > 0 && selectedIds.size > 0 && (
+            <div className={`${surfacePanelClass} mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3`}>
+              <p className="text-sm text-white/55">{selectedIds.size} selected</p>
+              <button
+                type="button"
+                onClick={handleBulkDelete}
+                className={`${btnSecondaryClass} border-rose-500/30 bg-rose-500/10 text-rose-200/90 hover:bg-rose-500/15`}
+              >
+                Delete selected
+              </button>
+            </div>
+          )}
+          <AdminIdeasTable
+            ideas={rejectedIdeas}
+            statusFilter="all"
+            onStatusFilterChange={() => {}}
+            hideStatusFilter
+            showRejectionNote
+            selectable
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelected}
+            onSelectAll={handleSelectAll}
+            allSelected={allVisibleSelected}
+            onEdit={setIdeaModal}
+            onDelete={handleDeleteRejectedIdea}
+          />
+        </>
       ) : (
         <ToCreateIdeasTable
           cards={cards}

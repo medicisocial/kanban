@@ -152,13 +152,15 @@ export function useVideoIdeas() {
         if (i.id !== id) return i;
         return {
           ...i,
-          status: "declined",
+          status: "rejected",
           clientComment,
           reviewedAt: Date.now(),
         };
       }),
     );
   }, []);
+
+  const markRejected = markDeclined;
 
   const ensureIdeaExists = useCallback((ideaSnapshot) => {
     notifyMutation();
@@ -183,6 +185,7 @@ export function useVideoIdeas() {
     deleteIdeas,
     markApproved,
     markDeclined,
+    markRejected,
     ensureIdeaExists,
     getPendingResponsesCount,
   };
@@ -206,7 +209,7 @@ export function applyClientResponses(ideas, responses, { markApproved, markDecli
     if (response.action === "approved") {
       markApproved(response.ideaId, response.comment || "", null);
       applied += 1;
-    } else if (response.action === "declined") {
+    } else if (response.action === "declined" || response.action === "rejected") {
       markDeclined(response.ideaId, response.comment || "");
       applied += 1;
     }

@@ -333,15 +333,19 @@ export async function handleIdeaPortalResponse(orgId, sessionBrand, response = {
     return { ok: true, ideaId, status: 'approved' };
   }
 
-  if (action === 'declined') {
+  // `declined` kept as a write alias for older clients; always persist as `rejected`.
+  if (action === 'rejected' || action === 'declined') {
+    if (!comment) {
+      throw new Error('Please add a note explaining your feedback before rejecting.');
+    }
     await saveIdea(orgId, ideaId, {
       ...idea,
-      status: 'declined',
+      status: 'rejected',
       clientComment: comment,
       reviewedAt: timestamp,
       updatedAt: timestamp,
     });
-    return { ok: true, ideaId, status: 'declined' };
+    return { ok: true, ideaId, status: 'rejected' };
   }
 
   throw new Error('Unsupported idea response action.');

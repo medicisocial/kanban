@@ -17,6 +17,9 @@ const TABS = [
   { id: 'script', label: 'Script' },
 ];
 
+const REJECT_NOTE_REQUIRED =
+  'Please add a note explaining your feedback before rejecting.';
+
 export default function ClientIdeaDetailModal({
   idea,
   onClose,
@@ -28,15 +31,11 @@ export default function ClientIdeaDetailModal({
 }) {
   const [activeTab, setActiveTab] = useState('notes');
   const [notes, setNotes] = useState(idea?.description || '');
-  const [declineComment, setDeclineComment] = useState('');
-  const [declining, setDeclining] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     setNotes(idea?.description || '');
     setActiveTab('notes');
-    setDeclineComment('');
-    setDeclining(false);
     setError('');
   }, [idea?.id]);
 
@@ -58,14 +57,14 @@ export default function ClientIdeaDetailModal({
   const slideType = isSlidePostType(idea.contentType);
   const dirty = notes.trim() !== String(idea.description || '').trim();
 
-  const buildUpdates = () => ({
+  const buildNoteUpdates = () => ({
     description: notes.trim(),
   });
 
   const handleSave = async () => {
     setError('');
     try {
-      await onSave?.(idea.id, buildUpdates());
+      await onSave?.(idea.id, buildNoteUpdates());
       onClose?.();
     } catch (err) {
       setError(err?.message || 'Could not save your notes.');
@@ -75,7 +74,7 @@ export default function ClientIdeaDetailModal({
   const handleApprove = async () => {
     setError('');
     try {
-      if (dirty) await onSave?.(idea.id, buildUpdates());
+      if (dirty) await onSave?.(idea.id, buildNoteUpdates());
       await onApprove?.(idea.id, '');
       onClose?.();
     } catch (err) {
@@ -83,19 +82,20 @@ export default function ClientIdeaDetailModal({
     }
   };
 
-  const handleDecline = async () => {
-    const trimmed = declineComment.trim();
-    if (!trimmed) {
-      setError('Please explain why you are passing on this idea.');
+  const handleReject = async () => {
+    const rejectionNote = notes.trim();
+    if (!rejectionNote) {
+      setActiveTab('notes');
+      setError(REJECT_NOTE_REQUIRED);
       return;
     }
     setError('');
     try {
-      if (dirty) await onSave?.(idea.id, buildUpdates());
-      await onDecline?.(idea.id, trimmed);
+      // Rejection reason goes to clientComment only — never sync into description.
+      await onDecline?.(idea.id, rejectionNote);
       onClose?.();
     } catch (err) {
-      setError(err?.message || 'Could not submit your response.');
+      setError(err?.message || 'Could not reject this idea.');
     }
   };
 
@@ -154,7 +154,7 @@ export default function ClientIdeaDetailModal({
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
                   rows={8}
-                  placeholder="Add context, talking points, or anything your production team should know…"
+                  placeholder="Add context for your team — required if you reject this idea…"
                   className={`${inputClass} resize-y`}
                 />
               </label>
@@ -200,22 +200,6 @@ export default function ClientIdeaDetailModal({
             </div>
           )}
 
-          {canDecide && declining && (
-            <div className="mt-4 space-y-2 border-t border-white/10 pt-4">
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-medium text-white/45">
-                  Why are you passing? (required)
-                </span>
-                <textarea
-                  value={declineComment}
-                  onChange={(event) => setDeclineComment(event.target.value)}
-                  rows={3}
-                  className={`${inputClass} resize-y`}
-                />
-              </label>
-            </div>
-          )}
-
           {error && (
             <p className="mt-4 border border-rose-500/20 bg-rose-500/5 px-3 py-2 text-sm text-rose-200">
               {error}
@@ -235,7 +219,7 @@ export default function ClientIdeaDetailModal({
           >
             {saving ? 'Saving…' : 'Save notes'}
           </button>
-          {canDecide && !declining && (
+          {canDecide && (
             <>
               <button
                 type="button"
@@ -247,23 +231,13 @@ export default function ClientIdeaDetailModal({
               </button>
               <button
                 type="button"
-                onClick={() => setDeclining(true)}
-                className={btnSecondaryClass}
+                onClick={handleReject}
+                className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-500/20 disabled:opacity-40"
                 disabled={saving}
               >
-                Pass
+                Reject
               </button>
             </>
-          )}
-          {canDecide && declining && (
-            <button
-              type="button"
-              onClick={handleDecline}
-              className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-500/20 disabled:opacity-40"
-              disabled={saving}
-            >
-              Submit pass
-            </button>
           )}
         </div>
       </div>
