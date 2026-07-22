@@ -48,6 +48,14 @@ function buildBaseNavSections(visibleTaskTabs, { personalAmNav = false } = {}) {
         ],
       },
       ...(taskItems.team.length ? [{ label: 'Team', items: taskItems.team }] : []),
+      {
+        label: 'Planning',
+        items: [
+          { id: 'calendars', label: 'Calendars', Icon: IconCalendar },
+          { id: 'deliverables', label: 'Deliverables', Icon: IconTarget },
+          { id: 'metrics', label: 'Metrics', Icon: IconEye },
+        ],
+      },
     ];
   }
 

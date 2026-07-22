@@ -21,6 +21,9 @@ export const PERSONAL_AM_ALLOWED_VIEWS = new Set([
   'todo',
   'todo-account',
   'client-files',
+  'calendars',
+  'deliverables',
+  'metrics',
 ]);
 
 export function buildStaffWorkspaceScope(session, teamMembers) {
