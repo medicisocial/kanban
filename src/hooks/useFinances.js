@@ -17,6 +17,23 @@ import {
   resolveClientMonthAssignees,
 } from '../utils/monthAssignees';
 import { ensurePlanAssigneesOnStaffList } from '../utils/payrollPlanAssignees';
+import {
+  RETAINER_STATUS_OPTIONS,
+  normalizeRetainerStatus,
+  isRetainerActiveStatus,
+  compareYearMonth,
+  getRetainerEntries,
+  calculateRetainerTotal,
+  applyRetainerStatusForward,
+  copyPlanInputsForClients,
+  normalizePlanInputs,
+} from '../utils/retainerFinance';
+
+export {
+  RETAINER_STATUS_OPTIONS,
+  normalizeRetainerStatus,
+  isRetainerActiveStatus,
+};
 
 /** Return the current month as "YYYY-MM". */
 function currentYearMonth() {
@@ -65,29 +82,8 @@ function calculateQuickBooksCardFee(amount) {
   return value > 0 ? (value * 0.029) + 0.25 : 0;
 }
 
-/** Per-month retainer billing status. Paused/canceled are excluded from revenue + payroll. */
-export const RETAINER_STATUS_OPTIONS = [
-  { id: 'active', label: 'Active' },
-  { id: 'paused', label: 'Paused' },
-  { id: 'canceled', label: 'Canceled' },
-];
-
-export function normalizeRetainerStatus(value) {
-  const status = String(value || '').trim().toLowerCase();
-  if (status === 'paused' || status === 'canceled') return status;
-  return 'active';
-}
-
-export function isRetainerActiveStatus(value) {
-  return normalizeRetainerStatus(value) === 'active';
-}
-
 function previousYearMonth(yearMonth) {
   return previousAssigneesYearMonth(yearMonth || currentYearMonth());
-}
-
-function compareYearMonth(left, right) {
-  return String(left || '').localeCompare(String(right || ''));
 }
 
 function createRevenueItem(overrides = {}) {
@@ -124,27 +120,6 @@ function getRevenueMonth(revenue, yearMonth) {
   return revenue?.data?.[yearMonth] && typeof revenue.data[yearMonth] === 'object'
     ? revenue.data[yearMonth]
     : {};
-}
-
-function getRetainerEntries(monthRevenue) {
-  return Object.entries(monthRevenue || {}).filter(([key, value]) => {
-    if (
-      key === 'oneOff' ||
-      key === 'oneOffProjects' ||
-      key === 'retainersMeta' ||
-      key === 'retainerTotal'
-    ) {
-      return false;
-    }
-    return typeof value === 'number' || typeof value === 'string';
-  });
-}
-
-function calculateRetainerTotal(monthRevenue) {
-  return getRetainerEntries(monthRevenue).reduce((sum, [client, value]) => {
-    if (!isRetainerActiveStatus(monthRevenue?.retainersMeta?.[client]?.status)) return sum;
-    return sum + (Number(value) || 0);
-  }, 0);
 }
 
 function normalizeRetainerMeta(monthRevenue, client) {
@@ -336,7 +311,7 @@ function copyRecurringRetainers(previousMonth) {
   const retainersMeta = {};
   for (const [client, amount] of Object.entries(retainers)) {
     const previousMeta = previousMonth.retainersMeta?.[client] || {};
-    // Canceled clients drop off; paused stay paused for the new month until resumed.
+    // Canceled clients drop off; On Hold (paused) stays on hold until resumed.
     const status = normalizeRetainerStatus(previousMeta.status);
     if (status === 'canceled') continue;
     nextRetainers[client] = Number(amount) || 0;
@@ -347,9 +322,11 @@ function copyRecurringRetainers(previousMonth) {
     });
   }
   if (!Object.keys(nextRetainers).length) return null;
+  const planInputs = copyPlanInputsForClients(previousMonth, Object.keys(nextRetainers));
   return {
     ...nextRetainers,
     retainersMeta,
+    ...(planInputs ? { planInputs } : {}),
     oneOff: 0,
     oneOffProjects: [],
     retainerTotal: calculateRetainerTotal({ ...nextRetainers, retainersMeta }),
@@ -441,7 +418,12 @@ export function useFinances() {
       writeOrgScopedJson(FINANCES_STORAGE_KEY, finances);
       return { ok: true, localOnly: true };
     }
-    const rows = finances.map((record) => ({ id: getFinanceId(record.id), data: record }));
+    const rows = finances.map((record) => ({
+      id: getFinanceId(record.id),
+      // Persist month maps directly — never nest the whole { id, data } record
+      // inside data (that breaks server-side extractAssigneesData / AM allowlists).
+      data: record?.data && typeof record.data === 'object' ? record.data : {},
+    }));
     const ok = await pushStaffSyncRows('finances', rows);
     if (!ok) {
       throw new Error('Could not save finances to Supabase. Please make sure you are signed in and try again.');
@@ -593,22 +575,52 @@ export function useFinances() {
     setFinances((prev) => {
       const revenue = prev.find((r) => r.id === 'revenue');
       const rest = prev.filter((r) => r.id !== 'revenue');
-      const data = revenue?.data ? { ...revenue.data } : {};
-      const month = { ...(data[yearMonth] || {}) };
-      const amount = Number(month[client]) || 0;
-      month.retainersMeta = {
-        ...(month.retainersMeta || {}),
-        [client]: createRetainerMeta(client, amount, {
-          ...(month.retainersMeta?.[client] || {}),
-          status,
+      let data = revenue?.data ? { ...revenue.data } : {};
+      // Ensure the selected month exists so write-forward has a base row.
+      if (!data[yearMonth] || typeof data[yearMonth] !== 'object') {
+        data[yearMonth] = {};
+      }
+      const baseMonth = { ...data[yearMonth] };
+      if (!Object.prototype.hasOwnProperty.call(baseMonth, client)) {
+        baseMonth[client] = Number(baseMonth[client]) || 0;
+      }
+      data[yearMonth] = baseMonth;
+      data = applyRetainerStatusForward(data, client, yearMonth, status, ({ amount, prevMeta, status: nextStatus }) =>
+        createRetainerMeta(client, amount, {
+          ...prevMeta,
+          status: nextStatus,
           qbFee: undefined,
         }),
-      };
-      // Ensure the retainer row exists even when amount was never seeded.
-      if (!Object.prototype.hasOwnProperty.call(month, client)) {
-        month[client] = amount;
+      );
+      return [...rest, { id: 'revenue', data }];
+    });
+  }, []);
+
+  /** Snapshot plan inputs for a client/month (insurance for post-delete pay). Live reads stay live-first. */
+  const setMonthPlanInputs = useCallback((client, yearMonth, inputs) => {
+    if (!client || !yearMonth) return;
+    notifyMutation();
+    const normalized = normalizePlanInputs(inputs);
+    setFinances((prev) => {
+      const revenue = prev.find((r) => r.id === 'revenue');
+      const rest = prev.filter((r) => r.id !== 'revenue');
+      const data = revenue?.data ? { ...revenue.data } : {};
+      const month = { ...(data[yearMonth] || {}) };
+      const prevInputs = month.planInputs && typeof month.planInputs === 'object' ? month.planInputs : {};
+      const existing = prevInputs[client];
+      if (
+        existing &&
+        Number(existing.reelPoints) === normalized.reelPoints &&
+        Number(existing.carouselStaticPoints) === normalized.carouselStaticPoints &&
+        Number(existing.shootDays) === normalized.shootDays &&
+        Number(existing.shootHoursPerDay) === normalized.shootHoursPerDay
+      ) {
+        return prev;
       }
-      month.retainerTotal = calculateRetainerTotal(month);
+      month.planInputs = {
+        ...prevInputs,
+        [client]: normalized,
+      };
       data[yearMonth] = month;
       return [...rest, { id: 'revenue', data }];
     });
@@ -1108,6 +1120,10 @@ export function useFinances() {
         retainers: Object.fromEntries(getRetainerEntries(monthRevenue)),
         retainerPayments,
         retainerTotal,
+        planInputs:
+          monthRevenue?.planInputs && typeof monthRevenue.planInputs === 'object'
+            ? monthRevenue.planInputs
+            : {},
         retainerQbFees,
         oneOff,
         oneOffProjects,
@@ -1154,7 +1170,8 @@ export function useFinances() {
               k !== 'oneOff' &&
               k !== 'oneOffProjects' &&
               k !== 'retainersMeta' &&
-              k !== 'retainerTotal'
+              k !== 'retainerTotal' &&
+              k !== 'planInputs'
             ) {
               clientSet.add(k);
             }
@@ -1256,6 +1273,7 @@ export function useFinances() {
     setMonthlyRetainer,
     setRetainerPaymentMethod,
     setRetainerStatus,
+    setMonthPlanInputs,
     setOneOffRevenue,
     addOneOffProject,
     updateOneOffProject,

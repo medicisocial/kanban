@@ -24,6 +24,11 @@ import {
   normalizeRetainerStatus,
   isRetainerActiveStatus,
 } from '../hooks/useFinances';
+import {
+  listActivePayrollClients,
+  resolvePlanInputsLiveFirst,
+  getMonthPlanInputs,
+} from '../utils/retainerFinance';
 
 function fmt$(n) {
   const num = Number(n) || 0;
@@ -839,6 +844,7 @@ export default function FinancesPage({
     setMonthlyRetainer,
     setRetainerPaymentMethod,
     setRetainerStatus,
+    setMonthPlanInputs,
     addOneOffProject,
     updateOneOffProject,
     deleteOneOffProject,
@@ -921,16 +927,57 @@ export default function FinancesPage({
     return getMonthlySnapshot(prev)?.retainerPayments || {};
   }, [getMonthlySnapshot, selectedMonth]);
 
-  /** Clients billed this month (Active + retainer > $0). Paused/canceled are out of payroll. */
+  /** Clients billed this month (Active + retainer > $0), including orphaned brands. */
   const activePayrollClients = useMemo(
     () =>
-      (clients || []).filter((client) => {
-        const status = normalizeRetainerStatus(monthRetainerPayments[client]?.status);
-        if (!isRetainerActiveStatus(status)) return false;
-        return (Number(monthRetainers[client]) || 0) > 0;
+      listActivePayrollClients({
+        monthRetainers,
+        monthRetainerPayments,
+        liveClients: clients,
       }),
     [clients, monthRetainers, monthRetainerPayments],
   );
+
+  const liveClientKeys = useMemo(() => {
+    const keys = new Set();
+    for (const client of clients || []) {
+      keys.add(String(client).trim().toLowerCase());
+    }
+    return keys;
+  }, [clients]);
+
+  const clientIsListed = useCallback(
+    (client) => liveClientKeys.has(String(client || '').trim().toLowerCase()),
+    [liveClientKeys],
+  );
+
+  const monthPlanInputs = useMemo(
+    () => getMonthlySnapshot(selectedMonth)?.planInputs || {},
+    [getMonthlySnapshot, selectedMonth],
+  );
+
+  // Refresh plan-input snapshots for still-listed clients (insurance only; reads stay live-first).
+  useEffect(() => {
+    if (!setMonthPlanInputs) return;
+    for (const client of activePayrollClients) {
+      if (!clientIsListed(client)) continue;
+      setMonthPlanInputs(client, selectedMonth, {
+        reelPoints: getClientReelPointsTarget?.(client) || 0,
+        carouselStaticPoints: getClientCarouselStaticTarget?.(client) || 0,
+        shootDays: getClientShootDaysPerMonth?.(client) || 0,
+        shootHoursPerDay: getClientShootHoursPerDay?.(client) || 0,
+      });
+    }
+  }, [
+    activePayrollClients,
+    clientIsListed,
+    getClientCarouselStaticTarget,
+    getClientReelPointsTarget,
+    getClientShootDaysPerMonth,
+    getClientShootHoursPerDay,
+    selectedMonth,
+    setMonthPlanInputs,
+  ]);
 
   const activePayrollClientKeys = useMemo(() => {
     const keys = new Set();
@@ -1062,15 +1109,27 @@ export default function FinancesPage({
       getClientPhotographer?.(client) ||
       '';
 
+    const resolvePlanInputs = (client) =>
+      resolvePlanInputsLiveFirst({
+        clientListed: clientIsListed(client),
+        live: {
+          reelPoints: getClientReelPointsTarget?.(client) || 0,
+          carouselStaticPoints: getClientCarouselStaticTarget?.(client) || 0,
+          shootDays: getClientShootDaysPerMonth?.(client) || 0,
+          shootHoursPerDay: getClientShootHoursPerDay?.(client) || 0,
+        },
+        snapshot: getMonthPlanInputs({ planInputs: monthPlanInputs }, client),
+      });
+
     const { byName } = buildPlanBasedPayByAssignee({
       clients: activePayrollClients,
       getClientAccountManager: resolveAm,
       getClientVideographer: resolveVideographer,
       getClientPhotographer: resolvePhotographer,
-      getClientReelPointsTarget,
-      getClientCarouselStaticTarget,
-      getClientShootDaysPerMonth,
-      getClientShootHoursPerDay,
+      getClientReelPointsTarget: (client) => resolvePlanInputs(client).reelPoints,
+      getClientCarouselStaticTarget: (client) => resolvePlanInputs(client).carouselStaticPoints,
+      getClientShootDaysPerMonth: (client) => resolvePlanInputs(client).shootDays,
+      getClientShootHoursPerDay: (client) => resolvePlanInputs(client).shootHoursPerDay,
       rates: payRates,
     });
     const planPayByName = {};
@@ -1113,6 +1172,8 @@ export default function FinancesPage({
     getClientCarouselStaticTarget,
     getClientShootDaysPerMonth,
     getClientShootHoursPerDay,
+    clientIsListed,
+    monthPlanInputs,
     payRates,
   ]);
 
@@ -1591,12 +1652,12 @@ export default function FinancesPage({
                             </span>
                             {status === 'paused' ? (
                               <span className="mt-0.5 block text-[10px] text-amber-200/70">
-                                Paused — out of revenue &amp; payroll this month
+                                On Hold — out of revenue &amp; payroll this month
                               </span>
                             ) : null}
                             {status === 'canceled' ? (
                               <span className="mt-0.5 block text-[10px] text-rose-200/70">
-                                Canceled — won&apos;t copy to next month
+                                Canceled — $0 going forward; won&apos;t seed new months
                               </span>
                             ) : null}
                           </td>
