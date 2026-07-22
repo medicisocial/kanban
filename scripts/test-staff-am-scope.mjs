@@ -2,12 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'fs';
 import {
   buildAccountManagerClientAllowlist,
-  buildAccountManagerReadAllowlist,
-  buildAccountManagerWriteAllowlist,
   clientInAllowlist,
   collectClientNamesForAllowlist,
   currentYearMonth,
-  AM_READ_PAST_WINDOW_MONTHS,
 } from '../src/utils/staffClientAllowlist.js';
 import {
   filterSyncRowsForScope,
@@ -17,7 +14,6 @@ import {
 import {
   unwrapAssigneesMonthMap,
   resolveClientMonthAssignees,
-  shiftYearMonth,
 } from '../src/utils/monthAssignees.js';
 
 // --- Same month-resolution helper as Finances Pay ---
@@ -357,138 +353,126 @@ assert.equal(
   'July write to Arco denied — month map says Valerie, not silent flat over-grant',
 );
 
-// --- Part 2: read vs write allowlists + 18-month past window ---
+// --- Single allowlist: current-month AM = full content R/W; instant handoff ---
 
-assert.equal(AM_READ_PAST_WINDOW_MONTHS, 18);
-
-const dualAssignees = {
-  '2024-12': {
-    Legacy: { accountManager: 'Jeslyn', videographer: '', photographer: '' },
-  },
-  '2026-01': {
-    Recent: { accountManager: 'Jeslyn', videographer: '', photographer: '' },
-    CurrentOnly: { accountManager: 'Valerie', videographer: '', photographer: '' },
-  },
+const handoffAssignees = {
   '2026-07': {
-    CurrentOnly: { accountManager: 'Jeslyn', videographer: '', photographer: '' },
-    Recent: { accountManager: 'Valerie', videographer: '', photographer: '' },
-    // Explicit handoff so Legacy is no longer current via lookback
-    Legacy: { accountManager: 'Valerie', videographer: '', photographer: '' },
+    Arco: { accountManager: 'Valerie', videographer: '', photographer: '' },
+    Plume: { accountManager: 'Jeslyn', videographer: '', photographer: '' },
+  },
+  '2026-08': {
+    Arco: { accountManager: 'Jeslyn', videographer: '', photographer: '' },
+    Plume: { accountManager: 'Jeslyn', videographer: '', photographer: '' },
   },
   '2026-09': {
-    FutureBrand: { accountManager: 'Jeslyn', videographer: '', photographer: '' },
+    // Future-only brand — not current in August
+    Newbie: { accountManager: 'Jeslyn', videographer: '', photographer: '' },
   },
 };
-const dualFlat = {
-  CurrentOnly: 'Jeslyn',
-  Recent: 'Valerie',
-  FutureBrand: 'Valerie',
-  Legacy: 'Valerie',
-};
-const dualNames = ['Legacy', 'Recent', 'CurrentOnly', 'FutureBrand'];
-const dualArgs = {
+const handoffFlat = { Arco: 'Valerie', Plume: 'Jeslyn', Never: 'Other Person' };
+const handoffNames = ['Arco', 'Plume', 'Newbie', 'Never'];
+
+const jeslynJulyHandoff = buildAccountManagerClientAllowlist({
   staffName: 'Jeslyn',
   yearMonth: '2026-07',
-  assigneesData: dualAssignees,
-  flatAccountManagers: dualFlat,
-  clientNames: dualNames,
-};
+  assigneesData: handoffAssignees,
+  flatAccountManagers: handoffFlat,
+  clientNames: handoffNames,
+});
+assert.deepEqual(jeslynJulyHandoff.sort(), ['Plume'], 'July: Jeslyn only current for Plume');
 
-const writeJuly = buildAccountManagerWriteAllowlist(dualArgs);
-assert.ok(writeJuly.includes('CurrentOnly'), 'write includes current-month AM client');
-assert.ok(!writeJuly.includes('FutureBrand'), 'write excludes future-only assignment');
-assert.ok(!writeJuly.includes('Recent'), 'write excludes past-only assignment');
-assert.ok(!writeJuly.includes('Legacy'), 'write excludes aged-out past assignment');
+const valerieJulyHandoff = buildAccountManagerClientAllowlist({
+  staffName: 'Valerie',
+  yearMonth: '2026-07',
+  assigneesData: handoffAssignees,
+  flatAccountManagers: handoffFlat,
+  clientNames: handoffNames,
+});
+assert.ok(valerieJulyHandoff.includes('Arco'), 'July: Valerie is current AM for Arco');
+assert.ok(!valerieJulyHandoff.includes('Plume'));
 
-const readJuly = buildAccountManagerReadAllowlist(dualArgs);
-assert.ok(readJuly.includes('CurrentOnly'), 'read includes current write client');
-assert.ok(readJuly.includes('FutureBrand'), 'read includes future-assigned client');
-assert.ok(readJuly.includes('Recent'), 'read includes past AM within 18 months');
-assert.ok(!readJuly.includes('Legacy'), 'read drops client last assigned >18 months ago');
+const jeslynAugustHandoff = buildAccountManagerClientAllowlist({
+  staffName: 'Jeslyn',
+  yearMonth: '2026-08',
+  assigneesData: handoffAssignees,
+  flatAccountManagers: handoffFlat,
+  clientNames: handoffNames,
+});
+assert.ok(jeslynAugustHandoff.includes('Arco'), 'August handoff: Jeslyn gets Arco immediately');
+assert.ok(jeslynAugustHandoff.includes('Plume'));
+assert.ok(!jeslynAugustHandoff.includes('Newbie'), 'future-only assignment is not current access');
+assert.ok(!jeslynAugustHandoff.includes('Never'), 'never assigned → nothing');
 
-// Aged-out boundary: last explicit AM exactly at cutoff stays; one month older drops.
-// Current month must reassign so lookback does not keep write membership forever.
-const cutoff = shiftYearMonth('2026-07', -18); // 2025-01
-assert.equal(cutoff, '2025-01');
-const atCutoffArgs = {
-  ...dualArgs,
-  assigneesData: {
-    [cutoff]: { Edge: { accountManager: 'Jeslyn', videographer: '', photographer: '' } },
-    '2026-07': { Edge: { accountManager: 'Valerie', videographer: '', photographer: '' } },
-  },
-  clientNames: ['Edge'],
-  flatAccountManagers: {},
-};
-assert.ok(
-  buildAccountManagerReadAllowlist(atCutoffArgs).includes('Edge'),
-  'last AM at exactly -18 months remains readable',
-);
-assert.ok(
-  !buildAccountManagerWriteAllowlist(atCutoffArgs).includes('Edge'),
-  'handed-off Edge is not writable in current month',
-);
-const olderCutoff = shiftYearMonth(cutoff, -1);
-assert.ok(
-  !buildAccountManagerReadAllowlist({
-    ...atCutoffArgs,
-    assigneesData: {
-      [olderCutoff]: { Edge: { accountManager: 'Jeslyn', videographer: '', photographer: '' } },
-      '2026-07': { Edge: { accountManager: 'Valerie', videographer: '', photographer: '' } },
-    },
-  }).includes('Edge'),
-  'last AM older than 18 months is not readable',
-);
+const valerieAugustHandoff = buildAccountManagerClientAllowlist({
+  staffName: 'Valerie',
+  yearMonth: '2026-08',
+  assigneesData: handoffAssignees,
+  flatAccountManagers: handoffFlat,
+  clientNames: handoffNames,
+});
+assert.ok(!valerieAugustHandoff.includes('Arco'), 'instant handoff: Valerie loses Arco entirely');
+assert.deepEqual(valerieAugustHandoff, [], 'former AM has no lingering clients');
 
-// GET uses read list; write gate uses write list.
-const dualScope = {
+const jeslynAugustContentScope = {
   mode: 'personal_am',
   restricted: true,
   staffName: 'Jeslyn',
-  allowedClients: readJuly,
-  allowedClientsWrite: writeJuly,
-  yearMonth: '2026-07',
+  allowedClients: jeslynAugustHandoff,
+  yearMonth: '2026-08',
 };
-const dualCards = [
-  { id: 'c', data: { client: 'CurrentOnly' } },
-  { id: 'f', data: { client: 'FutureBrand' } },
-  { id: 'r', data: { client: 'Recent' } },
-  { id: 'l', data: { client: 'Legacy' } },
+const contentCards = [
+  { id: 'arco-old', data: { client: 'Arco', title: 'past card' } },
+  { id: 'plume', data: { client: 'Plume' } },
+  { id: 'newbie', data: { client: 'Newbie' } },
+  { id: 'never', data: { client: 'Never' } },
 ];
 assert.deepEqual(
-  filterSyncRowsForScope('cards', dualCards, dualScope).map((r) => r.id).sort(),
-  ['c', 'f', 'r'],
-  'GET returns current + future + recent past, not aged-out Legacy',
+  filterSyncRowsForScope('cards', contentCards, jeslynAugustContentScope).map((r) => r.id).sort(),
+  ['arco-old', 'plume'],
+  'GET: current AM sees full client content (incl. past cards); not future-only/never',
 );
-
 assert.equal(
   assertSyncWriteAllowed(
     'cards',
-    [{ id: '1', data: { client: 'CurrentOnly' } }],
+    [{ id: 'w', data: { client: 'Arco' } }],
     [],
-    dualScope,
+    jeslynAugustContentScope,
   ).ok,
   true,
-  'current-month resolved AM can write to their current client',
+  'current-month AM has full write to handed-off client',
+);
+
+const valerieAugustContentScope = {
+  mode: 'personal_am',
+  restricted: true,
+  staffName: 'Valerie',
+  allowedClients: valerieAugustHandoff,
+  yearMonth: '2026-08',
+};
+assert.deepEqual(
+  filterSyncRowsForScope('cards', contentCards, valerieAugustContentScope),
+  [],
+  'former AM GET is empty for handed-off client — no grace period',
 );
 assert.equal(
   assertSyncWriteAllowed(
     'cards',
-    [{ id: '2', data: { client: 'FutureBrand' } }],
+    [{ id: 'w', data: { client: 'Arco' } }],
     [],
-    dualScope,
+    valerieAugustContentScope,
   ).ok,
   false,
-  'future-only client is read-only — write denied',
+  'former AM write denied immediately after handoff',
+);
+
+// Finances still denied for personal AM (pay stays month-resolved elsewhere).
+assert.equal(
+  filterSyncRowsForScope('finances', [{ id: 'revenue', data: {} }], jeslynAugustContentScope),
+  null,
 );
 assert.equal(
-  assertSyncWriteAllowed(
-    'cards',
-    [{ id: '3', data: { client: 'Recent' } }],
-    [],
-    dualScope,
-  ).ok,
+  assertSyncWriteAllowed('finances', [{ id: 'revenue', data: {} }], [], jeslynAugustContentScope).ok,
   false,
-  'past-only client is read-only — write denied',
 );
 
 console.log('test-staff-am-scope: ok');

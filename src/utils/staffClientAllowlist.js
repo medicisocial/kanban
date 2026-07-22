@@ -1,16 +1,14 @@
 /**
- * Account Manager client allowlists.
- * Write = current-month resolved AM (Finances Pay resolution + flat fallback).
- * Read = write ∪ future month assignments ∪ past assignments within 18 months.
+ * Current-month Account Manager client allowlist.
+ * Uses the SAME resolution as Finances Pay: month lookback, then flat fallback
+ * (see resolveClientMonthAssignees in monthAssignees.js).
+ *
+ * Personal AMs get full content read+write for these clients only (entire
+ * history). Access follows the current-month assignment with no grace period
+ * for former AMs. Finances stay denied separately — pay uses month assignees.
  */
-import {
-  normalizeAssigneeEntry,
-  resolveClientMonthAssignees,
-  shiftYearMonth,
-} from './monthAssignees.js';
+import { resolveClientMonthAssignees } from './monthAssignees.js';
 import { clientBrandNameKey, clientMatchesBrand } from './clients.js';
-
-export const AM_READ_PAST_WINDOW_MONTHS = 18;
 
 export function currentYearMonth(now = new Date()) {
   const y = now.getFullYear();
@@ -76,18 +74,6 @@ function flatFallbackForClient(client, flatAccountManagers = {}, clientRecords =
   return { accountManager: '', videographer: '', photographer: '' };
 }
 
-function yearMonthKeys(assigneesData = {}) {
-  return Object.keys(assigneesData || {}).filter((key) => /^\d{4}-\d{2}$/.test(key));
-}
-
-/** Explicit month-row AM only (no lookback / flat). Null when that month has no client key. */
-export function explicitMonthAccountManager(assigneesData, yearMonth, client) {
-  const month = assigneesData?.[yearMonth];
-  if (!month || typeof month !== 'object') return null;
-  if (!Object.prototype.hasOwnProperty.call(month, client)) return null;
-  return normalizeAssigneeEntry(month[client]).accountManager || '';
-}
-
 /**
  * Clients where staffName is the resolved Account Manager for yearMonth.
  * Empty staffName → [] (never "everything").
@@ -121,83 +107,6 @@ export function buildAccountManagerClientAllowlist({
     }
   }
   return allowed;
-}
-
-/** Write allowlist: current calendar month only (same as buildAccountManagerClientAllowlist). */
-export function buildAccountManagerWriteAllowlist(args = {}) {
-  return buildAccountManagerClientAllowlist(args);
-}
-
-/**
- * Read allowlist: current-month write set, plus future-assigned brands, plus brands
- * where this person was last the *explicit* month-map AM within the past window
- * (default 18 months). Past/future expansion ignores lookback/flat so sticky
- * inheritance cannot keep a handed-off brand visible forever.
- */
-export function buildAccountManagerReadAllowlist({
-  staffName,
-  yearMonth,
-  assigneesData = {},
-  flatAccountManagers = {},
-  clientNames = [],
-  clientRecords = [],
-  pastWindowMonths = AM_READ_PAST_WINDOW_MONTHS,
-} = {}) {
-  const staff = String(staffName || '').trim();
-  if (!staff) return [];
-
-  const current = yearMonth || currentYearMonth();
-  const writeList = buildAccountManagerWriteAllowlist({
-    staffName: staff,
-    yearMonth: current,
-    assigneesData,
-    flatAccountManagers,
-    clientNames,
-    clientRecords,
-  });
-  const allowed = new Set(writeList);
-
-  const clients = collectClientNamesForAllowlist({
-    clientNames,
-    flatAccountManagers,
-    assigneesData,
-    clientRecords,
-  });
-  const monthKeys = yearMonthKeys(assigneesData).sort();
-  const cutoff = shiftYearMonth(current, -Math.max(0, Number(pastWindowMonths) || 0));
-
-  for (const client of clients) {
-    if (allowed.has(client)) continue;
-
-    let futureHit = false;
-    for (const ym of monthKeys) {
-      if (ym <= current) continue;
-      const am = explicitMonthAccountManager(assigneesData, ym, client);
-      if (am !== null && staffNamesMatch(am, staff)) {
-        futureHit = true;
-        break;
-      }
-    }
-    if (futureHit) {
-      allowed.add(client);
-      continue;
-    }
-
-    let lastExplicitAsAm = null;
-    for (const ym of monthKeys) {
-      if (ym > current) continue;
-      const am = explicitMonthAccountManager(assigneesData, ym, client);
-      if (am !== null && staffNamesMatch(am, staff)) {
-        lastExplicitAsAm = ym;
-      }
-    }
-
-    if (lastExplicitAsAm && lastExplicitAsAm >= cutoff) {
-      allowed.add(client);
-    }
-  }
-
-  return [...allowed];
 }
 
 /** Case-insensitive allowlist membership (display name or brand key). */

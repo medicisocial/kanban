@@ -76,7 +76,7 @@ import {
   scopeAdminTasksForStaff,
   scopeCardsForStaff,
 } from "../utils/staffWorkspaceScope";
-import { buildAccountManagerReadAllowlist, clientInAllowlist } from "../utils/staffClientAllowlist";
+import { buildAccountManagerClientAllowlist, clientInAllowlist } from "../utils/staffClientAllowlist";
 import {
   findIdeaBoardCard,
   findIdeaForCard,
@@ -981,7 +981,7 @@ export default function AppShell({ onSignOut }) {
     // re-filter by flat AM alone — that would hide month-only handoffs the
     // server already included. Trust staff-sync scoped payloads.
     if (!Object.keys(assigneesData).length) return null;
-    return buildAccountManagerReadAllowlist({
+    return buildAccountManagerClientAllowlist({
       staffName,
       yearMonth: financesController.currentYearMonth(),
       assigneesData,

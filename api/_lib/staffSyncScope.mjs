@@ -6,8 +6,7 @@
 import { getSessionFromRequest, isStaffSessionValid, isOpsStaffEmail } from './staffAuth.mjs';
 import { fetchSyncRows } from './supabase.mjs';
 import {
-  buildAccountManagerReadAllowlist,
-  buildAccountManagerWriteAllowlist,
+  buildAccountManagerClientAllowlist,
   clientInAllowlist,
   allowlistKeySet,
   currentYearMonth,
@@ -142,7 +141,6 @@ function extractClientNames(clientRecords, clientBlobRows) {
  *   restricted: boolean,
  *   staffName: string,
  *   allowedClients: string[] | null,
- *   allowedClientsWrite: string[] | null,
  *   yearMonth: string,
  * }>}
  */
@@ -153,7 +151,6 @@ export async function resolveStaffSyncScope(req, orgId, { fetchClientRecords } =
     restricted: false,
     staffName: '',
     allowedClients: null,
-    allowedClientsWrite: null,
     yearMonth,
   };
 
@@ -186,24 +183,21 @@ export async function resolveStaffSyncScope(req, orgId, { fetchClientRecords } =
     const assigneesData = extractAssigneesData(financeRows);
     const flatAccountManagers = extractFlatAccountManagers(clientRecords, clientBlobRows);
     const clientNames = extractClientNames(clientRecords, clientBlobRows);
-    const allowlistArgs = {
+    // Single allowlist: current-month resolved AM → full content R/W for those clients.
+    const allowedClients = buildAccountManagerClientAllowlist({
       staffName,
       yearMonth,
       assigneesData,
       flatAccountManagers,
       clientNames,
       clientRecords,
-    };
-    // Read: current + future + 18mo past. Write: current month only.
-    const allowedClientsWrite = buildAccountManagerWriteAllowlist(allowlistArgs);
-    const allowedClients = buildAccountManagerReadAllowlist(allowlistArgs);
+    });
     return {
       mode: 'personal_am',
       // restricted=true even when allowedClients is [] — empty means none, not all
       restricted: true,
       staffName,
       allowedClients,
-      allowedClientsWrite,
       yearMonth,
     };
   }
@@ -213,7 +207,6 @@ export async function resolveStaffSyncScope(req, orgId, { fetchClientRecords } =
     restricted: true,
     staffName,
     allowedClients: null,
-    allowedClientsWrite: null,
     yearMonth,
   };
 }
@@ -348,13 +341,7 @@ export function assertSyncWriteAllowed(table, upserts, deleteIds, scope, existin
     return { ok: false, error: 'Forbidden: administrative tasks are not available for account managers.' };
   }
 
-  // Writes use the stricter current-month allowlist; fall back to read list only
-  // if an older scope object lacks allowedClientsWrite.
-  const allowed = Array.isArray(scope.allowedClientsWrite)
-    ? scope.allowedClientsWrite
-    : Array.isArray(scope.allowedClients)
-      ? scope.allowedClients
-      : [];
+  const allowed = Array.isArray(scope.allowedClients) ? scope.allowedClients : [];
   if (!CLIENT_SCOPED_TABLES.has(table)) return { ok: true };
 
   if (!allowed.length) {
