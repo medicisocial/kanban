@@ -8,6 +8,14 @@ import { useCollectionSync } from '../lib/useCollectionSync';
 import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
 import { pushStaffSyncRows } from '../lib/staffSyncApi';
+import {
+  copyAssigneesMonth,
+  monthHasAssignees,
+  normalizeAssigneeEntry,
+  previousYearMonth as previousAssigneesYearMonth,
+  resolveClientMonthAssignee,
+  resolveClientMonthAssignees,
+} from '../utils/monthAssignees';
 
 /** Return the current month as "YYYY-MM". */
 function currentYearMonth() {
@@ -18,10 +26,10 @@ function currentYearMonth() {
 }
 
 function getFinanceId(category) {
-  return category?.id || category; // 'revenue' | 'payroll' | 'expenses'
+  return category?.id || category; // 'revenue' | 'payroll' | 'expenses' | 'assignees' | 'pay_rates'
 }
 
-const FINANCE_RECORD_IDS = new Set(['revenue', 'payroll', 'expenses', 'pay_rates']);
+const FINANCE_RECORD_IDS = new Set(['revenue', 'payroll', 'expenses', 'pay_rates', 'assignees']);
 
 function isFinanceRecord(record) {
   return FINANCE_RECORD_IDS.has(getFinanceId(record));
@@ -74,9 +82,7 @@ export function isRetainerActiveStatus(value) {
 }
 
 function previousYearMonth(yearMonth) {
-  const [year, month] = String(yearMonth || currentYearMonth()).split('-').map(Number);
-  const date = new Date(year || new Date().getFullYear(), (month || 1) - 2, 1);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  return previousAssigneesYearMonth(yearMonth || currentYearMonth());
 }
 
 function compareYearMonth(left, right) {
@@ -500,6 +506,20 @@ export function useFinances() {
           { id: 'payroll', data: payrollData },
         ];
         changed = true;
+      }
+
+      const assignees = next.find((r) => r.id === 'assignees');
+      const assigneesData = assignees?.data ? { ...assignees.data } : {};
+      if (!monthHasAssignees(assigneesData[yearMonth])) {
+        const copiedAssignees = copyAssigneesMonth(assigneesData[previousMonth]);
+        if (copiedAssignees) {
+          assigneesData[yearMonth] = copiedAssignees;
+          next = [
+            ...next.filter((r) => r.id !== 'assignees'),
+            { id: 'assignees', data: assigneesData },
+          ];
+          changed = true;
+        }
       }
 
       return changed ? next : prev;
@@ -1068,6 +1088,89 @@ export function useFinances() {
     return Array.from(clientSet).sort();
   }, [finances]);
 
+  const getAssigneesData = useCallback(() => {
+    const record = finances.find((r) => r.id === 'assignees');
+    return record?.data && typeof record.data === 'object' ? record.data : {};
+  }, [finances]);
+
+  /** Raw month map, or null when that month was never written/copied. */
+  const getMonthAssigneesMap = useCallback(
+    (yearMonth) => {
+      const month = getAssigneesData()[yearMonth];
+      return monthHasAssignees(month) ? month : null;
+    },
+    [getAssigneesData],
+  );
+
+  /**
+   * Resolve assignees for a client in a month.
+   * Falls back through prior months, then optional flatFallback.
+   */
+  const getClientMonthAssignees = useCallback(
+    (client, yearMonth, flatFallback = {}) =>
+      resolveClientMonthAssignees(getAssigneesData(), yearMonth, client, flatFallback),
+    [getAssigneesData],
+  );
+
+  const getClientMonthAssignee = useCallback(
+    (client, yearMonth, role, flatFallback = '') => {
+      const resolved = resolveClientMonthAssignee(getAssigneesData(), yearMonth, client, role);
+      if (resolved !== null) return resolved;
+      return String(flatFallback || '').trim();
+    },
+    [getAssigneesData],
+  );
+
+  /** Upsert AM / videographer / photographer for one client in one month. */
+  const setClientMonthAssignees = useCallback((client, yearMonth, assignees) => {
+    if (!client || !yearMonth) return;
+    notifyMutation();
+    const nextEntry = normalizeAssigneeEntry(assignees);
+    setFinances((prev) => {
+      const record = prev.find((r) => r.id === 'assignees');
+      const rest = prev.filter((r) => r.id !== 'assignees');
+      const data = record?.data ? { ...record.data } : {};
+      const month = { ...(data[yearMonth] || {}) };
+      month[client] = nextEntry;
+      data[yearMonth] = month;
+      return [...rest, { id: 'assignees', data }];
+    });
+  }, []);
+
+  /**
+   * Seed a month from flat client defaults when the month has no assignee history
+   * and the previous month also has none (first-time bootstrap).
+   */
+  const seedMonthAssigneesFromClients = useCallback((yearMonth, byClient) => {
+    if (!yearMonth || !byClient || typeof byClient !== 'object') return false;
+    let seeded = false;
+    setFinances((prev) => {
+      const record = prev.find((r) => r.id === 'assignees');
+      const data = record?.data ? { ...record.data } : {};
+      if (monthHasAssignees(data[yearMonth])) return prev;
+      const previousMonth = previousYearMonth(yearMonth);
+      if (monthHasAssignees(data[previousMonth])) {
+        const copied = copyAssigneesMonth(data[previousMonth]);
+        if (!copied) return prev;
+        data[yearMonth] = copied;
+        seeded = true;
+        const rest = prev.filter((r) => r.id !== 'assignees');
+        return [...rest, { id: 'assignees', data }];
+      }
+      const nextMonth = {};
+      for (const [client, entry] of Object.entries(byClient)) {
+        if (!client) continue;
+        nextMonth[client] = normalizeAssigneeEntry(entry);
+      }
+      if (!Object.keys(nextMonth).length) return prev;
+      data[yearMonth] = nextMonth;
+      seeded = true;
+      const rest = prev.filter((r) => r.id !== 'assignees');
+      return [...rest, { id: 'assignees', data }];
+    });
+    return seeded;
+  }, []);
+
   return {
     finances,
     replaceFinances,
@@ -1096,6 +1199,11 @@ export function useFinances() {
     getMonthlySnapshot,
     getAllMonths,
     getAllClientsWithRetainers,
+    getMonthAssigneesMap,
+    getClientMonthAssignees,
+    getClientMonthAssignee,
+    setClientMonthAssignees,
+    seedMonthAssigneesFromClients,
     currentYearMonth,
   };
 }

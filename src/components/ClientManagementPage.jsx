@@ -36,6 +36,11 @@ import {
   applyClientPlanDefaults,
   normalizeClientPlanId,
 } from '../constants/clientPlans';
+import { IconChevronLeft, IconChevronRight } from './clientPortal/ClientPortalIcons';
+import {
+  formatYearMonthLabel,
+  shiftYearMonth,
+} from '../utils/monthAssignees';
 
 const TABS = [
   { id: 'profile', label: 'Profile' },
@@ -55,6 +60,12 @@ export default function ClientManagementPage({
   ideas = [],
   setMonthlyRetainer,
   currentYearMonth,
+  ensureRecurringMonth,
+  getClientMonthAssignees,
+  getMonthAssigneesMap,
+  setClientMonthAssignees,
+  seedMonthAssigneesFromClients,
+  saveFinancesNow,
 }) {
   const {
     clients,
@@ -94,6 +105,9 @@ export default function ClientManagementPage({
 
   const [selectedClient, setSelectedClient] = useState(profileClients[0] || '');
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [planMonth, setPlanMonth] = useState(() =>
+    typeof currentYearMonth === 'function' ? currentYearMonth() : currentYearMonth || '',
+  );
   const [color, setColor] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [photoGalleryLink, setPhotoGalleryLink] = useState('');
@@ -124,9 +138,48 @@ export default function ClientManagementPage({
   const [removeError, setRemoveError] = useState('');
   const fileInputRef = useRef(null);
 
+  const resolvePlanMonth = () =>
+    planMonth || (typeof currentYearMonth === 'function' ? currentYearMonth() : currentYearMonth) || '';
+
+  const loadMonthAssignees = (client, yearMonth) => {
+    const flat = {
+      accountManager: getClientAccountManager(client) || '',
+      videographer: getClientVideographer(client) || '',
+      photographer: getClientPhotographer(client) || '',
+    };
+    if (typeof getClientMonthAssignees === 'function' && yearMonth) {
+      return getClientMonthAssignees(client, yearMonth, flat);
+    }
+    return flat;
+  };
+
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
+
+  useEffect(() => {
+    if (!planMonth && typeof currentYearMonth === 'function') {
+      setPlanMonth(currentYearMonth());
+    }
+  }, [currentYearMonth, planMonth]);
+
+  useEffect(() => {
+    const ym = resolvePlanMonth();
+    if (!ym || typeof ensureRecurringMonth !== 'function') return;
+    ensureRecurringMonth(ym);
+    if (typeof getMonthAssigneesMap === 'function' && getMonthAssigneesMap(ym)) return;
+    if (typeof seedMonthAssigneesFromClients !== 'function' || !profileClients.length) return;
+    const byClient = {};
+    for (const client of profileClients) {
+      byClient[client] = {
+        accountManager: getClientAccountManager(client) || '',
+        videographer: getClientVideographer(client) || '',
+        photographer: getClientPhotographer(client) || '',
+      };
+    }
+    seedMonthAssigneesFromClients(ym, byClient);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planMonth, ensureRecurringMonth, profileClients.length]);
 
   const selectTab = (tabId) => {
     setActiveTab(tabId);
@@ -154,9 +207,10 @@ export default function ClientManagementPage({
     setWebsite(getClientWebsite(selectedClient));
     setReelPointsTarget(String(getClientReelPointsTarget(selectedClient) || ''));
     setCarouselStaticTarget(String(getClientCarouselStaticTarget(selectedClient) || ''));
-    setAccountManager(getClientAccountManager(selectedClient) || '');
-    setVideographer(getClientVideographer(selectedClient) || '');
-    setPhotographer(getClientPhotographer(selectedClient) || '');
+    const monthAssignees = loadMonthAssignees(selectedClient, resolvePlanMonth());
+    setAccountManager(monthAssignees.accountManager || '');
+    setVideographer(monthAssignees.videographer || '');
+    setPhotographer(monthAssignees.photographer || '');
     setPlanId(getClientPlanId(selectedClient) || 'custom');
     setShootDaysPerMonth(String(getClientShootDaysPerMonth(selectedClient) || ''));
     setShootHoursPerDay(String(getClientShootHoursPerDay(selectedClient) || ''));
@@ -173,9 +227,9 @@ export default function ClientManagementPage({
     setProfileMessage('');
     setPlanError('');
     setPlanMessage('');
-    // Only reload the form when switching clients — not on background sync updates.
+    // Reload form when switching clients or plan month — not on background sync updates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClient]);
+  }, [selectedClient, planMonth]);
 
   const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
@@ -272,6 +326,22 @@ export default function ClientManagementPage({
         const n = Number(monthlyPackageAmount);
         return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0;
       })();
+      const yearMonth = resolvePlanMonth();
+      const thisMonth =
+        typeof currentYearMonth === 'function' ? currentYearMonth() : currentYearMonth;
+      const isCurrentMonth = yearMonth && thisMonth && yearMonth === thisMonth;
+
+      const assigneePayload = {
+        accountManager: accountManager || '',
+        videographer: videographer || '',
+        photographer: photographer || '',
+      };
+
+      // Always persist month assignees for Finances pay attribution.
+      if (typeof setClientMonthAssignees === 'function' && yearMonth) {
+        setClientMonthAssignees(selectedClient, yearMonth, assigneePayload);
+      }
+
       const result = await saveClientProfile(selectedClient, {
         planId: normalizeClientPlanId(planId),
         reelPointsTarget: normalizeReelPointsTarget(reelPointsTarget),
@@ -279,9 +349,8 @@ export default function ClientManagementPage({
         // Clear split counts so combined feed points remain the source of truth.
         carouselTarget: 0,
         staticTarget: 0,
-        accountManager: accountManager || '',
-        videographer: videographer || '',
-        photographer: photographer || '',
+        // Flat client defaults only when editing the current calendar month.
+        ...(isCurrentMonth ? assigneePayload : {}),
         shootDaysPerMonth: Math.max(0, Math.round(Number(shootDaysPerMonth) || 0)),
         shootHoursPerDay: Math.max(0, Number(shootHoursPerDay) || 0),
         monthlyPackageAmount: packageAmount,
@@ -290,10 +359,21 @@ export default function ClientManagementPage({
         setPlanError(result.error || 'Could not save plan.');
         return;
       }
-      if (typeof setMonthlyRetainer === 'function' && typeof currentYearMonth === 'function') {
-        setMonthlyRetainer(selectedClient, currentYearMonth(), packageAmount);
+      if (typeof setMonthlyRetainer === 'function' && yearMonth) {
+        setMonthlyRetainer(selectedClient, yearMonth, packageAmount);
       }
-      setPlanMessage('Plan saved.');
+      if (typeof saveFinancesNow === 'function') {
+        try {
+          await saveFinancesNow();
+        } catch {
+          // Plan + month assignees already updated locally; cloud push can retry later.
+        }
+      }
+      setPlanMessage(
+        isCurrentMonth
+          ? 'Plan saved.'
+          : `Plan saved for ${formatYearMonthLabel(yearMonth)}. Assignees apply to Finances → Pay for that month.`,
+      );
       setTimeout(() => setPlanMessage(''), 4000);
     } catch (err) {
       setPlanError(err.message || 'Could not save plan.');
@@ -309,14 +389,18 @@ export default function ClientManagementPage({
     (selectedClient && photoGalleryLink !== getClientPhotoGalleryLink(selectedClient)) ||
     (selectedClient && website !== getClientWebsite(selectedClient));
 
+  const savedMonthAssignees = selectedClient
+    ? loadMonthAssignees(selectedClient, resolvePlanMonth())
+    : { accountManager: '', videographer: '', photographer: '' };
+
   const hasPlanChanges =
     selectedClient &&
     (normalizeClientPlanId(planId) !== getClientPlanId(selectedClient) ||
       normalizeReelPointsTarget(reelPointsTarget) !== getClientReelPointsTarget(selectedClient) ||
       normalizeReelPointsTarget(carouselStaticTarget) !== getClientCarouselStaticTarget(selectedClient) ||
-      (accountManager || '') !== (getClientAccountManager(selectedClient) || '') ||
-      (videographer || '') !== (getClientVideographer(selectedClient) || '') ||
-      (photographer || '') !== (getClientPhotographer(selectedClient) || '') ||
+      (accountManager || '') !== (savedMonthAssignees.accountManager || '') ||
+      (videographer || '') !== (savedMonthAssignees.videographer || '') ||
+      (photographer || '') !== (savedMonthAssignees.photographer || '') ||
       Math.max(0, Math.round(Number(shootDaysPerMonth) || 0)) !== getClientShootDaysPerMonth(selectedClient) ||
       Math.max(0, Number(shootHoursPerDay) || 0) !== getClientShootHoursPerDay(selectedClient) ||
       (() => {
@@ -324,6 +408,13 @@ export default function ClientManagementPage({
         const packageAmount = Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0;
         return packageAmount !== getClientMonthlyPackageAmount(selectedClient);
       })());
+
+  const goPlanPrevMonth = () => setPlanMonth((prev) => shiftYearMonth(prev || resolvePlanMonth(), -1));
+  const goPlanNextMonth = () => setPlanMonth((prev) => shiftYearMonth(prev || resolvePlanMonth(), 1));
+  const goPlanThisMonth = () => {
+    const ym = typeof currentYearMonth === 'function' ? currentYearMonth() : currentYearMonth;
+    if (ym) setPlanMonth(ym);
+  };
 
   const handleAddClient = async (name, clientColor, logo) => {
     const result = await addClient(name, clientColor, logo);
@@ -636,7 +727,39 @@ export default function ClientManagementPage({
           )}
 
           {activeTab === 'plan' && (
-            <div key={`plan-${selectedClient}`} className="portal-content-fade max-w-xl space-y-5">
+            <div key={`plan-${selectedClient}-${resolvePlanMonth()}`} className="portal-content-fade max-w-xl space-y-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={goPlanPrevMonth}
+                  className="rounded p-1.5 text-white/55 transition hover:bg-white/10 hover:text-white"
+                  aria-label="Previous month"
+                >
+                  <IconChevronLeft />
+                </button>
+                <h3 className="min-w-[9rem] text-center text-sm font-semibold text-white">
+                  {formatYearMonthLabel(resolvePlanMonth())}
+                </h3>
+                <button
+                  type="button"
+                  onClick={goPlanNextMonth}
+                  className="rounded p-1.5 text-white/55 transition hover:bg-white/10 hover:text-white"
+                  aria-label="Next month"
+                >
+                  <IconChevronRight />
+                </button>
+                <button
+                  type="button"
+                  onClick={goPlanThisMonth}
+                  className={`${btnSecondaryClass} ml-1 py-1 px-2.5 text-[10px]`}
+                >
+                  This month
+                </button>
+              </div>
+              <p className="text-[10px] text-white/35">
+                Assignees for this month feed Finances → Pay. New months copy the previous month until you change them.
+              </p>
+
               <label className="block">
                 <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
                   Package
@@ -677,7 +800,7 @@ export default function ClientManagementPage({
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
-                    Videographer
+                    Content creator
                   </span>
                   <select
                     value={videographer}
@@ -806,8 +929,8 @@ export default function ClientManagementPage({
               </div>
 
               <p className="text-[10px] text-white/35">
-                Assigned AM / videographer / photographer earn plan pay on Finances → Pay. Editors still earn
-                from completed cards.
+                Assigned AM / content creator / photographer earn plan pay on Finances → Pay for the month
+                shown above. Editors still earn from completed cards.
               </p>
 
               {planError && <p className="text-sm text-rose-300">{planError}</p>}

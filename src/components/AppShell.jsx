@@ -1404,6 +1404,12 @@ export default function AppShell({ onSignOut }) {
           onTabChange={setClientsTab}
           setMonthlyRetainer={financesController.setMonthlyRetainer}
           currentYearMonth={financesController.currentYearMonth}
+          ensureRecurringMonth={financesController.ensureRecurringMonth}
+          getClientMonthAssignees={financesController.getClientMonthAssignees}
+          getMonthAssigneesMap={financesController.getMonthAssigneesMap}
+          setClientMonthAssignees={financesController.setClientMonthAssignees}
+          seedMonthAssigneesFromClients={financesController.seedMonthAssigneesFromClients}
+          saveFinancesNow={financesController.saveFinancesNow}
         />
       )}
 

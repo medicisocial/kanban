@@ -826,6 +826,7 @@ export default function FinancesPage({
     getPayRates,
     setPayRates,
     getAllClientsWithRetainers,
+    getClientMonthAssignee,
     currentYearMonth,
   } = finances;
 
@@ -1009,11 +1010,39 @@ export default function FinancesPage({
   }, []);
 
   const planPayMaps = useMemo(() => {
+    const resolveAm = (client) =>
+      getClientMonthAssignee?.(
+        client,
+        selectedMonth,
+        'accountManager',
+        getClientAccountManager?.(client) || '',
+      ) ||
+      getClientAccountManager?.(client) ||
+      '';
+    const resolveVideographer = (client) =>
+      getClientMonthAssignee?.(
+        client,
+        selectedMonth,
+        'videographer',
+        getClientVideographer?.(client) || '',
+      ) ||
+      getClientVideographer?.(client) ||
+      '';
+    const resolvePhotographer = (client) =>
+      getClientMonthAssignee?.(
+        client,
+        selectedMonth,
+        'photographer',
+        getClientPhotographer?.(client) || '',
+      ) ||
+      getClientPhotographer?.(client) ||
+      '';
+
     const { byName } = buildPlanBasedPayByAssignee({
       clients: activePayrollClients,
-      getClientAccountManager,
-      getClientVideographer,
-      getClientPhotographer,
+      getClientAccountManager: resolveAm,
+      getClientVideographer: resolveVideographer,
+      getClientPhotographer: resolvePhotographer,
       getClientReelPointsTarget,
       getClientCarouselStaticTarget,
       getClientShootDaysPerMonth,
@@ -1039,6 +1068,8 @@ export default function FinancesPage({
     };
   }, [
     activePayrollClients,
+    selectedMonth,
+    getClientMonthAssignee,
     getClientAccountManager,
     getClientVideographer,
     getClientPhotographer,
