@@ -71,7 +71,12 @@ import { appendShootRosterIds, removeShootRosterId } from "../utils/shootDay";
 import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
 import { buildWorkspaceHomeSummary, buildNavBadgeCounts } from "../utils/workspaceHome";
 import { useStaffWorkspaceScope } from "../hooks/useStaffWorkspaceScope";
-import { scopeAdminTasksForStaff, scopeCardsForStaff } from "../utils/staffWorkspaceScope";
+import {
+  isViewAllowedForStaffScope,
+  scopeAdminTasksForStaff,
+  scopeCardsForStaff,
+} from "../utils/staffWorkspaceScope";
+import { buildAccountManagerClientAllowlist, clientInAllowlist } from "../utils/staffClientAllowlist";
 import {
   findIdeaBoardCard,
   findIdeaForCard,
@@ -159,7 +164,7 @@ export default function AppShell({ onSignOut }) {
   const { meetings, meetingsSyncLoaded, replaceMeetings, addMeeting, updateMeeting, deleteMeeting } =
     useMeetings();
   const { authRequired, ready, logout, session, org, orgReady } = useStaffAuth();
-  const { teamMembers, clientAccountManagers, getClientColor } = useClientsContext();
+  const { teamMembers, clientAccountManagers, getClientColor, clients } = useClientsContext();
 
   const { canUndo, undo } = useUndoHistory({
     cards,
@@ -963,9 +968,57 @@ export default function AppShell({ onSignOut }) {
     myWorkOnly,
     companyWideView,
     personalTaskScope,
+    isPersonalAccountManager,
     visibleCompanyTaskTabs,
+    allowedNavViews,
     clientAccountManagers: scopeClientAccountManagers,
   } = useStaffWorkspaceScope();
+
+  const personalAllowedClients = useMemo(() => {
+    if (!isPersonalAccountManager || !staffName) return null;
+    const assigneesData = financesController.getAssigneesData?.() || {};
+    // Without assignees history (personal AMs receive 403 on finances), do not
+    // re-filter by flat AM alone — that would hide month-only handoffs the
+    // server already included. Trust staff-sync scoped payloads.
+    if (!Object.keys(assigneesData).length) return null;
+    return buildAccountManagerClientAllowlist({
+      staffName,
+      yearMonth: financesController.currentYearMonth(),
+      assigneesData,
+      flatAccountManagers: scopeClientAccountManagers,
+      clientNames: clients,
+    });
+  }, [
+    isPersonalAccountManager,
+    staffName,
+    financesController,
+    scopeClientAccountManagers,
+    clients,
+  ]);
+
+  useEffect(() => {
+    if (!allowedNavViews) return;
+    if (!isViewAllowedForStaffScope(activeView, allowedNavViews)) {
+      setActiveView('home');
+      return;
+    }
+    if (
+      activeView === 'todo' &&
+      tasksRole === 'admin' &&
+      !visibleCompanyTaskTabs.includes('admin')
+    ) {
+      setTasksRole(visibleCompanyTaskTabs[0] || 'account');
+    }
+  }, [allowedNavViews, activeView, tasksRole, visibleCompanyTaskTabs]);
+
+  useEffect(() => {
+    if (!Array.isArray(personalAllowedClients)) return;
+    if (clientFilter === 'all') return;
+    if (!clientInAllowlist(clientFilter, personalAllowedClients)) {
+      setClientFilter('all');
+    }
+  }, [personalAllowedClients, clientFilter]);
+
   const workspaceCards = useMemo(
     () =>
       scopeCardsForStaff(cards, {
@@ -973,17 +1026,42 @@ export default function AppShell({ onSignOut }) {
         personalTaskScope,
         staffName,
         clientAccountManagers: scopeClientAccountManagers,
+        allowedClients: personalAllowedClients,
+        isPersonalAccountManager,
       }),
-    [cards, clientFilter, personalTaskScope, staffName, scopeClientAccountManagers],
+    [
+      cards,
+      clientFilter,
+      personalTaskScope,
+      staffName,
+      scopeClientAccountManagers,
+      personalAllowedClients,
+      isPersonalAccountManager,
+    ],
   );
+  const workspaceIdeas = useMemo(() => {
+    if (!Array.isArray(personalAllowedClients)) return ideas;
+    return (ideas || []).filter((idea) => clientInAllowlist(idea?.client, personalAllowedClients));
+  }, [ideas, personalAllowedClients]);
+  const workspacePlans = useMemo(() => {
+    if (!Array.isArray(personalAllowedClients) || !plans || typeof plans !== 'object') {
+      return plans;
+    }
+    const next = {};
+    for (const [key, plan] of Object.entries(plans)) {
+      if (clientInAllowlist(plan?.client, personalAllowedClients)) next[key] = plan;
+    }
+    return next;
+  }, [plans, personalAllowedClients]);
   const workspaceAdminTasks = useMemo(
     () =>
       scopeAdminTasksForStaff(adminTasks, {
         clientFilter,
         personalTaskScope,
         staffName,
+        hideAdminTasks: isPersonalAccountManager,
       }),
-    [adminTasks, clientFilter, personalTaskScope, staffName],
+    [adminTasks, clientFilter, personalTaskScope, staffName, isPersonalAccountManager],
   );
   const showAccountManagerQueue = agencyOps || !myWorkOnly
     ? true
@@ -991,14 +1069,21 @@ export default function AppShell({ onSignOut }) {
   const workspaceAlerts = useMemo(
     () =>
       buildWorkspaceAlerts({
-        cards,
-        ideas,
+        cards: workspaceCards,
+        ideas: workspaceIdeas,
         clientFilter,
         staffName,
         clientAccountManagers: scopeClientAccountManagers,
         personalTaskScope,
       }),
-    [cards, ideas, clientFilter, staffName, scopeClientAccountManagers, personalTaskScope],
+    [
+      workspaceCards,
+      workspaceIdeas,
+      clientFilter,
+      staffName,
+      scopeClientAccountManagers,
+      personalTaskScope,
+    ],
   );
   const notificationCount = syncTotal + workspaceAlerts.length;
 
@@ -1165,6 +1250,10 @@ export default function AppShell({ onSignOut }) {
       homeNavLabel={companyWideView && myWorkOnly ? 'Overview' : myWorkOnly ? 'My work' : 'Overview'}
       navBadges={navBadges}
       visibleTaskTabs={visibleCompanyTaskTabs}
+      personalAmNav={Boolean(isPersonalAccountManager)}
+      filterClientNames={
+        Array.isArray(personalAllowedClients) ? personalAllowedClients : undefined
+      }
       canUndo={canUndo}
       onUndo={undo}
     >
@@ -1191,11 +1280,11 @@ export default function AppShell({ onSignOut }) {
       <Suspense fallback={<PageLoadingFallback />}>
       {activeView === "home" && (
         <WorkspaceHomePage
-          cards={cards}
-          ideas={ideas}
+          cards={workspaceCards}
+          ideas={workspaceIdeas}
           adminTasks={workspaceAdminTasks}
           meetings={meetings}
-          plans={plans}
+          plans={workspacePlans}
           getPlan={getPlan}
           clientFilter={clientFilter}
           syncTotal={syncTotal}
@@ -1219,9 +1308,9 @@ export default function AppShell({ onSignOut }) {
 
       {activeView === "ideas" && (
         <VideoIdeas
-          ideas={ideas}
-          cards={cards}
-          plans={plans}
+          ideas={workspaceIdeas}
+          cards={workspaceCards}
+          plans={workspacePlans}
           clientFilter={clientFilter}
           onAddCard={() => {
             const resolvedClient = clientFilter !== 'all' ? clientFilter : undefined;
@@ -1324,8 +1413,8 @@ export default function AppShell({ onSignOut }) {
 
       {activeView === "todo" && (
         <CompanyTasks
-          cards={cards}
-          ideas={ideas}
+          cards={workspaceCards}
+          ideas={workspaceIdeas}
           adminTasks={workspaceAdminTasks}
           clientFilter={clientFilter}
           embedded
@@ -1370,10 +1459,10 @@ export default function AppShell({ onSignOut }) {
 
       {activeView === "shoot" && (
         <ShootDay
-          cards={cards}
-          ideas={ideas}
+          cards={workspaceCards}
+          ideas={workspaceIdeas}
           clientFilter={clientFilter}
-          plans={plans}
+          plans={workspacePlans}
           focusRequest={shootFocus}
           onMoveClientShootDay={handleMoveClientShootDay}
           onNavigate={handleNavigate}

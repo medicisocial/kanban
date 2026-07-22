@@ -1283,6 +1283,7 @@ export function useFinances() {
     getClientMonthAssignee,
     setClientMonthAssignees,
     seedMonthAssigneesFromClients,
+    getAssigneesData,
     currentYearMonth,
   };
 }

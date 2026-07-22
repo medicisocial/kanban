@@ -43,16 +43,29 @@ async function fetchClientRecordRowsDirect(orgId, select) {
 }
 
 async function readClientRecords(orgId, select) {
+  // Prefer staff-sync so personal AM allowlists are enforced server-side.
+  // Direct Supabase reads are org-wide under RLS and would bypass that gate.
+  const apiRows = await fetchStaffSyncRows('client_records', orgId);
+  if (apiRows !== null) return apiRows;
+
+  const { loadStaffSession, isSharedOperationsLogin, usesPersonalWorkspaceView } =
+    await import('../utils/staffAuth.js');
+  const session = loadStaffSession();
+  if (
+    session &&
+    !isSharedOperationsLogin(session) &&
+    usesPersonalWorkspaceView(session)
+  ) {
+    return [];
+  }
+
   const directRows = await Promise.race([
     fetchClientRecordRowsDirect(orgId, select),
     new Promise((resolve) => {
       setTimeout(() => resolve([]), DIRECT_READ_TIMEOUT_MS);
     }),
   ]);
-  if (directRows.length) return directRows;
-
-  const apiRows = await fetchStaffSyncRows('client_records', orgId);
-  return Array.isArray(apiRows) ? apiRows : [];
+  return Array.isArray(directRows) ? directRows : [];
 }
 
 /** Fast list load — direct Supabase first, staff-sync fallback only if empty. */

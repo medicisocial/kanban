@@ -95,6 +95,13 @@ async function staffSyncAuthHeaders() {
 /**
  * Load a workspace table through /api/staff-sync (service-role on the server).
  * Use when browser Supabase reads return empty — common on mobile with RLS.
+ *
+ * Returns:
+ * - array (possibly empty) when the API answered (including 403 → [])
+ * - null only when auth/headers/network prevented a staff-sync response
+ *
+ * Callers must treat [] as authoritative scoped data and must NOT fall through
+ * to org-wide REST/anon when a non-null array is returned.
  */
 export async function fetchStaffSyncRows(table, orgId = getOrgId()) {
   if (!SUPABASE_ENABLED) return null;
@@ -111,9 +118,12 @@ export async function fetchStaffSyncRows(table, orgId = getOrgId()) {
       headers,
       signal: controller.signal,
     });
+    // 403 = server denied this table for this staff scope. Return [] so callers
+    // do not fall open to unscoped REST/anon (security).
+    if (response.status === 403) return [];
     if (!response.ok) return null;
     const payload = await response.json().catch(() => ({}));
-    return Array.isArray(payload.rows) ? payload.rows : null;
+    return Array.isArray(payload.rows) ? payload.rows : [];
   } catch {
     return null;
   } finally {

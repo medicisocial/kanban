@@ -3,8 +3,21 @@ import { fetchStaffSyncRows } from './staffSyncApi';
 import { fetchLegacyWorkspaceBlobRows } from './workspaceBlobFallback';
 import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
 import { getOrgId, LEGACY_ORG_ID } from './orgSession';
+import {
+  isSharedOperationsLogin,
+  loadStaffSession,
+  usesPersonalWorkspaceView,
+} from '../utils/staffAuth';
 
 const REST_FETCH_TIMEOUT_MS = 5000;
+
+/** Personal team logins must not fall open to org-wide REST/RLS when staff-sync fails. */
+function mustFailClosedWithoutStaffSync() {
+  const session = loadStaffSession();
+  if (!session) return false;
+  if (isSharedOperationsLogin(session)) return false;
+  return usesPersonalWorkspaceView(session);
+}
 
 async function fetchAllViaRest(table, orgId) {
   // Anon REST only works for the legacy org where RLS allows unauthenticated reads.
@@ -63,15 +76,17 @@ function buildTableStore(table, orgId, brandId) {
       // Warm DB session in the background; reads must not wait on it.
       void ensureStaffSupabaseSession();
 
-      const staffPromise = fetchStaffSyncRows(table, orgId);
-      const restPromise =
-        orgId === LEGACY_ORG_ID ? fetchAllViaRest(table, orgId) : Promise.resolve(null);
-      const [staffRows, restRows] = await Promise.all([staffPromise, restPromise]);
-
-      if (Array.isArray(staffRows) && staffRows.length) return staffRows;
-      if (Array.isArray(restRows) && restRows.length) return restRows;
+      // Prefer staff-sync (server-scoped). An empty array is a valid restricted
+      // result — never fall through to org-wide REST/anon when the API answered.
+      const staffRows = await fetchStaffSyncRows(table, orgId);
       if (staffRows !== null) return staffRows;
-      if (restRows !== null) return restRows;
+      if (mustFailClosedWithoutStaffSync()) return [];
+
+      // No staff-sync auth/response. Legacy anon REST only for unauthenticated
+      // bootstrap of the legacy org — never used after a scoped staff session.
+      const restRows =
+        orgId === LEGACY_ORG_ID ? await fetchAllViaRest(table, orgId) : null;
+      if (Array.isArray(restRows)) return restRows;
 
       if (supabase && (await hasStaffSupabaseSession())) {
         let query = supabase

@@ -35,8 +35,22 @@ function buildTaskItems(visibleTaskTabs) {
   };
 }
 
-function buildBaseNavSections(visibleTaskTabs) {
+function buildBaseNavSections(visibleTaskTabs, { personalAmNav = false } = {}) {
   const taskItems = buildTaskItems(visibleTaskTabs);
+
+  if (personalAmNav) {
+    return [
+      {
+        label: 'Production',
+        items: [
+          { id: 'ideas', label: 'Vault', Icon: IconIdeas },
+          { id: 'shoot', label: 'Scheduled shoots', Icon: IconShoots },
+        ],
+      },
+      ...(taskItems.team.length ? [{ label: 'Team', items: taskItems.team }] : []),
+    ];
+  }
+
   return [
   {
     label: 'Production',
@@ -67,7 +81,7 @@ function buildBaseNavSections(visibleTaskTabs) {
   ];
 }
 
-function buildNavSections(homeLabel, clientFilter, visibleTaskTabs) {
+function buildNavSections(homeLabel, clientFilter, visibleTaskTabs, { personalAmNav = false } = {}) {
   const clientName = clientFilter && clientFilter !== 'all' ? clientFilter : null;
   const clientSection = clientName
     ? {
@@ -82,7 +96,7 @@ function buildNavSections(homeLabel, clientFilter, visibleTaskTabs) {
       items: [{ id: 'home', label: homeLabel, Icon: IconHome }],
     },
     ...(clientSection ? [clientSection] : []),
-    ...buildBaseNavSections(visibleTaskTabs),
+    ...buildBaseNavSections(visibleTaskTabs, { personalAmNav }),
   ];
 }
 
@@ -101,14 +115,21 @@ export default function AdminConsoleLayout({
   homeNavLabel = 'Overview',
   navBadges = {},
   visibleTaskTabs,
+  personalAmNav = false,
+  filterClientNames = null,
   canUndo = false,
   onUndo,
   children,
 }) {
-  const admin = useWorkspaceAdmin({ clientFilter, onClientChange });
+  const admin = useWorkspaceAdmin({
+    clientFilter,
+    onClientChange,
+    clientNames: filterClientNames,
+    hideAdminSettings: personalAmNav,
+  });
   const navSections = useMemo(
-    () => buildNavSections(homeNavLabel, clientFilter, visibleTaskTabs),
-    [homeNavLabel, clientFilter, visibleTaskTabs],
+    () => buildNavSections(homeNavLabel, clientFilter, visibleTaskTabs, { personalAmNav }),
+    [homeNavLabel, clientFilter, visibleTaskTabs, personalAmNav],
   );
   const { getClientColor, getClientLogo, setClientLogo } = useClientsContext();
   const teamColor = getClientColor(INTERNAL_TEAM_CLIENT);

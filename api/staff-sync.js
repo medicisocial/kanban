@@ -12,6 +12,11 @@ import {
   filterAuthCriticalDeletes,
   sanitizeAuthCriticalUpserts,
 } from './_lib/authCriticalSync.mjs';
+import {
+  assertSyncWriteAllowed,
+  filterSyncRowsForScope,
+  resolveStaffSyncScope,
+} from './_lib/staffSyncScope.mjs';
 import { prepareCardPipelineUpsert } from '../src/utils/cardPipelineMerge.js';
 import {
   badRequest,
@@ -218,6 +223,16 @@ export default async function handler(req, res) {
     }
 
     try {
+      const scope = await resolveStaffSyncScope(req, orgCheck.orgId, {
+        fetchClientRecords: fetchClientRecordRows,
+      });
+      if (scope.restricted && table === 'finances') {
+        return forbidden(
+          res,
+          'Forbidden: finances access requires leadership or ops login.',
+        );
+      }
+
       const rows =
         table === 'client_records'
           ? await fetchClientRecordRows(orgCheck.orgId)
@@ -226,7 +241,14 @@ export default async function handler(req, res) {
             : table === 'team_members'
               ? await fetchTeamMemberRows(orgCheck.orgId)
               : await fetchSyncRows(table, orgCheck.orgId);
-      return ok(res, { rows: rows || [] });
+      const scoped = filterSyncRowsForScope(table, rows || [], scope);
+      if (scoped === null) {
+        return forbidden(
+          res,
+          'Forbidden: finances access requires leadership or ops login.',
+        );
+      }
+      return ok(res, { rows: scoped });
     } catch (error) {
       console.error('[staff-sync] fetch failed:', error?.message || error);
       return serverError(res, 'Could not load workspace data.');
@@ -256,6 +278,24 @@ export default async function handler(req, res) {
   const resolvedOrgId = orgCheck.orgId;
 
   try {
+    const scope = await resolveStaffSyncScope(req, resolvedOrgId, {
+      fetchClientRecords: fetchClientRecordRows,
+    });
+    const existingForScope =
+      scope.restricted && Array.isArray(deleteIds) && deleteIds.length
+        ? await fetchSyncRows(table, resolvedOrgId)
+        : [];
+    const writeGate = assertSyncWriteAllowed(
+      table,
+      upserts,
+      deleteIds,
+      scope,
+      existingForScope,
+    );
+    if (!writeGate.ok) {
+      return forbidden(res, writeGate.error || 'Forbidden.');
+    }
+
     const safeDeleteIds = filterAuthCriticalDeletes(table, deleteIds, authDeleteConfirmed);
     const safeUpserts = await sanitizeAuthCriticalUpserts(table, upserts, resolvedOrgId, {
       credentialPasswordChanges,

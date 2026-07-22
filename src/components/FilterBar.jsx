@@ -11,8 +11,14 @@ import ClientFilterSelect from './clientPortal/ClientFilterSelect';
 import { btnSecondaryClass } from './clientPortal/clientPortalUi';
 import { buildClientFilterOptions } from '../utils/clients';
 
-export function useWorkspaceAdmin({ clientFilter, onClientChange }) {
-  const { clients, getClientColor, getClientUsers, setClientPortalUsers } = useClientsContext();
+export function useWorkspaceAdmin({
+  clientFilter,
+  onClientChange,
+  clientNames = null,
+  hideAdminSettings = false,
+}) {
+  const { clients: allClients, getClientColor, getClientUsers, setClientPortalUsers } = useClientsContext();
+  const clients = Array.isArray(clientNames) ? clientNames : allClients;
   const { session } = useStaffAuth();
   const cloudMode = isCloudSourceOfTruth();
   const [showTeamUsers, setShowTeamUsers] = useState(false);
