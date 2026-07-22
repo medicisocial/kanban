@@ -329,6 +329,7 @@ export default function AccountManagerTodo({
   cards,
   clientFilter,
   embedded = false,
+  onAddCard,
   onOpenCard,
   onUpdateCard,
   onMarkScheduled,
@@ -363,9 +364,15 @@ export default function AccountManagerTodo({
     [cards, clientAccountManagers],
   );
 
+  // Personal AMs: cards are already allowlist-scoped — show all AM queues for those
+  // clients without requiring card.accountManager === staff name.
   const filterOptions = useMemo(
-    () => ({ client: clientFilter, assignee: assigneeFilter }),
-    [clientFilter, assigneeFilter],
+    () => ({
+      client: clientFilter,
+      assignee: assigneeFilter,
+      matchAccountManager: !restrictAssigneeFilter,
+    }),
+    [clientFilter, assigneeFilter, restrictAssigneeFilter],
   );
 
   const orderedSetPostDateTasks = useMemo(
@@ -415,7 +422,7 @@ export default function AccountManagerTodo({
         </div>
       )}
 
-      <div className={`flex justify-center ${embedded ? 'mb-4' : 'mb-8'}`}>
+      <div className={`flex flex-wrap items-center justify-center gap-3 ${embedded ? 'mb-4' : 'mb-8'}`}>
         <label className="flex items-center gap-2 text-sm text-white/45">
           <span>Account manager</span>
           <select
@@ -432,6 +439,15 @@ export default function AccountManagerTodo({
             ))}
           </select>
         </label>
+        {onAddCard ? (
+          <button
+            type="button"
+            onClick={onAddCard}
+            className={`${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`}
+          >
+            + Add card
+          </button>
+        ) : null}
       </div>
 
       <div className={`${glassSegmentClass} mb-4 flex w-fit flex-wrap gap-0.5 p-0.5`}>

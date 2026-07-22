@@ -146,12 +146,124 @@ assert(
   (accountTodoSource.match(/onOpen=\{openCard\}/g) || []).length >= 4,
   'all account manager task card types open from the full card',
 );
+assert(accountTodoSource.includes('onAddCard'), 'AM todo accepts onAddCard for creating cards');
+assert(accountTodoSource.includes('+ Add card'), 'AM todo exposes Add card control');
+assert(
+  accountTodoSource.includes('matchAccountManager: !restrictAssigneeFilter'),
+  'personal AM queues skip card accountManager name match',
+);
 
 const teamCardSource = readFileSync(new URL('../src/components/TeamTaskCard.jsx', import.meta.url), 'utf8');
 assert(teamCardSource.includes('openFromTaskCard'), 'shared team cards support row-open clicks');
 assert(
   teamCardSource.includes("closest('button, a, input, select, textarea, label')"),
   'row-open ignores interactive controls',
+);
+
+const companyTasksSource = readFileSync(
+  new URL('../src/components/CompanyTasks.jsx', import.meta.url),
+  'utf8',
+);
+assert(
+  companyTasksSource.includes('onAddCard={onAddToCreateCard}'),
+  'AM tab wires Add card to to-create card creation',
+);
+
+// Pure filter behavior (mirrors accountManagerTodo / editorTodo — avoid Vite-only imports).
+function filterAccountManagerTasks(tasks, { client, assignee, matchAccountManager = true } = {}) {
+  return tasks.filter((task) => {
+    if (client && client !== 'all' && task.client !== client) return false;
+    if (
+      matchAccountManager &&
+      assignee &&
+      assignee !== 'all' &&
+      task.accountManager !== assignee
+    ) {
+      return false;
+    }
+    return true;
+  });
+}
+function filterEditorTasks(tasks, { assignee, client } = {}) {
+  return tasks.filter((task) => {
+    if (assignee && assignee !== 'all' && task.assignedTo !== assignee) return false;
+    if (client && client !== 'all' && task.client !== client) return false;
+    return true;
+  });
+}
+
+const arcoTasks = [
+  {
+    id: '1',
+    client: 'Arco Fit',
+    accountManager: 'Valerie Landeros',
+    assignedTo: 'Jordan Nguyen',
+  },
+  {
+    id: '2',
+    client: 'Arco Fit',
+    accountManager: '',
+    assignedTo: 'Jeslyn Nguyen',
+  },
+  {
+    id: '3',
+    client: 'Plume',
+    accountManager: 'Jeslyn Nguyen',
+    assignedTo: 'Jeslyn Nguyen',
+  },
+];
+
+const jeslynAmVisible = filterAccountManagerTasks(arcoTasks, {
+  client: 'all',
+  assignee: 'Jeslyn Nguyen',
+  matchAccountManager: false,
+});
+assert(jeslynAmVisible.length === 3, 'allowlist-scoped AM queue shows all clients regardless of card AM');
+assert(
+  jeslynAmVisible.some((t) => t.accountManager === 'Valerie Landeros'),
+  'Jeslyn sees Arco AM tasks even when card accountManager is Valerie',
+);
+
+const leadershipAmFilter = filterAccountManagerTasks(arcoTasks, {
+  client: 'all',
+  assignee: 'Jeslyn Nguyen',
+  matchAccountManager: true,
+});
+assert(
+  leadershipAmFilter.length === 1,
+  'company-wide AM filter still matches exact accountManager when enabled',
+);
+
+const jeslynEditorVisible = filterEditorTasks(arcoTasks, {
+  assignee: 'Jeslyn Nguyen',
+  client: 'all',
+});
+assert(jeslynEditorVisible.length === 2, 'editor tab only shows assignedTo === Jeslyn');
+assert(
+  !jeslynEditorVisible.some((t) => t.assignedTo === 'Jordan Nguyen'),
+  'editor filter untouched — Jordan-assigned cards hidden from Jeslyn editor queue',
+);
+
+const editorTodoSourceCheck = readFileSync(
+  new URL('../src/utils/editorTodo.js', import.meta.url),
+  'utf8',
+);
+assert(
+  editorTodoSourceCheck.includes('task.assignedTo !== assignee'),
+  'editor filter still keys off assignedTo only',
+);
+assert(
+  !editorTodoSourceCheck.includes('matchAccountManager'),
+  'editor filter does not use AM allowlist match flag',
+);
+
+const amUtilSource = readFileSync(
+  new URL('../src/utils/accountManagerTodo.js', import.meta.url),
+  'utf8',
+);
+assert(
+  amUtilSource.includes('matchAccountManager = true'),
+  'AM filter supports matchAccountManager flag',
 );
 
 console.log('Account manager todo tests passed.');

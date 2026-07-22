@@ -158,6 +158,7 @@ export default function CompanyTasks({
           embedded
           cards={cards}
           clientFilter={clientFilter}
+          onAddCard={onAddToCreateCard}
           onOpenCard={onOpenCard}
           onUpdateCard={onUpdateCard}
           onMarkScheduled={onMarkScheduled}

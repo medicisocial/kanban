@@ -293,10 +293,17 @@ export function groupAccountManagerTasksByDate(tasks, todayKey = toDateKey(new D
   return groups;
 }
 
-export function filterAccountManagerTasks(tasks, { client, assignee }) {
+export function filterAccountManagerTasks(tasks, { client, assignee, matchAccountManager = true } = {}) {
   return tasks.filter((task) => {
     if (!matchesClientFilter(task.client, client)) return false;
-    if (assignee && assignee !== 'all' && task.accountManager !== assignee) return false;
+    if (
+      matchAccountManager &&
+      assignee &&
+      assignee !== 'all' &&
+      task.accountManager !== assignee
+    ) {
+      return false;
+    }
     return true;
   });
 }

@@ -107,7 +107,9 @@ function buildPersonalWorkspaceHomeSummary({
   showAccountManagerQueue,
 }) {
   const assignee = staffName;
-  const amFilter = { client: clientFilter, assignee };
+  // Personal home cards are already client-allowlist scoped for AMs — do not
+  // re-filter AM queues by flat/card accountManager (month handoffs diverge).
+  const amFilter = { client: clientFilter, assignee, matchAccountManager: false };
 
   const toCreateCount = buildContentCreatorTasks(cards, {
     client: clientFilter,
