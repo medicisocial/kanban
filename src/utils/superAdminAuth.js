@@ -1,33 +1,19 @@
 export const SUPER_ADMIN_SESSION_KEY = 'medici-super-admin-session';
 
-async function hashPassword(password) {
-  const data = new TextEncoder().encode(password);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
 export async function verifySuperAdminCredentials(username, password) {
-  const normalizedUsername = String(username || '').trim().toLowerCase();
-  const adminUsername = (import.meta.env.VITE_SUPER_ADMIN_USERNAME || 'admin@medicisocial.com').trim().toLowerCase();
-
-  if (normalizedUsername !== adminUsername) return null;
-
-  const passwordHash = await hashPassword(String(password || '').trim());
-
-  const defaultHash = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'; // hash of 'admin'
-  const expectedHash = (import.meta.env.VITE_SUPER_ADMIN_PASSWORD_HASH || defaultHash).trim().toLowerCase();
-
-  if (passwordHash !== expectedHash) return null;
-
-  const expires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
-  const signatureData = `${normalizedUsername}:${expires}:${passwordHash}`;
-  const signature = await hashPassword(signatureData);
-
-  return {
-    username: normalizedUsername,
-    expires,
-    signature,
-  };
+  const res = await fetch('/api/admin-auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username: String(username || '').trim(),
+      password: String(password || '').trim(),
+    }),
+  });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok || !payload?.session) {
+    return null;
+  }
+  return payload.session;
 }
 
 export function loadSuperAdminSession() {
@@ -48,10 +34,30 @@ export function clearSuperAdminSession() {
   localStorage.removeItem(SUPER_ADMIN_SESSION_KEY);
 }
 
-export function isSuperAdminSessionValid(session) {
+/**
+ * Shape/expiry check only — never grants privileges by itself.
+ * Call validateSuperAdminSession before showing admin UI or accepting impersonation.
+ */
+export function hasSuperAdminSessionShape(session) {
   if (!session?.username || !session?.expires || !session?.signature) return false;
   if (Date.now() > session.expires) return false;
   return true;
+}
+
+/** Server-verified session check (signature validated with a server-only secret). */
+export async function isSuperAdminSessionValid(session) {
+  if (!hasSuperAdminSessionShape(session)) return false;
+  try {
+    const res = await fetch('/api/admin-auth', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${btoa(JSON.stringify(session))}`,
+      },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 export function impersonateOrg(org, ownerEmail, adminSession) {

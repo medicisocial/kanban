@@ -1,4 +1,5 @@
 import { findTeamMember, verifyTeamMemberPassword } from './_lib/teamAuth.mjs';
+import { createStaffSession } from './_lib/staffAuth.mjs';
 import { canUseSupabaseForAuth, fetchRowsAcrossOrgs, getSupabaseUrl, resolveAuthReadKey } from './_lib/supabase.mjs';
 import { checkRateLimit, rateLimitKeyFromRequest } from './_lib/rateLimit.mjs';
 import {
@@ -113,10 +114,18 @@ export default async function handler(req, res) {
     }
 
     const loginEmail = member.email?.trim().toLowerCase() || member.username?.trim().toLowerCase();
+    let session = null;
+    try {
+      session = createStaffSession(loginEmail);
+    } catch (error) {
+      console.error('[team-auth] session mint failed:', error?.message || error);
+      return unavailable(res, 'Team login is temporarily unavailable.');
+    }
     return ok(res, {
       username: loginEmail,
       name: member.name,
       orgId: orgId || undefined,
+      session,
     });
   } catch (error) {
     console.error('[team-auth] failed:', error?.message || error);

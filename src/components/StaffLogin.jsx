@@ -41,8 +41,10 @@ export default function StaffLogin() {
 
         {!isStaffAuthConfigured() && !import.meta.env.PROD ? (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-            Staff login is not configured yet. Add <code className="text-amber-100">VITE_STAFF_USERNAME</code> and{' '}
-            <code className="text-amber-100">VITE_STAFF_PASSWORD_HASH</code> to a <code className="text-amber-100">.env</code> file, then restart the dev server.
+            Staff login is not configured yet. Add <code className="text-amber-100">VITE_STAFF_USERNAME</code> and
+            server-only <code className="text-amber-100">STAFF_PASSWORD_HASH</code> /{' '}
+            <code className="text-amber-100">STAFF_SESSION_SECRET</code> to <code className="text-amber-100">.env</code>, then restart the
+            dev server.
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">

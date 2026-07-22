@@ -1,10 +1,15 @@
 export const STAFF_SESSION_KEY = 'medici-staff-session';
 /** Tab-scoped flag set on explicit sign-out so Supabase session restore is skipped. */
 export const STAFF_SIGNED_OUT_KEY = 'medici-staff-signed-out';
-const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const PROD_STAFF_USERNAME = 'info@medicisocial.com';
-const PROD_STAFF_PASSWORD_HASH = '288a74dd35327615ef98b375a2445d9ebd4c570a5e5d413181986ebf127f45e1';
+
+/** SHA-256 hex digest — used for client portal user password storage only. */
+export async function hashPassword(password) {
+  const data = new TextEncoder().encode(password);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 function getConfiguredUsername() {
   const fromEnv = (import.meta.env.VITE_STAFF_USERNAME || '').trim();
@@ -13,15 +18,9 @@ function getConfiguredUsername() {
   return '';
 }
 
-function getConfiguredPasswordHash() {
-  const fromEnv = (import.meta.env.VITE_STAFF_PASSWORD_HASH || '').trim().toLowerCase();
-  if (fromEnv) return fromEnv;
-  if (import.meta.env.PROD) return PROD_STAFF_PASSWORD_HASH;
-  return '';
-}
-
+/** Public username only — password hashes must never ship in the browser bundle. */
 export function isStaffAuthConfigured() {
-  return Boolean(getConfiguredUsername() && getConfiguredPasswordHash());
+  return Boolean(getConfiguredUsername()) || import.meta.env.PROD;
 }
 
 export function isStaffAuthRequired() {
@@ -63,28 +62,6 @@ export function isClientHubPortal() {
   return params.get('portal') === '1' || params.get('portal') === 'true';
 }
 
-export async function hashPassword(password) {
-  const data = new TextEncoder().encode(password);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-function timingSafeEqual(a, b) {
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i += 1) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return result === 0;
-}
-
-function getEffectivePasswordHash(username) {
-  if (isOpsStaffEmail(username) && import.meta.env.PROD) {
-    return PROD_STAFF_PASSWORD_HASH;
-  }
-  return getConfiguredPasswordHash();
-}
-
 export function isOpsStaffEmail(value) {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return false;
@@ -93,36 +70,41 @@ export function isOpsStaffEmail(value) {
   return import.meta.env.PROD && normalized === PROD_STAFF_USERNAME.toLowerCase();
 }
 
-async function createSessionSignature(username, expires) {
-  const secret = getEffectivePasswordHash(username);
-  return hashPassword(`${username}:${expires}:${secret}`);
-}
-
-export async function verifyStaffCredentials(username, password) {
-  if (!isOpsStaffEmail(username)) return false;
-  if (!isStaffAuthConfigured() && !import.meta.env.PROD) return false;
-
-  const passwordHash = await hashPassword(String(password || '').trim());
-  return timingSafeEqual(passwordHash, getEffectivePasswordHash(username));
-}
-
-export async function createStaffSession(username) {
-  const expires = Date.now() + SESSION_TTL_MS;
-  const signature = await createSessionSignature(username.trim(), expires);
-  return {
-    username: username.trim(),
-    expires,
-    signature,
-  };
+/**
+ * Server-side credential check + session mint. Never hashes passwords against a
+ * client-bundled secret.
+ */
+export async function loginStaffWithPassword(username, password) {
+  const res = await fetch('/api/staff-auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username: String(username || '').trim(),
+      password: String(password || '').trim(),
+    }),
+  });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok || !payload?.session) {
+    return { ok: false, error: payload?.error || 'Invalid email or password.' };
+  }
+  return { ok: true, session: payload.session };
 }
 
 export async function isStaffSessionValid(session) {
   if (!session?.username || !session?.expires || !session?.signature) return false;
-  if (!isStaffAuthConfigured()) return false;
   if (Date.now() > session.expires) return false;
 
-  const expectedSignature = await createSessionSignature(session.username, session.expires);
-  return timingSafeEqual(session.signature, expectedSignature);
+  try {
+    const res = await fetch('/api/staff-auth', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${btoa(JSON.stringify(session))}`,
+      },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 export function getConfiguredStaffUsername() {
