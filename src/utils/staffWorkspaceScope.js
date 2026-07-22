@@ -20,6 +20,7 @@ export const PERSONAL_AM_ALLOWED_VIEWS = new Set([
   'shoot',
   'todo',
   'todo-account',
+  'clients',
   'client-files',
   'calendars',
   'deliverables',

@@ -3,6 +3,7 @@ import { isCloudSourceOfTruth } from '../lib/cloudSourceOfTruth';
 import { PIPELINE_REGRESSION_AUTH_KEY } from './cardPipelineMerge';
 import { shouldUsePortalResponseQueue, queueStorageKey } from './portalResponseQueue';
 import { encodeSharePayload, decodeSharePayload, decodeShareQueryParam } from './sharePayload';
+import { getStructuredScript } from './scriptFields';
 
 const RESPONSES_KEY = 'medici-social-content-review-responses';
 
@@ -102,15 +103,31 @@ function expandContentSnapshot(data, client) {
   if (data.v === 2 && Array.isArray(data.i)) {
     return {
       client,
-      cards: data.i.map(([id, title, contentType, dropboxLink, notes]) => ({
-        id,
-        client,
-        title,
-        contentType,
-        dropboxLink: dropboxLink || '',
-        notes: notes || '',
-        columnId: 'in-review',
-      })),
+      cards: data.i.map(
+        ([
+          id,
+          title,
+          contentType,
+          dropboxLink,
+          notes,
+          shootScriptHook,
+          shootScriptBody,
+          shootTextOverlays,
+          caption,
+        ]) => ({
+          id,
+          client,
+          title,
+          contentType,
+          dropboxLink: dropboxLink || '',
+          notes: notes || '',
+          shootScriptHook: shootScriptHook || '',
+          shootScriptBody: shootScriptBody || '',
+          shootTextOverlays: shootTextOverlays || '',
+          caption: caption || '',
+          columnId: 'in-review',
+        }),
+      ),
     };
   }
 
@@ -127,6 +144,7 @@ export function parseContentShareHash() {
 }
 
 export function snapshotCard(card) {
+  const script = getStructuredScript(card);
   return {
     id: card.id,
     client: card.client,
@@ -134,6 +152,10 @@ export function snapshotCard(card) {
     contentType: card.contentType,
     dropboxLink: card.dropboxLink || '',
     notes: card.notes || '',
+    shootScriptHook: script.hook,
+    shootScriptBody: script.body,
+    shootTextOverlays: script.overlays,
+    caption: script.caption,
     columnId: 'in-review',
   };
 }
@@ -141,13 +163,20 @@ export function snapshotCard(card) {
 export function buildContentReviewShareUrl(client, reviewCards) {
   const payload = encodeSharePayload({
     v: 2,
-    i: reviewCards.map((card) => [
-      card.id,
-      card.title,
-      card.contentType,
-      card.dropboxLink || '',
-      card.notes || '',
-    ]),
+    i: reviewCards.map((card) => {
+      const script = getStructuredScript(card);
+      return [
+        card.id,
+        card.title,
+        card.contentType,
+        card.dropboxLink || '',
+        card.notes || '',
+        script.hook,
+        script.body,
+        script.overlays,
+        script.caption,
+      ];
+    }),
   });
   const base = `${window.location.origin}${window.location.pathname}`;
   return `${base}?content=${encodeURIComponent(client)}#${payload}`;

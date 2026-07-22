@@ -1,7 +1,9 @@
 import { Fragment, useMemo, useState } from 'react';
 import { getContentTypeStyle } from '../../constants';
 import ClientAvatar from '../ClientAvatar';
+import ScriptPanel from '../ScriptPanel';
 import { formatScheduledDateTime } from '../../utils';
+import { getStructuredScript, hasStructuredScript } from '../../utils/scriptFields';
 import {
   btnGhostClass,
   btnPrimaryClass,
@@ -17,6 +19,46 @@ import {
   tableHeaderClass,
   tableRowClass,
 } from './clientPortalUi';
+
+function ReviewCardDetails({ card }) {
+  const script = getStructuredScript(card);
+  const showScript = hasStructuredScript(card);
+  const contentLink = card.dropboxLink || card.driveLink || '';
+
+  return (
+    <div className="space-y-3 text-sm text-white/65">
+      {card.description || card.notes ? (
+        <p className="whitespace-pre-wrap">{card.description || card.notes}</p>
+      ) : null}
+      {showScript ? (
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-white/40">
+            Script
+          </p>
+          <ScriptPanel
+            hook={script.hook}
+            body={script.body}
+            overlays={script.overlays}
+            caption={script.caption}
+            readOnly
+          />
+        </div>
+      ) : !card.description && !card.notes ? (
+        <p className="text-white/40">No additional details.</p>
+      ) : null}
+      {contentLink ? (
+        <a
+          href={contentLink}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-block text-xs text-[#c88] underline-offset-2 hover:underline"
+        >
+          View content
+        </a>
+      ) : null}
+    </div>
+  );
+}
 
 function SortHeader({ label, sortKey, sort, onSort }) {
   const active = sort.key === sortKey;
@@ -136,16 +178,7 @@ export default function ClientTasksTable({
                 </div>
                 {(expanded || denying) && (
                   <div className="mt-3 space-y-3 border border-white/10 bg-white/[0.02] p-3">
-                    {card.description ? (
-                      <p className="text-sm text-white/65">{card.description}</p>
-                    ) : (
-                      <p className="text-sm text-white/40">No additional details.</p>
-                    )}
-                    {card.driveLink && (
-                      <a href={card.driveLink} target="_blank" rel="noreferrer" className="text-xs text-[#c88] underline-offset-2 hover:underline">
-                        View content
-                      </a>
-                    )}
+                    <ReviewCardDetails card={card} />
                     {denying && (
                       <>
                         <textarea
@@ -271,25 +304,7 @@ export default function ClientTasksTable({
                       <tr className="border-b border-white/[0.06] bg-white/[0.02]">
                         <td colSpan={6} className="px-4 py-4">
                           <div className="grid gap-4 md:grid-cols-[1fr_auto]">
-                            <div className="text-sm text-white/65">
-                              {card.description ? (
-                                <p>{card.description}</p>
-                              ) : (
-                                <p className="text-white/40">No additional details.</p>
-                              )}
-                              {card.driveLink && (
-                                <p className="mt-2 text-xs">
-                                  <a
-                                    href={card.driveLink}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-[#c88] underline-offset-2 hover:underline"
-                                  >
-                                    View content
-                                  </a>
-                                </p>
-                              )}
-                            </div>
+                            <ReviewCardDetails card={card} />
                             {denying && (
                               <div className="min-w-[260px] border border-white/10 bg-[#0d0d0d] p-3">
                                 <p className="text-[10px] font-medium uppercase tracking-wider text-white/45">

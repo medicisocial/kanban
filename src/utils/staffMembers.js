@@ -3,9 +3,14 @@ import { memberMatchesRole } from './teamMembers';
 import { isSharedOperationsLogin } from './staffAuth';
 
 export function resolveStaffMember(session, teamMembers) {
-  if (!session?.username || !Array.isArray(teamMembers)) return null;
+  if (!Array.isArray(teamMembers)) return null;
 
-  const key = session.username.trim().toLowerCase();
+  // Team-auth sessions use `username`; SaaS sessions often only have `email`.
+  const key = String(session?.username || session?.email || '')
+    .trim()
+    .toLowerCase();
+  if (!key) return null;
+
   return (
     teamMembers.find(
       (entry) =>

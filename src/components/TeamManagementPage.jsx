@@ -34,9 +34,11 @@ export default function TeamManagementPage() {
     saveTeamMemberToCloud,
     removeTeamMember,
     getClientColor,
+    getClientLogo,
   } = useClientsContext();
 
   const teamColor = getClientColor(INTERNAL_TEAM_CLIENT) || '#810100';
+  const teamLogo = getClientLogo(INTERNAL_TEAM_CLIENT);
 
   const [newName, setNewName] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState(null);
@@ -134,7 +136,7 @@ export default function TeamManagementPage() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
                   <ClientLogoAvatar
-                    logo={member.avatar}
+                    logo={member.avatar || teamLogo}
                     name={member.name}
                     color={teamColor}
                     size="lg"

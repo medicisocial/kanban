@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useClientsContext } from '../context/ClientsContext';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { BUSINESS_TYPES } from '../utils/eventFormSchemas';
 import { sortClientNamesAlphabetically } from '../utils/clients';
+import { clientInAllowlist } from '../utils/staffClientAllowlist';
 import { syncClientPortalCredentialsToCloud } from '../utils/clientPortalAdmin';
 import { getOrgId } from '../lib/orgSession';
 import { registerPortalCredentialBrand } from '../lib/syncHelpers';
@@ -42,7 +43,7 @@ import {
   shiftYearMonth,
 } from '../utils/monthAssignees';
 
-const TABS = [
+const ALL_TABS = [
   { id: 'profile', label: 'Profile' },
   { id: 'plan', label: 'Plan' },
   { id: 'files', label: 'Brand assets' },
@@ -54,10 +55,14 @@ const TABS = [
 
 export default function ClientManagementPage({
   initialTab = 'profile',
+  initialClient = '',
   onTabChange,
   onClientAdded,
   cards = [],
   ideas = [],
+  allowedClients = null,
+  canManageRoster = true,
+  hidePlanTab = false,
   setMonthlyRetainer,
   currentYearMonth,
   ensureRecurringMonth,
@@ -101,9 +106,19 @@ export default function ClientManagementPage({
   } = useClientsContext();
   const { session } = useStaffAuth();
   // Include Medici Social so the agency can manage its own brand profile like any client.
-  const profileClients = sortClientNamesAlphabetically(clients);
+  const profileClients = useMemo(() => {
+    const sorted = sortClientNamesAlphabetically(clients);
+    if (!Array.isArray(allowedClients)) return sorted;
+    return sorted.filter((client) => clientInAllowlist(client, allowedClients));
+  }, [clients, allowedClients]);
+  const tabs = useMemo(
+    () => (hidePlanTab ? ALL_TABS.filter((tab) => tab.id !== 'plan') : ALL_TABS),
+    [hidePlanTab],
+  );
 
-  const [selectedClient, setSelectedClient] = useState(profileClients[0] || '');
+  const [selectedClient, setSelectedClient] = useState(
+    () => initialClient || profileClients[0] || '',
+  );
   const [activeTab, setActiveTab] = useState(initialTab);
   const [planMonth, setPlanMonth] = useState(() =>
     typeof currentYearMonth === 'function' ? currentYearMonth() : currentYearMonth || '',
@@ -154,8 +169,16 @@ export default function ClientManagementPage({
   };
 
   useEffect(() => {
-    setActiveTab(initialTab);
-  }, [initialTab]);
+    const next = hidePlanTab && initialTab === 'plan' ? 'profile' : initialTab;
+    setActiveTab(next);
+  }, [initialTab, hidePlanTab]);
+
+  useEffect(() => {
+    if (!initialClient) return;
+    if (profileClients.includes(initialClient)) {
+      setSelectedClient(initialClient);
+    }
+  }, [initialClient, profileClients]);
 
   useEffect(() => {
     if (!planMonth && typeof currentYearMonth === 'function') {
@@ -478,12 +501,18 @@ export default function ClientManagementPage({
           description="Manage brand profiles and portal logins."
         />
         <div className="border border-dashed border-white/10 px-6 py-16 text-center">
-          <p className="text-sm text-white/45">No clients yet.</p>
-          <button type="button" onClick={() => setShowAddClient(true)} className={`${btnPrimaryClass} mt-4`}>
-            + Add client
-          </button>
+          <p className="text-sm text-white/45">
+            {Array.isArray(allowedClients)
+              ? 'No clients assigned to you yet.'
+              : 'No clients yet.'}
+          </p>
+          {canManageRoster && (
+            <button type="button" onClick={() => setShowAddClient(true)} className={`${btnPrimaryClass} mt-4`}>
+              + Add client
+            </button>
+          )}
         </div>
-        {showAddClient && (
+        {canManageRoster && showAddClient && (
           <AddClientModal
             existingClients={clients}
             onClose={() => setShowAddClient(false)}
@@ -500,9 +529,11 @@ export default function ClientManagementPage({
         title="Clients"
         description="Manage brand profiles, contacts, social logins, and portal access for each client."
       >
-        <button type="button" onClick={() => setShowAddClient(true)} className={btnSecondaryClass}>
-          + Add client
-        </button>
+        {canManageRoster && (
+          <button type="button" onClick={() => setShowAddClient(true)} className={btnSecondaryClass}>
+            + Add client
+          </button>
+        )}
       </ClientPortalSectionHeader>
 
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
@@ -551,7 +582,7 @@ export default function ClientManagementPage({
           </div>
 
           <div className={`${glassSegmentClass} mb-6 flex w-fit flex-wrap gap-1 p-1`}>
-            {TABS.map((tab) => (
+            {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
@@ -711,22 +742,24 @@ export default function ClientManagementPage({
                 {savingProfile ? 'Saving…' : 'Save profile'}
               </button>
 
-              <div className="mt-2 border-t border-white/[0.06] pt-4">
-                <button
-                  type="button"
-                  onClick={openRemoveClient}
-                  className="text-[11px] font-medium uppercase tracking-[0.18em] text-rose-300/75 transition-colors duration-300 hover:text-rose-300"
-                >
-                  Remove this client
-                </button>
-                <p className="mt-1.5 text-[10px] text-white/35">
-                  Removes {selectedClient} from the pipeline, calendars, and client filters.
-                </p>
-              </div>
+              {canManageRoster && (
+                <div className="mt-2 border-t border-white/[0.06] pt-4">
+                  <button
+                    type="button"
+                    onClick={openRemoveClient}
+                    className="text-[11px] font-medium uppercase tracking-[0.18em] text-rose-300/75 transition-colors duration-300 hover:text-rose-300"
+                  >
+                    Remove this client
+                  </button>
+                  <p className="mt-1.5 text-[10px] text-white/35">
+                    Removes {selectedClient} from the pipeline, calendars, and client filters.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
-          {activeTab === 'plan' && (
+          {activeTab === 'plan' && !hidePlanTab && (
             <div key={`plan-${selectedClient}-${resolvePlanMonth()}`} className="portal-content-fade max-w-xl space-y-5">
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -1028,7 +1061,7 @@ export default function ClientManagementPage({
         </div>
       </div>
 
-      {showAddClient && (
+      {canManageRoster && showAddClient && (
         <AddClientModal
           existingClients={clients}
           onClose={() => setShowAddClient(false)}
@@ -1036,7 +1069,7 @@ export default function ClientManagementPage({
         />
       )}
 
-      {confirmRemove && (
+      {canManageRoster && confirmRemove && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
           onMouseDown={(e) => {

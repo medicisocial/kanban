@@ -240,6 +240,7 @@ assert.ok(
   'admin tab is not pushed for personal users',
 );
 assert.ok(scopeSource.includes('PERSONAL_AM_ALLOWED_VIEWS'), 'personal AM view allowlist exists');
+assert.ok(scopeSource.includes("'clients'"), 'personal AM may open Clients profiles');
 assert.ok(scopeSource.includes("'calendars'"), 'personal AM may open calendars');
 assert.ok(scopeSource.includes("'deliverables'"), 'personal AM may open deliverables');
 assert.ok(scopeSource.includes("'metrics'"), 'personal AM may open metrics');
@@ -250,6 +251,10 @@ const navSource = readFileSync(
 );
 assert.ok(navSource.includes('personalAmNav'), 'sidebar supports personal AM nav mode');
 assert.ok(
+  navSource.includes("id: 'clients'") && navSource.includes('if (personalAmNav)'),
+  'personal AM nav includes Clients',
+);
+assert.ok(
   navSource.includes("id: 'calendars'") && navSource.includes('if (personalAmNav)'),
   'personal AM nav includes Planning calendars',
 );
@@ -258,8 +263,8 @@ assert.ok(
   'personal AM allowed views still exclude finances',
 );
 assert.ok(
-  !scopeSource.includes("'clients'"),
-  'personal AM allowed views still exclude clients admin',
+  !scopeSource.includes("'team'") && !scopeSource.includes("'settings'"),
+  'personal AM allowed views still exclude Staff and Settings',
 );
 
 // --- Double-wrapped finances.assignees (production shape) ---

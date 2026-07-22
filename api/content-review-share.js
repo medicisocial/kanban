@@ -28,6 +28,11 @@ async function loadShareReviewCards(orgId, cardIds) {
       contentType: card.contentType,
       dropboxLink: card.dropboxLink || '',
       notes: card.notes || '',
+      shootScript: card.shootScript || '',
+      shootScriptHook: card.shootScriptHook || '',
+      shootScriptBody: card.shootScriptBody || '',
+      shootTextOverlays: card.shootTextOverlays || '',
+      caption: card.caption || '',
       columnId: card.columnId,
       contentReviewShare: normalizeContentReviewShare(card.contentReviewShare),
     });

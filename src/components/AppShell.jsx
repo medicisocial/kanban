@@ -1487,10 +1487,16 @@ export default function AppShell({ onSignOut }) {
 
       {activeView === "clients" && (
         <ClientManagementPage
-          cards={cards}
-          ideas={ideas}
+          cards={isPersonalAccountManager ? workspaceCards : cards}
+          ideas={isPersonalAccountManager ? workspaceIdeas : ideas}
           initialTab={clientsTab}
+          initialClient={clientFilter !== "all" ? clientFilter : ""}
           onTabChange={setClientsTab}
+          allowedClients={
+            Array.isArray(personalAllowedClients) ? personalAllowedClients : null
+          }
+          canManageRoster={!isPersonalAccountManager}
+          hidePlanTab={Boolean(isPersonalAccountManager)}
           setMonthlyRetainer={financesController.setMonthlyRetainer}
           currentYearMonth={financesController.currentYearMonth}
           ensureRecurringMonth={financesController.ensureRecurringMonth}

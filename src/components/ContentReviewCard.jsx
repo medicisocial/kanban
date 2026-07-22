@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { getContentTypeStyle } from '../constants';
 import { contentTypePillProps } from '../utils/contentTypeColors';
 import { buildPeerApprovalMessage, buildPeerDenialMessage } from '../utils/contentReviewShare';
+import { getStructuredScript, hasStructuredScript } from '../utils/scriptFields';
 import { useClientsContext } from '../context/ClientsContext';
+import ScriptPanel from './ScriptPanel';
 import { glassInsetClass, inputClass } from './clientPortal/clientPortalUi';
 
 export default function ContentReviewCard({
@@ -17,6 +19,8 @@ export default function ContentReviewCard({
   const { getClientColor } = useClientsContext();
   const typeStyle = getContentTypeStyle(card.contentType);
   const clientColor = getClientColor(card.client);
+  const script = getStructuredScript(card);
+  const showScript = hasStructuredScript(card);
 
   const handleDeny = () => {
     const trimmed = comment.trim();
@@ -64,6 +68,21 @@ export default function ContentReviewCard({
 
         {card.notes && (
           <p className="mb-3 text-sm text-gray-400">{card.notes}</p>
+        )}
+
+        {showScript && (
+          <div className="mb-3 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+            <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-white/40">
+              Script
+            </p>
+            <ScriptPanel
+              hook={script.hook}
+              body={script.body}
+              overlays={script.overlays}
+              caption={script.caption}
+              readOnly
+            />
+          </div>
         )}
 
         {peerResponses

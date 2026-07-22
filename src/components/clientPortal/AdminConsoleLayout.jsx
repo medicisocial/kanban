@@ -41,6 +41,10 @@ function buildBaseNavSections(visibleTaskTabs, { personalAmNav = false } = {}) {
   if (personalAmNav) {
     return [
       {
+        label: 'Clients',
+        items: [{ id: 'clients', label: 'Clients', Icon: IconClients }],
+      },
+      {
         label: 'Production',
         items: [
           { id: 'ideas', label: 'Vault', Icon: IconIdeas },
@@ -94,7 +98,12 @@ function buildNavSections(homeLabel, clientFilter, visibleTaskTabs, { personalAm
   const clientSection = clientName
     ? {
         label: clientName,
-        items: [{ id: 'client-files', label: 'Brand assets', Icon: IconFiles }],
+        items: personalAmNav
+          ? [
+              { id: 'clients', label: 'Profile', Icon: IconClients },
+              { id: 'client-files', label: 'Brand assets', Icon: IconFiles },
+            ]
+          : [{ id: 'client-files', label: 'Brand assets', Icon: IconFiles }],
       }
     : null;
 
@@ -184,7 +193,9 @@ export default function AdminConsoleLayout({
         notificationsOpen={notificationsOpen}
         onNotificationsOpenChange={onNotificationsOpenChange}
         profileLabel={profileLabel || 'Staff'}
-        profileLogo={profileLogo}
+        // Prefer personal staff photo; otherwise use the workspace logo so every
+        // team member shares the same Operations Console profile pic.
+        profileLogo={profileLogo || teamLogo}
         profileColor={teamColor}
         sidebarLogoUrl={teamLogo}
         onSidebarLogoClick={() => setLogoModalOpen(true)}
