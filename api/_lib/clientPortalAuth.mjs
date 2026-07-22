@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'crypto';
+import { getClientPortalSessionSecret } from './sessionSecrets.mjs';
 
 const CLIENT_PORTAL_AUTH_KEY = 'medici-client-portal-auth';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -26,9 +27,7 @@ function normalizeUserAvatar(avatar) {
 }
 
 function getSessionSecret() {
-  return (process.env.STAFF_PASSWORD_HASH || process.env.CLIENT_PORTAL_SESSION_SECRET || 'medici-client-portal')
-    .trim()
-    .toLowerCase();
+  return getClientPortalSessionSecret();
 }
 
 export function hashValue(value) {

@@ -31,7 +31,7 @@ async function legacyStaffHeaders() {
   const session = loadStaffSession();
   if (session?.impersonated && session?.adminSession) {
     const { isSuperAdminSessionValid } = await import('../utils/superAdminAuth');
-    if (isSuperAdminSessionValid(session.adminSession)) {
+    if (await isSuperAdminSessionValid(session.adminSession)) {
       return {
         Authorization: `Bearer ${btoa(JSON.stringify(session.adminSession))}`,
         'Content-Type': 'application/json',

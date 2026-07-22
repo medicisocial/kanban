@@ -48,14 +48,12 @@ export async function loginTeamMemberRemote(username, password) {
   return payload;
 }
 
-/** Try local team credentials first, then cloud workspace credentials. */
+/**
+ * Authenticate a team member and return a server-minted session.
+ * Returns `{ username, session }` or null.
+ */
 export async function authenticateTeamMemberCredentials(username, password) {
   const key = normalizePortalLogin(username);
-  const local = verifyTeamMemberStaffCredentials(key, password);
-  if (local) {
-    return normalizePortalLogin(local.email || local.username);
-  }
-
   const configuredStaff = getConfiguredStaffUsername();
   if (isOpsStaffEmail(key) || (configuredStaff && key === configuredStaff.toLowerCase())) {
     return null;
@@ -63,9 +61,20 @@ export async function authenticateTeamMemberCredentials(username, password) {
 
   try {
     const remote = await loginTeamMemberRemote(key, password);
-    if (remote?.username) return normalizePortalLogin(remote.username);
+    if (remote?.session?.signature && remote?.username) {
+      return {
+        username: normalizePortalLogin(remote.username),
+        session: remote.session,
+      };
+    }
   } catch (error) {
     if (error?.code !== 'unavailable') throw error;
+  }
+
+  // Local credential match alone is not enough — sessions must be server-signed.
+  const local = verifyTeamMemberStaffCredentials(key, password);
+  if (local) {
+    return null;
   }
 
   return null;

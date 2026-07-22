@@ -2,16 +2,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import {
   clearStaffSession,
   clearStaffSignedOut,
-  createStaffSession,
   isOpsStaffEmail,
   isStaffAuthConfigured,
   isStaffAuthRequired,
   isStaffSessionValid,
   loadStaffSession,
+  loginStaffWithPassword,
   markStaffSignedOut,
   saveStaffSession,
   shouldSuppressStaffAutoRestore,
-  verifyStaffCredentials,
 } from '../utils/staffAuth';
 import { SUPABASE_ENABLED, supabase } from '../lib/supabaseClient';
 import { normalizePlanType } from '../constants/plans';
@@ -73,10 +72,12 @@ function friendlyAuthError(message) {
   return message;
 }
 
-async function establishLegacyStaffSession(loginId, password, applyLegacyOrg, setSession) {
-  const nextSession = await createStaffSession(loginId);
-  saveStaffSession(nextSession);
-  setSession(nextSession);
+async function establishLegacyStaffSession(loginId, password, applyLegacyOrg, setSession, serverSession) {
+  if (!serverSession?.signature) {
+    return { ok: false, error: 'Staff login failed.' };
+  }
+  saveStaffSession(serverSession);
+  setSession(serverSession);
   applyLegacyOrg();
   if (SUPABASE_ENABLED) {
     clearSyncedWorkspaceCache(LEGACY_ORG_ID);
@@ -152,7 +153,7 @@ export function StaffAuthProvider({ children }) {
       const stored = loadStaffSession();
       if (stored?.impersonated && stored?.adminSession) {
         const { isSuperAdminSessionValid } = await import('../utils/superAdminAuth');
-        if (isSuperAdminSessionValid(stored.adminSession)) {
+        if (await isSuperAdminSessionValid(stored.adminSession)) {
           if (!cancelled) {
             setSession(stored);
             setOrg(stored.org);
@@ -267,22 +268,46 @@ export function StaffAuthProvider({ children }) {
     const isOpsLogin = isOpsStaffEmail(loginId);
 
     if (isOpsLogin) {
-      const legacyOk = await verifyStaffCredentials(loginId, trimmedPassword);
-      if (legacyOk) {
-        return establishLegacyStaffSession(loginId, trimmedPassword, applyLegacyOrg, setSession);
+      const legacy = await loginStaffWithPassword(loginId, trimmedPassword);
+      if (legacy.ok) {
+        return establishLegacyStaffSession(
+          loginId,
+          trimmedPassword,
+          applyLegacyOrg,
+          setSession,
+          legacy.session,
+        );
       }
-      return { ok: false, error: 'Invalid email or password.' };
+      return { ok: false, error: legacy.error || 'Invalid email or password.' };
     }
 
     if (isStaffAuthConfigured()) {
-      const legacyOk = await verifyStaffCredentials(loginId, trimmedPassword);
-      if (legacyOk) {
-        return establishLegacyStaffSession(loginId, trimmedPassword, applyLegacyOrg, setSession);
+      const legacy = await loginStaffWithPassword(loginId, trimmedPassword);
+      if (legacy.ok) {
+        return establishLegacyStaffSession(
+          loginId,
+          trimmedPassword,
+          applyLegacyOrg,
+          setSession,
+          legacy.session,
+        );
       }
 
       const teamLogin = await authenticateTeamMemberCredentials(loginId, trimmedPassword);
-      if (teamLogin) {
-        return establishLegacyStaffSession(teamLogin, trimmedPassword, applyLegacyOrg, setSession);
+      if (teamLogin?.session?.signature) {
+        return establishLegacyStaffSession(
+          teamLogin.username,
+          trimmedPassword,
+          applyLegacyOrg,
+          setSession,
+          teamLogin.session,
+        );
+      }
+      if (teamLogin?.username) {
+        return {
+          ok: false,
+          error: 'Team login could not establish a secure session. Try again in a moment.',
+        };
       }
     }
 

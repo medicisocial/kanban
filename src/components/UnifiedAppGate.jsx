@@ -8,7 +8,12 @@ import { WorkspaceSyncProvider } from '../context/WorkspaceSyncContext';
 import UnifiedLogin from './UnifiedLogin';
 import MarketingLandingPage from './MarketingLandingPage';
 import PricingPage from './PricingPage';
-import { loadSuperAdminSession, isSuperAdminSessionValid, clearSuperAdminSession } from '../utils/superAdminAuth';
+import {
+  loadSuperAdminSession,
+  isSuperAdminSessionValid,
+  clearSuperAdminSession,
+  hasSuperAdminSessionShape,
+} from '../utils/superAdminAuth';
 
 const SuperAdminConsole = lazyWithRetry(() => import('./SuperAdminConsole'));
 
@@ -87,10 +92,7 @@ function UnifiedAppGateInner() {
   const { ready, session } = useStaffAuth();
   const initialGate = useMemo(() => parseGateView(), []);
   const [mode, setMode] = useState(() => {
-    const adminSession = loadSuperAdminSession();
-    if (adminSession && isSuperAdminSessionValid(adminSession)) {
-      return 'admin';
-    }
+    // Never grant admin UI from localStorage shape alone — validate via API first.
     if (initialGate.view === 'admin-login') return 'admin-login';
     return initialGate.view === 'login' || initialGate.view === 'signup' ? 'login' : 'loading';
   });
@@ -138,19 +140,42 @@ function UnifiedAppGateInner() {
 
   useEffect(() => {
     if (!ready) return;
+    let cancelled = false;
 
-    const adminSession = loadSuperAdminSession();
-    if (adminSession && isSuperAdminSessionValid(adminSession)) {
-      setMode('admin');
-      return;
-    }
+    (async () => {
+      const adminSession = loadSuperAdminSession();
+      if (adminSession && hasSuperAdminSessionShape(adminSession)) {
+        const valid = await isSuperAdminSessionValid(adminSession);
+        if (cancelled) return;
+        if (valid) {
+          setMode('admin');
+          return;
+        }
+        clearSuperAdminSession();
+      }
 
-    if (gateView === 'admin-login') {
-      setMode('admin-login');
-      return;
-    }
+      if (gateView === 'admin-login') {
+        setMode('admin-login');
+        return;
+      }
 
-    if (preferredAuthMode === 'client') {
+      if (preferredAuthMode === 'client') {
+        const client = loadUsableClientSession();
+        if (client?.brand) {
+          if (window.location.search) {
+            window.history.replaceState({}, '', window.location.pathname);
+          }
+          setMode('client');
+          return;
+        }
+        setPreferredAuthMode(null);
+      }
+
+      if (session) {
+        setMode('staff');
+        return;
+      }
+
       const client = loadUsableClientSession();
       if (client?.brand) {
         if (window.location.search) {
@@ -159,24 +184,13 @@ function UnifiedAppGateInner() {
         setMode('client');
         return;
       }
-      setPreferredAuthMode(null);
-    }
 
-    if (session) {
-      setMode('staff');
-      return;
-    }
+      setMode('login');
+    })();
 
-    const client = loadUsableClientSession();
-    if (client?.brand) {
-      if (window.location.search) {
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-      setMode('client');
-      return;
-    }
-
-    setMode('login');
+    return () => {
+      cancelled = true;
+    };
   }, [ready, session, preferredAuthMode, gateView]);
 
   const handleSignOut = useCallback(() => {

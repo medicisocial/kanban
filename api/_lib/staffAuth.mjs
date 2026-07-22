@@ -1,14 +1,22 @@
 import { createHash } from 'crypto';
+import { getStaffSessionSecret } from './sessionSecrets.mjs';
 
 const PROD_STAFF_USERNAME = 'info@medicisocial.com';
-const PROD_STAFF_PASSWORD_HASH = '288a74dd35327615ef98b375a2445d9ebd4c570a5e5d413181986ebf127f45e1';
 
 function getConfiguredUsername() {
-  return (process.env.STAFF_USERNAME || PROD_STAFF_USERNAME).trim();
+  return (process.env.STAFF_USERNAME || process.env.VITE_STAFF_USERNAME || PROD_STAFF_USERNAME)
+    .trim();
 }
 
+/** Password verifier material — server env only. Never used as a session MAC secret. */
 function getConfiguredPasswordHash() {
-  return (process.env.STAFF_PASSWORD_HASH || PROD_STAFF_PASSWORD_HASH).trim().toLowerCase();
+  return (
+    process.env.STAFF_PASSWORD_HASH ||
+    process.env.VITE_STAFF_PASSWORD_HASH ||
+    ''
+  )
+    .trim()
+    .toLowerCase();
 }
 
 function hashPassword(password) {
@@ -25,8 +33,37 @@ function timingSafeEqual(a, b) {
 }
 
 function createSessionSignature(username, expires) {
-  const secret = getConfiguredPasswordHash();
+  const secret = getStaffSessionSecret();
   return hashPassword(`${username}:${expires}:${secret}`);
+}
+
+export function getConfiguredStaffUsername() {
+  return getConfiguredUsername();
+}
+
+export function isOpsStaffEmail(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return false;
+  return normalized === getConfiguredUsername().toLowerCase();
+}
+
+export function verifyStaffPassword(username, password) {
+  if (!isOpsStaffEmail(username)) return false;
+  const expected = getConfiguredPasswordHash();
+  if (!expected) return false;
+  const passwordHash = hashPassword(String(password || '').trim());
+  return timingSafeEqual(passwordHash, expected);
+}
+
+export function createStaffSession(username) {
+  const expires = Date.now() + 7 * 24 * 60 * 60 * 1000;
+  const normalized = String(username || '').trim();
+  const signature = createSessionSignature(normalized, expires);
+  return {
+    username: normalized,
+    expires,
+    signature,
+  };
 }
 
 export function getSessionFromRequest(req) {
@@ -45,6 +82,10 @@ export function isStaffSessionValid(session) {
   if (!session?.username || !session?.expires || !session?.signature) return false;
   if (Date.now() > session.expires) return false;
 
-  const expectedSignature = createSessionSignature(session.username, session.expires);
-  return timingSafeEqual(session.signature, expectedSignature);
+  try {
+    const expectedSignature = createSessionSignature(session.username, session.expires);
+    return timingSafeEqual(session.signature, expectedSignature);
+  } catch {
+    return false;
+  }
 }
