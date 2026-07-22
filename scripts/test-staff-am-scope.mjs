@@ -159,6 +159,30 @@ assert.deepEqual(
   'admin tasks hidden for personal AM',
 );
 
+const allShootPlans = [
+  { id: 'p1', data: { client: 'Plume', dateKey: '2026-08-01', manual: true } },
+  { id: 'p2', data: { client: 'Ara', dateKey: '2026-08-01', manual: true } },
+];
+assert.deepEqual(
+  filterSyncRowsForScope('shoot_plans', allShootPlans, personalAmPlume).map((r) => r.id).sort(),
+  ['p1', 'p2'],
+  'personal AM gets org-wide shoot plans for conflict visibility',
+);
+assert.deepEqual(
+  filterSyncRowsForScope('shoot_plans', allShootPlans, personalAmEmpty).map((r) => r.id).sort(),
+  ['p1', 'p2'],
+  'personal AM still gets shoot plans when allowlist is empty',
+);
+{
+  const writeOtherClientPlan = assertSyncWriteAllowed(
+    'shoot_plans',
+    [{ id: 'p2', data: { client: 'Ara', dateKey: '2026-08-01', manual: true } }],
+    [],
+    personalAmPlume,
+  );
+  assert.equal(writeOtherClientPlan.ok, false, 'writing another client shoot plan stays forbidden');
+}
+
 const company = {
   mode: 'company',
   restricted: false,

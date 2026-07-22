@@ -270,7 +270,8 @@ function filterClientsWorkspaceRow(row, allowedClients) {
 
 /**
  * Filter GET rows for a resolved scope.
- * personal_am + empty allowlist → [] for client-scoped tables (never full dump).
+ * personal_am + empty allowlist → [] for client-scoped tables (never full dump),
+ * except shoot_plans (org-wide read for schedule conflict visibility).
  */
 export function filterSyncRowsForScope(table, rows, scope) {
   if (!scope?.restricted) return rows || [];
@@ -297,6 +298,11 @@ export function filterSyncRowsForScope(table, rows, scope) {
   }
   if (table === 'admin_tasks') {
     return [];
+  }
+  // Org-wide shoot calendar so AMs can see other clients' booked days and
+  // avoid overlaps. Writes stay allowlist-gated in assertSyncWriteAllowed.
+  if (table === 'shoot_plans') {
+    return rows || [];
   }
   if (!CLIENT_SCOPED_TABLES.has(table)) {
     return rows || [];

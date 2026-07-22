@@ -1461,8 +1461,8 @@ export default function AppShell({ onSignOut }) {
         <ShootDay
           cards={workspaceCards}
           ideas={workspaceIdeas}
-          clientFilter={clientFilter}
-          plans={workspacePlans}
+          clientFilter={isPersonalAccountManager ? "all" : clientFilter}
+          plans={isPersonalAccountManager ? plans : workspacePlans}
           focusRequest={shootFocus}
           onMoveClientShootDay={handleMoveClientShootDay}
           onNavigate={handleNavigate}
