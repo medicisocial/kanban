@@ -164,6 +164,10 @@ assert(modalSource.includes('ScriptPanel'), 'VideoIdeaModal uses shared ScriptPa
 
 const vaultSource = readFileSync(new URL('../src/components/IdeaVaultTable.jsx', import.meta.url), 'utf8');
 assert(vaultSource.includes('Script ready'), 'IdeaVaultTable shows script indicator');
-assert(!vaultSource.includes('idea.description'), 'IdeaVaultTable does not render Notes for Client');
+assert(
+  vaultSource.includes('idea.description') && vaultSource.includes('Client notes:'),
+  'IdeaVaultTable surfaces client notes from description',
+);
+assert(!vaultSource.includes('Notes for Client'), 'IdeaVaultTable does not use old Notes for Client label');
 
 console.log('test-idea-script-carryover: ok');

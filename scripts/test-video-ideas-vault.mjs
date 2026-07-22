@@ -431,17 +431,35 @@ assert(!ideaModalSource.includes('Client Comment'), 'idea editor hides client co
 assert(ideaModalSource.includes('onDelete'), 'idea editor accepts Delete handler');
 assert(ideaModalSource.includes('>Delete<') || ideaModalSource.includes('Delete\n'), 'idea editor exposes Delete for existing ideas');
 assert(ideaModalSource.includes('Task Title'), 'idea editor Details use Task Title like calendar cards');
-assert(ideaModalSource.includes('>Notes<') || ideaModalSource.includes('Notes</span>'), 'idea editor shows Notes on Details');
+assert(
+  ideaModalSource.includes('["notes", "Notes"]') || ideaModalSource.includes("['notes', 'Notes']"),
+  'idea editor has a dedicated Notes tab',
+);
+assert(
+  ideaModalSource.includes('activeTab === "notes"') || ideaModalSource.includes("activeTab === 'notes'"),
+  'idea editor renders Notes tab content',
+);
+assert(
+  ideaModalSource.includes('Client notes') && ideaModalSource.includes('form.description'),
+  'idea editor Notes tab edits client notes (description)',
+);
 assert(!ideaModalSource.includes('Notes for Client'), 'idea editor no longer uses Notes for Client label');
 assert(!ideaModalSource.includes('Idea Title'), 'idea editor no longer uses Idea Title label');
 assert(ideaModalSource.includes('Editor points'), 'idea editor can set editor points on Details');
 assert(ideaModalSource.includes('Make one-off project'), 'idea editor puts Make one-off project on Details');
 {
+  const detailsIdx = ideaModalSource.indexOf('activeTab === "details"');
+  const notesTabIdx = ideaModalSource.indexOf('activeTab === "notes"');
   const makeOneOffIdx = ideaModalSource.indexOf('Make one-off project');
-  const notesIdx = ideaModalSource.indexOf('Notes</span>');
+  assert(detailsIdx > 0 && notesTabIdx > detailsIdx, 'idea editor defines Details before Notes tab body');
   assert(
-    makeOneOffIdx > 0 && notesIdx > makeOneOffIdx,
-    'idea editor places Make one-off project above Notes',
+    makeOneOffIdx > detailsIdx && makeOneOffIdx < notesTabIdx,
+    'idea editor keeps Make one-off project on Details (not Notes)',
+  );
+  const detailsSlice = ideaModalSource.slice(detailsIdx, notesTabIdx);
+  assert(
+    !detailsSlice.includes('form.description') && !detailsSlice.includes('Client notes'),
+    'idea editor keeps notes field off Details',
   );
 }
 assert(
