@@ -36,20 +36,11 @@ export const SPOTLIGHT_QUESTION_FIELDS = [
 ];
 
 function getTokenSecret() {
-  const explicit = (
-    process.env.SPOTLIGHT_TOKEN_SECRET ||
-    process.env.CLIENT_PORTAL_SESSION_SECRET ||
-    ''
-  ).trim();
-  if (explicit) return explicit.toLowerCase();
-  const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-  if (serviceRole) {
-    return createHmac('sha256', serviceRole).update('spotlight-token-v1').digest('hex');
+  const secret = (process.env.SPOTLIGHT_TOKEN_SECRET || '').trim();
+  if (!secret) {
+    throw new Error('SPOTLIGHT_TOKEN_SECRET is required.');
   }
-  if (process.env.NODE_ENV !== 'production' && process.env.VERCEL_ENV !== 'production') {
-    return 'medici-spotlight-questionnaire-dev-only';
-  }
-  throw new Error('SPOTLIGHT_TOKEN_SECRET (or SUPABASE_SERVICE_ROLE_KEY) is required.');
+  return secret.toLowerCase();
 }
 
 function escapeHtml(value) {

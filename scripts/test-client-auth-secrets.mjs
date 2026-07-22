@@ -40,8 +40,24 @@ assert(serverStaff.includes('getStaffSessionSecret'), 'server staff sessions use
 assert(!serverSuper.includes(ADMIN_PASSWORD_HASH), 'server must not default super-admin password to admin');
 assert(serverSuper.includes('isSuperAdminConfigured'), 'super-admin requires configured password hash');
 
-assert(sessionSecrets.includes('STAFF_SESSION_SECRET'), 'sessionSecrets defines staff MAC secret');
-assert(sessionSecrets.includes('super-admin-session-v1'), 'sessionSecrets derives super-admin MAC');
+assert(sessionSecrets.includes('STAFF_SESSION_SECRET'), 'sessionSecrets requires STAFF_SESSION_SECRET');
+assert(sessionSecrets.includes('SUPER_ADMIN_SESSION_SECRET'), 'sessionSecrets requires SUPER_ADMIN_SESSION_SECRET');
+assert(sessionSecrets.includes('CLIENT_PORTAL_SESSION_SECRET'), 'sessionSecrets requires CLIENT_PORTAL_SESSION_SECRET');
+assert(!sessionSecrets.includes('deriveFromServiceRole'), 'sessionSecrets must not derive from service role');
+assert(!sessionSecrets.includes('SUPABASE_SERVICE_ROLE_KEY'), 'sessionSecrets must not fall back to service role');
+assert(!sessionSecrets.includes('dev-only'), 'sessionSecrets must not use hardcoded dev fallbacks');
+
+const spotlight = readFileSync(resolve(root, 'api/_lib/spotlightQuestionnaire.mjs'), 'utf8');
+assert(spotlight.includes('SPOTLIGHT_TOKEN_SECRET'), 'spotlight requires SPOTLIGHT_TOKEN_SECRET');
+assert(
+  !spotlight.includes('CLIENT_PORTAL_SESSION_SECRET'),
+  'spotlight must not fall back to CLIENT_PORTAL_SESSION_SECRET',
+);
+assert(
+  !spotlight.includes('SUPABASE_SERVICE_ROLE_KEY'),
+  'spotlight must not fall back to service role',
+);
+assert(!spotlight.includes('dev-only'), 'spotlight must not use hardcoded dev fallbacks');
 
 assert(
   !clientPortalAuth.includes("|| 'medici-client-portal'"),
