@@ -48,16 +48,8 @@ async function readClientRecords(orgId, select) {
   const apiRows = await fetchStaffSyncRows('client_records', orgId);
   if (apiRows !== null) return apiRows;
 
-  const { loadStaffSession, isSharedOperationsLogin, usesPersonalWorkspaceView } =
-    await import('../utils/staffAuth.js');
-  const session = loadStaffSession();
-  if (
-    session &&
-    !isSharedOperationsLogin(session) &&
-    usesPersonalWorkspaceView(session)
-  ) {
-    return [];
-  }
+  const { mustUseStaffSyncOnly } = await import('../lib/staffSyncReadPolicy.js');
+  if (mustUseStaffSyncOnly()) return [];
 
   const directRows = await Promise.race([
     fetchClientRecordRowsDirect(orgId, select),

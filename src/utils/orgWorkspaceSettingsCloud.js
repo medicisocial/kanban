@@ -1,6 +1,7 @@
 import { SUPABASE_ENABLED, supabase } from '../lib/supabaseClient';
 import { getOrgId } from '../lib/orgSession';
 import { fetchStaffSyncRows } from '../lib/staffSyncApi';
+import { mustUseStaffSyncOnly } from '../lib/staffSyncReadPolicy.js';
 
 export { mergeOrgSettingsIntoWorkspace } from './clientsWorkspacePush.js';
 
@@ -31,6 +32,7 @@ function settingsFromSlimClientsBlob(data = {}) {
 
 async function fetchOrgSettingsDirect(orgId) {
   if (!supabase) return null;
+  if (mustUseStaffSyncOnly()) return null;
   const { data, error } = await supabase
     .from('org_workspace_settings')
     .select(ORG_SETTINGS_SELECT)
@@ -50,9 +52,13 @@ async function fetchOrgSettingsFallback(orgId) {
   return settingsFromSlimClientsBlob(workspace?.data);
 }
 
-/** Load org-level settings — parallel Supabase + slim clients blob fallback. */
+/** Load org-level settings — staff-sync for personal sessions; direct only for ops. */
 export async function fetchOrgWorkspaceSettings(orgId = getOrgId()) {
   if (!SUPABASE_ENABLED || !orgId) return null;
+
+  if (mustUseStaffSyncOnly()) {
+    return fetchOrgSettingsFallback(orgId);
+  }
 
   const [direct, fallback] = await Promise.all([
     fetchOrgSettingsDirect(orgId),

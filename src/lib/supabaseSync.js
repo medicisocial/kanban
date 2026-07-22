@@ -3,21 +3,9 @@ import { fetchStaffSyncRows } from './staffSyncApi';
 import { fetchLegacyWorkspaceBlobRows } from './workspaceBlobFallback';
 import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
 import { getOrgId, LEGACY_ORG_ID } from './orgSession';
-import {
-  isSharedOperationsLogin,
-  loadStaffSession,
-  usesPersonalWorkspaceView,
-} from '../utils/staffAuth';
+import { mustUseStaffSyncOnly } from './staffSyncReadPolicy';
 
 const REST_FETCH_TIMEOUT_MS = 5000;
-
-/** Personal team logins must not fall open to org-wide REST/RLS when staff-sync fails. */
-function mustFailClosedWithoutStaffSync() {
-  const session = loadStaffSession();
-  if (!session) return false;
-  if (isSharedOperationsLogin(session)) return false;
-  return usesPersonalWorkspaceView(session);
-}
 
 async function fetchAllViaRest(table, orgId) {
   // Anon REST only works for the legacy org where RLS allows unauthenticated reads.
@@ -80,7 +68,7 @@ function buildTableStore(table, orgId, brandId) {
       // result — never fall through to org-wide REST/anon when the API answered.
       const staffRows = await fetchStaffSyncRows(table, orgId);
       if (staffRows !== null) return staffRows;
-      if (mustFailClosedWithoutStaffSync()) return [];
+      if (mustUseStaffSyncOnly()) return [];
 
       // No staff-sync auth/response. Legacy anon REST only for unauthenticated
       // bootstrap of the legacy org — never used after a scoped staff session.

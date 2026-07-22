@@ -13,6 +13,8 @@ import { reportSyncIssue } from './workspaceSyncHealth';
 import { isEditorFilePickActive } from '../utils/editorPickGuard';
 import { subscribeWorkspaceRefetch } from '../utils/workspaceReload';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { decideRealtimePayloadAction } from './realtimeStaffScope.js';
+import { mustRouteWritesThroughStaffSync } from './staffSyncReadPolicy.js';
 import {
   fetchRowsWithTimeout,
   localCollectionHasRecords,
@@ -175,6 +177,15 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
         scheduleApplyRemote();
         return;
       }
+
+      // Finances / clients blobs are org-wide — restricted sessions must refetch
+      // through staff-sync (or get empty) rather than applying inline.
+      const realtimeAction = decideRealtimePayloadAction({ rowClient: '' });
+      if (realtimeAction === 'refetch') {
+        scheduleApplyRemote();
+        return;
+      }
+      if (realtimeAction === 'drop') return;
 
       const rowOrg = payload.new?.org_id ?? payload.old?.org_id;
       if (rowOrg && rowOrg !== orgId) return;
@@ -351,7 +362,7 @@ export function useSingletonSync({ table, value, setValue, loadLocal, recordId =
           }
         }
 
-        if (canWrite) {
+        if (canWrite && !mustRouteWritesThroughStaffSync()) {
           await store.upsertRecords([{ id: recordId, data: dataToWrite }]);
         } else {
           const ok = await pushStaffSyncSingleton(table, recordId, dataToWrite);

@@ -10,6 +10,8 @@ import { subscribeCardPipelineRefresh } from './cardPipelineBroadcast';
 import { guardCardPushBatch } from './cardPushGuard';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { markRecentlyPushed, wasRecentlyPushed } from './syncEchoGuard';
+import { decideRealtimePayloadAction } from './realtimeStaffScope.js';
+import { mustRouteWritesThroughStaffSync } from './staffSyncReadPolicy.js';
 import {
   augmentLocalWithPendingCreates,
   fetchRowsWithTimeout,
@@ -285,6 +287,24 @@ export function useCollectionSync({
         return;
       }
 
+      const rowClient = String(
+        payload.new?.data?.client ||
+          payload.old?.data?.client ||
+          payload.new?.data?.brand ||
+          payload.old?.data?.brand ||
+          '',
+      ).trim();
+      const realtimeAction = decideRealtimePayloadAction({ rowClient });
+      if (realtimeAction === 'refetch') {
+        // Personal/restricted sessions: never apply org-wide rows inline.
+        // Refetch through staff-sync (same allowlist as GET).
+        scheduleApplyRemote();
+        return;
+      }
+      if (realtimeAction === 'drop') {
+        return;
+      }
+
       const rowOrg = payload.new?.org_id ?? payload.old?.org_id;
       if (rowOrg && rowOrg !== orgId) return;
 
@@ -519,7 +539,10 @@ export function useCollectionSync({
       }
 
       try {
-        const routeThroughStaffSync = table === 'cards' || table === 'team_members';
+        const routeThroughStaffSync =
+          table === 'cards' ||
+          table === 'team_members' ||
+          mustRouteWritesThroughStaffSync();
 
         if (canWrite && !routeThroughStaffSync) {
           if (changed.length) {

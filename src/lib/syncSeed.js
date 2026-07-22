@@ -1,6 +1,7 @@
 import { pushStaffSyncRows } from './staffSyncApi';
 import { ensureStaffSupabaseSession, hasStaffSupabaseSession } from './staffSupabaseAuth';
 import { reportSyncIssue } from './workspaceSyncHealth';
+import { mustRouteWritesThroughStaffSync } from './staffSyncReadPolicy.js';
 
 /**
  * Upload local records when Supabase is empty but this browser still has data.
@@ -16,7 +17,7 @@ export async function seedRecordsToCloud({ table, orgId, store, rows }) {
   }
 
   try {
-    if (canWrite && store && table !== 'cards') {
+    if (canWrite && store && table !== 'cards' && !mustRouteWritesThroughStaffSync()) {
       await store.upsertRecords(rows);
       return true;
     }

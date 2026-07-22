@@ -1,5 +1,6 @@
 import { SUPABASE_ENABLED, supabase } from './supabaseClient';
 import { fetchStaffSyncRows } from './staffSyncApi';
+import { mustUseStaffSyncOnly } from './staffSyncReadPolicy';
 
 const PORTAL_USERS_SELECT =
   'id, username, password_hash, display_name, avatar, brands!inner ( brand_key, org_id )';
@@ -25,8 +26,16 @@ function rowsToCredentialMap(rows = []) {
   return map;
 }
 
+/**
+ * Direct org-wide portal_users read. Must NEVER run for personal/restricted
+ * staff sessions — password hashes would leak across brands.
+ */
 async function fetchPortalUsersDirect(orgId) {
   if (!supabase) return null;
+  if (mustUseStaffSyncOnly()) {
+    console.warn('[portal_users] blocked direct Supabase read for personal staff session');
+    return null;
+  }
   const { data, error } = await supabase
     .from('portal_users')
     .select(PORTAL_USERS_SELECT)
@@ -38,21 +47,27 @@ async function fetchPortalUsersDirect(orgId) {
   return rowsToCredentialMap(Array.isArray(data) ? data : []);
 }
 
-async function fetchPortalUsersFallback(orgId) {
+async function fetchPortalUsersViaStaffSync(orgId) {
   const rows = await fetchStaffSyncRows('portal_users', orgId);
   if (!Array.isArray(rows)) return null;
   return rowsToCredentialMap(rows);
 }
 
-/** Load portal users keyed by brand_key — Supabase direct read, staff-sync fallback. */
+/**
+ * Load portal users keyed by brand_key.
+ * Personal staff sessions: staff-sync only (server allowlist). Never direct.
+ * Ops / no staff session: staff-sync first, then direct as last resort.
+ */
 export async function loadPortalUsers(orgId) {
   if (!SUPABASE_ENABLED || !orgId) return {};
 
-  const direct = await fetchPortalUsersDirect(orgId);
-  if (direct && Object.keys(direct).length) return direct;
+  const viaSync = await fetchPortalUsersViaStaffSync(orgId);
+  if (viaSync !== null) return viaSync;
 
-  const fallback = await fetchPortalUsersFallback(orgId);
-  return fallback || {};
+  if (mustUseStaffSyncOnly()) return {};
+
+  const direct = await fetchPortalUsersDirect(orgId);
+  return direct || {};
 }
 
 /** Subscribe to portal_users changes for an org (refetch on any change). */
@@ -84,4 +99,4 @@ export function subscribePortalUsers(orgId, onChange) {
   };
 }
 
-export { rowsToCredentialMap };
+export { rowsToCredentialMap, fetchPortalUsersDirect };

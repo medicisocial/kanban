@@ -12,9 +12,14 @@ export async function hashPassword(password) {
 }
 
 function getConfiguredUsername() {
-  const fromEnv = (import.meta.env.VITE_STAFF_USERNAME || '').trim();
+  const fromEnv = String(
+    (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_STAFF_USERNAME) ||
+      '',
+  ).trim();
   if (fromEnv) return fromEnv;
-  if (import.meta.env.PROD) return PROD_STAFF_USERNAME;
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.PROD) {
+    return PROD_STAFF_USERNAME;
+  }
   return '';
 }
 
@@ -65,9 +70,10 @@ export function isClientHubPortal() {
 export function isOpsStaffEmail(value) {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return false;
+  if (normalized === PROD_STAFF_USERNAME.toLowerCase()) return true;
   const configured = getConfiguredUsername();
   if (configured && normalized === configured.toLowerCase()) return true;
-  return import.meta.env.PROD && normalized === PROD_STAFF_USERNAME.toLowerCase();
+  return false;
 }
 
 /**

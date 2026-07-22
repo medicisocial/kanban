@@ -12,6 +12,8 @@ import { isCloudSourceOfTruth } from './cloudSourceOfTruth';
 import { reportSyncIssue } from './workspaceSyncHealth';
 import { subscribeWorkspaceRefetch } from '../utils/workspaceReload';
 import { useStaffAuth } from '../context/StaffAuthContext';
+import { decideRealtimePayloadAction } from './realtimeStaffScope.js';
+import { mustRouteWritesThroughStaffSync } from './staffSyncReadPolicy.js';
 import {
   augmentLocalMapWithPendingCreates,
   fetchRowsWithTimeout,
@@ -179,6 +181,20 @@ export function useMapSync({ table, map, setMap, loadLocal, enabled = true }) {
         scheduleApplyRemote();
         return;
       }
+
+      const rowClient = String(
+        payload.new?.data?.client ||
+          payload.old?.data?.client ||
+          payload.new?.id ||
+          payload.old?.id ||
+          '',
+      ).trim();
+      const realtimeAction = decideRealtimePayloadAction({ rowClient });
+      if (realtimeAction === 'refetch') {
+        scheduleApplyRemote();
+        return;
+      }
+      if (realtimeAction === 'drop') return;
 
       const rowOrg = payload.new?.org_id ?? payload.old?.org_id;
       if (rowOrg && rowOrg !== orgId) return;
@@ -411,7 +427,7 @@ export function useMapSync({ table, map, setMap, loadLocal, enabled = true }) {
           }
         }
 
-        if (canWrite) {
+        if (canWrite && !mustRouteWritesThroughStaffSync()) {
           if (rowsToWrite.length) await store.upsertRecords(rowsToWrite);
           if (removed.length) await store.deleteRecords(removed);
         } else if (rowsToWrite.length || removed.length) {
