@@ -56,8 +56,8 @@ const julyJeslyn = buildAccountManagerClientAllowlist({
 });
 assert.deepEqual(
   julyJeslyn.sort(),
-  ['Newbie'].sort(),
-  'July: Jeslyn only gets flat-only Newbie, not August Plume',
+  ['Newbie', 'Plume'].sort(),
+  'July: Jeslyn gets flat Newbie plus future August Plume for early prep',
 );
 
 const augustJeslyn = buildAccountManagerClientAllowlist({
@@ -315,7 +315,10 @@ const jeslynJuly = buildAccountManagerClientAllowlist({
   flatAccountManagers: flatArcoValerie,
   clientNames: ['Arco Fit', 'Henderson Construction'],
 });
-assert.ok(!jeslynJuly.includes('Arco Fit'), 'July still Valerie — Arco not on Jeslyn allowlist');
+assert.ok(
+  jeslynJuly.includes('Arco Fit'),
+  'July: Jeslyn gets Arco early via August assignment',
+);
 assert.ok(jeslynJuly.includes('Henderson Construction'), 'July Henderson stays on Jeslyn allowlist');
 
 // Write gate uses the same allowlist — wrong flat fallback would allow writes to wrong brands
@@ -349,11 +352,11 @@ assert.equal(
     [],
     julyScope,
   ).ok,
-  false,
-  'July write to Arco denied — month map says Valerie, not silent flat over-grant',
+  true,
+  'July write to Arco allowed for Jeslyn via August future assignment',
 );
 
-// --- Single allowlist: current-month AM = full content R/W; instant handoff ---
+// --- Current + future AM allowlist; instant handoff for former AMs ---
 
 const handoffAssignees = {
   '2026-07': {
@@ -365,7 +368,7 @@ const handoffAssignees = {
     Plume: { accountManager: 'Jeslyn', videographer: '', photographer: '' },
   },
   '2026-09': {
-    // Future-only brand — not current in August
+    // Future-only brand relative to August
     Newbie: { accountManager: 'Jeslyn', videographer: '', photographer: '' },
   },
 };
@@ -379,7 +382,12 @@ const jeslynJulyHandoff = buildAccountManagerClientAllowlist({
   flatAccountManagers: handoffFlat,
   clientNames: handoffNames,
 });
-assert.deepEqual(jeslynJulyHandoff.sort(), ['Plume'], 'July: Jeslyn only current for Plume');
+assert.ok(jeslynJulyHandoff.includes('Plume'), 'July: Jeslyn current for Plume');
+assert.ok(
+  jeslynJulyHandoff.includes('Arco'),
+  'July: Jeslyn sees Arco early via August assignment',
+);
+assert.ok(!jeslynJulyHandoff.includes('Never'), 'never assigned → nothing');
 
 const valerieJulyHandoff = buildAccountManagerClientAllowlist({
   staffName: 'Valerie',
@@ -388,7 +396,7 @@ const valerieJulyHandoff = buildAccountManagerClientAllowlist({
   flatAccountManagers: handoffFlat,
   clientNames: handoffNames,
 });
-assert.ok(valerieJulyHandoff.includes('Arco'), 'July: Valerie is current AM for Arco');
+assert.ok(valerieJulyHandoff.includes('Arco'), 'July: Valerie remains current AM for Arco');
 assert.ok(!valerieJulyHandoff.includes('Plume'));
 
 const jeslynAugustHandoff = buildAccountManagerClientAllowlist({
@@ -398,9 +406,12 @@ const jeslynAugustHandoff = buildAccountManagerClientAllowlist({
   flatAccountManagers: handoffFlat,
   clientNames: handoffNames,
 });
-assert.ok(jeslynAugustHandoff.includes('Arco'), 'August handoff: Jeslyn gets Arco immediately');
+assert.ok(jeslynAugustHandoff.includes('Arco'), 'August: Jeslyn current for Arco');
 assert.ok(jeslynAugustHandoff.includes('Plume'));
-assert.ok(!jeslynAugustHandoff.includes('Newbie'), 'future-only assignment is not current access');
+assert.ok(
+  jeslynAugustHandoff.includes('Newbie'),
+  'August: future September Newbie unlocks early for Jeslyn',
+);
 assert.ok(!jeslynAugustHandoff.includes('Never'), 'never assigned → nothing');
 
 const valerieAugustHandoff = buildAccountManagerClientAllowlist({
@@ -413,12 +424,12 @@ const valerieAugustHandoff = buildAccountManagerClientAllowlist({
 assert.ok(!valerieAugustHandoff.includes('Arco'), 'instant handoff: Valerie loses Arco entirely');
 assert.deepEqual(valerieAugustHandoff, [], 'former AM has no lingering clients');
 
-const jeslynAugustContentScope = {
+const jeslynJulyContentScope = {
   mode: 'personal_am',
   restricted: true,
   staffName: 'Jeslyn',
-  allowedClients: jeslynAugustHandoff,
-  yearMonth: '2026-08',
+  allowedClients: jeslynJulyHandoff,
+  yearMonth: '2026-07',
 };
 const contentCards = [
   { id: 'arco-old', data: { client: 'Arco', title: 'past card' } },
@@ -427,19 +438,32 @@ const contentCards = [
   { id: 'never', data: { client: 'Never' } },
 ];
 assert.deepEqual(
-  filterSyncRowsForScope('cards', contentCards, jeslynAugustContentScope).map((r) => r.id).sort(),
-  ['arco-old', 'plume'],
-  'GET: current AM sees full client content (incl. past cards); not future-only/never',
+  filterSyncRowsForScope('cards', contentCards, jeslynJulyContentScope).map((r) => r.id).sort(),
+  ['arco-old', 'newbie', 'plume'],
+  'GET in July: Jeslyn gets current Plume + any future AM brands (Arco Aug, Newbie Sep)',
 );
 assert.equal(
   assertSyncWriteAllowed(
     'cards',
     [{ id: 'w', data: { client: 'Arco' } }],
     [],
-    jeslynAugustContentScope,
+    jeslynJulyContentScope,
   ).ok,
   true,
-  'current-month AM has full write to handed-off client',
+  'July write OK for Arco when Jeslyn is August AM — early prep',
+);
+
+const jeslynAugustContentScope = {
+  mode: 'personal_am',
+  restricted: true,
+  staffName: 'Jeslyn',
+  allowedClients: jeslynAugustHandoff,
+  yearMonth: '2026-08',
+};
+assert.deepEqual(
+  filterSyncRowsForScope('cards', contentCards, jeslynAugustContentScope).map((r) => r.id).sort(),
+  ['arco-old', 'newbie', 'plume'],
+  'GET in August: current + future Newbie',
 );
 
 const valerieAugustContentScope = {
@@ -467,11 +491,11 @@ assert.equal(
 
 // Finances still denied for personal AM (pay stays month-resolved elsewhere).
 assert.equal(
-  filterSyncRowsForScope('finances', [{ id: 'revenue', data: {} }], jeslynAugustContentScope),
+  filterSyncRowsForScope('finances', [{ id: 'revenue', data: {} }], jeslynJulyContentScope),
   null,
 );
 assert.equal(
-  assertSyncWriteAllowed('finances', [{ id: 'revenue', data: {} }], [], jeslynAugustContentScope).ok,
+  assertSyncWriteAllowed('finances', [{ id: 'revenue', data: {} }], [], jeslynJulyContentScope).ok,
   false,
 );
 

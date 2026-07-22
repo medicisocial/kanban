@@ -1,13 +1,13 @@
 /**
- * Current-month Account Manager client allowlist.
- * Uses the SAME resolution as Finances Pay: month lookback, then flat fallback
- * (see resolveClientMonthAssignees in monthAssignees.js).
+ * Account Manager content allowlist for personal staff portal.
+ * Includes clients where staff is the current-month resolved AM (same as Finances
+ * Pay: month lookback, then flat fallback) OR is explicitly named as AM on any
+ * future month row — so next-month assignments unlock content early for prep.
  *
- * Personal AMs get full content read+write for these clients only (entire
- * history). Access follows the current-month assignment with no grace period
+ * Full content read+write for allowlisted clients (entire history). No past linger
  * for former AMs. Finances stay denied separately — pay uses month assignees.
  */
-import { resolveClientMonthAssignees } from './monthAssignees.js';
+import { normalizeAssigneeEntry, resolveClientMonthAssignees } from './monthAssignees.js';
 import { clientBrandNameKey, clientMatchesBrand } from './clients.js';
 
 export function currentYearMonth(now = new Date()) {
@@ -74,10 +74,20 @@ function flatFallbackForClient(client, flatAccountManagers = {}, clientRecords =
   return { accountManager: '', videographer: '', photographer: '' };
 }
 
+function yearMonthKeys(assigneesData = {}) {
+  return Object.keys(assigneesData || {}).filter((key) => /^\d{4}-\d{2}$/.test(key));
+}
+
+function explicitFutureAccountManager(assigneesData, yearMonth, client) {
+  const month = assigneesData?.[yearMonth];
+  if (!month || typeof month !== 'object') return null;
+  if (!Object.prototype.hasOwnProperty.call(month, client)) return null;
+  return normalizeAssigneeEntry(month[client]).accountManager || '';
+}
+
 /**
- * Clients where staffName is the resolved Account Manager for yearMonth.
- * Empty staffName → [] (never "everything").
- * Zero matches → [] (restricted empty set, not a company-wide fallback).
+ * Clients where staffName is the current-month resolved AM, or is explicitly
+ * listed as AM on any future month. Empty staffName / zero matches → [].
  */
 export function buildAccountManagerClientAllowlist({
   staffName,
@@ -97,6 +107,7 @@ export function buildAccountManagerClientAllowlist({
     assigneesData,
     clientRecords,
   });
+  const futureMonths = yearMonthKeys(assigneesData).filter((key) => key > ym);
 
   const allowed = [];
   for (const client of clients) {
@@ -104,7 +115,17 @@ export function buildAccountManagerClientAllowlist({
     const resolved = resolveClientMonthAssignees(assigneesData, ym, client, flat);
     if (staffNamesMatch(resolved.accountManager, staff)) {
       allowed.push(client);
+      continue;
     }
+    let futureHit = false;
+    for (const futureYm of futureMonths) {
+      const am = explicitFutureAccountManager(assigneesData, futureYm, client);
+      if (am !== null && staffNamesMatch(am, staff)) {
+        futureHit = true;
+        break;
+      }
+    }
+    if (futureHit) allowed.push(client);
   }
   return allowed;
 }
