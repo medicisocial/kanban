@@ -6,6 +6,7 @@ import {
   memberMatchesRole,
   mergeTeamMemberUpdates,
   normalizeTeamMember,
+  scrubTeamMemberSecrets,
 } from '../utils/teamMembers';
 import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
@@ -73,20 +74,31 @@ export function useTeamMembers() {
     loadLocal: loadTeamMembers,
   });
 
-  // Keep localStorage as a write-through cache even when Supabase is enabled, so
-  // team-member logins keep working: verifyTeamMemberStaffCredentials() reads
-  // localStorage directly, and the /api/team-auth endpoint reads the KV blob fed
-  // from it. Supabase realtime updates flow into state -> here -> localStorage.
-  // Debounce writes to avoid thrashing during rapid edits.
+  // Keep localStorage as a write-through cache even when Supabase is enabled.
+  // Never persist plaintext passwords or hashes — login is always via /api/team-auth.
   const persistTimerRef = useRef(null);
   useEffect(() => {
     if (!shouldPersistSyncedState(syncLoaded)) return;
     clearTimeout(persistTimerRef.current);
     persistTimerRef.current = setTimeout(() => {
-      writeOrgScopedJson(TEAM_STORAGE_KEY, teamMembers);
+      writeOrgScopedJson(
+        TEAM_STORAGE_KEY,
+        teamMembers.map((member) => scrubTeamMemberSecrets(member)),
+      );
     }, 400);
     return () => clearTimeout(persistTimerRef.current);
   }, [teamMembers, syncLoaded]);
+
+  // Drop one-shot plaintext passwords from memory after they have been queued for sync.
+  useEffect(() => {
+    if (!teamMembers.some((member) => member?.password)) return undefined;
+    const timer = setTimeout(() => {
+      setTeamMembers((prev) =>
+        prev.map((member) => (member?.password ? scrubTeamMemberSecrets(member) : member)),
+      );
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [teamMembers]);
 
   const getMembersByRole = useCallback(
     (role) => teamMembers.filter((member) => memberMatchesRole(member, role)),

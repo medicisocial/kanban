@@ -159,6 +159,44 @@ async function fetchPortalUserRows(orgId) {
   }));
 }
 
+async function fetchTeamMemberRows(orgId) {
+  const rows = await fetchSyncRows('team_members', orgId);
+  if (!Array.isArray(rows)) return [];
+
+  const url = getSupabaseUrl();
+  const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  let hashByMember = new Map();
+  if (url && serviceKey) {
+    const endpoint =
+      `${url}/rest/v1/staff_accounts?select=member_id,password_hash` +
+      `&org_id=eq.${encodeURIComponent(orgId)}`;
+    const response = await fetch(endpoint, {
+      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+    });
+    if (response.ok) {
+      const accounts = await response.json().catch(() => []);
+      hashByMember = new Map(
+        (Array.isArray(accounts) ? accounts : []).map((row) => [
+          String(row.member_id),
+          Boolean(String(row.password_hash || '').trim()),
+        ]),
+      );
+    }
+  }
+
+  return rows.map((row) => {
+    const data = row?.data && typeof row.data === 'object' ? { ...row.data } : {};
+    delete data.password;
+    delete data.password_hash;
+    delete data.passwordHash;
+    const hasPassword = hashByMember.get(String(row.id)) || data.hasPassword === true;
+    return {
+      ...row,
+      data: { ...data, hasPassword },
+    };
+  });
+}
+
 export default async function handler(req, res) {
   if (!(await isAuthorized(req))) {
     return unauthorized(res, 'Unauthorized');
@@ -185,7 +223,9 @@ export default async function handler(req, res) {
           ? await fetchClientRecordRows(orgCheck.orgId)
           : table === 'portal_users'
             ? await fetchPortalUserRows(orgCheck.orgId)
-            : await fetchSyncRows(table, orgCheck.orgId);
+            : table === 'team_members'
+              ? await fetchTeamMemberRows(orgCheck.orgId)
+              : await fetchSyncRows(table, orgCheck.orgId);
       return ok(res, { rows: rows || [] });
     } catch (error) {
       console.error('[staff-sync] fetch failed:', error?.message || error);

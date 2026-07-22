@@ -390,6 +390,56 @@ export async function deleteRecords(table, ids, orgIdOverride) {
   }
 }
 
+/**
+ * Set or clear staff_accounts.password_hash for one team member.
+ * Upserts a stub row when the sync trigger has not created one yet.
+ */
+export async function upsertStaffAccountPasswordHash(orgId, memberId, passwordHash) {
+  const { url, key } = getWriteConfig(orgId);
+  if (!url || !key) throw new Error('Supabase is not configured.');
+  if (!orgId || !memberId) throw new Error('orgId and memberId are required.');
+
+  const endpoint = `${url}/rest/v1/staff_accounts`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify({
+      org_id: orgId,
+      member_id: String(memberId),
+      password_hash: String(passwordHash || ''),
+      password: '',
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`staff_accounts password_hash upsert failed: ${response.status} ${detail}`.trim());
+  }
+}
+
+/** Read staff_accounts.password_hash for one member (service-role). */
+export async function fetchStaffAccountPasswordHash(orgId, memberId) {
+  const { url, key } = getWriteConfig(orgId);
+  if (!url || !key || !orgId || !memberId) return '';
+
+  const endpoint =
+    `${url}/rest/v1/staff_accounts?select=password_hash` +
+    `&org_id=eq.${encodeURIComponent(orgId)}` +
+    `&member_id=eq.${encodeURIComponent(memberId)}` +
+    `&limit=1`;
+  const response = await fetch(endpoint, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
+  if (!response.ok) return '';
+  const rows = await response.json().catch(() => []);
+  return String(rows?.[0]?.password_hash || '');
+}
+
 /** Inserts or updates multiple records. */
 export async function upsertRecords(table, records, orgIdOverride) {
   const rows = (records || []).filter((record) => record?.id);

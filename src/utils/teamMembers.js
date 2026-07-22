@@ -30,6 +30,18 @@ function normalizeMemberAvatar(avatar) {
   return normalized ? serializeClientLogo(normalized) : null;
 }
 
+/** Never persist plaintext or hashes in browser storage / synced blobs. */
+export function scrubTeamMemberSecrets(member) {
+  if (!member || typeof member !== 'object') return member;
+  const {
+    password: _password,
+    password_hash: _passwordHashSnake,
+    passwordHash: _passwordHashCamel,
+    ...rest
+  } = member;
+  return rest;
+}
+
 export function getEffectiveRoles(member) {
   const roles = new Set(member.roles || []);
   for (const leadershipRole of TEAM_LEADERSHIP_ROLES) {
@@ -52,16 +64,19 @@ export function normalizeTeamMember(member, fallbackId) {
     email && isValidPortalEmail(email)
       ? email
       : normalizePortalLogin(member.username || email);
-  return {
+  const hasPassword =
+    member.hasPassword === true ||
+    Boolean(String(member.passwordHash || member.password_hash || '').trim());
+  return scrubTeamMemberSecrets({
     id: member.id || fallbackId || crypto.randomUUID(),
     name,
     roles,
     username,
-    password: typeof member.password === 'string' ? member.password : '',
     email,
     phone: member.phone?.trim() || '',
     avatar: normalizeMemberAvatar(member.avatar),
-  };
+    hasPassword,
+  });
 }
 
 export function mergeTeamMemberUpdates(member, updates) {
@@ -69,12 +84,8 @@ export function mergeTeamMemberUpdates(member, updates) {
     updates.roles !== undefined
       ? updates.roles.filter((role) => TEAM_ROLES.includes(role))
       : member.roles;
-  const password =
-    updates.password !== undefined && updates.password !== ''
-      ? updates.password
-      : member.password || '';
 
-  return normalizeTeamMember(
+  const next = normalizeTeamMember(
     {
       ...member,
       ...updates,
@@ -87,12 +98,23 @@ export function mergeTeamMemberUpdates(member, updates) {
           : updates.username !== undefined
             ? normalizePortalLogin(updates.username)
             : member.username,
-      password,
       phone: updates.phone !== undefined ? updates.phone.trim() : member.phone,
       avatar: updates.avatar !== undefined ? normalizeMemberAvatar(updates.avatar) : member.avatar,
+      hasPassword:
+        updates.hasPassword !== undefined
+          ? updates.hasPassword
+          : Boolean(String(updates.password || '').trim()) || member.hasPassword === true,
     },
     member.id,
   );
+
+  // One-shot plaintext for staff-sync hashing only — never kept on the member after merge
+  // except as a transient field on the returned object when the admin is setting a password.
+  const plainPassword = String(updates.password || '').trim();
+  if (plainPassword) {
+    return { ...next, password: plainPassword, hasPassword: true };
+  }
+  return next;
 }
 
 export function loadTeamMembersFromStorage() {

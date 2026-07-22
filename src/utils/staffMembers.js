@@ -1,4 +1,4 @@
-import { memberMatchesRole, loadTeamMembersFromStorage } from './teamMembers';
+import { memberMatchesRole } from './teamMembers';
 
 import { isSharedOperationsLogin } from './staffAuth';
 
@@ -86,17 +86,8 @@ export function staffMemberHasRole(session, teamMembers, role) {
   return memberMatchesRole(member, role);
 }
 
-/** Team member console login — work email + password from Team settings. */
-export function verifyTeamMemberStaffCredentials(username, password) {
-  const key = username.trim().toLowerCase();
-  if (!key || !password) return null;
-
-  const member = loadTeamMembersFromStorage().find(
-    (entry) =>
-      entry.username?.trim().toLowerCase() === key ||
-      entry.email?.trim().toLowerCase() === key,
-  );
-
-  if (!member?.password || member.password !== password) return null;
-  return member;
+/** Team member console login — always via /api/team-auth (server bcrypt). */
+export function verifyTeamMemberStaffCredentials() {
+  // Local plaintext compare removed: passwords are never stored in the browser.
+  return null;
 }

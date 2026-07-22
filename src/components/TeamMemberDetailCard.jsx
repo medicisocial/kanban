@@ -29,10 +29,12 @@ function buildDraft(member) {
   return {
     name: member.name || '',
     roles: [...(member.roles || [])],
-    password: member.password || '',
+    // Write-only: never hydrate the stored secret into the form.
+    password: '',
     email: member.email || member.username || '',
     phone: member.phone || '',
     pendingAvatar: undefined,
+    hasPassword: member.hasPassword === true,
   };
 }
 
@@ -45,7 +47,7 @@ function memberSnapshotKey(member) {
     email: member.email,
     username: member.username,
     phone: member.phone,
-    password: member.password,
+    hasPassword: member.hasPassword === true,
     avatar: member.avatar,
   });
 }
@@ -123,10 +125,14 @@ export default function TeamMemberDetailCard({
         name: draft.name,
         roles: draft.roles,
         username: email,
-        password: draft.password,
         email,
         phone: draft.phone,
+        hasPassword: Boolean(draft.password?.trim()) || draft.hasPassword === true,
       };
+      // Only send plaintext when the admin is setting/changing a password (write-only field).
+      if (draft.password?.trim()) {
+        payload.password = draft.password.trim();
+      }
 
       if (draft.pendingAvatar !== undefined) {
         payload.avatar =
@@ -134,12 +140,19 @@ export default function TeamMemberDetailCard({
       }
 
       draftDirtyRef.current = false;
-      lastSnapshotRef.current = memberSnapshotKey({ ...member, ...payload });
+      lastSnapshotRef.current = memberSnapshotKey({
+        ...member,
+        ...payload,
+        hasPassword: payload.hasPassword,
+      });
       const result = await onSave(member.id, payload);
       if (result?.ok === false) {
         setError(result.error || 'Could not save team member.');
         return;
       }
+      // Clear the write-only field after a successful save.
+      setDraft((prev) => ({ ...prev, password: '', hasPassword: payload.hasPassword }));
+      draftDirtyRef.current = false;
     } catch (err) {
       setError(err.message || 'Could not save photo.');
     } finally {
@@ -269,11 +282,21 @@ export default function TeamMemberDetailCard({
 
             <div className="sm:col-span-2">
               <PasswordField
-                label="Password"
+                label={draft.hasPassword ? 'New password' : 'Password'}
                 value={draft.password}
                 onChange={(e) => patchDraft((prev) => ({ ...prev, password: e.target.value }))}
                 autoComplete="new-password"
+                placeholder={
+                  draft.hasPassword
+                    ? 'Leave blank to keep the current password'
+                    : 'Set a console login password'
+                }
               />
+              {draft.hasPassword && !draft.password && (
+                <p className="mt-1.5 text-[10px] text-white/35">
+                  A password is set. Enter a new one only if you need to replace it.
+                </p>
+              )}
             </div>
           </div>
 
