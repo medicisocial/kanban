@@ -285,10 +285,21 @@ export async function handleIdeaPortalResponse(orgId, sessionBrand, response = {
       throw new Error('You do not have access to this idea.');
     }
 
-    // Client sessions may only write notes (description). Script fields in the
-    // payload are intentionally ignored — reads still return existing script.
+    // Clients may edit idea details + notes. Script fields are ignored.
     const next = {
       ...existing,
+      title:
+        updates.title !== undefined
+          ? String(updates.title || '').trim() || existing.title || 'New idea'
+          : existing.title,
+      contentType:
+        updates.contentType !== undefined
+          ? String(updates.contentType || '').trim() || existing.contentType
+          : existing.contentType,
+      referenceVideo:
+        updates.referenceVideo !== undefined
+          ? String(updates.referenceVideo || '').trim()
+          : existing.referenceVideo,
       description:
         updates.description !== undefined
           ? String(updates.description || '').trim()

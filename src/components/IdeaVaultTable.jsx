@@ -27,6 +27,8 @@ export default function IdeaVaultTable({
   onOpenIdea,
   readOnly = false,
   hideClientColumn = false,
+  emptyTitle,
+  emptyDescription,
 }) {
   const { getClientColor } = useClientsContext();
   const [expandedId, setExpandedId] = useState(null);
@@ -57,14 +59,16 @@ export default function IdeaVaultTable({
     return (
       <div className={`${surfacePanelClass} px-4 py-16 text-center`}>
         <p className="text-sm text-white/45">
-          {readOnly
-            ? 'No approved concepts waiting for a shoot day.'
-            : 'No approved concepts are waiting to be scheduled.'}
+          {emptyTitle ||
+            (readOnly
+              ? 'No approved concepts waiting for a shoot day.'
+              : 'No approved concepts are waiting to be scheduled.')}
         </p>
         <p className="mt-2 text-xs text-white/35">
-          {readOnly
-            ? 'When your team approves ideas, they appear here until scheduled on a shoot.'
-            : 'When clients approve concepts, they stay here until you schedule them on a shoot.'}
+          {emptyDescription ||
+            (readOnly
+              ? 'When your team approves ideas, they appear here until scheduled on a shoot.'
+              : 'When clients approve concepts, they stay here until you schedule them on a shoot.')}
         </p>
       </div>
     );

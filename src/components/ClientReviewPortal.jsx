@@ -8,11 +8,15 @@ import {
 } from '../utils/clientShare';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import ClientIdeasTable from './clientPortal/ClientIdeasTable';
-import VideoIdeaQuickAdd from './VideoIdeaQuickAdd';
 import IdeaVaultTable from './IdeaVaultTable';
 import ClientIdeaDetailModal from './ClientIdeaDetailModal';
 import SharePortalShell from './clientPortal/SharePortalShell';
-import { btnPrimaryClass, glassSegmentClass, surfacePanelClass } from './clientPortal/clientPortalUi';
+import {
+  btnPrimaryClass,
+  btnSecondaryClass,
+  glassSegmentClass,
+  surfacePanelClass,
+} from './clientPortal/clientPortalUi';
 import { clientMatchesBrand } from '../utils/clients';
 import { getVaultIdeas, isReviewQueueIdeaStatus } from '../utils/videoIdeas';
 
@@ -43,7 +47,9 @@ export default function ClientReviewPortal({
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('review');
   const [detailIdeaId, setDetailIdeaId] = useState(null);
+  const [draftIdea, setDraftIdea] = useState(null);
   const [detailSaving, setDetailSaving] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const clientColor = getClientColor(client);
   const clientLogo = getClientLogo(client);
@@ -79,19 +85,20 @@ export default function ClientReviewPortal({
       return;
     }
 
-    const snapshot = parseShareHash();
-    const merged = mergePortalIdeas(ideas, client, snapshot).filter(
-      (idea) => !respondedIds.includes(idea.id),
-    );
-    setLocalIdeas(merged);
-    setDone(merged.length === 0);
+    if (!client) return;
+    const shared = parseShareHash();
+    if (shared?.type === 'ideas' && shared.client === client) {
+      setLocalIdeas(mergePortalIdeas(ideas, shared.ideas || [], client));
+      setDone(false);
+    } else {
+      setLocalIdeas(pendingIdeas);
+      setDone(pendingIdeas.length === 0);
+    }
   }, [ideas, client, respondedIds, useCloudSync, pendingIdeas]);
 
   const recordResponse = (response) => {
-    setSessionResponses((prev) => [...prev.filter((r) => r.ideaId !== response.ideaId), response]);
-    if (!canSyncLocally) {
-      queueClientResponse(response);
-    }
+    queueClientResponse(response);
+    setSessionResponses((prev) => [...prev, response]);
   };
 
   const markResponded = (ideaId) => {
@@ -114,10 +121,10 @@ export default function ClientReviewPortal({
     }
   };
 
-  const buildIdeaPayload = (ideaData) => ({
+  const buildIdeaPayload = (ideaData = {}) => ({
     id: crypto.randomUUID(),
     client,
-    title: ideaData.title,
+    title: ideaData.title || 'New idea',
     referenceVideo: ideaData.referenceVideo || '',
     description: ideaData.description || '',
     contentType: ideaData.contentType || 'Reel',
@@ -128,40 +135,22 @@ export default function ClientReviewPortal({
     reviewedAt: null,
   });
 
-  const handleAddIdea = async (ideaData) => {
-    const idea = buildIdeaPayload(ideaData);
-
-    setActionError('');
-    try {
-      if (useCloudSync && onCloudQueueResponse) {
-        await onCloudQueueResponse({
-          action: 'create',
-          idea,
-          client,
-          timestamp: Date.now(),
-        });
-        return;
-      }
-
-      if (onAddIdea) {
-        onAddIdea(ideaData);
-        return;
-      }
-
-      throw new Error('Could not save your idea.');
-    } catch (err) {
-      setActionError(err.message || 'Could not save your idea. Please try again.');
-    }
+  const openCreatedIdea = (idea) => {
+    setDraftIdea(idea);
+    setDetailIdeaId(idea.id);
   };
 
-  const handleAddIdeaToBank = async (ideaData) => {
-    const idea = {
-      ...buildIdeaPayload(ideaData),
-      status: 'approved',
-      reviewedAt: Date.now(),
-    };
+  const handleCreateIdea = async ({ toBank = false } = {}) => {
+    const idea = buildIdeaPayload({ title: 'New idea' });
+    if (toBank) {
+      idea.status = 'approved';
+      idea.reviewedAt = Date.now();
+    }
 
     setActionError('');
+    setCreating(true);
+    openCreatedIdea(idea);
+
     try {
       if (useCloudSync && onCloudQueueResponse) {
         await onCloudQueueResponse({
@@ -173,19 +162,45 @@ export default function ClientReviewPortal({
         return;
       }
 
-      if (onAddIdeaToBank) {
-        onAddIdeaToBank(ideaData);
+      if (toBank) {
+        if (!onAddIdeaToBank) throw new Error('Could not save to the bank.');
+        onAddIdeaToBank({
+          id: idea.id,
+          title: idea.title,
+          referenceVideo: idea.referenceVideo,
+          description: idea.description,
+          contentType: idea.contentType,
+          clientComment: idea.clientComment,
+          status: 'approved',
+          reviewedAt: idea.reviewedAt,
+        });
         return;
       }
 
-      throw new Error('Could not save to the bank.');
+      if (!onAddIdea) throw new Error('Could not save your idea.');
+      onAddIdea({
+        id: idea.id,
+        title: idea.title,
+        referenceVideo: idea.referenceVideo,
+        description: idea.description,
+        contentType: idea.contentType,
+        clientComment: idea.clientComment,
+        status: 'pending',
+      });
     } catch (err) {
-      setActionError(err.message || 'Could not save to the bank. Please try again.');
+      setDetailIdeaId(null);
+      setDraftIdea(null);
+      setActionError(err.message || 'Could not create your idea. Please try again.');
+    } finally {
+      setCreating(false);
     }
   };
 
   const handleApprove = async (ideaId, comment) => {
-    const idea = pendingIdeas.find((i) => i.id === ideaId) || ideas.find((i) => i.id === ideaId);
+    const idea =
+      pendingIdeas.find((i) => i.id === ideaId) ||
+      ideas.find((i) => i.id === ideaId) ||
+      (draftIdea?.id === ideaId ? draftIdea : null);
     if (!idea || idea.status !== 'pending') return;
 
     const response = {
@@ -208,6 +223,7 @@ export default function ClientReviewPortal({
         if (next.length === 0) setDone(true);
         return next;
       });
+      setDraftIdea(null);
     } catch (err) {
       setActionError(err.message || 'Could not save your approval. Please try again.');
     } finally {
@@ -226,7 +242,10 @@ export default function ClientReviewPortal({
       return;
     }
 
-    const idea = pendingIdeas.find((i) => i.id === ideaId) || ideas.find((i) => i.id === ideaId);
+    const idea =
+      pendingIdeas.find((i) => i.id === ideaId) ||
+      ideas.find((i) => i.id === ideaId) ||
+      (draftIdea?.id === ideaId ? draftIdea : null);
     if (!idea || idea.status !== 'pending') return;
 
     const response = {
@@ -249,6 +268,7 @@ export default function ClientReviewPortal({
         if (next.length === 0) setDone(true);
         return next;
       });
+      setDraftIdea(null);
     } catch (err) {
       setActionError(err.message || 'Could not save your response. Please try again.');
     } finally {
@@ -273,7 +293,8 @@ export default function ClientReviewPortal({
 
   const detailIdea =
     (detailIdeaId &&
-      (vaultIdeas.find((idea) => idea.id === detailIdeaId) ||
+      ((draftIdea?.id === detailIdeaId ? draftIdea : null) ||
+        vaultIdeas.find((idea) => idea.id === detailIdeaId) ||
         reviewIdeas.find((idea) => idea.id === detailIdeaId) ||
         brandIdeas.find((idea) => idea.id === detailIdeaId) ||
         localIdeas.find((idea) => idea.id === detailIdeaId))) ||
@@ -291,9 +312,22 @@ export default function ClientReviewPortal({
           client,
           timestamp: Date.now(),
         });
+        setDraftIdea((prev) =>
+          prev?.id === ideaId
+            ? {
+                ...prev,
+                ...updates,
+                title: updates.title ?? prev.title,
+                contentType: updates.contentType ?? prev.contentType,
+                referenceVideo: updates.referenceVideo ?? prev.referenceVideo,
+                description:
+                  updates.description !== undefined ? updates.description : prev.description,
+              }
+            : prev,
+        );
         return;
       }
-      throw new Error('Could not save your notes.');
+      throw new Error('Could not save your idea.');
     } finally {
       setDetailSaving(false);
     }
@@ -301,12 +335,37 @@ export default function ClientReviewPortal({
 
   const pendingCount = pendingIdeas.length;
 
+  const displayedReviewIdeas = useMemo(() => {
+    if (!draftIdea || !isReviewQueueIdeaStatus(draftIdea.status)) return reviewIdeas;
+    if (reviewIdeas.some((idea) => idea.id === draftIdea.id)) return reviewIdeas;
+    return [draftIdea, ...reviewIdeas];
+  }, [draftIdea, reviewIdeas]);
+
+  const displayedVaultIdeas = useMemo(() => {
+    if (!draftIdea || draftIdea.status !== 'approved') return vaultIdeas;
+    if (vaultIdeas.some((idea) => idea.id === draftIdea.id)) return vaultIdeas;
+    return [draftIdea, ...vaultIdeas];
+  }, [draftIdea, vaultIdeas]);
+
   const tabClass = (tabId) =>
     `px-4 py-1.5 text-xs font-medium uppercase tracking-wider transition ${
       activeTab === tabId
         ? 'rounded-sm bg-[#810100] text-white'
         : 'text-white/45 hover:text-white'
     }`;
+
+  const addActions = (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <button
+        type="button"
+        onClick={() => handleCreateIdea({ toBank: activeTab === 'bank' })}
+        className={`${btnPrimaryClass} py-1.5 text-[10px]`}
+        disabled={creating}
+      >
+        + New idea
+      </button>
+    </div>
+  );
 
   if (embedded) {
     return (
@@ -327,18 +386,21 @@ export default function ClientReviewPortal({
           )}
         </ClientPortalSectionHeader>
 
-        <div className={`${glassSegmentClass} mb-5 flex w-fit gap-0.5 p-0.5`}>
-          {VAULT_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={tabClass(tab.id)}
-            >
-              {tab.label}
-              {tab.id === 'bank' && vaultIdeas.length > 0 ? ` (${vaultIdeas.length})` : ''}
-            </button>
-          ))}
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className={`${glassSegmentClass} flex w-fit gap-0.5 p-0.5`}>
+            {VAULT_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={tabClass(tab.id)}
+              >
+                {tab.label}
+                {tab.id === 'bank' && vaultIdeas.length > 0 ? ` (${vaultIdeas.length})` : ''}
+              </button>
+            ))}
+          </div>
+          {addActions}
         </div>
 
         {actionError && (
@@ -348,51 +410,45 @@ export default function ClientReviewPortal({
         )}
 
         {activeTab === 'review' ? (
-          <>
-            <VideoIdeaQuickAdd
-              clientOnly={client}
-              onAdd={handleAddIdea}
-              onAddToBank={handleAddIdeaToBank}
-              submitLabel="Submit for review"
-              hint="Submit for team review, or add straight to Approved."
-            />
-
-            <ClientIdeasTable
-              ideas={reviewIdeas}
-              client={client}
-              clientColor={clientColor}
-              clientLogo={clientLogo}
-              onApprove={handleApprove}
-              onDecline={handleDecline}
-              onOpenIdea={(idea) => setDetailIdeaId(idea.id)}
-              busyIds={busyIds}
-            />
-          </>
+          <ClientIdeasTable
+            ideas={displayedReviewIdeas}
+            client={client}
+            clientColor={clientColor}
+            clientLogo={clientLogo}
+            onApprove={handleApprove}
+            onDecline={handleDecline}
+            onOpenIdea={(idea) => {
+              setDraftIdea((prev) => (prev?.id === idea.id ? prev : null));
+              setDetailIdeaId(idea.id);
+            }}
+            busyIds={busyIds}
+          />
         ) : (
-          <>
-            <VideoIdeaQuickAdd
-              clientOnly={client}
-              variant="bank"
-              onAddToBank={handleAddIdeaToBank}
-            />
-            <IdeaVaultTable
-              ideas={vaultIdeas}
-              readOnly
-              hideClientColumn
-              onOpenIdea={(idea) => setDetailIdeaId(idea.id)}
-            />
-          </>
+          <IdeaVaultTable
+            ideas={displayedVaultIdeas}
+            readOnly
+            hideClientColumn
+            emptyTitle="No approved ideas yet"
+            emptyDescription="Click + New idea to add a concept straight to Approved. It opens so you can fill in the details."
+            onOpenIdea={(idea) => {
+              setDraftIdea((prev) => (prev?.id === idea.id ? prev : null));
+              setDetailIdeaId(idea.id);
+            }}
+          />
         )}
 
         {detailIdea && (
           <ClientIdeaDetailModal
             idea={detailIdea}
-            onClose={() => setDetailIdeaId(null)}
+            onClose={() => {
+              setDetailIdeaId(null);
+              setDraftIdea(null);
+            }}
             onSave={handleUpdateIdeaDetails}
             onApprove={handleApprove}
             onDecline={handleDecline}
             canDecide={detailIdea.status === 'pending'}
-            saving={detailSaving || busyIds.has(detailIdea.id)}
+            saving={detailSaving || creating || busyIds.has(detailIdea.id)}
           />
         )}
       </section>
@@ -433,14 +489,15 @@ export default function ClientReviewPortal({
             <div className="mt-6 text-left">
               <p className="text-sm text-white/55">Send your approvals to Medici Social</p>
               <p className="mt-1 text-xs text-white/35">
-                Copy this link and send it to your account manager so approved ideas can be added to the board.
+                Copy this link and send it to your account manager so approved ideas can be added to
+                the board.
               </p>
               <button
                 type="button"
                 onClick={copyImportLink}
-                className={`${btnPrimaryClass} mt-3 py-2 text-[11px]`}
+                className={`${btnSecondaryClass} mt-3`}
               >
-                {copied ? 'Link copied!' : 'Copy approval link'}
+                {copied ? 'Copied' : 'Copy import link'}
               </button>
             </div>
           )}

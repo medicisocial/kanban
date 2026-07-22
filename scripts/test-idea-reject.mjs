@@ -73,7 +73,8 @@ assert(
   'client modal blocks reject without a note',
 );
 assert(
-  modalSource.includes('never sync into description'),
+  modalSource.includes('without writing rejection text into description') ||
+    modalSource.includes('includeNotes: false'),
   'client reject does not sync note into description',
 );
 assert(
@@ -105,6 +106,33 @@ assert(
 const rejectBlockStart = portalResponses.indexOf("action === 'rejected'");
 const rejectBlock = portalResponses.slice(rejectBlockStart, rejectBlockStart + 500);
 assert(!rejectBlock.includes('description:'), 'reject action does not write description');
+
+const updateBlockStart = portalResponses.indexOf(
+  'Clients may edit idea details + notes. Script fields are ignored.',
+);
+const updateBlock = portalResponses.slice(updateBlockStart, updateBlockStart + 900);
+assert(updateBlock.includes('updates.title'), 'client update can edit title');
+assert(updateBlock.includes('updates.description'), 'client update can edit notes');
+assert(!updateBlock.includes('updates.scriptHook'), 'client update cannot edit scriptHook');
+
+const reviewPortalSource = readFileSync(
+  new URL('../src/components/ClientReviewPortal.jsx', import.meta.url),
+  'utf8',
+);
+assert(reviewPortalSource.includes('+ New idea'), 'client vault has + New idea button');
+assert(
+  !reviewPortalSource.includes('VideoIdeaQuickAdd'),
+  'client vault no longer uses inline New Idea form',
+);
+assert(
+  reviewPortalSource.includes('openCreatedIdea(idea)'),
+  'client + New idea creates an idea and opens it like Add card',
+);
+assert(
+  reviewPortalSource.includes('displayedVaultIdeas') &&
+    reviewPortalSource.includes("toBank: activeTab === 'bank'"),
+  'Approved tab uses the same create-and-open flow',
+);
 
 const videoIdeasSource = readFileSync(
   new URL('../src/components/VideoIdeas.jsx', import.meta.url),
