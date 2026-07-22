@@ -88,3 +88,29 @@ export function resolveClientMonthAssignees(assigneesData, yearMonth, client, fl
         : String(flatFallback.photographer || '').trim(),
   };
 }
+
+/**
+ * Finances assignees month map. Handles double-wrapped payloads where the
+ * sync layer stored `{ id, data: { YYYY-MM: ... } }` inside the row's data.
+ */
+export function unwrapAssigneesMonthMap(raw) {
+  let data = raw && typeof raw === 'object' ? raw : null;
+  if (!data) return {};
+
+  if (
+    data.data &&
+    typeof data.data === 'object' &&
+    !Array.isArray(data.data) &&
+    !looksLikeYearMonthMap(data) &&
+    looksLikeYearMonthMap(data.data)
+  ) {
+    data = data.data;
+  }
+
+  return data && typeof data === 'object' ? data : {};
+}
+
+function looksLikeYearMonthMap(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  return Object.keys(value).some((key) => /^\d{4}-\d{2}$/.test(key));
+}

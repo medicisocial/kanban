@@ -9,7 +9,12 @@ import {
 import {
   filterSyncRowsForScope,
   assertSyncWriteAllowed,
+  extractAssigneesData,
 } from '../api/_lib/staffSyncScope.mjs';
+import {
+  unwrapAssigneesMonthMap,
+  resolveClientMonthAssignees,
+} from '../src/utils/monthAssignees.js';
 
 // --- Same month-resolution helper as Finances Pay ---
 
@@ -218,5 +223,120 @@ const navSource = readFileSync(
 );
 assert.ok(navSource.includes('personalAmNav'), 'sidebar supports personal AM nav mode');
 assert.ok(navSource.includes('if (personalAmNav)'), 'personal AM nav skips Planning/Admin sections');
+
+// --- Double-wrapped finances.assignees (production shape) ---
+// Without unwrap, month keys are missed and resolve silently falls back to flat AM.
+const doubleWrappedFinanceRows = [
+  {
+    id: 'assignees',
+    data: {
+      id: 'assignees',
+      data: {
+        '2026-07': {
+          'Arco Fit': {
+            accountManager: 'Valerie Landeros',
+            videographer: 'Jordan Nguyen',
+            photographer: 'Jordan Nguyen',
+          },
+          'Henderson Construction': {
+            accountManager: 'Jeslyn Nguyen',
+            videographer: 'Jordan Nguyen',
+            photographer: 'Jordan Nguyen',
+          },
+        },
+        '2026-08': {
+          'Arco Fit': {
+            accountManager: 'Jeslyn Nguyen',
+            videographer: 'Jordan Nguyen',
+            photographer: 'Jordan Nguyen',
+          },
+          'Henderson Construction': {
+            accountManager: 'Jeslyn Nguyen',
+            videographer: 'Jordan Nguyen',
+            photographer: 'Jordan Nguyen',
+          },
+        },
+      },
+    },
+  },
+];
+
+const unwrapped = extractAssigneesData(doubleWrappedFinanceRows);
+assert.ok(unwrapped['2026-07'], 'unwrap exposes 2026-07 month keys');
+assert.ok(unwrapped['2026-08'], 'unwrap exposes 2026-08 month keys');
+assert.equal(
+  unwrapAssigneesMonthMap(doubleWrappedFinanceRows[0].data)['2026-08']['Arco Fit'].accountManager,
+  'Jeslyn Nguyen',
+);
+
+const flatArcoValerie = {
+  'Arco Fit': 'Valerie Landeros',
+  'Henderson Construction': 'Jeslyn Nguyen',
+};
+
+// Broken extract (raw nested object) would miss months and over-grant via stale flat:
+const brokenNested = doubleWrappedFinanceRows[0].data; // { id, data: months } — NOT a month map
+assert.equal(
+  resolveClientMonthAssignees(brokenNested, '2026-08', 'Arco Fit', {
+    accountManager: flatArcoValerie['Arco Fit'],
+  }).accountManager,
+  'Valerie Landeros',
+  'without unwrap, August Jeslyn is missed and flat Valerie wins (silent fail-open to flat)',
+);
+
+const jeslynAugust = buildAccountManagerClientAllowlist({
+  staffName: 'Jeslyn Nguyen',
+  yearMonth: '2026-08',
+  assigneesData: unwrapped,
+  flatAccountManagers: flatArcoValerie,
+  clientNames: ['Arco Fit', 'Henderson Construction'],
+});
+assert.ok(jeslynAugust.includes('Arco Fit'), 'after unwrap, August allowlist includes Arco for Jeslyn');
+assert.ok(jeslynAugust.includes('Henderson Construction'));
+
+const jeslynJuly = buildAccountManagerClientAllowlist({
+  staffName: 'Jeslyn Nguyen',
+  yearMonth: '2026-07',
+  assigneesData: unwrapped,
+  flatAccountManagers: flatArcoValerie,
+  clientNames: ['Arco Fit', 'Henderson Construction'],
+});
+assert.ok(!jeslynJuly.includes('Arco Fit'), 'July still Valerie — Arco not on Jeslyn allowlist');
+assert.ok(jeslynJuly.includes('Henderson Construction'), 'July Henderson stays on Jeslyn allowlist');
+
+// Write gate uses the same allowlist — wrong flat fallback would allow writes to wrong brands
+const augustScope = {
+  mode: 'personal_am',
+  restricted: true,
+  staffName: 'Jeslyn Nguyen',
+  allowedClients: jeslynAugust,
+  yearMonth: '2026-08',
+};
+assert.equal(
+  assertSyncWriteAllowed(
+    'cards',
+    [{ id: '1', data: { client: 'Arco Fit' } }],
+    [],
+    augustScope,
+  ).ok,
+  true,
+  'August write to Arco allowed after correct unwrap',
+);
+
+const julyScope = {
+  ...augustScope,
+  allowedClients: jeslynJuly,
+  yearMonth: '2026-07',
+};
+assert.equal(
+  assertSyncWriteAllowed(
+    'cards',
+    [{ id: '1', data: { client: 'Arco Fit' } }],
+    [],
+    julyScope,
+  ).ok,
+  false,
+  'July write to Arco denied — month map says Valerie, not silent flat over-grant',
+);
 
 console.log('test-staff-am-scope: ok');

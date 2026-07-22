@@ -13,6 +13,7 @@ import {
   staffNamesMatch,
 } from '../../src/utils/staffClientAllowlist.js';
 import { clientBrandNameKey } from '../../src/utils/clients.js';
+import { unwrapAssigneesMonthMap } from '../../src/utils/monthAssignees.js';
 
 const LEADERSHIP_ROLES = ['Owner', 'Creative Director'];
 const LEADERSHIP_COVERS_ACCOUNT_MANAGER = true;
@@ -87,9 +88,15 @@ function memberHasAccountManager(member) {
   return memberHasRole(member, 'Account Manager');
 }
 
-function extractAssigneesData(financeRows) {
+/**
+ * Unwrap finances.assignees payload for allowlist resolution.
+ * Double-wrapped rows must be unwrapped — otherwise month keys are missed and
+ * resolveClientMonthAssignees silently falls back to flat account_manager
+ * (no throw/log), which can over-grant stale flat AMs or under-grant month AMs.
+ */
+export function extractAssigneesData(financeRows) {
   const row = (financeRows || []).find((entry) => String(entry?.id) === 'assignees');
-  return row?.data && typeof row.data === 'object' ? row.data : {};
+  return unwrapAssigneesMonthMap(row?.data);
 }
 
 function extractFlatAccountManagers(clientRecords, clientBlobRows) {

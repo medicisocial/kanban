@@ -7,6 +7,7 @@ import {
   resolveClientMonthAssignee,
   resolveClientMonthAssignees,
   shiftYearMonth,
+  unwrapAssigneesMonthMap,
 } from '../src/utils/monthAssignees.js';
 
 assert.equal(previousYearMonth('2026-07'), '2026-06');
@@ -99,6 +100,22 @@ assert.deepEqual(
 assert.equal(
   resolveClientMonthAssignee(data, '2026-07', 'Plume', 'accountManager'),
   'Valerie Landeros',
+);
+
+// Double-wrapped assignees blob (staff-sync / DB shape).
+const wrapped = {
+  id: 'assignees',
+  data: {
+    '2026-08': { Plume: { accountManager: 'Jeslyn', videographer: '', photographer: '' } },
+  },
+};
+assert.equal(
+  unwrapAssigneesMonthMap(wrapped)['2026-08'].Plume.accountManager,
+  'Jeslyn',
+);
+assert.equal(
+  resolveClientMonthAssignee(unwrapAssigneesMonthMap(wrapped), '2026-08', 'Plume', 'accountManager'),
+  'Jeslyn',
 );
 
 console.log('test-month-assignees: ok');
