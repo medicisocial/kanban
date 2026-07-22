@@ -1,14 +1,24 @@
 import lzString from 'lz-string';
 import { decodeSharePayload } from '../api/_lib/sharePayload.mjs';
-import { getStructuredScript } from '../src/utils/scriptFields.js';
 
 const { compressToEncodedURIComponent } = lzString;
+
+/** Keep in sync with getStructuredScript fields used by buildContentReviewShareUrl. */
+function scriptFieldsForShare(card) {
+  const hook = String(card?.shootScriptHook || card?.scriptHook || '').trim();
+  const body = String(
+    card?.shootScriptBody || card?.scriptBody || card?.shootScript || card?.script || '',
+  ).trim();
+  const overlays = String(card?.shootTextOverlays || card?.scriptOverlays || '').trim();
+  const caption = String(card?.caption || '').trim();
+  return { hook, body, overlays, caption };
+}
 
 function buildContentReviewShareUrl(client, reviewCards) {
   const payload = compressToEncodedURIComponent(JSON.stringify({
     v: 2,
     i: reviewCards.map((card) => {
-      const script = getStructuredScript(card);
+      const script = scriptFieldsForShare(card);
       return [
         card.id,
         card.title,
