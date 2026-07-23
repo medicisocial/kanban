@@ -8,6 +8,7 @@ import PostSlidesPanel from './PostSlidesPanel';
 import ReferenceVideoLink, { ReferenceMusicLink } from './clientPortal/ReferenceVideoLink';
 import {
   btnPrimaryClass,
+  btnRejectClass,
   btnSecondaryClass,
   glassSegmentClass,
   inputClass,
@@ -281,7 +282,7 @@ export default function ClientIdeaDetailModal({
           <button
             type="button"
             onClick={handleSave}
-            className={btnPrimaryClass}
+            className={btnSecondaryClass}
             disabled={saving || !dirty}
           >
             {saving ? 'Saving…' : 'Save'}
@@ -291,7 +292,7 @@ export default function ClientIdeaDetailModal({
               <button
                 type="button"
                 onClick={handleApprove}
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-40"
+                className={btnPrimaryClass}
                 disabled={saving}
               >
                 Approve
@@ -299,7 +300,7 @@ export default function ClientIdeaDetailModal({
               <button
                 type="button"
                 onClick={handleReject}
-                className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-500/20 disabled:opacity-40"
+                className={btnRejectClass}
                 disabled={saving}
               >
                 Reject

@@ -13,6 +13,10 @@ export const btnPrimaryClass =
 export const btnSecondaryClass =
   'inline-flex items-center justify-center rounded-sm border border-white/20 bg-transparent px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.2em] text-white/75 transition-all duration-300 hover:border-white/35 hover:bg-white/[0.04] hover:text-white disabled:cursor-not-allowed disabled:opacity-40';
 
+/** Destructive / reject actions on client portal review surfaces. */
+export const btnRejectClass =
+  'inline-flex items-center justify-center rounded-sm bg-rose-600 px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition-opacity duration-300 hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-40';
+
 export const btnGhostClass =
   'inline-flex items-center justify-center rounded-sm border border-transparent px-3 py-2 text-[11px] font-medium uppercase tracking-[0.18em] text-white/55 transition-all duration-300 hover:bg-white/[0.04] hover:text-white/90';
 

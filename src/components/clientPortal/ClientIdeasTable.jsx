@@ -7,6 +7,7 @@ import ReferenceVideoLink, { ReferenceMusicLink } from './ReferenceVideoLink';
 import {
   btnGhostClass,
   btnPrimaryClass,
+  btnRejectClass,
   btnSecondaryClass,
   formatPortalDate,
   inputClass,
@@ -188,7 +189,7 @@ export default function ClientIdeasTable({
                       type="button"
                       onClick={() => startReject(idea)}
                       disabled={isBusy}
-                      className={`${btnSecondaryClass} min-h-10 flex-1 px-3 py-2 text-[11px] disabled:opacity-40`}
+                      className={`${btnRejectClass} min-h-10 flex-1 px-3 py-2 text-[11px] disabled:opacity-40`}
                     >
                       Reject
                     </button>
@@ -233,7 +234,7 @@ export default function ClientIdeasTable({
                             type="button"
                             onClick={() => submitDecline(idea.id)}
                             disabled={!comment.trim()}
-                            className={`${btnSecondaryClass} min-h-10 flex-1 text-[11px] disabled:opacity-40`}
+                            className={`${btnRejectClass} min-h-10 flex-1 text-[11px] disabled:opacity-40`}
                           >
                             Submit reject
                           </button>
@@ -330,7 +331,7 @@ export default function ClientIdeasTable({
                               type="button"
                               onClick={() => startReject(idea)}
                               disabled={isBusy}
-                              className={`${btnSecondaryClass} px-2.5 py-1.5 text-[10px] disabled:opacity-40`}
+                              className={`${btnRejectClass} px-2.5 py-1.5 text-[10px] disabled:opacity-40`}
                             >
                               Reject
                             </button>
@@ -394,7 +395,7 @@ export default function ClientIdeasTable({
                                     type="button"
                                     onClick={() => submitDecline(idea.id)}
                                     disabled={!comment.trim()}
-                                    className={`${btnPrimaryClass} px-3 py-1.5 text-[10px] uppercase tracking-wider disabled:opacity-40`}
+                                    className={`${btnRejectClass} px-3 py-1.5 text-[10px] uppercase tracking-wider disabled:opacity-40`}
                                   >
                                     Submit reject
                                   </button>
