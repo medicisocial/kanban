@@ -27,6 +27,15 @@ export const PERSONAL_AM_ALLOWED_VIEWS = new Set([
   'metrics',
 ]);
 
+/** Personal Editors: My work, Editors queue, and full client profiles. */
+export const PERSONAL_EDITOR_ALLOWED_VIEWS = new Set([
+  'home',
+  'todo',
+  'todo-editor',
+  'clients',
+  'client-files',
+]);
+
 export function buildStaffWorkspaceScope(session, teamMembers) {
   const agencyOps = isSharedOperationsLogin(session);
   const staffName = agencyOps ? '' : resolveStaffMemberName(session, teamMembers);
@@ -37,6 +46,16 @@ export function buildStaffWorkspaceScope(session, teamMembers) {
   const member = resolveStaffMember(session, teamMembers);
   const isPersonalAccountManager =
     personalTaskScope && member && memberMatchesRole(member, 'Account Manager');
+  // Editor-only personal console (AM nav wins when they also have AM).
+  const isPersonalEditor =
+    personalTaskScope &&
+    !isPersonalAccountManager &&
+    member &&
+    memberMatchesRole(member, 'Editor');
+
+  let allowedNavViews = null;
+  if (isPersonalAccountManager) allowedNavViews = PERSONAL_AM_ALLOWED_VIEWS;
+  else if (isPersonalEditor) allowedNavViews = PERSONAL_EDITOR_ALLOWED_VIEWS;
 
   return {
     staffName,
@@ -44,10 +63,13 @@ export function buildStaffWorkspaceScope(session, teamMembers) {
     companyWideView,
     personalTaskScope,
     isPersonalAccountManager,
+    isPersonalEditor,
     restrictAssigneeFilter: personalTaskScope,
     defaultAssignee: personalTaskScope ? staffName : 'all',
-    visibleCompanyTaskTabs: getVisibleCompanyTaskTabs(session, teamMembers, companyWideView),
-    allowedNavViews: isPersonalAccountManager ? PERSONAL_AM_ALLOWED_VIEWS : null,
+    visibleCompanyTaskTabs: isPersonalEditor
+      ? ['editor']
+      : getVisibleCompanyTaskTabs(session, teamMembers, companyWideView),
+    allowedNavViews,
   };
 }
 
@@ -85,6 +107,7 @@ export function scopeCardsForStaff(
     clientAccountManagers = {},
     allowedClients = null,
     isPersonalAccountManager = false,
+    isPersonalEditor = false,
   },
 ) {
   let next = cards;
@@ -96,8 +119,10 @@ export function scopeCardsForStaff(
     client: clientFilter,
     // Personal AMs are scoped by client allowlist / server sync — not by per-card
     // assignee fields (month handoffs can diverge from card.accountManager).
+    // Personal editors only see cards where assignedTo matches their name.
     assigneeFilter:
       personalTaskScope && !Array.isArray(allowedClients) && !isPersonalAccountManager,
+    editorAssigneeOnly: Boolean(isPersonalEditor),
     staffName,
     clientAccountManagers,
   });
@@ -121,6 +146,12 @@ export function isViewAllowedForStaffScope(view, allowedNavViews) {
   if (!id) return true;
   if (allowedNavViews.has(id)) return true;
   // todo-account is allowed; todo-admin / todo-editor are not unless listed.
-  if (id === 'todo') return allowedNavViews.has('todo') || allowedNavViews.has('todo-account');
+  if (id === 'todo') {
+    return (
+      allowedNavViews.has('todo') ||
+      allowedNavViews.has('todo-account') ||
+      allowedNavViews.has('todo-editor')
+    );
+  }
   return false;
 }

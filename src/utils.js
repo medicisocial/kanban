@@ -1,6 +1,6 @@
 import { addDays, parseDateKey, toDateKey } from './utils/calendar';
 import { isScheduledPostType } from './constants';
-import { cardIsAssignedToStaff } from './utils/staffMembers';
+import { cardIsAssignedToStaff, cardIsAssignedToEditor } from './utils/staffMembers';
 import { matchesClientFilter } from './utils/clients';
 
 export function formatDate(dateStr) {
@@ -95,11 +95,24 @@ export function getPipelineClientNames(cards) {
   return [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 }
 
-export function filterCards(cards, { client, assigneeFilter = false, staffName = '', clientAccountManagers = {} }) {
+export function filterCards(
+  cards,
+  {
+    client,
+    assigneeFilter = false,
+    editorAssigneeOnly = false,
+    staffName = '',
+    clientAccountManagers = {},
+  },
+) {
   return cards.filter((card) => {
     if (!matchesClientFilter(card.client, client)) return false;
-    if (assigneeFilter && staffName && !cardIsAssignedToStaff(card, staffName, clientAccountManagers)) {
-      return false;
+    if (assigneeFilter && staffName) {
+      if (editorAssigneeOnly) {
+        if (!cardIsAssignedToEditor(card, staffName)) return false;
+      } else if (!cardIsAssignedToStaff(card, staffName, clientAccountManagers)) {
+        return false;
+      }
     }
     return true;
   });

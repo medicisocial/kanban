@@ -65,7 +65,7 @@ import {
   readWorkspaceViewFromUrl,
   syncWorkspaceViewUrl,
 } from "../utils/workspaceViewUrl";
-import { resolveStaffMemberAvatar, resolveStaffDisplayName, staffHasAccountManagerQueueAccess } from "../utils/staffMembers";
+import { resolveStaffMemberAvatar, resolveStaffDisplayName, staffHasAccountManagerQueueAccess, staffCanAccessFinances } from "../utils/staffMembers";
 import { isSharedOperationsLogin } from "../utils/staffAuth";
 import { appendShootRosterIds, removeShootRosterId } from "../utils/shootDay";
 import { buildWorkspaceAlerts } from "../utils/workspaceNotifications";
@@ -969,10 +969,12 @@ export default function AppShell({ onSignOut }) {
     companyWideView,
     personalTaskScope,
     isPersonalAccountManager,
+    isPersonalEditor,
     visibleCompanyTaskTabs,
     allowedNavViews,
     clientAccountManagers: scopeClientAccountManagers,
   } = useStaffWorkspaceScope();
+  const canAccessFinances = staffCanAccessFinances(session, teamMembers, org?.role);
 
   const personalAllowedClients = useMemo(() => {
     if (!isPersonalAccountManager || !staffName) return null;
@@ -997,9 +999,18 @@ export default function AppShell({ onSignOut }) {
   ]);
 
   useEffect(() => {
-    if (!allowedNavViews) return;
+    if (!allowedNavViews) {
+      if (activeView === 'finances' && !canAccessFinances) {
+        setActiveView('home');
+      }
+      return;
+    }
     if (!isViewAllowedForStaffScope(activeView, allowedNavViews)) {
       setActiveView('home');
+      return;
+    }
+    if (isPersonalEditor && tasksRole !== 'editor') {
+      setTasksRole('editor');
       return;
     }
     if (
@@ -1009,7 +1020,14 @@ export default function AppShell({ onSignOut }) {
     ) {
       setTasksRole(visibleCompanyTaskTabs[0] || 'account');
     }
-  }, [allowedNavViews, activeView, tasksRole, visibleCompanyTaskTabs]);
+  }, [
+    allowedNavViews,
+    activeView,
+    tasksRole,
+    visibleCompanyTaskTabs,
+    canAccessFinances,
+    isPersonalEditor,
+  ]);
 
   useEffect(() => {
     if (!Array.isArray(personalAllowedClients)) return;
@@ -1028,6 +1046,7 @@ export default function AppShell({ onSignOut }) {
         clientAccountManagers: scopeClientAccountManagers,
         allowedClients: personalAllowedClients,
         isPersonalAccountManager,
+        isPersonalEditor,
       }),
     [
       cards,
@@ -1037,6 +1056,7 @@ export default function AppShell({ onSignOut }) {
       scopeClientAccountManagers,
       personalAllowedClients,
       isPersonalAccountManager,
+      isPersonalEditor,
     ],
   );
   const workspaceIdeas = useMemo(() => {
@@ -1251,6 +1271,8 @@ export default function AppShell({ onSignOut }) {
       navBadges={navBadges}
       visibleTaskTabs={visibleCompanyTaskTabs}
       personalAmNav={Boolean(isPersonalAccountManager)}
+      personalEditorNav={Boolean(isPersonalEditor)}
+      showFinancesNav={canAccessFinances}
       filterClientNames={
         Array.isArray(personalAllowedClients) ? personalAllowedClients : undefined
       }

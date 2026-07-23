@@ -240,6 +240,14 @@ assert.ok(
   'admin tab is not pushed for personal users',
 );
 assert.ok(scopeSource.includes('PERSONAL_AM_ALLOWED_VIEWS'), 'personal AM view allowlist exists');
+assert.ok(scopeSource.includes('PERSONAL_EDITOR_ALLOWED_VIEWS'), 'personal editor view allowlist exists');
+assert.ok(scopeSource.includes('isPersonalEditor'), 'personal editor scope flag exists');
+assert.ok(scopeSource.includes('editorAssigneeOnly'), 'editors filter by assignedTo only');
+assert.ok(
+  scopeSource.includes("'clients'") &&
+    /PERSONAL_EDITOR_ALLOWED_VIEWS[\s\S]*?'clients'/.test(scopeSource),
+  'personal editors may open Clients profiles',
+);
 assert.ok(scopeSource.includes("'clients'"), 'personal AM may open Clients profiles');
 assert.ok(scopeSource.includes("'calendars'"), 'personal AM may open calendars');
 assert.ok(scopeSource.includes("'deliverables'"), 'personal AM may open deliverables');
@@ -250,13 +258,14 @@ const navSource = readFileSync(
   'utf8',
 );
 assert.ok(navSource.includes('personalAmNav'), 'sidebar supports personal AM nav mode');
+assert.ok(navSource.includes('personalEditorNav'), 'sidebar supports personal editor nav mode');
 assert.ok(
   navSource.includes("id: 'clients'") && navSource.includes('if (personalAmNav)'),
   'personal AM nav includes Clients',
 );
 assert.ok(
-  navSource.includes("id: 'calendars'") && navSource.includes('if (personalAmNav)'),
-  'personal AM nav includes Planning calendars',
+  navSource.includes('personalEditorNav') && navSource.includes("label: 'Team'"),
+  'personal editor nav keeps Team section',
 );
 assert.ok(
   !scopeSource.includes("'finances'"),

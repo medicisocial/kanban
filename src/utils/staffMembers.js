@@ -57,11 +57,19 @@ export function cardIsAssignedToAccountManager(card, staffName, clientAccountMan
 }
 
 export function staffHasLeadershipWorkspaceAccess(session, teamMembers) {
-  if (!session?.username) return false;
+  if (!session?.username && !session?.email) return false;
   return (
     staffMemberHasRole(session, teamMembers, 'Owner') ||
     staffMemberHasRole(session, teamMembers, 'Creative Director')
   );
+}
+
+/** Finances nav + page: ops login, Owner/CD, or SaaS org owner/admin. */
+export function staffCanAccessFinances(session, teamMembers, orgRole) {
+  if (isSharedOperationsLogin(session)) return true;
+  if (staffHasLeadershipWorkspaceAccess(session, teamMembers)) return true;
+  const role = String(orgRole || '').toLowerCase();
+  return role === 'owner' || role === 'admin';
 }
 
 export function staffHasAccountManagerQueueAccess(session, teamMembers) {
@@ -83,6 +91,12 @@ export function cardIsAssignedToStaff(card, staffName, clientAccountManagers = {
   if (matches(resolveCardAccountManager(card, clientAccountManagers))) return true;
 
   return false;
+}
+
+/** Editor queue: only the card's editor assignee field (`assignedTo`). */
+export function cardIsAssignedToEditor(card, staffName) {
+  if (!staffName) return true;
+  return (card.assignedTo || '').trim().toLowerCase() === staffName.trim().toLowerCase();
 }
 
 export function staffMemberHasRole(session, teamMembers, role) {

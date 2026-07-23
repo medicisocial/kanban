@@ -43,9 +43,25 @@ assert(navSource.includes("id: 'todo-editor'"), 'sidebar includes Editor role');
 assert(navSource.includes("id: 'todo-account'"), 'sidebar includes Account Manager role');
 assert(navSource.includes("id: 'todo-admin'"), 'Admin includes Administrative Tasks');
 assert(navSource.includes("{ id: 'team', label: 'Staff'"), 'staff management route is retained');
+assert(navSource.includes('showFinancesNav'), 'finances nav can be hidden for non-leadership roles');
+assert(
+  navSource.includes('showFinancesNav ? [{ id: \'finances\''),
+  'finances item is gated by showFinancesNav',
+);
+assert(navSource.includes('personalEditorNav'), 'sidebar supports personal editor nav');
 assert(!navSource.includes("{ id: 'todo', label: 'Team tasks'"), 'generic Team tasks nav is removed');
 
+const staffMembersSource = readFileSync(
+  new URL('../src/utils/staffMembers.js', import.meta.url),
+  'utf8',
+);
+assert(staffMembersSource.includes('staffCanAccessFinances'), 'finances access helper exists');
+assert(staffMembersSource.includes('cardIsAssignedToEditor'), 'editor assignee helper exists');
+
 const shellSource = readFileSync(new URL('../src/components/AppShell.jsx', import.meta.url), 'utf8');
+assert(shellSource.includes('showFinancesNav={canAccessFinances}'), 'AppShell hides finances for editors');
+assert(shellSource.includes('personalEditorNav={Boolean(isPersonalEditor)}'), 'AppShell wires editor nav');
+assert(shellSource.includes('isPersonalEditor'), 'AppShell passes editor card scope');
 assert(shellSource.includes("view.startsWith('todo-')"), 'synthetic task nav IDs map to todo view');
 assert(
   shellSource.includes("activeView === 'todo' ? `todo-${tasksRole}`"),

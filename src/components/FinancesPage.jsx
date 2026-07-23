@@ -12,8 +12,7 @@ import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader'
 import { IconChevronLeft, IconChevronRight } from './clientPortal/ClientPortalIcons';
 import { useStaffAuth } from '../context/StaffAuthContext';
 import { useClientsContext } from '../context/ClientsContext';
-import { isSharedOperationsLogin } from '../utils/staffAuth';
-import { staffHasLeadershipWorkspaceAccess } from '../utils/staffMembers';
+import { staffCanAccessFinances } from '../utils/staffMembers';
 import { buildEditorReelPointsByAssignee, buildEditorCompletedCards, getEditorCompletedStatusLabel } from '../utils/editorTodo';
 import { buildPlanBasedPayByAssignee } from '../utils/planBasedPay';
 import { buildPayBreakdownLines } from '../utils/payBreakdownLines';
@@ -878,15 +877,10 @@ export default function FinancesPage({
   } = useClientsContext();
   const teamMembers = teamMembersProp || contextTeamMembers || [];
 
-  const isAdmin = useMemo(() => {
-    const orgRole = String(org?.role || '').toLowerCase();
-    return (
-      isSharedOperationsLogin(session) ||
-      staffHasLeadershipWorkspaceAccess(session, teamMembers) ||
-      orgRole === 'owner' ||
-      orgRole === 'admin'
-    );
-  }, [session, teamMembers, org?.role]);
+  const isAdmin = useMemo(
+    () => staffCanAccessFinances(session, teamMembers, org?.role),
+    [session, teamMembers, org?.role],
+  );
 
   const [selectedMonth, setSelectedMonth] = useState(() => currentYearMonth());
   const [activeTab, setActiveTab] = useState('pay');

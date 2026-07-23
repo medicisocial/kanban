@@ -35,8 +35,21 @@ function buildTaskItems(visibleTaskTabs) {
   };
 }
 
-function buildBaseNavSections(visibleTaskTabs, { personalAmNav = false } = {}) {
+function buildBaseNavSections(
+  visibleTaskTabs,
+  { personalAmNav = false, personalEditorNav = false, showFinancesNav = true } = {},
+) {
   const taskItems = buildTaskItems(visibleTaskTabs);
+
+  if (personalEditorNav) {
+    return [
+      {
+        label: 'Clients',
+        items: [{ id: 'clients', label: 'Clients', Icon: IconClients }],
+      },
+      ...(taskItems.team.length ? [{ label: 'Team', items: taskItems.team }] : []),
+    ];
+  }
 
   if (personalAmNav) {
     return [
@@ -86,24 +99,30 @@ function buildBaseNavSections(visibleTaskTabs, { personalAmNav = false } = {}) {
       ...taskItems.admin,
       { id: 'clients', label: 'Clients', Icon: IconClients },
       { id: 'team', label: 'Staff', Icon: IconTeam },
-      { id: 'finances', label: 'Finances', Icon: IconDollar },
+      ...(showFinancesNav ? [{ id: 'finances', label: 'Finances', Icon: IconDollar }] : []),
       { id: 'settings', label: 'Settings', Icon: IconSettings },
     ],
   },
   ];
 }
 
-function buildNavSections(homeLabel, clientFilter, visibleTaskTabs, { personalAmNav = false } = {}) {
+function buildNavSections(
+  homeLabel,
+  clientFilter,
+  visibleTaskTabs,
+  { personalAmNav = false, personalEditorNav = false, showFinancesNav = true } = {},
+) {
   const clientName = clientFilter && clientFilter !== 'all' ? clientFilter : null;
   const clientSection = clientName
     ? {
         label: clientName,
-        items: personalAmNav
-          ? [
-              { id: 'clients', label: 'Profile', Icon: IconClients },
-              { id: 'client-files', label: 'Brand assets', Icon: IconFiles },
-            ]
-          : [{ id: 'client-files', label: 'Brand assets', Icon: IconFiles }],
+        items:
+          personalAmNav || personalEditorNav
+            ? [
+                { id: 'clients', label: 'Profile', Icon: IconClients },
+                { id: 'client-files', label: 'Brand assets', Icon: IconFiles },
+              ]
+            : [{ id: 'client-files', label: 'Brand assets', Icon: IconFiles }],
       }
     : null;
 
@@ -113,7 +132,11 @@ function buildNavSections(homeLabel, clientFilter, visibleTaskTabs, { personalAm
       items: [{ id: 'home', label: homeLabel, Icon: IconHome }],
     },
     ...(clientSection ? [clientSection] : []),
-    ...buildBaseNavSections(visibleTaskTabs, { personalAmNav }),
+    ...buildBaseNavSections(visibleTaskTabs, {
+      personalAmNav,
+      personalEditorNav,
+      showFinancesNav,
+    }),
   ];
 }
 
@@ -133,6 +156,8 @@ export default function AdminConsoleLayout({
   navBadges = {},
   visibleTaskTabs,
   personalAmNav = false,
+  personalEditorNav = false,
+  showFinancesNav = true,
   filterClientNames = null,
   canUndo = false,
   onUndo,
@@ -142,11 +167,16 @@ export default function AdminConsoleLayout({
     clientFilter,
     onClientChange,
     clientNames: filterClientNames,
-    hideAdminSettings: personalAmNav,
+    hideAdminSettings: personalAmNav || personalEditorNav,
   });
   const navSections = useMemo(
-    () => buildNavSections(homeNavLabel, clientFilter, visibleTaskTabs, { personalAmNav }),
-    [homeNavLabel, clientFilter, visibleTaskTabs, personalAmNav],
+    () =>
+      buildNavSections(homeNavLabel, clientFilter, visibleTaskTabs, {
+        personalAmNav,
+        personalEditorNav,
+        showFinancesNav,
+      }),
+    [homeNavLabel, clientFilter, visibleTaskTabs, personalAmNav, personalEditorNav, showFinancesNav],
   );
   const { getClientColor, getClientLogo, setClientLogo } = useClientsContext();
   const teamColor = getClientColor(INTERNAL_TEAM_CLIENT);
