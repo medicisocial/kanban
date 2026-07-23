@@ -522,12 +522,16 @@ export function mergeRemoteRecordWithLocal({ remote, local, syncedStr }) {
   }
 
   // Local matches the last sync snapshot. Only accept remote if it is clearly newer.
+  // When remote wins, take it as-is — do NOT furthest-stage merge against stale
+  // synced/local copies (that resurrects in-review after an intentional send-back).
   if (remoteStr !== syncedStr) {
     const remoteTs = recordRevision(remote);
     const localTs = recordRevision(local);
     const syncedTs = recordRevision(syncedRecord);
-    const chosen = remoteTs > syncedTs && remoteTs > localTs ? remote : local;
-    return finalizeMergedRecord(syncedRecord, remote, local, chosen);
+    if (remoteTs > syncedTs && remoteTs > localTs) {
+      return remote;
+    }
+    return local;
   }
 
   return finalizeMergedRecord(syncedRecord, remote, local);

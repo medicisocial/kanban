@@ -315,6 +315,33 @@ const getId = (record) => record.id;
   );
 }
 
+// Idle tab: local===synced===in-review, newer remote editing after send-back → accept editing.
+{
+  const synced = {
+    id: 'idle-sendback',
+    columnId: 'in-review',
+    status: 'In Review',
+    updatedAt: 100,
+  };
+  const local = { ...synced };
+  const remote = {
+    id: 'idle-sendback',
+    columnId: 'editing',
+    status: 'Editing',
+    updatedAt: 300,
+  };
+  const merged = mergeRemoteRecordWithLocal({
+    remote,
+    local,
+    syncedStr: JSON.stringify(synced),
+  });
+  assert(
+    merged.columnId === 'editing',
+    'idle tab must accept newer remote Needs editing without resurrecting In Review',
+  );
+  assert(merged.status === 'Editing', 'idle tab send-back pull must keep Editing status');
+}
+
 // Pull merge: Editing → To Create authorized regression sticks.
 {
   const merged = mergeCardRecords(
