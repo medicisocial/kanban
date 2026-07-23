@@ -12,10 +12,11 @@ import { useReloadFromStorage } from './useReloadFromStorage';
 import { SUPABASE_ENABLED } from '../lib/supabaseClient';
 import { isCloudSourceOfTruth } from '../lib/cloudSourceOfTruth';
 import { getOrgId } from '../lib/orgSession';
-import { fetchStaffSyncRows } from '../lib/staffSyncApi';
+import { fetchStaffSyncRows, pushStaffSync } from '../lib/staffSyncApi';
 import { useCollectionSync } from '../lib/useCollectionSync';
 import { initialSyncCollectionState, shouldPersistSyncedState, tombstoneSyncedDeletes } from '../lib/syncInitialState';
 import { readOrgScopedJson, writeOrgScopedJson } from '../lib/orgStorage';
+import { saveTeamMemberToCloud as pushTeamMemberCloudSave } from '../utils/teamMemberCloudSave';
 
 const getTeamMemberId = (member) => member.id;
 
@@ -89,16 +90,8 @@ export function useTeamMembers() {
     return () => clearTimeout(persistTimerRef.current);
   }, [teamMembers, syncLoaded]);
 
-  // Drop one-shot plaintext passwords from memory after they have been queued for sync.
-  useEffect(() => {
-    if (!teamMembers.some((member) => member?.password)) return undefined;
-    const timer = setTimeout(() => {
-      setTeamMembers((prev) =>
-        prev.map((member) => (member?.password ? scrubTeamMemberSecrets(member) : member)),
-      );
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, [teamMembers]);
+  // Plaintext passwords stay in memory until saveTeamMemberToCloud confirms staff-sync
+  // succeeded (or local-only mode). Never scrub on a timer — a failed push must be retryable.
 
   const getMembersByRole = useCallback(
     (role) => teamMembers.filter((member) => memberMatchesRole(member, role)),
@@ -154,9 +147,21 @@ export function useTeamMembers() {
   }, []);
 
   const saveTeamMemberToCloud = useCallback(async (member) => {
-    if (!member) return { ok: false, error: 'Nothing to save.' };
-    // useCollectionSync pushes cloud writes; local state was already updated.
-    return { ok: true };
+    const result = await pushTeamMemberCloudSave(member, {
+      pushFn: pushStaffSync,
+      getOrgId,
+      isCloudEnabled: () => SUPABASE_ENABLED && isCloudSourceOfTruth(),
+    });
+
+    if (result.ok && result.shouldScrubPassword && member?.id) {
+      setTeamMembers((prev) =>
+        prev.map((entry) =>
+          entry.id === member.id && entry.password ? scrubTeamMemberSecrets(entry) : entry,
+        ),
+      );
+    }
+
+    return result;
   }, []);
 
   const removeTeamMember = useCallback((id) => {

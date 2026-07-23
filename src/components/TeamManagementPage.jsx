@@ -10,6 +10,7 @@ import {
   statusBadgeClass,
   surfacePanelClass,
 } from './clientPortal/clientPortalUi';
+import { teamMemberSaveUiState } from '../utils/teamMemberCloudSave';
 
 function RoleSummary({ roles }) {
   if (roles.length === 0) {
@@ -62,15 +63,21 @@ export default function TeamManagementPage() {
   };
 
   const handleSaveMember = async (id, draft) => {
+    setError('');
+    setMessage('');
     const persisted = updateTeamMember(id, draft);
     if (!persisted) {
       return { ok: false, error: 'Could not update team member.' };
     }
 
     const cloud = await saveTeamMemberToCloud(persisted);
-    if (!cloud.ok) return cloud;
+    const ui = teamMemberSaveUiState(cloud);
+    if (!ui.ok) {
+      setError(ui.error);
+      return { ok: false, error: ui.error };
+    }
 
-    setMessage('Team member saved.');
+    setMessage(ui.successMessage);
     setTimeout(() => setMessage(''), 3000);
     setSelectedMemberId(null);
     return { ok: true };
