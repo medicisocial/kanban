@@ -342,6 +342,39 @@ const getId = (record) => record.id;
   assert(merged.status === 'Editing', 'idle tab send-back pull must keep Editing status');
 }
 
+// Acting tab after cloud confirms send-back: syncedRef still in-review, local+remote editing.
+{
+  const synced = {
+    id: 'acting-sendback',
+    columnId: 'in-review',
+    status: 'In Review',
+    updatedAt: 100,
+  };
+  const local = {
+    id: 'acting-sendback',
+    columnId: 'editing',
+    status: 'Editing',
+    [PIPELINE_REGRESSION_AUTH_KEY]: true,
+    updatedAt: 300,
+  };
+  const remote = {
+    id: 'acting-sendback',
+    columnId: 'editing',
+    status: 'Editing',
+    updatedAt: 310,
+  };
+  const merged = mergeRemoteRecordWithLocal({
+    remote,
+    local,
+    syncedStr: JSON.stringify(synced),
+  });
+  assert(
+    merged.columnId === 'editing',
+    'acting tab must keep Needs editing when cloud confirmed and syncedRef is still In Review',
+  );
+  assert(merged.status === 'Editing', 'acting tab confirmed send-back must keep Editing status');
+}
+
 // Pull merge: Editing → To Create authorized regression sticks.
 {
   const merged = mergeCardRecords(

@@ -518,6 +518,16 @@ export function mergeRemoteRecordWithLocal({ remote, local, syncedStr }) {
   // older card statuses over newer Supabase data when they wake up/refetch.
   if (localStr !== syncedStr) {
     const chosen = preferLocalOverRemote(remote, local) ? local : remote;
+    // After an authorized send-back, cloud confirms `editing` while syncedRef may
+    // still hold stale `in-review`. If local and remote already agree on stage,
+    // do NOT furthest-merge against that stale synced copy (it snaps the card forward).
+    if (
+      local?.columnId &&
+      remote?.columnId &&
+      local.columnId === remote.columnId
+    ) {
+      return finalizeMergedRecord(remote, local, chosen);
+    }
     return finalizeMergedRecord(syncedRecord, remote, local, chosen);
   }
 
