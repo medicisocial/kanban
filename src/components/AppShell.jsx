@@ -1334,6 +1334,8 @@ export default function AppShell({ onSignOut }) {
           cards={workspaceCards}
           plans={workspacePlans}
           clientFilter={clientFilter}
+          onAddIdea={addIdea}
+          onAddIdeaToBank={addIdeaToBank}
           onAddCard={() => {
             const resolvedClient = clientFilter !== 'all' ? clientFilter : undefined;
             const newCard = addCard('shoot', { client: resolvedClient });

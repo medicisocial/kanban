@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import VideoIdeaModal from './VideoIdeaModal';
+import VideoIdeaQuickAdd from './VideoIdeaQuickAdd';
 import ClientSharePanel from './ClientSharePanel';
 import ClientPortalSectionHeader from './clientPortal/ClientPortalSectionHeader';
 import AdminIdeasTable from './clientPortal/AdminIdeasTable';
@@ -35,6 +36,8 @@ export default function VideoIdeas({
   cards,
   plans = {},
   clientFilter,
+  onAddIdea,
+  onAddIdeaToBank,
   onAddCard,
   onAddOneOffTask,
   onApprove,
@@ -178,28 +181,29 @@ export default function VideoIdeas({
       ? `${btnPrimaryClass} !px-4 !py-1.5 !text-xs !tracking-wider`
       : `${btnSecondaryClass} !px-4 !py-1.5 !text-xs !tracking-wider !border-transparent !text-white/45 hover:!text-white`;
 
-  const addActions = (
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      {onAddCard && (
-        <button
-          type="button"
-          onClick={() => onAddCard()}
-          className={`${btnPrimaryClass} py-1.5 text-[10px]`}
-        >
-          + Add card
-        </button>
-      )}
-      {onAddOneOffTask && (
-        <button
-          type="button"
-          onClick={() => setShowAddOneOff(true)}
-          className={`${btnSecondaryClass} py-1.5 text-[10px]`}
-        >
-          + Add one-off project
-        </button>
-      )}
-    </div>
-  );
+  const addActions =
+    activeTab === 'to-create' ? (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {onAddCard && (
+          <button
+            type="button"
+            onClick={() => onAddCard()}
+            className={`${btnPrimaryClass} py-1.5 text-[10px]`}
+          >
+            + Add card
+          </button>
+        )}
+        {onAddOneOffTask && (
+          <button
+            type="button"
+            onClick={() => setShowAddOneOff(true)}
+            className={`${btnSecondaryClass} py-1.5 text-[10px]`}
+          >
+            + Add one-off project
+          </button>
+        )}
+      </div>
+    ) : null;
 
   return (
     <section>
@@ -270,6 +274,14 @@ export default function VideoIdeas({
 
       {activeTab === 'review' ? (
         <>
+          {onAddIdea && (
+            <VideoIdeaQuickAdd
+              clientFilter={clientFilter}
+              onAdd={onAddIdea}
+              onAddToBank={onAddIdeaToBank}
+              submitLabel="Add for review"
+            />
+          )}
           <ClientSharePanel ideas={ideas} clientFilter={clientFilter} />
 
           <AdminIdeasTable
@@ -282,12 +294,22 @@ export default function VideoIdeas({
           />
         </>
       ) : activeTab === 'approved' ? (
-        <IdeaVaultTable
-          ideas={vaultIdeas}
-          onEdit={setIdeaModal}
-          onSchedule={setScheduleIdea}
-          onMoveToReview={onMoveApprovedToReview}
-        />
+        <>
+          {onAddIdeaToBank && (
+            <VideoIdeaQuickAdd
+              clientFilter={clientFilter}
+              onAddToBank={onAddIdeaToBank}
+              variant="bank"
+              onAdded={() => setActiveTab('approved')}
+            />
+          )}
+          <IdeaVaultTable
+            ideas={vaultIdeas}
+            onEdit={setIdeaModal}
+            onSchedule={setScheduleIdea}
+            onMoveToReview={onMoveApprovedToReview}
+          />
+        </>
       ) : activeTab === 'rejected' ? (
         <>
           {rejectedIdeas.length > 0 && selectedIds.size > 0 && (

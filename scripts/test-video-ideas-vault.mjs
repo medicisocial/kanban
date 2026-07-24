@@ -296,11 +296,22 @@ assert(
 );
 assert(
   videoIdeasSource.includes('+ Add card') && videoIdeasSource.includes('+ Add one-off project'),
-  'Vault tabs expose Add card and Add one-off like Editors',
+  'To Create exposes Add card and Add one-off',
 );
 assert(
-  !videoIdeasSource.includes('VideoIdeaQuickAdd'),
-  'Vault no longer shows Review/Approved quick-add idea UI',
+  videoIdeasSource.includes("activeTab === 'to-create'") &&
+    videoIdeasSource.includes('+ Add card'),
+  'Add card / one-off actions are scoped to To Create',
+);
+assert(
+  videoIdeasSource.includes('VideoIdeaQuickAdd') &&
+    videoIdeasSource.includes('variant="bank"') &&
+    videoIdeasSource.includes('onAddIdeaToBank'),
+  'Approved tab restores Add to Approved quick-add',
+);
+assert(
+  videoIdeasSource.includes('onAddIdea') && videoIdeasSource.includes('Add for review'),
+  'Review tab restores idea quick-add',
 );
 assert(
   videoIdeasSource.includes('AddEditorTaskModal') && videoIdeasSource.includes('onAddOneOffTask'),
@@ -439,7 +450,10 @@ const ideaModalSource = readFileSync(
 );
 assert(!ideaModalSource.includes('Client Comment'), 'idea editor hides client comments');
 assert(ideaModalSource.includes('onDelete'), 'idea editor accepts Delete handler');
-assert(ideaModalSource.includes('>Delete<') || ideaModalSource.includes('Delete\n'), 'idea editor exposes Delete for existing ideas');
+assert(
+  /onClick=\{\(\) => onDelete\(idea\)\}[\s\S]*?>\s*Delete\s*</.test(ideaModalSource),
+  'idea editor exposes Delete for existing ideas',
+);
 assert(ideaModalSource.includes('Task Title'), 'idea editor Details use Task Title like calendar cards');
 assert(
   ideaModalSource.includes('["notes", "Notes"]') || ideaModalSource.includes("['notes', 'Notes']"),
@@ -594,6 +608,10 @@ assert(
   videoIdeasUiSource.includes('onAddCard') && videoIdeasUiSource.includes('onAddOneOffTask'),
   'Vault accepts Add card and Add one-off handlers',
 );
+assert(
+  videoIdeasUiSource.includes('onAddIdea') && videoIdeasUiSource.includes('onAddIdeaToBank'),
+  'Vault accepts Review and Approved idea-add handlers',
+);
 const navSource = readFileSync(
   new URL('../src/components/clientPortal/AdminConsoleLayout.jsx', import.meta.url),
   'utf8',
@@ -612,6 +630,10 @@ assert(
 assert(
   shellSource.includes('onAddCard={() =>') && shellSource.includes("addCard('shoot'"),
   'AppShell wires Vault Add card into To Create',
+);
+assert(
+  shellSource.includes('onAddIdea={addIdea}') && shellSource.includes('onAddIdeaToBank={addIdeaToBank}'),
+  'AppShell wires Vault Review/Approved idea add handlers',
 );
 assert(
   shellSource.includes('onAddOneOffTask={(data)') || shellSource.includes('onAddOneOffTask={'),
