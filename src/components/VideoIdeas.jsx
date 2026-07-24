@@ -173,6 +173,12 @@ export default function VideoIdeas({
     if (deleted) setIdeaModal(null);
   };
 
+  const handleReturnToReady = (card) => {
+    if (onReturnToApproved?.(card)) {
+      setActiveTab('ready');
+    }
+  };
+
   const handleAddCard = () => {
     onAddCard?.();
     setActiveTab('to-create');
@@ -334,7 +340,7 @@ export default function VideoIdeas({
           clientFilter={clientFilter}
           onOpenCard={onOpenCard}
           onOpenShoot={onOpenShoot}
-          onReturnToApproved={onReturnToApproved}
+          onReturnToApproved={handleReturnToReady}
         />
       )}
 

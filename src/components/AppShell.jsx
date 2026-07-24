@@ -544,7 +544,7 @@ export default function AppShell({ onSignOut }) {
           `Move "${label}" back to Ready? The To Create card will be removed and you can schedule it again later.`,
         )
       ) {
-        return;
+        return false;
       }
       beginBatch();
       try {
@@ -561,6 +561,7 @@ export default function AppShell({ onSignOut }) {
       } finally {
         endBatch();
       }
+      return true;
     },
     [ideas, addIdea, deleteCard, updateIdea, selectedCard?.id, removeCardFromShootRoster],
   );

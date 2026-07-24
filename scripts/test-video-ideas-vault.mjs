@@ -21,6 +21,10 @@ function isIdeaInVault(idea, cards = []) {
   return !findIdeaBoardCard(idea, cards);
 }
 
+function getVaultIdeas(ideas, cards = []) {
+  return ideas.filter((idea) => isIdeaInVault(idea, cards));
+}
+
 function isIdeaScheduled(idea, cards = []) {
   if (!idea || idea.status !== 'approved') return false;
   return !isIdeaInVault(idea, cards);
@@ -158,6 +162,24 @@ assert(
 assert(
   !canReturnCardToVault({ columnId: 'shoot', contentType: 'One-off Project', isOneOffProject: true }),
   'one-off projects in To Create cannot return to vault',
+);
+
+// After Move back to Ready: idea is approved with no live board card → Ready list.
+const returnedIdea = { id: 'idea-2', status: 'approved', boardCardId: null };
+const cardsAfterReturn = [];
+assert(
+  isIdeaInVault(returnedIdea, cardsAfterReturn),
+  'returned idea with cleared boardCardId populates Ready',
+);
+assert(
+  getVaultIdeas([returnedIdea], cardsAfterReturn).some((entry) => entry.id === 'idea-2'),
+  'getVaultIdeas includes returned Ready idea',
+);
+assert(
+  !isIdeaInVault({ id: 'idea-2', status: 'approved', boardCardId: 'card-2' }, [
+    { id: 'card-2', sourceIdeaId: 'idea-2', columnId: 'shoot', contentType: 'Reel' },
+  ]),
+  'idea stays out of Ready while its To Create card still exists',
 );
 
 const videoIdeasUtilSource = readFileSync(
@@ -301,6 +323,11 @@ assert(
 assert(
   videoIdeasSource.includes('handleAddCard') && videoIdeasSource.includes("setActiveTab('to-create')"),
   'Add card switches Vault to To Create so the new card is visible',
+);
+assert(
+  videoIdeasSource.includes('handleReturnToReady') &&
+    videoIdeasSource.includes("setActiveTab('ready')"),
+  'Move back to Ready switches Vault to the Ready tab',
 );
 assert(
   !videoIdeasSource.includes('VideoIdeaQuickAdd'),
@@ -623,6 +650,10 @@ assert(
 assert(
   shellSource.includes('onAddCard={() =>') && shellSource.includes("addCard('shoot'"),
   'AppShell wires Vault Add card into To Create',
+);
+assert(
+  shellSource.includes('handleReturnCardToVault') && shellSource.includes('return true'),
+  'AppShell Move back to Ready reports success for Vault tab switch',
 );
 assert(
   shellSource.includes('onAddIdeaToBank={addIdeaToBank}'),
