@@ -70,7 +70,7 @@ export default function ScheduleVaultIdeaModal({ idea, cards = [], plans = {}, o
         className={`${surfacePanelClass} flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden`}
       >
         <div className="shrink-0 p-5 pb-0">
-          <p className="text-xs font-medium uppercase tracking-wider text-white/45">Bank</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-white/45">Ready</p>
           <h2 className="mt-1 text-lg font-semibold text-white">Add to shoot</h2>
           <p className="mt-2 text-sm text-white/55">
             {idea.title || 'Untitled idea'} · {idea.client}

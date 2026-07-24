@@ -22,7 +22,7 @@ import { getVaultIdeas, isReviewQueueIdeaStatus } from '../utils/videoIdeas';
 
 const VAULT_TABS = [
   { id: 'review', label: 'Review' },
-  { id: 'bank', label: 'Approved' },
+  { id: 'bank', label: 'Ready' },
 ];
 
 export default function ClientReviewPortal({
@@ -163,7 +163,7 @@ export default function ClientReviewPortal({
       }
 
       if (toBank) {
-        if (!onAddIdeaToBank) throw new Error('Could not save to the bank.');
+        if (!onAddIdeaToBank) throw new Error('Could not save to Ready.');
         onAddIdeaToBank({
           id: idea.id,
           title: idea.title,
@@ -372,7 +372,7 @@ export default function ClientReviewPortal({
       <section>
         <ClientPortalSectionHeader
           title="Vault"
-          description="Review new concepts from your team, submit your own, and browse approved ideas waiting for a shoot."
+          description="Review new concepts from your team, submit your own, and browse Ready ideas waiting for a shoot."
         >
           {pendingCount > 0 && activeTab === 'review' && (
             <span className="border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-amber-200/90">
@@ -381,7 +381,7 @@ export default function ClientReviewPortal({
           )}
           {vaultIdeas.length > 0 && (
             <span className="border border-violet-500/25 bg-violet-500/10 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-violet-200/90">
-              {vaultIdeas.length} approved
+              {vaultIdeas.length} ready
             </span>
           )}
         </ClientPortalSectionHeader>
@@ -428,8 +428,8 @@ export default function ClientReviewPortal({
             ideas={displayedVaultIdeas}
             readOnly
             hideClientColumn
-            emptyTitle="No approved ideas yet"
-            emptyDescription="Click + New idea to add a concept straight to Approved. It opens so you can fill in the details."
+            emptyTitle="No ready ideas yet"
+            emptyDescription="Click + New idea to add a concept straight to Ready. It opens so you can fill in the details."
             onOpenIdea={(idea) => {
               setDraftIdea((prev) => (prev?.id === idea.id ? prev : null));
               setDetailIdeaId(idea.id);
@@ -489,7 +489,7 @@ export default function ClientReviewPortal({
             <div className="mt-6 text-left">
               <p className="text-sm text-white/55">Send your approvals to Medici Social</p>
               <p className="mt-1 text-xs text-white/35">
-                Copy this link and send it to your account manager so approved ideas can be added to
+                Copy this link and send it to your account manager so ready ideas can be added to
                 the board.
               </p>
               <button

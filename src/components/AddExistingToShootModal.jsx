@@ -99,7 +99,7 @@ export default function AddExistingToShootModal({
                 <p className="text-sm font-medium text-white">{item.title || 'Untitled'}</p>
                 <p className="mt-0.5 text-xs text-gray-500">
                   <span {...contentTypeLabelProps(typeStyle, 'text-xs')}>{item.contentType}</span>
-                  {kind === 'idea' ? ' · Bank' : item.status ? ` · ${item.status}` : ''}
+                  {kind === 'idea' ? ' · Ready' : item.status ? ` · ${item.status}` : ''}
                 </p>
               </div>
             </label>
@@ -143,7 +143,7 @@ export default function AddExistingToShootModal({
             <div className="rounded-lg border border-dashed border-white/10 px-4 py-10 text-center">
               <p className="text-sm text-gray-400">Nothing available for {client}.</p>
               <p className="mt-2 text-xs text-gray-500">
-                Approve ideas into the bank, or create items on the board first.
+                Approve ideas into Ready, or create items on the board first.
               </p>
             </div>
           ) : (
@@ -151,7 +151,7 @@ export default function AddExistingToShootModal({
               {ideaCandidates.length > 0 && (
                 <div>
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-violet-200/80">
-                    Bank
+                    Ready
                   </p>
                   {renderSelectableList(ideaCandidates, selectedIdeaIds, toggleIdea, 'idea')}
                 </div>

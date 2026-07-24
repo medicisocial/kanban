@@ -135,7 +135,7 @@ export default function ContentCreatorTodo({
                       onClick={() => onReturnToVault(task.card)}
                       className={taskActionBtnClass}
                     >
-                      Move back to Approved
+                      Move back to Ready
                     </button>
                   )}
                   {onHandoff && (

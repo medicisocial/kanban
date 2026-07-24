@@ -131,7 +131,7 @@ assert(
 assert(
   reviewPortalSource.includes('displayedVaultIdeas') &&
     reviewPortalSource.includes("toBank: activeTab === 'bank'"),
-  'Approved tab uses the same create-and-open flow',
+  'Ready tab uses the same create-and-open flow',
 );
 
 const videoIdeasSource = readFileSync(

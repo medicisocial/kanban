@@ -100,7 +100,7 @@ export default function ToCreateIdeasTable({
                     onClick={() => onReturnToApproved?.(card)}
                     className={taskActionBtnClass}
                   >
-                    Move back to Approved
+                    Move back to Ready
                   </button>
                 ) : null}
               </div>

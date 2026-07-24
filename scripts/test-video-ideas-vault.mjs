@@ -204,7 +204,7 @@ assert(returnedToReview.reviewedAt === null, 'returning to Review clears approva
 assert(returnedToReview.title === bankPayload.title, 'returning to Review preserves idea content');
 
 const videoIdeasSource = readFileSync(new URL('../src/components/VideoIdeas.jsx', import.meta.url), 'utf8');
-assert(videoIdeasSource.includes("{ id: 'approved', label: 'Approved' }"), 'staff Vault has Approved tab');
+assert(videoIdeasSource.includes("{ id: 'ready', label: 'Ready' }"), 'staff Vault has Ready tab');
 assert(videoIdeasSource.includes("{ id: 'rejected', label: 'Rejected' }"), 'staff Vault has Rejected tab');
 assert(videoIdeasSource.includes("{ id: 'to-create', label: 'To Create' }"), 'staff Vault has To Create tab');
 assert(
@@ -224,14 +224,14 @@ const toCreateSource = readFileSync(
   new URL('../src/components/ToCreateIdeasTable.jsx', import.meta.url),
   'utf8',
 );
-assert(toCreateSource.includes('Move back to Approved'), 'To Create view can restore approved ideas');
+assert(toCreateSource.includes('Move back to Ready'), 'To Create view can restore Ready ideas');
 assert(
   toCreateSource.includes('getToCreateCards') && toCreateSource.includes('sortCardsByShootSchedule'),
   'To Create view lists shoot board cards (including one-offs) chronologically',
 );
 assert(
   toCreateSource.includes('canReturnCardToVault'),
-  'To Create only offers Move back to Approved for idea-linked reels',
+  'To Create only offers Move back to Ready for idea-linked reels',
 );
 assert(
   toCreateSource.includes('space-y-3') && toCreateSource.includes('TeamTaskCard'),
@@ -285,33 +285,26 @@ assert(
 );
 assert(
   !videoIdeasSource.includes('onUpdateReference') && !videoIdeasSource.includes('onUpdateContentType'),
-  'Approved tab no longer inline-edits reference or content type on the row',
+  'Ready tab no longer inline-edits reference or content type on the row',
 );
-const approvedSource = readFileSync(new URL('../src/components/IdeaVaultTable.jsx', import.meta.url), 'utf8');
-assert(approvedSource.includes('Add to shoot'), 'Approved rows keep Add to shoot action');
-assert(approvedSource.includes('Move to Review'), 'Approved rows can return ideas to Review');
+const readySource = readFileSync(new URL('../src/components/IdeaVaultTable.jsx', import.meta.url), 'utf8');
+assert(readySource.includes('Add to shoot'), 'Ready rows keep Add to shoot action');
+assert(readySource.includes('Move to Review'), 'Ready rows can return ideas to Review');
 assert(
-  !approvedSource.includes('Add to To Create'),
-  'Approved rows do not use Add to To Create row action',
+  !readySource.includes('Add to To Create'),
+  'Ready rows do not use Add to To Create row action',
 );
 assert(
   videoIdeasSource.includes('+ Add card') && videoIdeasSource.includes('+ Add one-off project'),
-  'To Create exposes Add card and Add one-off',
+  'Vault exposes Add card and Add one-off',
 );
 assert(
-  videoIdeasSource.includes("activeTab === 'to-create'") &&
-    videoIdeasSource.includes('+ Add card'),
-  'Add card / one-off actions are scoped to To Create',
+  videoIdeasSource.includes('handleAddCard') && videoIdeasSource.includes("setActiveTab('to-create')"),
+  'Add card switches Vault to To Create so the new card is visible',
 );
 assert(
-  videoIdeasSource.includes('VideoIdeaQuickAdd') &&
-    videoIdeasSource.includes('variant="bank"') &&
-    videoIdeasSource.includes('onAddIdeaToBank'),
-  'Approved tab restores Add to Approved quick-add',
-);
-assert(
-  videoIdeasSource.includes('onAddIdea') && videoIdeasSource.includes('Add for review'),
-  'Review tab restores idea quick-add',
+  !videoIdeasSource.includes('VideoIdeaQuickAdd'),
+  'Vault no longer shows staff Review/Ready quick-add idea UI',
 );
 assert(
   videoIdeasSource.includes('AddEditorTaskModal') && videoIdeasSource.includes('onAddOneOffTask'),
@@ -333,49 +326,49 @@ assert(
   addEditorModalSource.includes("id: 'shoot'") && addEditorModalSource.includes('Start in'),
   'Add one-off modal lets users start in To Create',
 );
-assert(approvedSource.includes('taskActionBtnClass'), 'Approved actions use compact team-card button styling');
-assert(approvedSource.includes('TeamTaskCard'), 'Approved rows use team-task separated cards');
+assert(readySource.includes('taskActionBtnClass'), 'Approved actions use compact team-card button styling');
+assert(readySource.includes('TeamTaskCard'), 'Approved rows use team-task separated cards');
 assert(
-  approvedSource.includes('space-y-3'),
+  readySource.includes('space-y-3'),
   'Approved uses spaced team-task style card list',
 );
 assert(
-  approvedSource.includes('vaultRowActionsClass'),
+  readySource.includes('vaultRowActionsClass'),
   'Approved uses shared Vault action column width',
 );
 assert(
-  approvedSource.includes('contentTypePipelinePillProps'),
+  readySource.includes('contentTypePipelinePillProps'),
   'Approved uses team-task style content type pills',
 );
 assert(
-  !approvedSource.includes("statusPipelinePillProps('approved')"),
+  !readySource.includes("statusPipelinePillProps('approved')"),
   'Approved rows do not show a per-card Approved status pill',
 );
 assert(
-  approvedSource.includes('rounded-full border border-white/10 bg-white/[0.04]'),
+  readySource.includes('rounded-full border border-white/10 bg-white/[0.04]'),
   'Approved script-ready chip uses the soft pill style',
 );
 {
-  const typeIdx = approvedSource.indexOf('contentTypePipelinePillProps(typeStyle)');
-  const clientIdx = approvedSource.indexOf('<ClientAvatar client={idea.client}');
-  const titleIdx = approvedSource.indexOf('idea.title || \'Untitled idea\'');
+  const typeIdx = readySource.indexOf('contentTypePipelinePillProps(typeStyle)');
+  const clientIdx = readySource.indexOf('<ClientAvatar client={idea.client}');
+  const titleIdx = readySource.indexOf('idea.title || \'Untitled idea\'');
   assert(typeIdx > 0 && typeIdx < clientIdx, 'Approved shows content type left of client');
   assert(clientIdx > 0 && clientIdx < titleIdx, 'Approved shows client above title');
 }
-assert(!approvedSource.includes('<select'), 'Approved content type is not a clickable select');
-assert(!approvedSource.includes('DebouncedField'), 'Approved row has no inline paste-link field');
-assert(!approvedSource.includes('Paste link'), 'Approved row does not show paste-link placeholder');
-assert(!approvedSource.includes('min-w-[720px]'), 'Approved no longer uses a wide desktop table');
+assert(!readySource.includes('<select'), 'Approved content type is not a clickable select');
+assert(!readySource.includes('DebouncedField'), 'Approved row has no inline paste-link field');
+assert(!readySource.includes('Paste link'), 'Approved row does not show paste-link placeholder');
+assert(!readySource.includes('min-w-[720px]'), 'Approved no longer uses a wide desktop table');
 assert(
-  !approvedSource.includes('min-h-10 flex-1') && !approvedSource.includes('w-[32%]'),
+  !readySource.includes('min-h-10 flex-1') && !readySource.includes('w-[32%]'),
   'Approved action buttons do not stretch across a wide Actions column',
 );
-assert(!approvedSource.includes('onMakeOneOff'), 'Approved rows do not expose Make one-off');
-assert(!approvedSource.includes('Make one-off'), 'Approved rows do not show Make one-off action');
-assert(approvedSource.includes('ReferenceMusicLink'), 'Approved rows show clickable music links');
-assert(approvedSource.includes('ReferenceVideoLink'), 'Approved rows show clickable video links when set');
-assert(!/>\s*Edit\s*</.test(approvedSource), 'Approved rows do not show a standalone Edit action');
-assert(!/>\s*Delete\s*</.test(approvedSource), 'Approved rows do not show a standalone Delete action');
+assert(!readySource.includes('onMakeOneOff'), 'Approved rows do not expose Make one-off');
+assert(!readySource.includes('Make one-off'), 'Approved rows do not show Make one-off action');
+assert(readySource.includes('ReferenceMusicLink'), 'Approved rows show clickable music links');
+assert(readySource.includes('ReferenceVideoLink'), 'Approved rows show clickable video links when set');
+assert(!/>\s*Edit\s*</.test(readySource), 'Approved rows do not show a standalone Edit action');
+assert(!/>\s*Delete\s*</.test(readySource), 'Approved rows do not show a standalone Delete action');
 const reviewSource = readFileSync(
   new URL('../src/components/clientPortal/AdminIdeasTable.jsx', import.meta.url),
   'utf8',
@@ -609,8 +602,8 @@ assert(
   'Vault accepts Add card and Add one-off handlers',
 );
 assert(
-  videoIdeasUiSource.includes('onAddIdea') && videoIdeasUiSource.includes('onAddIdeaToBank'),
-  'Vault accepts Review and Approved idea-add handlers',
+  !videoIdeasUiSource.includes('onAddIdea') && !videoIdeasUiSource.includes('onAddIdeaToBank'),
+  'Staff Vault does not use idea quick-add handlers',
 );
 const navSource = readFileSync(
   new URL('../src/components/clientPortal/AdminConsoleLayout.jsx', import.meta.url),
@@ -621,7 +614,7 @@ const shellSource = readFileSync(new URL('../src/components/AppShell.jsx', impor
 assert(shellSource.includes('activeView === "board"'), 'legacy direct board route remains supported');
 assert(
   shellSource.includes('handleMoveApprovedIdeaToReview'),
-  'AppShell wires Approved-to-Review lifecycle handler',
+  'AppShell wires Ready-to-Review lifecycle handler',
 );
 assert(
   shellSource.includes('onCreateOneOffFromIdea') && shellSource.includes('addOneOffProject'),
@@ -632,8 +625,8 @@ assert(
   'AppShell wires Vault Add card into To Create',
 );
 assert(
-  shellSource.includes('onAddIdea={addIdea}') && shellSource.includes('onAddIdeaToBank={addIdeaToBank}'),
-  'AppShell wires Vault Review/Approved idea add handlers',
+  shellSource.includes('onAddIdeaToBank={addIdeaToBank}'),
+  'AppShell still wires client portal Add to Ready',
 );
 assert(
   shellSource.includes('onAddOneOffTask={(data)') || shellSource.includes('onAddOneOffTask={'),

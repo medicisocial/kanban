@@ -700,17 +700,17 @@ function CardModal({
           {card.columnId === 'shoot' && onReturnToVault && canReturnCardToVault(card) && (
             <div className="rounded-lg border border-violet-500/20 bg-violet-500/10 p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-violet-200/90">
-                Bank
+                Ready
               </p>
               <p className="mt-1 text-sm text-violet-100/80">
-                Not filming this yet? Move it back to Approved and schedule again later.
+                Not filming this yet? Move it back to Ready and schedule again later.
               </p>
               <button
                 type="button"
                 onClick={() => onReturnToVault(card)}
                 className="mt-3 rounded-lg border border-violet-500/30 bg-violet-500/15 px-3 py-2 text-sm font-medium text-violet-100 transition hover:bg-violet-500/25"
               >
-                Move back to Approved
+                Move back to Ready
               </button>
             </div>
           )}
@@ -814,7 +814,7 @@ function CardModal({
                       onClick={() => onReturnToVault(card)}
                       className="rounded-lg border border-violet-500/25 bg-violet-500/10 px-2.5 py-1 text-xs font-medium text-violet-200 hover:bg-violet-500/15"
                     >
-                      Move back to Approved
+                      Move back to Ready
                     </button>
                   )}
                   {onAddCardsToShoot && (

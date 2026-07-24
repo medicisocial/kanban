@@ -541,7 +541,7 @@ export default function AppShell({ onSignOut }) {
       const label = idea?.title || card.title || "this reel";
       if (
         !window.confirm(
-          `Move "${label}" back to Approved? The To Create card will be removed and you can schedule it again later.`,
+          `Move "${label}" back to Ready? The To Create card will be removed and you can schedule it again later.`,
         )
       ) {
         return;
@@ -1334,8 +1334,6 @@ export default function AppShell({ onSignOut }) {
           cards={workspaceCards}
           plans={workspacePlans}
           clientFilter={clientFilter}
-          onAddIdea={addIdea}
-          onAddIdeaToBank={addIdeaToBank}
           onAddCard={() => {
             const resolvedClient = clientFilter !== 'all' ? clientFilter : undefined;
             const newCard = addCard('shoot', { client: resolvedClient });
