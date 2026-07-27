@@ -5,9 +5,11 @@ import {
 import { isEmailConfigured, sendPlatformEmail } from './_lib/platformEmail.mjs';
 import {
   buildSpotlightFormUrl,
+  buildSpotlightGuideUrl,
   buildSpotlightInviteEmail,
   canSendSpotlightInvite,
   isValidEmail,
+  loadSpotlightGuideAttachment,
   signSpotlightToken,
 } from './_lib/spotlightQuestionnaire.mjs';
 
@@ -66,13 +68,17 @@ export default async function handler(req, res) {
       note,
       invitedBy,
     });
-    const formUrl = buildSpotlightFormUrl(token, resolveOrigin(req));
+    const origin = resolveOrigin(req);
+    const formUrl = buildSpotlightFormUrl(token, origin);
+    const guideUrl = buildSpotlightGuideUrl(origin);
     const email = buildSpotlightInviteEmail({
       brand,
       businessName,
       note,
       formUrl,
+      guideUrl,
     });
+    const guidePdf = loadSpotlightGuideAttachment();
 
     await sendPlatformEmail({
       to,
@@ -81,13 +87,16 @@ export default async function handler(req, res) {
       text: email.text,
       // No Reply-To — recipients should fill the form, not email back.
       replyTo: '',
+      attachments: [guidePdf],
     });
 
     return res.status(200).json({
       ok: true,
       to,
       formUrl,
+      guideUrl,
       brand,
+      attachment: guidePdf.filename,
     });
   } catch (error) {
     console.error('[spotlight-questionnaire-invite] failed:', error?.message || error);

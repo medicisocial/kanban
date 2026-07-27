@@ -3,7 +3,9 @@ import {
   buildSpotlightSubmissionEmail,
   buildSpotlightSubmissionPdf,
   getSpotlightNotifyRecipients,
+  logoAttachedAnswerFor,
   normalizeSpotlightAnswers,
+  normalizeSpotlightLogoAttachment,
   validateSpotlightAnswers,
   verifySpotlightToken,
 } from './_lib/spotlightQuestionnaire.mjs';
@@ -34,8 +36,15 @@ export default async function handler(req, res) {
   }
 
   let answers;
+  let logo = null;
   try {
     answers = normalizeSpotlightAnswers(req.body?.answers || req.body || {});
+    logo = normalizeSpotlightLogoAttachment(req.body?.logo);
+    if (logo) {
+      answers.logoAttached = logoAttachedAnswerFor(logo);
+    } else if (!answers.logoAttached) {
+      answers.logoAttached = 'Not attached';
+    }
     validateSpotlightAnswers(answers);
   } catch (error) {
     return res.status(400).json({ error: error?.message || 'Incomplete questionnaire.' });
@@ -45,13 +54,21 @@ export default async function handler(req, res) {
     const email = buildSpotlightSubmissionEmail({ invite, answers });
     const pdf = await buildSpotlightSubmissionPdf({ invite, answers });
     const recipients = getSpotlightNotifyRecipients();
+    const attachments = [pdf];
+    if (logo) {
+      attachments.push({
+        filename: logo.filename,
+        content: logo.content,
+        contentType: logo.contentType,
+      });
+    }
     await sendPlatformEmail({
       to: recipients,
       subject: email.subject,
       html: email.html,
       text: email.text,
       replyTo: invite.to,
-      attachments: [pdf],
+      attachments,
     });
 
     return res.status(200).json({
@@ -59,6 +76,7 @@ export default async function handler(req, res) {
       notified: recipients,
       businessName: answers.businessName,
       attachment: pdf.filename,
+      logoAttachment: logo?.filename || null,
     });
   } catch (error) {
     console.error('[spotlight-questionnaire-submit] failed:', error?.message || error);

@@ -6,6 +6,9 @@
   "functions": {
     "api/client-portal-set-password.js": {
       "maxDuration": 60
+    },
+    "api/spotlight-questionnaire-invite.js": {
+      "includeFiles": "api/_lib/assets/**"
     }
   },
   "headers": [
@@ -24,6 +27,6 @@
   ],
   "rewrites": [
     { "source": "/preview.html", "destination": "/preview.html" },
-    { "source": "/((?!preview\\.html$).*)", "destination": "/index.html" }
+    { "source": "/((?!preview\\.html$|.*\\.pdf$).*)", "destination": "/index.html" }
   ]
 }

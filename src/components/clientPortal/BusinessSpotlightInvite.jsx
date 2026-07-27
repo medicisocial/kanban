@@ -43,12 +43,13 @@ export default function BusinessSpotlightInvite({
     <section>
       <ClientPortalSectionHeader
         title="Business Spotlight"
-        description="Email the Business Spotlight questionnaire to a member business. When they submit, answers go to Marina and Medici Social."
+        description="Email the Business Spotlight Guide (PDF) plus questionnaire link to a member business. When they submit, answers go to Marina and Medici Social."
       />
 
       <div className={`${surfacePanelClass} max-w-xl px-5 py-5`}>
         <p className="mb-4 text-sm text-white/55">
-          Recipients get a no-login link. Completed answers are emailed to{' '}
+          Recipients get the guide PDF attached at the top of the email, then a no-login
+          questionnaire link. Completed answers are emailed to{' '}
           <span className="text-white/80">marina@fulshearregional.com</span> and{' '}
           <span className="text-white/80">info@medicisocial.com</span>.
         </p>

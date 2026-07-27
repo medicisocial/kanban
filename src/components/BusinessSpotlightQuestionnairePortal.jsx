@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   emptySpotlightAnswers,
   peekSpotlightTokenClient,
+  prepareSpotlightLogoAttachment,
   readSpotlightTokenFromUrl,
+  SPOTLIGHT_LOGO_ACCEPT,
   submitSpotlightQuestionnaire,
 } from '../utils/spotlightQuestionnaire';
 
@@ -109,18 +111,59 @@ export default function BusinessSpotlightQuestionnairePortal() {
   const [answers, setAnswers] = useState(() =>
     emptySpotlightAnswers({ businessName: invite?.businessName || '' }),
   );
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
+  const logoInputRef = useRef(null);
 
   const set = (key) => (value) => setAnswers((prev) => ({ ...prev, [key]: value }));
+
+  const clearLogo = () => {
+    if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
+    setLogoFile(null);
+    setLogoPreviewUrl('');
+    setAnswers((prev) => ({ ...prev, logoAttached: '' }));
+    if (logoInputRef.current) logoInputRef.current.value = '';
+  };
+
+  const handleLogoChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    setError('');
+    if (!file) {
+      clearLogo();
+      return;
+    }
+    try {
+      const ext = String(file.name || '')
+        .toLowerCase()
+        .match(/\.([a-z0-9]+)$/)?.[1];
+      const allowed = new Set(['png', 'jpg', 'jpeg', 'svg', 'webp', 'ai', 'eps']);
+      if (!allowed.has(ext)) {
+        throw new Error('Logo must be PNG, JPG, SVG, WEBP, AI, or EPS.');
+      }
+      if (file.size > 3 * 1024 * 1024) {
+        throw new Error('Logo must be 3 MB or smaller.');
+      }
+      if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
+      const canPreview = /^image\/(png|jpeg|jpg|webp|svg\+xml)$/i.test(file.type) || /\.(png|jpe?g|webp|svg)$/i.test(file.name);
+      setLogoFile(file);
+      setLogoPreviewUrl(canPreview ? URL.createObjectURL(file) : '');
+      setAnswers((prev) => ({ ...prev, logoAttached: `Yes — attached (${file.name})` }));
+    } catch (err) {
+      clearLogo();
+      setError(err?.message || 'Could not attach that logo.');
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
     setBusy(true);
     try {
-      await submitSpotlightQuestionnaire({ token, answers });
+      const logo = await prepareSpotlightLogoAttachment(logoFile);
+      await submitSpotlightQuestionnaire({ token, answers, logo });
       setDone(true);
     } catch (err) {
       setError(err?.message || 'Could not submit the questionnaire.');
@@ -185,6 +228,7 @@ export default function BusinessSpotlightQuestionnairePortal() {
         .bsq-field::placeholder { color: #adaaa5; }
         .bsq-field:focus { outline: none; border-color: #a3151d !important; }
         .bsq-submit:hover { background: #861118 !important; }
+        .bsq-choose-file:hover { background: #861118 !important; }
         @media (max-width: 720px) {
           .bsq-card { padding: 28px 20px 40px !important; }
           .bsq-header { flex-direction: column !important; }
@@ -294,13 +338,94 @@ export default function BusinessSpotlightQuestionnairePortal() {
         />
         <Field label="Facebook page" value={answers.facebookPage} onChange={set('facebookPage')} optional />
         <Field label="Website" value={answers.website} onChange={set('website')} optional />
-        <Field
-          label="High-resolution logo attached?"
-          value={answers.logoAttached}
-          onChange={set('logoAttached')}
-          hint="(PNG, AI, EPS, or SVG preferred)"
-          placeholder="Yes / No — how you'll send it"
-        />
+        <label style={labelStyle()}>
+          High-resolution logo
+          <span style={optionalSpan}> (optional — PNG, JPG, SVG, AI, or EPS)</span>
+        </label>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: 12,
+            marginTop: 4,
+            padding: '12px 14px',
+            border: '1px solid #d8d3cc',
+            background: '#faf7f4',
+          }}
+        >
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept={SPOTLIGHT_LOGO_ACCEPT}
+            onChange={handleLogoChange}
+            style={{
+              position: 'absolute',
+              width: 1,
+              height: 1,
+              opacity: 0,
+              overflow: 'hidden',
+              clip: 'rect(0 0 0 0)',
+            }}
+            tabIndex={-1}
+            aria-hidden="true"
+          />
+          <button
+            type="button"
+            className="bsq-choose-file"
+            onClick={() => logoInputRef.current?.click()}
+            style={{
+              display: 'inline-block',
+              background: '#a3151d',
+              color: '#ffffff',
+              fontWeight: 800,
+              fontSize: 13,
+              letterSpacing: '0.03em',
+              padding: '10px 18px',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'Arial, Helvetica, sans-serif',
+            }}
+          >
+            {logoFile ? 'CHANGE FILE' : 'CHOOSE FILE'}
+          </button>
+          {logoFile ? (
+            <>
+              {logoPreviewUrl ? (
+                <img
+                  src={logoPreviewUrl}
+                  alt="Logo preview"
+                  style={{
+                    height: 48,
+                    width: 48,
+                    objectFit: 'contain',
+                    background: '#fff',
+                    border: '1px solid #e2dcd2',
+                  }}
+                />
+              ) : null}
+              <span style={{ fontSize: 13, color: '#1a1a1a' }}>{logoFile.name}</span>
+              <button
+                type="button"
+                onClick={clearLogo}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#a3151d',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontFamily: 'Arial, Helvetica, sans-serif',
+                }}
+              >
+                Remove
+              </button>
+            </>
+          ) : (
+            <span style={{ fontSize: 13, color: '#6b6b6b' }}>No file chosen</span>
+          )}
+        </div>
 
         <div style={sectionTitle({ margin: '28px 0 12px' })}>SOCIAL MEDIA CONTACT</div>
         <div className="bsq-row" style={{ display: 'flex', gap: 24 }}>

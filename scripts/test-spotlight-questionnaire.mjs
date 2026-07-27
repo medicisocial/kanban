@@ -14,15 +14,20 @@ const {
   canSendSpotlightInvite,
   getSpotlightNotifyRecipients,
   normalizeSpotlightAnswers,
+  normalizeSpotlightLogoAttachment,
+  logoAttachedAnswerFor,
   validateSpotlightAnswers,
   buildSpotlightInviteEmail,
   buildSpotlightSubmissionEmail,
   buildSpotlightSubmissionPdf,
   buildSpotlightSubmissionPdfFilename,
   buildSpotlightFormUrl,
+  buildSpotlightGuideUrl,
+  loadSpotlightGuideAttachment,
   SPOTLIGHT_MEDICI_EMAIL,
   SPOTLIGHT_MARINA_EMAIL,
   SPOTLIGHT_QUESTION_FIELDS,
+  SPOTLIGHT_GUIDE_FILENAME,
 } = await import('../api/_lib/spotlightQuestionnaire.mjs');
 
 assert(canSendSpotlightInvite('Fulshear Regional'), 'Fulshear Regional can send spotlight invites');
@@ -83,11 +88,31 @@ const answers = normalizeSpotlightAnswers({
   businessHistory: 'Family business since 2010',
   specialHook: 'Handmade goods',
   coreOffer: 'Custom gifts',
-  logoAttached: 'Yes — email separately',
+  logoAttached: 'Yes — attached (logo.png)',
   website: 'https://example.com',
 });
-assert(answers.logoAttached === 'Yes — email separately', 'logoAttached keeps free-text answer');
+assert(answers.logoAttached === 'Yes — attached (logo.png)', 'logoAttached keeps free-text answer');
 validateSpotlightAnswers(answers);
+
+const tinyPngBase64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+const logo = normalizeSpotlightLogoAttachment({
+  filename: 'brand-logo.png',
+  contentType: 'image/png',
+  content: tinyPngBase64,
+});
+assert(logo.filename === 'brand-logo.png', 'logo keeps filename');
+assert(logo.contentType === 'image/png', 'logo keeps content type');
+assert(logoAttachedAnswerFor(logo) === 'Yes — attached (brand-logo.png)', 'logo answer summary');
+assert(normalizeSpotlightLogoAttachment(null) === null, 'missing logo is optional');
+
+let badLogoCaught = false;
+try {
+  normalizeSpotlightLogoAttachment({ filename: 'notes.txt', content: tinyPngBase64 });
+} catch (error) {
+  badLogoCaught = /png|jpg|svg|eps/i.test(error.message);
+}
+assert(badLogoCaught, 'rejects unsupported logo types');
 
 let missingCaught = false;
 try {
@@ -102,12 +127,23 @@ const inviteEmail = buildSpotlightInviteEmail({
   businessName: 'Example Co',
   note: 'Looking forward to filming',
   formUrl: buildSpotlightFormUrl(token, 'https://example.test'),
+  guideUrl: buildSpotlightGuideUrl('https://example.test'),
 });
 assert(
-  inviteEmail.subject === 'Fulshear Regional Chamber FOR Commerce - Business Spotlight Questionnaire',
-  'invite subject uses Chamber FOR Commerce title',
+  inviteEmail.subject === 'Fulshear Regional Chamber FOR Commerce - Business Spotlight',
+  'invite subject uses Chamber FOR Commerce Business Spotlight title',
 );
 assert(inviteEmail.html.includes('https://example.test/?spotlight='), 'invite includes form URL');
+assert(
+  inviteEmail.html.includes('https://example.test/fulshear-business-spotlight-guide.pdf'),
+  'invite includes guide URL',
+);
+assert(inviteEmail.html.includes(SPOTLIGHT_GUIDE_FILENAME), 'invite names attached guide PDF');
+assert(/1\.\s*Review the guide/i.test(inviteEmail.html), 'invite leads with guide section');
+assert(
+  /2\.\s*Complete the questionnaire/i.test(inviteEmail.html),
+  'invite follows with questionnaire section',
+);
 assert(inviteEmail.html.includes('Looking forward to filming'), 'invite includes note');
 assert(
   /joining the Fulshear Regional Chamber FOR Commerce/i.test(inviteEmail.html),
@@ -122,6 +158,12 @@ assert(
   /do not reply/i.test(inviteEmail.html) && /do not reply/i.test(inviteEmail.text),
   'invite tells recipients not to reply',
 );
+
+const guidePdf = loadSpotlightGuideAttachment();
+assert(guidePdf.filename === SPOTLIGHT_GUIDE_FILENAME, 'guide attachment filename');
+assert(guidePdf.contentType === 'application/pdf', 'guide attachment content type');
+assert(typeof guidePdf.content === 'string' && guidePdf.content.length > 100, 'guide has base64 content');
+assert(Buffer.from(guidePdf.content, 'base64').subarray(0, 4).toString() === '%PDF', 'guide bytes start with %PDF');
 
 const submission = buildSpotlightSubmissionEmail({ invite: verified, answers });
 assert(submission.subject.includes('Example Co'), 'submission subject includes business');
@@ -184,6 +226,8 @@ assert(
   !inviteApi.includes('SPOTLIGHT_MARINA_EMAIL'),
   'invite API does not set Marina as Reply-To',
 );
+assert(inviteApi.includes('loadSpotlightGuideAttachment'), 'invite API loads guide PDF');
+assert(inviteApi.includes('attachments: [guidePdf]'), 'invite API attaches guide PDF');
 
 const submitApi = readFileSync(
   new URL('../api/spotlight-questionnaire-submit.js', import.meta.url),
@@ -192,11 +236,22 @@ const submitApi = readFileSync(
 assert(submitApi.includes('getSpotlightNotifyRecipients'), 'submit API emails notify list');
 assert(submitApi.includes('verifySpotlightToken'), 'submit API verifies token');
 assert(submitApi.includes('buildSpotlightSubmissionPdf'), 'submit API builds PDF attachment');
-assert(submitApi.includes('attachments: [pdf]'), 'submit API attaches PDF to notify email');
+assert(submitApi.includes('normalizeSpotlightLogoAttachment'), 'submit API accepts logo upload');
+assert(submitApi.includes('attachments'), 'submit API attaches PDF (and logo when provided)');
 
 const platformEmail = readFileSync(new URL('../api/_lib/platformEmail.mjs', import.meta.url), 'utf8');
 assert(platformEmail.includes('Array.isArray(to)'), 'sendPlatformEmail supports multiple recipients');
 assert(platformEmail.includes('attachments'), 'sendPlatformEmail supports attachments');
+
+const portalSource = readFileSync(
+  new URL('../src/components/BusinessSpotlightQuestionnairePortal.jsx', import.meta.url),
+  'utf8',
+);
+assert(portalSource.includes('type="file"'), 'questionnaire has logo file input');
+assert(
+  portalSource.includes('prepareSpotlightLogoAttachment'),
+  'questionnaire prepares logo for submit',
+);
 
 await vite.close();
 console.log('test-spotlight-questionnaire: ok');

@@ -7,11 +7,10 @@ export const SPOTLIGHT_QUESTION_FIELDS = [
   { key: 'website', label: 'Website', section: 'Business information', type: 'url', optionalHint: true },
   {
     key: 'logoAttached',
-    label: 'High-resolution logo attached?',
+    label: 'High-resolution logo',
     section: 'Business information',
-    type: 'text',
-    hint: 'PNG, AI, EPS, or SVG preferred',
-    placeholder: "Yes / No — how you'll send it",
+    type: 'file',
+    hint: 'PNG, JPG, SVG, AI, or EPS preferred',
   },
   { key: 'socialContactName', label: 'Full name', section: 'Social media contact', required: true, type: 'text' },
   { key: 'socialContactPhone', label: 'Phone number', section: 'Social media contact', type: 'tel' },
@@ -176,11 +175,55 @@ export async function sendSpotlightQuestionnaireInvite({ to, businessName, note,
   return payload;
 }
 
-export async function submitSpotlightQuestionnaire({ token, answers }) {
+export const SPOTLIGHT_LOGO_MAX_BYTES = 3 * 1024 * 1024;
+export const SPOTLIGHT_LOGO_ACCEPT = '.png,.jpg,.jpeg,.svg,.webp,.ai,.eps';
+
+function extensionOf(filename) {
+  const match = String(filename || '')
+    .trim()
+    .toLowerCase()
+    .match(/\.([a-z0-9]+)$/);
+  return match?.[1] || '';
+}
+
+export function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(new Error('Could not read the logo file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+/** Validate and encode a logo File for questionnaire submit. */
+export async function prepareSpotlightLogoAttachment(file) {
+  if (!file) return null;
+  const filename = String(file.name || 'logo').trim().replace(/[/\\]/g, '-').slice(0, 120);
+  const ext = extensionOf(filename);
+  const allowed = new Set(['png', 'jpg', 'jpeg', 'svg', 'webp', 'ai', 'eps']);
+  if (!allowed.has(ext)) {
+    throw new Error('Logo must be PNG, JPG, SVG, WEBP, AI, or EPS.');
+  }
+  if (Number(file.size) > SPOTLIGHT_LOGO_MAX_BYTES) {
+    throw new Error('Logo must be 3 MB or smaller.');
+  }
+  const content = await readFileAsBase64(file);
+  return {
+    filename,
+    contentType: file.type || 'application/octet-stream',
+    content,
+  };
+}
+
+export async function submitSpotlightQuestionnaire({ token, answers, logo = null }) {
   const response = await fetch('/api/spotlight-questionnaire-submit', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token, answers }),
+    body: JSON.stringify({ token, answers, logo }),
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {

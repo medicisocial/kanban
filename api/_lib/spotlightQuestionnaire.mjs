@@ -1,8 +1,13 @@
 import { createHmac, timingSafeEqual } from 'crypto';
+import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 
 export const SPOTLIGHT_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export const SPOTLIGHT_MARINA_EMAIL = 'marina@fulshearregional.com';
 export const SPOTLIGHT_MEDICI_EMAIL = 'info@medicisocial.com';
+export const SPOTLIGHT_GUIDE_FILENAME = 'Fulshear-Business-Spotlight-Guide.pdf';
+export const SPOTLIGHT_GUIDE_PUBLIC_PATH = '/fulshear-business-spotlight-guide.pdf';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -13,7 +18,12 @@ export const SPOTLIGHT_QUESTION_FIELDS = [
   { key: 'instagramHandle', label: 'Instagram handle', section: 'Business information' },
   { key: 'facebookPage', label: 'Facebook page', section: 'Business information' },
   { key: 'website', label: 'Website', section: 'Business information' },
-  { key: 'logoAttached', label: 'High-resolution logo attached?', section: 'Business information' },
+  {
+    key: 'logoAttached',
+    label: 'High-resolution logo',
+    section: 'Business information',
+    hint: 'PNG, JPG, SVG, AI, or EPS preferred',
+  },
   { key: 'socialContactName', label: 'Social media contact — full name', section: 'Social media contact', required: true },
   { key: 'socialContactPhone', label: 'Social media contact — phone', section: 'Social media contact' },
   { key: 'socialContactEmail', label: 'Social media contact — email', section: 'Social media contact', required: true },
@@ -191,15 +201,112 @@ export function peekSpotlightToken(token) {
   }
 }
 
+export const SPOTLIGHT_LOGO_MAX_BYTES = 3 * 1024 * 1024;
+export const SPOTLIGHT_LOGO_ACCEPT =
+  '.png,.jpg,.jpeg,.svg,.webp,.ai,.eps,image/png,image/jpeg,image/svg+xml,image/webp,application/postscript';
+
+const SPOTLIGHT_LOGO_EXTENSIONS = new Set([
+  'png',
+  'jpg',
+  'jpeg',
+  'svg',
+  'webp',
+  'ai',
+  'eps',
+]);
+
+function extensionOf(filename) {
+  const match = String(filename || '')
+    .trim()
+    .toLowerCase()
+    .match(/\.([a-z0-9]+)$/);
+  return match?.[1] || '';
+}
+
+function guessLogoContentType(filename, contentType = '') {
+  const typed = String(contentType || '').trim().toLowerCase();
+  if (typed && typed !== 'application/octet-stream') return typed;
+  switch (extensionOf(filename)) {
+    case 'png':
+      return 'image/png';
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'svg':
+      return 'image/svg+xml';
+    case 'webp':
+      return 'image/webp';
+    case 'ai':
+    case 'eps':
+      return 'application/postscript';
+    default:
+      return 'application/octet-stream';
+  }
+}
+
+/**
+ * Normalize an optional logo file uploaded with the questionnaire.
+ * Expects { filename, contentType?, content } where content is base64 (optionally data-URL).
+ */
+export function normalizeSpotlightLogoAttachment(raw) {
+  if (raw == null || raw === '') return null;
+  if (typeof raw !== 'object') {
+    throw new Error('Logo upload is invalid.');
+  }
+
+  const filename = String(raw.filename || raw.name || '')
+    .trim()
+    .replace(/[/\\]/g, '-')
+    .slice(0, 120);
+  if (!filename) {
+    throw new Error('Logo filename is required.');
+  }
+
+  const ext = extensionOf(filename);
+  if (!SPOTLIGHT_LOGO_EXTENSIONS.has(ext)) {
+    throw new Error('Logo must be PNG, JPG, SVG, WEBP, AI, or EPS.');
+  }
+
+  let content = String(raw.content || raw.contentBase64 || '').trim();
+  const dataUrlMatch = content.match(/^data:[^;]+;base64,(.+)$/i);
+  if (dataUrlMatch) content = dataUrlMatch[1].replace(/\s+/g, '');
+  else content = content.replace(/\s+/g, '');
+  if (!content) {
+    throw new Error('Logo file is empty.');
+  }
+
+  let bytes;
+  try {
+    bytes = Buffer.from(content, 'base64');
+  } catch {
+    throw new Error('Logo file could not be read.');
+  }
+  if (!bytes.length) {
+    throw new Error('Logo file is empty.');
+  }
+  if (bytes.length > SPOTLIGHT_LOGO_MAX_BYTES) {
+    throw new Error('Logo must be 3 MB or smaller.');
+  }
+
+  // Re-encode to normalize padding / strip data-URL noise.
+  const normalized = bytes.toString('base64');
+  return {
+    filename,
+    contentType: guessLogoContentType(filename, raw.contentType || raw.type),
+    content: normalized,
+    byteLength: bytes.length,
+  };
+}
+
+export function logoAttachedAnswerFor(logo) {
+  if (!logo?.filename) return '';
+  return `Yes — attached (${logo.filename})`;
+}
+
 export function normalizeSpotlightAnswers(raw = {}) {
   const answers = {};
   for (const field of SPOTLIGHT_QUESTION_FIELDS) {
-    const value = raw[field.key];
-    if (field.key === 'logoAttached') {
-      answers[field.key] = String(value ?? '').trim();
-      continue;
-    }
-    answers[field.key] = String(value ?? '').trim();
+    answers[field.key] = String(raw[field.key] ?? '').trim();
   }
   return answers;
 }
@@ -229,34 +336,69 @@ export function buildSpotlightFormUrl(token, origin) {
   return `${buildOrigin(origin)}/?spotlight=${encodeURIComponent(token)}`;
 }
 
+export function buildSpotlightGuideUrl(origin) {
+  return `${buildOrigin(origin)}${SPOTLIGHT_GUIDE_PUBLIC_PATH}`;
+}
+
+/** Load the chamber guide PDF for invite email attachment (base64). */
+export function loadSpotlightGuideAttachment() {
+  const guidePath = join(
+    dirname(fileURLToPath(import.meta.url)),
+    'assets',
+    'fulshear-business-spotlight-guide.pdf',
+  );
+  const bytes = readFileSync(guidePath);
+  return {
+    filename: SPOTLIGHT_GUIDE_FILENAME,
+    content: bytes.toString('base64'),
+    contentType: 'application/pdf',
+  };
+}
+
 export function buildSpotlightInviteEmail({
   brand,
   businessName,
   note,
   formUrl,
+  guideUrl = '',
 }) {
   const agency = 'Medici Social';
   const biz = String(businessName || '').trim();
-  const subject = 'Fulshear Regional Chamber FOR Commerce - Business Spotlight Questionnaire';
+  const subject = 'Fulshear Regional Chamber FOR Commerce - Business Spotlight';
   const noteBlock = note
     ? `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#ccc;"><em>${escapeHtml(note)}</em></p>`
     : '';
-  const intro =
-    'Congratulations on joining the Fulshear Regional Chamber FOR Commerce! Your Business Spotlight - Branding Video is produced in partnership with Medici Social. Please complete this questionnaire so we can write your script and prepare for filming.';
+  const guideIntro =
+    'Congratulations on joining the Fulshear Regional Chamber FOR Commerce! Your Business Spotlight - Branding Video is produced in partnership with Medici Social. Start with the attached Business Spotlight Guide — it explains the process, filming, and what to expect.';
+  const questionnaireIntro =
+    'When you are ready, complete the questionnaire below so we can write your script and prepare for filming.';
+  const safeGuideUrl = String(guideUrl || '').trim();
+  const guideLinkBlock = safeGuideUrl
+    ? `<p style="margin:0 0 8px;font-size:12px;line-height:1.6;color:#777;">Guide:</p>
+      <p style="margin:0 0 20px;font-size:12px;line-height:1.6;word-break:break-all;"><a href="${escapeHtml(safeGuideUrl)}" style="color:#c88;">${escapeHtml(safeGuideUrl)}</a></p>`
+    : `<p style="margin:0 0 20px;font-size:13px;line-height:1.6;color:#999;">The Business Spotlight Guide is attached to this email as a PDF.</p>`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
   <body style="margin:0;padding:0;background:#0a0a0a;font-family:Inter,Segoe UI,sans-serif;color:#f5f5f5;">
     <div style="max-width:560px;margin:0 auto;padding:32px 24px;">
       <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#888;">Fulshear Regional Chamber FOR Commerce</p>
-      <h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;font-weight:600;color:#fff;">Business Spotlight Questionnaire</h1>
-      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#ccc;">
-        ${escapeHtml(intro)}
+      <h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;font-weight:600;color:#fff;">Business Spotlight</h1>
+      <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#ccc;">
+        ${escapeHtml(guideIntro)}
       </p>
       ${noteBlock}
+      <p style="margin:0 0 8px;font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#c88;">1. Review the guide</p>
+      <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#bbb;">Open the attached PDF: <strong style="color:#fff;">${escapeHtml(SPOTLIGHT_GUIDE_FILENAME)}</strong></p>
+      ${guideLinkBlock}
+      <hr style="border:none;border-top:1px solid #222;margin:8px 0 24px;" />
+      <p style="margin:0 0 8px;font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#c88;">2. Complete the questionnaire</p>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#ccc;">
+        ${escapeHtml(questionnaireIntro)}
+      </p>
       <a href="${escapeHtml(formUrl)}" style="display:inline-block;margin:8px 0 20px;padding:12px 24px;background:#810100;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;border-radius:2px;">Open questionnaire</a>
       <p style="margin:0 0 16px;font-size:13px;line-height:1.6;color:#999;">No sign-in required. Your answers are emailed to the Chamber and Medici Social when you submit.</p>
-      <p style="margin:16px 0 8px;font-size:12px;line-height:1.6;color:#777;">Link:</p>
+      <p style="margin:16px 0 8px;font-size:12px;line-height:1.6;color:#777;">Questionnaire link:</p>
       <p style="margin:0 0 24px;font-size:12px;line-height:1.6;word-break:break-all;"><a href="${escapeHtml(formUrl)}" style="color:#c88;">${escapeHtml(formUrl)}</a></p>
       <hr style="border:none;border-top:1px solid #222;margin:24px 0;" />
       <p style="margin:0;font-size:11px;line-height:1.6;color:#666;">Sent via ${escapeHtml(agency)}. Please use the button above to complete the form — do not reply to this email.</p>
@@ -265,12 +407,18 @@ export function buildSpotlightInviteEmail({
 </html>`;
 
   const text = [
-    'Fulshear Regional Chamber FOR Commerce - Business Spotlight Questionnaire',
+    'Fulshear Regional Chamber FOR Commerce - Business Spotlight',
     '',
-    intro,
+    guideIntro,
     note ? `Note: ${note}` : '',
     biz ? `Business: ${biz}` : '',
     '',
+    '1. Review the guide',
+    `Attached: ${SPOTLIGHT_GUIDE_FILENAME}`,
+    safeGuideUrl ? `Guide: ${safeGuideUrl}` : '',
+    '',
+    '2. Complete the questionnaire',
+    questionnaireIntro,
     `Open questionnaire: ${formUrl}`,
     '',
     'Please complete the form at the link above — do not reply to this email.',
@@ -304,7 +452,7 @@ export function buildSpotlightSubmissionEmail({ invite, answers }) {
         Invited: ${escapeHtml(invite.to)} · Brand: ${escapeHtml(invite.brand)}
       </p>
       <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#ccc;">
-        Full answers are attached as a PDF.
+        Full answers are attached as a PDF${answers.logoAttached && /attached/i.test(answers.logoAttached) ? ', with the business logo file when provided' : ''}.
       </p>
       <table style="width:100%;border-collapse:collapse;background:#111;border:1px solid #222;">${rows}</table>
       <p style="margin:24px 0 0;font-size:11px;line-height:1.6;color:#666;">Sent automatically via Medici Social Portal.</p>

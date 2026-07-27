@@ -102,7 +102,7 @@ export default function ClientPortalHome({
               Business Spotlight
             </p>
             <p className="mt-1 text-sm text-white/70">
-              Email the branding-video questionnaire to a member business.
+              Email the branding-video guide and questionnaire to a member business.
             </p>
           </div>
           <button
