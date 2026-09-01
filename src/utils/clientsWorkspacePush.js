@@ -1,3 +1,9 @@
+import {
+  mergeClientNameTombstones,
+  suppressedClientNameKeys,
+  stripSuppressedClientNames,
+} from './clientsWorkspaceMerge.js';
+
 /** Keys that stay in the legacy clients workspace blob (org-level, not per-brand). */
 export const CLIENTS_BLOB_ONLY_KEYS = [
   'removedNames',
@@ -66,12 +72,15 @@ export function stripClientsBlobBrandFields(workspace = {}) {
 /** Apply org_workspace_settings row in cloud mode — never touch names/profiles. */
 export function mergeOrgSettingsIntoWorkspace(prev = {}, settings = {}) {
   if (!settings || typeof settings !== 'object') return prev;
+  const now = Date.now();
+  const tombstones = mergeClientNameTombstones(prev, settings, now);
   const next = { ...prev };
-  if (settings.removedNames !== undefined) next.removedNames = settings.removedNames;
-  if (settings.restoredNames !== undefined) next.restoredNames = settings.restoredNames;
+  next.removedNames = tombstones.removedNames;
+  next.restoredNames = tombstones.restoredNames;
   if (settings.contentTypeColors !== undefined) next.contentTypeColors = settings.contentTypeColors;
   if (settings.customColorPalette !== undefined) next.customColorPalette = settings.customColorPalette;
-  return next;
+  const suppressed = suppressedClientNameKeys(tombstones, now);
+  return stripSuppressedClientNames(next, suppressed);
 }
 
 /** Apply only org-level clients blob fields in cloud mode — never touch names/profiles. */

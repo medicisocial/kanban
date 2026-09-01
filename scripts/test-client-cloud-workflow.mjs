@@ -31,14 +31,23 @@ assert(!afterBlob.colors?.Casalu, 'deprecated brand colors from blob must not ov
 assert(afterBlob.contentTypeColors?.Reel === '#ff0000', 'org contentTypeColors should merge from blob');
 
 const orgSettings = {
-  removedNames: { casalu: 1 },
+  removedNames: { casalu: Date.now() },
   contentTypeColors: { Reel: '#00ff00' },
   customColorPalette: ['#111111'],
 };
 const afterSettings = mergeOrgSettingsIntoWorkspace(hydrated, orgSettings);
 assert(afterSettings.contentTypeColors?.Reel === '#00ff00', 'org settings merge should apply contentTypeColors');
-assert(afterSettings.removedNames?.casalu === 1, 'org settings merge should apply removedNames');
+assert(afterSettings.removedNames?.casalu === orgSettings.removedNames.casalu, 'org settings merge should apply removedNames');
 assert(afterSettings.names.length === 2, 'org settings merge must preserve client names');
+
+// Local delete tombstone must survive a stale org-settings pull with empty maps.
+const localDeleteTs = Date.now();
+const withLocalDelete = mergeOrgSettingsIntoWorkspace(
+  { names: ['Plume', 'Casalu'], removedNames: { casalu: localDeleteTs } },
+  { removedNames: {}, restoredNames: {} },
+);
+assert(withLocalDelete.removedNames?.casalu === localDeleteTs, 'local removal tombstone must beat empty cloud settings');
+assert(!withLocalDelete.names.includes('Casalu'), 'org settings merge should strip tombstoned names');
 
 // ── 2. client_records rows populate empty workspace names ───────────────────
 const rows = [

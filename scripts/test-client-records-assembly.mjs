@@ -127,4 +127,17 @@ if (otherOrg.names.includes('Medici Social')) {
   throw new Error('ensureAgencyBrandInWorkspace should not add Medici Social for other orgs');
 }
 
+// Deleted clients must not resurrect when client_records still has the row.
+const deleteTs = Date.now();
+const tombstoned = mergeClientRecordRowsIntoWorkspace(
+  { names: ['Plume'], removedNames: { casalu: deleteTs } },
+  [{ display_name: 'Casalu', brand_key: 'casalu', client_color: '#ffffff' }],
+);
+if (tombstoned.names.includes('Casalu')) {
+  throw new Error('tombstoned client must not reappear from client_records sync');
+}
+if (tombstoned.restoredNames?.casalu) {
+  throw new Error('client_records sync must not set restoredNames (only explicit re-add does)');
+}
+
 console.log('Client records assembly tests passed.');

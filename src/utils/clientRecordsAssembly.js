@@ -1,4 +1,5 @@
 import { clientBrandNameKey, formatClientDisplayName, resolveClientMapValue, clientNamesConflict } from './clients.js';
+import { mergeClientNameTombstones, suppressedClientNameKeys } from './clientsWorkspaceMerge.js';
 
 const AGENCY_BRAND_NAME = 'Medici Social';
 const AGENCY_BRAND_COLOR = '#810100';
@@ -144,15 +145,20 @@ export function brandProfilePatchFromWorkspaceBrand(client, workspace = {}) {
 }
 
 export function mergeClientRecordRowsIntoWorkspace(workspace = {}, rows = []) {
-  const next = { ...workspace };
   const now = Date.now();
-  next.restoredNames = { ...(next.restoredNames || {}) };
-  next.names = unionClientNamesFromRecords(workspace.names, rows);
-  for (const row of rows) {
+  const tombstones = mergeClientNameTombstones(workspace, workspace, now);
+  const suppressed = suppressedClientNameKeys(tombstones, now);
+  const activeRows = (Array.isArray(rows) ? rows : []).filter((row) => {
+    const client = clientNameFromRecordRow(row);
+    if (!client) return false;
+    return !suppressed.has(clientBrandNameKey(client));
+  });
+
+  const next = { ...workspace };
+  next.names = unionClientNamesFromRecords(workspace.names, activeRows);
+  for (const row of activeRows) {
     const client = clientNameFromRecordRow(row);
     if (!client) continue;
-    const key = clientBrandNameKey(client);
-    if (key) next.restoredNames[key] = now;
     applyRemoteBrandField(next, 'clientColor', 'colors', client, row.client_color || '');
     applyRemoteBrandField(next, 'logo', 'logos', client, row.logo);
     applyRemoteBrandField(next, 'contacts', 'contacts', client, row.contacts);

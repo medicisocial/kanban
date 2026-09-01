@@ -583,6 +583,18 @@ export function useClients() {
     }
 
     if (SUPABASE_ENABLED && orgId) {
+      if (isCloudSourceOfTruth()) {
+        const settingsResult = await pushOrgWorkspaceSettings(orgId, {
+          removedNames: nextRemovedNames,
+          restoredNames: nextRestoredNames,
+        });
+        if (!settingsResult.ok) {
+          return {
+            ok: false,
+            error: settingsResult.error || 'Could not save client removal to the cloud.',
+          };
+        }
+      }
       await releaseClientBrandName(trimmed, orgId).catch(() => {});
     }
     return { ok: true, name: trimmed };
