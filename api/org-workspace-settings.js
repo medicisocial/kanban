@@ -1,6 +1,7 @@
 import { getSessionFromRequest, isStaffSessionValid } from './_lib/staffAuth.mjs';
 import { assertAuthorizedOrgId } from './_lib/orgContext.mjs';
 import { getSupabaseUrl, isSupabaseConfigured, resolveServerKeyOrAnon } from './_lib/supabase.mjs';
+import { mergeOrgWorkspaceSettingsWrite } from './_lib/orgWorkspaceSettingsMerge.mjs';
 
 function unauthorized(res) {
   return res.status(401).json({ ok: false, error: 'Unauthorized' });
@@ -150,12 +151,16 @@ export default async function handler(req, res) {
       return res.status(400).json({ ok: false, error: 'Missing settings.' });
     }
 
+    const existingRes = await restFetch(
+      `org_workspace_settings?org_id=eq.${encodeURIComponent(orgCheck.orgId)}&select=org_id,removed_names,restored_names,content_type_colors,custom_color_palette,updated_at`,
+    );
+    const existingRows = existingRes?.ok ? await existingRes.json().catch(() => []) : [];
+    const existing = Array.isArray(existingRows) ? existingRows[0] : null;
+    const merged = mergeOrgWorkspaceSettingsWrite(existing, settings);
+
     const row = {
       org_id: orgCheck.orgId,
-      removed_names: settings.removedNames || {},
-      restored_names: settings.restoredNames || {},
-      content_type_colors: settings.contentTypeColors || {},
-      custom_color_palette: settings.customColorPalette || [],
+      ...merged,
       updated_at: new Date().toISOString(),
     };
 
@@ -177,7 +182,7 @@ export default async function handler(req, res) {
       customColorPalette: row.custom_color_palette,
     });
 
-    return res.status(200).json({ ok: true });
+    return res.status(200).json({ ok: true, settings: settingsFromRow(row) });
   } catch (error) {
     console.error('[org-workspace-settings] failed:', error?.message || error);
     return res.status(500).json({

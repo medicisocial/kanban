@@ -57,6 +57,19 @@ const withLocalDelete = mergeOrgSettingsIntoWorkspace(
 assert(withLocalDelete.removedNames?.casalu === localDeleteTs, 'local removal tombstone must beat empty cloud settings');
 assert(!withLocalDelete.names.includes('Casalu'), 'org settings merge should strip tombstoned names');
 
+// Delete → stale settings wipe → row still soft-deleted → name stays gone.
+const wipedSettings = mergeOrgSettingsIntoWorkspace(
+  { names: ['Ara Med Spa'], removedNames: { 'ara med spa': Date.now() } },
+  { removedNames: {}, restoredNames: {} },
+);
+// Local tombstone still wins in-memory; cloud wipe is simulated by empty maps on cold load:
+const coldAfterWipe = mergeClientRecordRowsIntoWorkspace(
+  { names: [], removedNames: {} },
+  [{ display_name: 'Ara Med Spa', brand_key: 'ara med spa', deleted_at: new Date().toISOString() }],
+);
+assert(!coldAfterWipe.names.includes('Ara Med Spa'), 'deleted_at must keep brand gone after settings wipe');
+assert(wipedSettings.removedNames?.['ara med spa'], 'local removal must survive empty settings pull');
+
 // ── 2. client_records rows populate empty workspace names ───────────────────
 const rows = [
   {

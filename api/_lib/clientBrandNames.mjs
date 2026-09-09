@@ -141,6 +141,8 @@ export async function upsertClientRecordOnServer(orgId, displayName, { color, lo
       photographer: '',
       carousel_target: 0,
       static_target: 0,
+      deleted_at: null,
+      deleted_by: null,
       data: {},
     }),
   });
@@ -171,4 +173,48 @@ export async function releaseClientBrandNameOnServer(orgId, displayName) {
 
   const detail = await response.text().catch(() => '');
   throw new Error(detail || `Could not release client name (${response.status}).`);
+}
+
+/** Clear client_records.deleted_at when re-adding a soft-deleted brand. */
+export async function restoreClientRecordOnServer(orgId, displayName) {
+  const brandKey = normalizeClientBrandName(displayName);
+  if (!orgId || !brandKey) return { ok: true };
+
+  const response = await restFetch('rpc/restore_client_record', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      p_org_id: orgId,
+      p_brand_key: brandKey,
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(detail || `Could not restore client record (${response.status}).`);
+  }
+
+  return { ok: true };
+}
+
+/** Soft-delete a client_records row so list sync cannot resurrect it. */
+export async function tombstoneClientRecordOnServer(orgId, displayName) {
+  const brandKey = normalizeClientBrandName(displayName);
+  if (!orgId || !brandKey) return { ok: true };
+
+  const response = await restFetch('rpc/tombstone_client_record', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      p_org_id: orgId,
+      p_brand_key: brandKey,
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(detail || `Could not tombstone client record (${response.status}).`);
+  }
+
+  return { ok: true };
 }

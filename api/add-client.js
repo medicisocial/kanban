@@ -12,6 +12,7 @@ import {
   normalizeClientBrandName,
   releaseClientBrandNameOnServer,
   reserveClientBrandNameOnServer,
+  restoreClientRecordOnServer,
   upsertClientRecordOnServer,
 } from './_lib/clientBrandNames.mjs';
 
@@ -166,6 +167,11 @@ export default async function handler(req, res) {
       color: nextColor,
       logo,
       businessType,
+    });
+
+    // Clear soft-delete tombstone when (re)adding — upsert alone may not clear deleted_at.
+    await restoreClientRecordOnServer(resolvedOrgId, resolvedName).catch((err) => {
+      console.warn('[add-client] restore_client_record failed:', err?.message || err);
     });
 
     await patchBrandProfileRecord(

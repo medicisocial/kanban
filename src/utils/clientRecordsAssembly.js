@@ -149,6 +149,7 @@ export function mergeClientRecordRowsIntoWorkspace(workspace = {}, rows = []) {
   const tombstones = mergeClientNameTombstones(workspace, workspace, now);
   const suppressed = suppressedClientNameKeys(tombstones, now);
   const activeRows = (Array.isArray(rows) ? rows : []).filter((row) => {
+    if (row?.deleted_at) return false;
     const client = clientNameFromRecordRow(row);
     if (!client) return false;
     return !suppressed.has(clientBrandNameKey(client));

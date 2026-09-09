@@ -140,4 +140,33 @@ if (tombstoned.restoredNames?.casalu) {
   throw new Error('client_records sync must not set restoredNames (only explicit re-add does)');
 }
 
+// Row-level deleted_at is authoritative even without org removedNames.
+const softDeleted = mergeClientRecordRowsIntoWorkspace(
+  { names: [] },
+  [
+    {
+      display_name: 'Ara Med Spa',
+      brand_key: 'ara med spa',
+      deleted_at: new Date().toISOString(),
+      client_color: '#ec4899',
+    },
+    { display_name: 'Plume', brand_key: 'plume', deleted_at: null },
+  ],
+);
+if (softDeleted.names.includes('Ara Med Spa')) {
+  throw new Error('client_records.deleted_at must exclude the brand from names');
+}
+if (!softDeleted.names.includes('Plume')) {
+  throw new Error('active client_records rows must still hydrate names');
+}
+
+// Stale settings wipe + immortal row: deleted_at still keeps the name out.
+const afterStaleSettings = mergeClientRecordRowsIntoWorkspace(
+  { names: [], removedNames: {} },
+  [{ display_name: 'Ara Med Spa', brand_key: 'ara med spa', deleted_at: '2026-09-09T17:00:00Z' }],
+);
+if (afterStaleSettings.names.includes('Ara Med Spa')) {
+  throw new Error('deleted_at must block resurrection after org removedNames wipe');
+}
+
 console.log('Client records assembly tests passed.');

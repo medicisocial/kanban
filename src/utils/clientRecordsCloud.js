@@ -14,10 +14,10 @@ export {
 
 /** Slim select for fast filter/sidebar — skips heavy jsonb profile fields. */
 export const CLIENT_RECORDS_LIST_SELECT =
-  'org_id,brand_key,display_name,client_color,updated_at';
+  'org_id,brand_key,display_name,client_color,deleted_at,updated_at';
 
 const CLIENT_RECORDS_FULL_SELECT =
-  'id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,website,business_type,account_manager,videographer,photographer,deliverable_target,reel_points_target,carousel_static_target,carousel_target,static_target,plan_id,shoot_days_per_month,shoot_hours_per_day,monthly_package_amount,deleted_company_file_ids,updated_at';
+  'id,org_id,brand_key,display_name,client_color,logo,contacts,social_logins,company_files,special_menus,photo_gallery_link,website,business_type,account_manager,videographer,photographer,deliverable_target,reel_points_target,carousel_static_target,carousel_target,static_target,plan_id,shoot_days_per_month,shoot_hours_per_day,monthly_package_amount,deleted_company_file_ids,deleted_at,updated_at';
 
 const DIRECT_READ_TIMEOUT_MS = 3000;
 const DIRECT_PROFILE_SAVE_TIMEOUT_MS = 8000;
@@ -34,7 +34,11 @@ function withTimeout(promise, timeoutMs, errorMessage) {
 
 async function fetchClientRecordRowsDirect(orgId, select) {
   if (!supabase) return [];
-  const { data, error } = await supabase.from('client_records').select(select).eq('org_id', orgId);
+  const { data, error } = await supabase
+    .from('client_records')
+    .select(select)
+    .eq('org_id', orgId)
+    .is('deleted_at', null);
   if (error) {
     console.warn('[client_records] Supabase read failed:', error.message || error);
     return [];
@@ -46,7 +50,9 @@ async function readClientRecords(orgId, select) {
   // Prefer staff-sync so personal AM allowlists are enforced server-side.
   // Direct Supabase reads are org-wide under RLS and would bypass that gate.
   const apiRows = await fetchStaffSyncRows('client_records', orgId);
-  if (apiRows !== null) return apiRows;
+  if (apiRows !== null) {
+    return (Array.isArray(apiRows) ? apiRows : []).filter((row) => !row?.deleted_at);
+  }
 
   const { mustUseStaffSyncOnly } = await import('../lib/staffSyncReadPolicy.js');
   if (mustUseStaffSyncOnly()) return [];
@@ -57,7 +63,7 @@ async function readClientRecords(orgId, select) {
       setTimeout(() => resolve([]), DIRECT_READ_TIMEOUT_MS);
     }),
   ]);
-  return Array.isArray(directRows) ? directRows : [];
+  return (Array.isArray(directRows) ? directRows : []).filter((row) => !row?.deleted_at);
 }
 
 /** Fast list load — direct Supabase first, staff-sync fallback only if empty. */

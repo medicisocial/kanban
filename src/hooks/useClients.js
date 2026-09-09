@@ -56,6 +56,7 @@ import { diffBrandProfilePatches, pushBrandProfilePatches } from '../utils/clien
 import { pushOrgWorkspaceSettings } from '../utils/orgWorkspaceSettingsCloud.js';
 import { mergeCloudClientsBlobRemote } from '../utils/clientsWorkspacePush';
 import { reportSyncIssue } from '../lib/workspaceSyncHealth';
+import { tombstoneClientRecord, restoreClientRecord } from '../utils/clientRecordTombstone.js';
 
 function loadLegacyPortalPasswordVault() {
   try {
@@ -457,6 +458,28 @@ export function useClients() {
         writeOrgScopedJson(CLIENTS_STORAGE_KEY, nextState);
       }
       registerPortalCredentialBrand(orgId, resolvedName);
+      // Clear soft-delete so a re-added brand reappears in client_records pulls.
+      void restoreClientRecord(resolvedName, orgId).then((result) => {
+        if (!result.ok) {
+          reportSyncIssue({
+            level: 'error',
+            table: 'client_records',
+            message: result.error || 'Could not restore client record after re-add.',
+          });
+        }
+      });
+      if (isCloudSourceOfTruth()) {
+        void pushOrgWorkspaceSettings(
+          orgId,
+          {
+            removedNames: nextState.removedNames,
+            restoredNames: nextState.restoredNames,
+            contentTypeColors: nextState.contentTypeColors,
+            customColorPalette: nextState.customColorPalette,
+          },
+          { flush: true },
+        );
+      }
       return { ok: true, name: resolvedName };
     }
 
@@ -582,14 +605,24 @@ export function useClients() {
       writeOrgScopedJson(CLIENTS_STORAGE_KEY, nextState);
     }
 
-    // Persist tombstones / name release in the background. Never block the remove
-    // UI on cloud calls — hung Supabase RPC used to leave "Removing…" stuck forever
-    // and the selection would jump to another brand (Ara → Arco) mid-wait.
+    // Persist row tombstone + org settings in the background. Local hide is
+    // immediate; cloud failures surface in the sync banner so they are not silent.
     if (SUPABASE_ENABLED && orgId) {
       void (async () => {
         try {
+          const tombstoneResult = await tombstoneClientRecord(trimmed, orgId);
+          if (!tombstoneResult.ok) {
+            reportSyncIssue({
+              level: 'error',
+              table: 'client_records',
+              message:
+                tombstoneResult.error ||
+                'Client removal could not reach the cloud. Refresh and try again.',
+            });
+          }
+
           if (isCloudSourceOfTruth()) {
-            await pushOrgWorkspaceSettings(
+            const settingsResult = await pushOrgWorkspaceSettings(
               orgId,
               {
                 removedNames: nextState.removedNames,
@@ -599,10 +632,24 @@ export function useClients() {
               },
               { flush: true },
             );
+            if (!settingsResult.ok) {
+              reportSyncIssue({
+                level: 'error',
+                table: 'org_workspace_settings',
+                message:
+                  settingsResult.error ||
+                  'Client removal tombstone could not be saved. Refresh and try again.',
+              });
+            }
           }
           await releaseClientBrandName(trimmed, orgId);
         } catch (err) {
           console.warn('[removeClient] cloud cleanup failed:', err?.message || err);
+          reportSyncIssue({
+            level: 'error',
+            table: 'client_records',
+            message: err?.message || 'Client removal cloud cleanup failed.',
+          });
         }
       })();
     }
