@@ -150,6 +150,7 @@ export default function ClientManagementPage({
   const [showAddClient, setShowAddClient] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removingClient, setRemovingClient] = useState(false);
+  const [pendingRemoveClient, setPendingRemoveClient] = useState('');
   const [removeError, setRemoveError] = useState('');
   const fileInputRef = useRef(null);
 
@@ -450,28 +451,32 @@ export default function ClientManagementPage({
 
   const openRemoveClient = () => {
     setRemoveError('');
+    setPendingRemoveClient(selectedClient || '');
     setConfirmRemove(true);
   };
 
   const closeRemoveClient = () => {
     if (removingClient) return;
     setConfirmRemove(false);
+    setPendingRemoveClient('');
     setRemoveError('');
   };
 
   const handleRemoveClient = async () => {
-    if (!selectedClient) return;
+    const clientToRemove = pendingRemoveClient || selectedClient;
+    if (!clientToRemove) return;
     setRemovingClient(true);
     setRemoveError('');
     try {
-      const result = await removeClient(selectedClient);
+      const result = await removeClient(clientToRemove);
       if (result?.ok === false) {
         setRemoveError(result.error || 'Could not remove client.');
         return;
       }
-      const remaining = profileClients.filter((client) => client !== selectedClient);
+      const remaining = profileClients.filter((client) => client !== clientToRemove);
       setSelectedClient(remaining[0] || '');
       setConfirmRemove(false);
+      setPendingRemoveClient('');
     } catch (err) {
       setRemoveError(err.message || 'Could not remove client.');
     } finally {
@@ -1090,8 +1095,12 @@ export default function ClientManagementPage({
 
             <div className="space-y-3 px-5 py-4">
               <p className="text-sm text-white/70">
-                Remove <span className="font-semibold text-white">{selectedClient}</span> from your
-                workspace? The brand disappears from the pipeline, calendars, and client filters.
+                Remove{' '}
+                <span className="font-semibold text-white">
+                  {pendingRemoveClient || selectedClient}
+                </span>{' '}
+                from your workspace? The brand disappears from the pipeline, calendars, and client
+                filters.
               </p>
               <p className="text-[11px] text-white/40">
                 Existing cards and portal logins are not deleted. You can re-add this client later

@@ -584,10 +584,16 @@ export function useClients() {
 
     if (SUPABASE_ENABLED && orgId) {
       if (isCloudSourceOfTruth()) {
-        const settingsResult = await pushOrgWorkspaceSettings(orgId, {
-          removedNames: nextRemovedNames,
-          restoredNames: nextRestoredNames,
-        });
+        const settingsResult = await pushOrgWorkspaceSettings(
+          orgId,
+          {
+            removedNames: nextState.removedNames,
+            restoredNames: nextState.restoredNames,
+            contentTypeColors: nextState.contentTypeColors,
+            customColorPalette: nextState.customColorPalette,
+          },
+          { flush: true },
+        );
         if (!settingsResult.ok) {
           return {
             ok: false,
