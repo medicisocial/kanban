@@ -4,6 +4,7 @@ import { fetchStaffSyncRows } from '../lib/staffSyncApi';
 import { mustUseStaffSyncOnly } from '../lib/staffSyncReadPolicy.js';
 import { buildStaffApiAuthHeaders } from '../lib/staffApiAuth';
 import { ensureStaffSupabaseSession } from '../lib/staffSupabaseAuth';
+import { mergeClientNameTombstones } from './clientsWorkspaceMerge.js';
 
 export { mergeOrgSettingsIntoWorkspace } from './clientsWorkspacePush.js';
 
@@ -36,6 +37,43 @@ function settingsFromSlimClientsBlob(data = {}) {
   };
 }
 
+/** Prefer newer tombstone maps / non-empty org-level fields across sources. */
+function coalesceOrgSettings(sources = []) {
+  const valid = sources.filter(Boolean);
+  if (!valid.length) return null;
+
+  const now = Date.now();
+  let removedNames = {};
+  let restoredNames = {};
+  let contentTypeColors;
+  let customColorPalette;
+  let updatedAt;
+  let orgId;
+
+  for (const settings of valid) {
+    const tombstones = mergeClientNameTombstones(
+      { removedNames, restoredNames },
+      settings,
+      now,
+    );
+    removedNames = tombstones.removedNames;
+    restoredNames = tombstones.restoredNames;
+    if (settings.contentTypeColors !== undefined) contentTypeColors = settings.contentTypeColors;
+    if (settings.customColorPalette !== undefined) customColorPalette = settings.customColorPalette;
+    if (settings.updatedAt) updatedAt = settings.updatedAt;
+    if (settings.orgId) orgId = settings.orgId;
+  }
+
+  return {
+    orgId,
+    removedNames,
+    restoredNames,
+    contentTypeColors: contentTypeColors || {},
+    customColorPalette: Array.isArray(customColorPalette) ? customColorPalette : [],
+    updatedAt,
+  };
+}
+
 async function fetchOrgSettingsDirect(orgId) {
   if (!supabase) return null;
   if (mustUseStaffSyncOnly()) return null;
@@ -51,27 +89,52 @@ async function fetchOrgSettingsDirect(orgId) {
   return rowToSettings(data);
 }
 
-async function fetchOrgSettingsFallback(orgId) {
+async function fetchOrgSettingsViaApi(orgId) {
+  const headers = await buildStaffApiAuthHeaders({ preferSupabaseJwt: false });
+  if (!headers) return null;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_WRITE_TIMEOUT_MS);
+  try {
+    const params = new URLSearchParams({ orgId });
+    const response = await fetch(`/api/org-workspace-settings?${params}`, {
+      method: 'GET',
+      headers,
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const payload = await response.json().catch(() => ({}));
+    return payload?.settings || null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function fetchOrgSettingsFromClientsBlob(orgId) {
   const apiRows = await fetchStaffSyncRows('clients', orgId);
   if (!Array.isArray(apiRows)) return null;
   const workspace = apiRows.find((entry) => String(entry.id) === 'workspace');
   return settingsFromSlimClientsBlob(workspace?.data);
 }
 
-/** Load org-level settings — staff-sync for personal sessions; direct only for ops. */
+/**
+ * Load org-level settings. Always prefer org_workspace_settings (via staff API /
+ * direct). The legacy clients blob is only a tombstone union source — never the
+ * sole authority, or deleted clients resurrect from stale blob rows.
+ */
 export async function fetchOrgWorkspaceSettings(orgId = getOrgId()) {
   if (!SUPABASE_ENABLED || !orgId) return null;
 
-  if (mustUseStaffSyncOnly()) {
-    return fetchOrgSettingsFallback(orgId);
-  }
-
-  const [direct, fallback] = await Promise.all([
+  const [viaApi, direct, blob] = await Promise.all([
+    fetchOrgSettingsViaApi(orgId),
     fetchOrgSettingsDirect(orgId),
-    fetchOrgSettingsFallback(orgId),
+    fetchOrgSettingsFromClientsBlob(orgId),
   ]);
 
-  return direct || fallback;
+  // Canonical table first in the coalesce list so its timestamps win ties.
+  return coalesceOrgSettings([viaApi, direct, blob]);
 }
 
 function withTimeout(promise, timeoutMs, errorMessage) {

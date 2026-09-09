@@ -30,6 +30,14 @@ assert(afterBlob.contacts['Fulshear Regional']?.[0]?.name === 'Rachel Durham', '
 assert(!afterBlob.colors?.Casalu, 'deprecated brand colors from blob must not overwrite workspace');
 assert(afterBlob.contentTypeColors?.Reel === '#ff0000', 'org contentTypeColors should merge from blob');
 
+// Stale empty removedNames from the clients blob must not wipe local tombstones.
+const afterStaleBlob = mergeCloudClientsBlobRemote(
+  { names: ['Plume', 'Casalu'], removedNames: { casalu: Date.now() } },
+  { removedNames: {}, restoredNames: {} },
+);
+assert(afterStaleBlob.removedNames?.casalu, 'stale clients blob must not clear removal tombstones');
+assert(!afterStaleBlob.names.includes('Casalu'), 'stale clients blob must not resurrect tombstoned names');
+
 const orgSettings = {
   removedNames: { casalu: Date.now() },
   contentTypeColors: { Reel: '#00ff00' },

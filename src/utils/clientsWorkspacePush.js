@@ -83,14 +83,17 @@ export function mergeOrgSettingsIntoWorkspace(prev = {}, settings = {}) {
   return stripSuppressedClientNames(next, suppressed);
 }
 
-/** Apply only org-level clients blob fields in cloud mode — never touch names/profiles. */
+/** Apply only org-level clients blob fields in cloud mode — never wipe tombstones. */
 export function mergeCloudClientsBlobRemote(prev = {}, remote = {}) {
   if (!remote || typeof remote !== 'object') return prev;
   const slim = slimClientsWorkspaceForCloudPush(remote);
+  const now = Date.now();
+  const tombstones = mergeClientNameTombstones(prev, slim, now);
   const next = { ...prev };
-  if (slim.removedNames !== undefined) next.removedNames = slim.removedNames;
-  if (slim.restoredNames !== undefined) next.restoredNames = slim.restoredNames;
+  next.removedNames = tombstones.removedNames;
+  next.restoredNames = tombstones.restoredNames;
   if (slim.contentTypeColors !== undefined) next.contentTypeColors = slim.contentTypeColors;
   if (slim.customColorPalette !== undefined) next.customColorPalette = slim.customColorPalette;
-  return next;
+  const suppressed = suppressedClientNameKeys(tombstones, now);
+  return stripSuppressedClientNames(next, suppressed);
 }
