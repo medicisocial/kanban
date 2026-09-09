@@ -211,12 +211,15 @@ export default function ClientManagementPage({
   };
 
   useEffect(() => {
+    // Keep selection frozen while a remove is in progress so the modal
+    // cannot jump to another brand (e.g. Ara → Arco) mid-delete.
+    if (removingClient || pendingRemoveClient) return;
     if (!selectedClient && profileClients.length > 0) {
       setSelectedClient(profileClients[0]);
     } else if (selectedClient && !profileClients.includes(selectedClient) && profileClients.length > 0) {
       setSelectedClient(profileClients[0]);
     }
-  }, [profileClients, selectedClient]);
+  }, [profileClients, selectedClient, removingClient, pendingRemoveClient]);
 
   useEffect(() => {
     if (activeTab !== 'users' || !selectedClient) return;
@@ -474,9 +477,9 @@ export default function ClientManagementPage({
         return;
       }
       const remaining = profileClients.filter((client) => client !== clientToRemove);
-      setSelectedClient(remaining[0] || '');
       setConfirmRemove(false);
       setPendingRemoveClient('');
+      setSelectedClient(remaining[0] || '');
     } catch (err) {
       setRemoveError(err.message || 'Could not remove client.');
     } finally {
@@ -1097,7 +1100,7 @@ export default function ClientManagementPage({
               <p className="text-sm text-white/70">
                 Remove{' '}
                 <span className="font-semibold text-white">
-                  {pendingRemoveClient || selectedClient}
+                  {pendingRemoveClient || 'this client'}
                 </span>{' '}
                 from your workspace? The brand disappears from the pipeline, calendars, and client
                 filters.

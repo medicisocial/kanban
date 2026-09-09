@@ -582,26 +582,29 @@ export function useClients() {
       writeOrgScopedJson(CLIENTS_STORAGE_KEY, nextState);
     }
 
+    // Persist tombstones / name release in the background. Never block the remove
+    // UI on cloud calls — hung Supabase RPC used to leave "Removing…" stuck forever
+    // and the selection would jump to another brand (Ara → Arco) mid-wait.
     if (SUPABASE_ENABLED && orgId) {
-      if (isCloudSourceOfTruth()) {
-        const settingsResult = await pushOrgWorkspaceSettings(
-          orgId,
-          {
-            removedNames: nextState.removedNames,
-            restoredNames: nextState.restoredNames,
-            contentTypeColors: nextState.contentTypeColors,
-            customColorPalette: nextState.customColorPalette,
-          },
-          { flush: true },
-        );
-        if (!settingsResult.ok) {
-          return {
-            ok: false,
-            error: settingsResult.error || 'Could not save client removal to the cloud.',
-          };
+      void (async () => {
+        try {
+          if (isCloudSourceOfTruth()) {
+            await pushOrgWorkspaceSettings(
+              orgId,
+              {
+                removedNames: nextState.removedNames,
+                restoredNames: nextState.restoredNames,
+                contentTypeColors: nextState.contentTypeColors,
+                customColorPalette: nextState.customColorPalette,
+              },
+              { flush: true },
+            );
+          }
+          await releaseClientBrandName(trimmed, orgId);
+        } catch (err) {
+          console.warn('[removeClient] cloud cleanup failed:', err?.message || err);
         }
-      }
-      await releaseClientBrandName(trimmed, orgId).catch(() => {});
+      })();
     }
     return { ok: true, name: trimmed };
   }, [orgId, includeDefaults]);

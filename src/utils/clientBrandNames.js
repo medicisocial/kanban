@@ -163,24 +163,34 @@ export async function releaseClientBrandName(name, orgId) {
     return { ok: true };
   }
 
-  const apiResult = await reserveClientBrandNameViaApi(trimmed, orgId, 'release');
-  if (apiResult.ok) return apiResult;
+  try {
+    const apiResult = await reserveClientBrandNameViaApi(trimmed, orgId, 'release');
+    if (apiResult.ok) return apiResult;
 
-  if (!supabase) {
-    return { ok: false, error: apiResult.error || 'Could not release client name.' };
+    if (!supabase) {
+      return { ok: false, error: apiResult.error || 'Could not release client name.' };
+    }
+
+    const rpcResult = await Promise.race([
+      supabase.rpc('release_client_brand_name', {
+        p_display_name: trimmed,
+        p_org_id: orgId,
+      }),
+      new Promise((resolve) => {
+        setTimeout(() => resolve({ data: null, error: { message: 'Release timed out.' } }), 8000);
+      }),
+    ]);
+
+    if (rpcResult?.error) {
+      console.error('[clientBrandNames] release failed:', rpcResult.error.message || rpcResult.error);
+      return { ok: false, error: rpcResult.error.message || 'Could not release client name.' };
+    }
+
+    return parseRpcResult(rpcResult?.data, 'Could not release client name.');
+  } catch (err) {
+    console.error('[clientBrandNames] release failed:', err?.message || err);
+    return { ok: false, error: err?.message || 'Could not release client name.' };
   }
-
-  const { data, error } = await supabase.rpc('release_client_brand_name', {
-    p_display_name: trimmed,
-    p_org_id: orgId,
-  });
-
-  if (error) {
-    console.error('[clientBrandNames] release failed:', error.message || error);
-    return { ok: false, error: error.message || 'Could not release client name.' };
-  }
-
-  return parseRpcResult(data, 'Could not release client name.');
 }
 
 export { clientBrandNameKey };

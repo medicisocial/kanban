@@ -171,10 +171,12 @@ async function upsertOrgSettingsViaApi(orgId, settings) {
 }
 
 async function writeOrgWorkspaceSettings(orgId, settings) {
-  const direct = await upsertOrgSettingsDirect(orgId, settings);
-  if (direct.ok) return direct;
+  // Prefer the staff API (service role) — browser RLS often blocks direct upserts
+  // for cookie-only staff sessions and used to hang the remove UI.
   const viaApi = await upsertOrgSettingsViaApi(orgId, settings);
   if (viaApi.ok) return viaApi;
+  const direct = await upsertOrgSettingsDirect(orgId, settings);
+  if (direct.ok) return direct;
   return {
     ok: false,
     error: viaApi.error || direct.error || 'Could not save org settings.',
